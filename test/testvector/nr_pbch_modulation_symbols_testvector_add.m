@@ -13,7 +13,7 @@
 %       Besides the input parameters, a random codeword will also be generated for each test
 %       using a predefined random seed value.
 
-function output_string = nr_pbch_modulation_symbols_testvector_add(NCellID,cw,SSB_index,SSB_Lmax,testID)
+function output_string = nr_pbch_modulation_symbols_testvector_add(NCellID,cw,SSB_index,SSB_Lmax,testID,output_path)
     % all output files will have a common name basis
     base_filename = 'pbch_modulator_test_';
 
@@ -23,41 +23,24 @@ function output_string = nr_pbch_modulation_symbols_testvector_add(NCellID,cw,SS
     ssb_first_symbol = 0;
     ssb_amplitude = 1;
     ssb_ports = zeros(nof_ports,1);
-    ssb_ports_str = '';
-    for port=ssb_ports
-        ssb_ports_str = [ssb_ports_str, sprintf('%d,', port)];
-    end
-    ssb_ports_str = ssb_ports_str(1:end-1);
-    antenna_port_ix = 0;
+    ssb_ports_str = convert_array_to_string(ssb_ports);
 
     % write the BCH codeword to a binary file
-    cw_filename = [base_filename 'data' num2str(testID) '.bin'];
-    fileID_cw = fopen(cw_filename,'w');
-    for bit=1:length(cw)
-        fwrite(fileID_cw,cw(bit),'uint8');
-    end
-    fclose(fileID_cw);
+    cw_filename = [base_filename 'input' num2str(testID) '.dat'];
+    full_cw_filename = [output_path '/' cw_filename];
+    write_uint8_file(full_cw_filename,cw);
 
     % call the PBCH symbol modulation Matlab functions
     [modulated_symbols,symbol_indices] = nr_pbch_modulation_symbols_generate(cw,NCellID,SSB_index,SSB_Lmax);
 
     % write each complex symbol into a binary file, and the associated indices to another
-    symbols_filename = [base_filename 'symbols' num2str(testID) '.bin'];
-    fileID_symb = fopen(symbols_filename,'w');
-    symbol_indices_filename = [base_filename 'symb_ind' num2str(testID) '.bin'];
-    fileID_symb_ix = fopen(symbol_indices_filename,'w');
-    symbols_length = length(modulated_symbols);
-    % we'll write the number of symbols in the first line of the indices file
-    fwrite(fileID_symb_ix,symbols_length,'int');
-    for idx=1:symbols_length
-        fwrite(fileID_symb,real(modulated_symbols(idx)),'float');
-        fwrite(fileID_symb,imag(modulated_symbols(idx)),'float');
-        fwrite(fileID_symb_ix,antenna_port_ix,'int');
-        fwrite(fileID_symb_ix,symbol_indices(idx,2),'int');
-        fwrite(fileID_symb_ix,symbol_indices(idx,1),'int');
-    end
-    fclose(fileID_symb);
-    fclose(fileID_symb_ix);
+    symbols_filename = [base_filename 'output' num2str(testID) '.dat'];
+    full_symbols_filename = [output_path '/' symbols_filename];
+    write_resource_grid_entry_file(full_symbols_filename,modulated_symbols,symbol_indices);
 
-    output_string = sprintf('  {{%d, %d, %d, %d, %.1f, {%s}}, {"%s"}, {"%s"}, {"%s"}},\n', NCellID, SSB_index, ssb_first_subcarrier, ssb_first_symbol, ssb_amplitude, ssb_ports_str, cw_filename, symbols_filename, symbol_indices_filename);
+    % generate the configuration substring
+    config_string = sprintf('{%d, %d, %d, %d, %.1f, {%s}}', NCellID, SSB_index, ssb_first_subcarrier, ssb_first_symbol, ssb_amplitude, ssb_ports_str);
+
+    % generate the test case entry
+    output_string = sprintf('  {%s,"%s","%s"},\n', config_string, cw_filename, symbols_filename);
 end

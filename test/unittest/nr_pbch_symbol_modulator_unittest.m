@@ -30,6 +30,11 @@ classdef nr_pbch_symbol_modulator_unittest < matlab.unittest.TestCase
 %
 %   See also MATLAB.UNITTEST.
 
+    properties
+        output_path = '../testvector_outputs';
+        base_filename = 'pbch_modulator_test';
+    end
+
     properties (TestParameter) % we are really interestEd
         randomize_testvector = num2cell(randi([1,1008],1,24));
         NCellID = num2cell(0:1:1007);
@@ -53,16 +58,18 @@ classdef nr_pbch_symbol_modulator_unittest < matlab.unittest.TestCase
     methods (Test, TestTags = {'testvector'})
         function initialize_testvector(testCase)
             % delete previous testvectors (if any)
-            file = dir ('pbch_modulator_test*');
-            filenames = {file.name};
-            if length(filenames) > 0
-                delete(filenames{:});
-            end;
+            if isfolder(sprintf('%s',testCase.output_path))
+              rmdir(sprintf('%s',testCase.output_path),'s');
+            end
+
+            % create an output directory
+            mkdir(sprintf('%s',testCase.output_path));
 
             % write the file header
-            testvector_header_file_id = fopen('pbch_modulator_test_data.h', 'w');
-            fprintf(testvector_header_file_id, '#ifndef SRSGNB_UNITTEST_PHY_CHANNEL_PROCESSORS_PBCH_MODULATOR_TEST_DATA_H_\n');
-            fprintf(testvector_header_file_id, '#define SRSGNB_UNITTEST_PHY_CHANNEL_PROCESSORS_PBCH_MODULATOR_TEST_DATA_H_\n');
+            header_filename = sprintf('%s/%s_data.h', testCase.output_path,testCase.base_filename);
+            testvector_header_file_id = fopen(header_filename, 'w');
+            fprintf(testvector_header_file_id, '#ifndef SRSGNB_UNITTEST_PHY_CHANNEL_PROCESSORS_PBCH_MODULATOR_TEST_DATA_H\n');
+            fprintf(testvector_header_file_id, '#define SRSGNB_UNITTEST_PHY_CHANNEL_PROCESSORS_PBCH_MODULATOR_TEST_DATA_H\n');
             fprintf(testvector_header_file_id, '\n');
             fprintf(testvector_header_file_id, '// This file was generated using the following MATLAB scripts:\n');
             fprintf(testvector_header_file_id, '//   + "nr_pbch_symbol_modulator_unittest.m"\n');
@@ -76,10 +83,9 @@ classdef nr_pbch_symbol_modulator_unittest < matlab.unittest.TestCase
             fprintf(testvector_header_file_id, 'namespace srsgnb {\n');
             fprintf(testvector_header_file_id, '\n');
             fprintf(testvector_header_file_id, 'struct test_case_t {\n');
-            fprintf(testvector_header_file_id, '  pbch_modulator::config_t                   args;\n');
-            fprintf(testvector_header_file_id, '  std::string                                data_filename;\n');
-            fprintf(testvector_header_file_id, '  std::string                                symbols_filename;\n');
-            fprintf(testvector_header_file_id, '  std::string                                symbol_indices_filename;\n');
+            fprintf(testvector_header_file_id, '  pbch_modulator::config_t                config;\n');
+            fprintf(testvector_header_file_id, '  file_vector<uint8_t>                    data;\n');
+            fprintf(testvector_header_file_id, '  file_vector<resource_grid_spy::entry_t> symbols;\n');
             fprintf(testvector_header_file_id, '};\n');
             fprintf(testvector_header_file_id, '\n');
             fprintf(testvector_header_file_id, 'static const std::vector<test_case_t> pbch_modulator_test_data = {\n');
@@ -88,9 +94,10 @@ classdef nr_pbch_symbol_modulator_unittest < matlab.unittest.TestCase
 
         function testvector_generation_cases(testCase, SSB_index, SSB_Lmax)
             % generate a unique test ID
-            file = dir ('pbch_modulator_test_data*');
+            filename_template = sprintf('%s/%s_input*', testCase.output_path,testCase.base_filename);
+            file = dir (filename_template);
             filenames = {file.name};
-            testID = length(filenames)-1; % at least 'pbch_modulator_test_data.h' will be present
+            testID = length(filenames);
 
             % use a unique NCellID and cw for each test
             randomized_test_case = testCase.randomize_testvector{testID+1};
@@ -101,41 +108,43 @@ classdef nr_pbch_symbol_modulator_unittest < matlab.unittest.TestCase
             end;
 
             % add a new testvector to the unit test outputs
-            output_string = nr_pbch_modulation_symbols_testvector_add(NCellID,cw,SSB_index,SSB_Lmax,testID);
+            output_string = nr_pbch_modulation_symbols_testvector_add(NCellID,cw,SSB_index,SSB_Lmax,testID,sprintf('%s', testCase.output_path));
 
             % add the test to the file header
-            testvector_header_file_id = fopen('pbch_modulator_test_data.h', 'a+');
+            header_filename = sprintf('%s/%s_data.h', testCase.output_path,testCase.base_filename);
+            testvector_header_file_id = fopen(header_filename, 'a+');
             fprintf(testvector_header_file_id, '%s', output_string);
             fclose(testvector_header_file_id);
         end
 
         function close_testvector(testCase)
             % write the remaining .h file contents
-            testvector_header_file_id = fopen('pbch_modulator_test_data.h', 'a+');
+            header_filename = sprintf('%s/%s_data.h', testCase.output_path,testCase.base_filename);
+            testvector_header_file_id = fopen(header_filename, 'a+');
             fprintf(testvector_header_file_id, '};\n');
             fprintf(testvector_header_file_id, '\n');
             fprintf(testvector_header_file_id, '} // srsgnb\n');
             fprintf(testvector_header_file_id, '\n');
-            fprintf(testvector_header_file_id,'#endif // SRSGNB_UNITTEST_PHY_CHANNEL_PROCESSORS_PBCH_MODULATOR_TEST_DATA_H_\n');
+            fprintf(testvector_header_file_id,'#endif // SRSGNB_UNITTEST_PHY_CHANNEL_PROCESSORS_PBCH_MODULATOR_TEST_DATA_H\n');
             fclose(testvector_header_file_id);
         end
     end
 
 %     methods (Test, TestTags = {'srs_phy_validation'})
-% 
+%
 %         function srsphy_validation_cases(testCase, NCellID, SSB_index, SSB_Lmax)
 %             % use a cw for each test
 %             cw=zeros(864,1);
 %             for index = 1: 864
 %                 cw(index) = testCase.cw{index,NCellID+1};
 %             end;
-% 
+%
 %             % call the Matlab PHY function
 %             [mat_modulated_symbols,mat_symbol_indices] = nr_pbch_modulation_symbols_generate(cw,NCellID,SSB_index,SSB_Lmax);
-% 
+%
 %             % call the SRS PHY function
 %             % TBD: [srs_modulated_symbols, srs_symbol_indices] = nr_pbch_modulation_symbols_srs_phy_test(cw,NCellID,SSB_index,SSB_Lmax);
-% 
+%
 %             % compare the results
 %             % TBD: testCase.verifyEqual(mat_modulated_symbols, srs_modulated_symbols);
 %             % TBD: testCase.verifyEqual(mat_symbol_indices, srs_symbol_indices);
