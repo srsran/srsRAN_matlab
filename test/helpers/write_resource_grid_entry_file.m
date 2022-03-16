@@ -13,11 +13,11 @@ function write_resource_grid_entry_file(filename,data,indices)
     fileID = fopen(filename,'w');
     data_length = length(data);
     for idx=1:data_length
+        fwrite(fileID,indices(idx,3),'uint32');
+        fwrite(fileID,indices(idx,2),'uint32');
+        fwrite(fileID,indices(idx,1),'uint32');
         fwrite(fileID,real(data(idx)),'float');
         fwrite(fileID,imag(data(idx)),'float');
-        fwrite(fileID,indices(idx,3),'int');
-        fwrite(fileID,indices(idx,2),'int');
-        fwrite(fileID,indices(idx,1),'int');
     end
     fclose(fileID);
 end

@@ -12,6 +12,6 @@ function write_uint8_file(filename,data)
     data_length = length(data);
     for idx=1:data_length
         fwrite(fileID,data(idx),'uint8');
-    end
+    end   
     fclose(fileID);
 end
