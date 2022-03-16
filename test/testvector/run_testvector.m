@@ -12,7 +12,7 @@ function run_testvector(class_name)
     addpath('../../src/phy','../unittest','../helpers','../testvector');
 
     % run the testvector generation tests from the related unit test class
-    unittest_filename = ['../unittest/' class_name '.m']
+    unittest_filename = ['../unittest/' class_name '.m'];
     nr_phy_testvector_tests = TestSuite.fromFile(unittest_filename,'Tag','testvector');
     testResults = nr_phy_testvector_tests.run;
 end

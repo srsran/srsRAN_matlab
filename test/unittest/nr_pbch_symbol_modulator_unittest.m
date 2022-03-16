@@ -78,6 +78,7 @@ classdef nr_pbch_symbol_modulator_unittest < matlab.unittest.TestCase
             fprintf(testvector_header_file_id, '#include "../../resource_grid_test_doubles.h"\n');
             fprintf(testvector_header_file_id, '#include "srsgnb/phy/upper/channel_processors/pbch_modulator.h"\n');
             fprintf(testvector_header_file_id, '#include "srsgnb/adt/complex.h"\n');
+            fprintf(testvector_header_file_id, '#include "srsgnb/support/file_vector.h"\n');
             fprintf(testvector_header_file_id, '#include <array>\n');
             fprintf(testvector_header_file_id, '\n');
             fprintf(testvector_header_file_id, 'namespace srsgnb {\n');
