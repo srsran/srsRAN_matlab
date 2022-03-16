@@ -42,5 +42,5 @@ function output_string = nr_pbch_modulation_symbols_testvector_add(NCellID,cw,SS
     config_string = sprintf('{%d, %d, %d, %d, %.1f, {%s}}', NCellID, SSB_index, ssb_first_subcarrier, ssb_first_symbol, ssb_amplitude, ssb_ports_str);
 
     % generate the test case entry
-    output_string = sprintf('  {%s,"%s","%s"},\n', config_string, cw_filename, symbols_filename);
+    output_string = sprintf('  {%s,{"%s"},{"%s"}},\n', config_string, cw_filename, symbols_filename);
 end
