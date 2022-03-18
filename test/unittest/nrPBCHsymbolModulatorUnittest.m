@@ -33,6 +33,7 @@ classdef nrPBCHsymbolModulatorUnittest < matlab.unittest.TestCase
     properties
         outputPath = '../testvector_outputs';
         baseFilename = 'pbch_modulator_test';
+        testImpl;
     end
 
     properties (TestParameter) % we are really interestEd
@@ -45,6 +46,12 @@ classdef nrPBCHsymbolModulatorUnittest < matlab.unittest.TestCase
 
     methods (TestClassSetup)
         function initialize(testCase)
+            % create test vector implementation object
+            testCaseName = class(testCase);
+            testVectName = [testCaseName(1:end - length('Unittest')) 'TestvectorImpl'];
+            constructor = str2func(testVectName);
+            testCase.testImpl = constructor();
+
             % setup the random seed
             seed = 1234;
             rng(seed);
@@ -52,7 +59,7 @@ classdef nrPBCHsymbolModulatorUnittest < matlab.unittest.TestCase
             % add main folder to the Matlab path
             p = path;
             testCase.addTeardown(@path, p);
-        end;
+        end
     end
 
     methods (Test, TestTags = {'testvector'})
@@ -102,17 +109,17 @@ classdef nrPBCHsymbolModulatorUnittest < matlab.unittest.TestCase
 
             % use a unique NCellID and cw for each test
             randomizedTestCase = testCase.randomizeTestvector{testID+1};
-            NCellID = testCase.NCellID{randomizedTestCase};
-            cw = zeros(864, 1);
+            cellID = testCase.NCellID{randomizedTestCase};
+            codeWord = zeros(864, 1);
             for index = 1: 864
-                cw(index) = testCase.cw{index,randomizedTestCase};
-            end;
+                codeWord(index) = testCase.cw{index,randomizedTestCase};
+            end
 
             % Lmax is currently fixed (Lmax = 4 is not currently supported, and Lmax = 64 and Lmax = 8 are equivalent in this stage)
-            Lmax = 8;
+            SSBLmax = 8;
 
             % add a new testvector to the unit test outputs
-            outputString = nrPBCHmodulationSymbolsTestvectorAdd(NCellID, cw, SSBindex, Lmax, testID, sprintf('%s', testCase.outputPath));
+            outputString = testCase.testImpl.addTestCase(testID, cellID, codeWord, SSBindex, SSBLmax, sprintf('%s', testCase.outputPath));
 
             % add the test to the file header
             headerFilename = sprintf('%s/%s_data.h', testCase.outputPath, testCase.baseFilename);
@@ -132,13 +139,8 @@ classdef nrPBCHsymbolModulatorUnittest < matlab.unittest.TestCase
             fprintf(testvectorHeaderFileID,'#endif // SRSGNB_UNITTEST_PHY_CHANNEL_PROCESSORS_PBCH_MODULATOR_TEST_DATA_H\n');
             fclose(testvectorHeaderFileID);
 
-            % zip generated testvector files
-            oldpath = cd(sprintf('%s', testCase.outputPath));
-            tarfile = tar(sprintf('%s_data.tar', testCase.baseFilename), {'*.dat'});
-            gzipfile = gzip(sprintf('%s_data.tar', testCase.baseFilename));
-            delete(sprintf('%s/%s_data.tar', testCase.outputPath, testCase.baseFilename));
-            delete('*.dat');
-            cd(oldpath);
+            % gzip generated testvector files
+            testCase.testImpl.packResults(headerFilename, testCase.baseFilename, testCase.outputPath);
         end
     end
 
