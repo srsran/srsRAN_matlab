@@ -11,8 +11,8 @@
 
 function writeResourceGridEntryFile(filename, data, indices)
     fileID = fopen(filename, 'w');
-    data_length = length(data);
-    for idx = 1:data_length
+    dataLength = length(data);
+    for idx = 1:dataLength
         fwrite(fileID, indices(idx, 3), 'uint8');
         fwrite(fileID, indices(idx, 2), 'uint8');
         fwrite(fileID, indices(idx, 1), 'uint16');

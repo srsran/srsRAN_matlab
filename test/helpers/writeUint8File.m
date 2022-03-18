@@ -9,8 +9,8 @@
 
 function writeUint8File(filename, data)
     fileID = fopen(filename, 'w');
-    data_length = length(data);
-    for idx = 1:data_length
+    dataLength = length(data);
+    for idx = 1:dataLength
         fwrite(fileID, data(idx), 'uint8');
     end
     fclose(fileID);
