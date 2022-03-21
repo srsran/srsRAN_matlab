@@ -1,4 +1,4 @@
-classdef nrPBCHsymbolModulatorUnittest < matlab.unittest.TestCase
+classdef nrPBCHmodulatorUnittest < matlab.unittest.TestCase
 %NRPBCHSYMBOLMODULATORUNITTEST Unit tests for PBCH symbol modulator functions
 %  This class implements unit tests for the PBCH symbol modulator functions using the
 %  matlab.unittest framework. The simplest use consists in creating an object with
@@ -30,13 +30,10 @@ classdef nrPBCHsymbolModulatorUnittest < matlab.unittest.TestCase
 %
 %  See also MATLAB.UNITTEST.
 
-    properties
-        outputPath = '../../../../testvector_outputs';
-        baseFilename = 'pbch_modulator';
-        testImpl;
-    end
-
-    properties (TestParameter) % we are really interestEd
+    properties (TestParameter)
+        outputPath = {''};
+        baseFilename = {''};
+        testImpl = {''};
         randomizeTestvector = num2cell(randi([1, 1008], 1, 24));
         NCellID = num2cell(0:1:1007);
         cw = num2cell(randi([0 1], 864, 1008));
@@ -46,13 +43,6 @@ classdef nrPBCHsymbolModulatorUnittest < matlab.unittest.TestCase
 
     methods (TestClassSetup)
         function initialize(testCase)
-            % create test vector implementation object
-            testCase.testImpl = testvector;
-
-            % setup the random seed
-            seed = 1234;
-            rng(seed);
-
             % add main folder to the Matlab path
             p = path;
             testCase.addTeardown(@path, p);
@@ -60,17 +50,9 @@ classdef nrPBCHsymbolModulatorUnittest < matlab.unittest.TestCase
     end
 
     methods (Test, TestTags = {'testvector'})
-        function initializeTestvector(testCase)
-            % create folder and remove old testvectors (if needed)
-            testCase.testImpl.createOutputFolder(testCase.baseFilename, testCase.outputPath);
-
-            % create the header file with the initial contents
-            testCase.testImpl.createChannelProcessorsHeaderFile(testCase.baseFilename, testCase.outputPath, mfilename);
-        end
-
-        function testvectorGenerationCases(testCase, SSBindex)
+        function testvectorGenerationCases(testCase, testImpl, outputPath, baseFilename, SSBindex)
             % generate a unique test ID
-            filenameTemplate = sprintf('%s/%s_test_input*', testCase.outputPath, testCase.baseFilename);
+            filenameTemplate = sprintf('%s/%s_test_input*', outputPath, baseFilename);
             file = dir (filenameTemplate);
             filenames = {file.name};
             testID = length(filenames);
@@ -93,28 +75,20 @@ classdef nrPBCHsymbolModulatorUnittest < matlab.unittest.TestCase
             SSBportsStr = convertArrayToString(SSBports);
 
             % write the BCH cw to a binary file
-            testCase.testImpl.saveDataFile(testCase.baseFilename, '_test_input', testID, testCase.outputPath, 'writeUint8File', cw);
+            testImpl.saveDataFile(baseFilename, '_test_input', testID, outputPath, 'writeUint8File', cw);
 
             % call the PBCH symbol modulation Matlab functions
-            [modulatedSymbols, symbolIndices] = nrPBCHmodulationSymbolsGenerate(cw, NCellID, SSBindex, Lmax);
+            [modulatedSymbols, symbolIndices] = nrPBCHmodulator(cw, NCellID, SSBindex, Lmax);
 
             % write each complex symbol into a binary file, and the associated indices to another
-            testCase.testImpl.saveDataFile(testCase.baseFilename, '_test_output', testID, testCase.outputPath, 'writeResourceGridEntryFile', modulatedSymbols, symbolIndices);
+            testImpl.saveDataFile(baseFilename, '_test_output', testID, outputPath, 'writeResourceGridEntryFile', modulatedSymbols, symbolIndices);
 
             % generate the test case entry
-            testCaseString = testCase.testImpl.testCaseToString('{%d, %d, %d, %d, %.1f, {%s}}', testCase.baseFilename, testID, NCellID, SSBindex, ...
+            testCaseString = testImpl.testCaseToString('{%d, %d, %d, %d, %.1f, {%s}}', baseFilename, testID, NCellID, SSBindex, ...
                                                                 SSBfirstSubcarrier, SSBfirstSymbol, SSBamplitude, SSBportsStr);
 
             % add the test to the file header
-            testCase.testImpl.addTestToChannelProcessorsHeaderFile(testCaseString, testCase.baseFilename, testCase.outputPath);
-        end
-
-        function closeTestvector(testCase)
-            % write the remaining header file contents
-            testCase.testImpl.closeChannelProcessorsHeaderFile(testCase.baseFilename, testCase.outputPath);
-
-            % gzip generated testvector files
-            testCase.testImpl.packResults(testCase.baseFilename, testCase.outputPath);
+            testImpl.addTestToChannelProcessorsHeaderFile(testCaseString, baseFilename, outputPath);
         end
     end
 
@@ -128,10 +102,10 @@ classdef nrPBCHsymbolModulatorUnittest < matlab.unittest.TestCase
 %             end;
 %
 %             % call the Matlab PHY function
-%             [matModulatedSymbols, matSymbolIndices] = nrPBCHmodulationSymbolsGenerate(cw, NCellID, SSBindex, Lmax);
+%             [matModulatedSymbols, matSymbolIndices] = nrPBCHmodulator(cw, NCellID, SSBindex, Lmax);
 %
 %             % call the SRS PHY function
-%             % TBD: [srsModulatedSymbols, srsSymbolIndices] = nr_pbch_modulation_symbols_srs_phy_test(cw, NCellID, SSBindex, Lmax);
+%             % TBD: [srsModulatedSymbols, srsSymbolIndices] = nrPBCHmodulatorSRSphyTest(cw, NCellID, SSBindex, Lmax);
 %
 %             % compare the results
 %             % TBD: testCase.verifyEqual(matModulatedSymbols, srsModulatedSymbols);

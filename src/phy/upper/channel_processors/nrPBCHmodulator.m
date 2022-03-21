@@ -1,8 +1,8 @@
-%NR_PBCH_MODULATION_SYMBOLS_GENERATE:
+%NRPBCHMODULATOR:
 %  Function generating the PBCH modulation symbols.
 %
 %  Call details:
-%    [MODULATEDSYMBOLS, SYMBOLINDICES] = NR_PBCH_MODULATION_SYMBOLS_GENERATE(CW, NCELLID, LMAX) receives the parameters
+%    [MODULATEDSYMBOLS, SYMBOLINDICES] = NRPBCHMODULATOR(CW, NCELLID, LMAX) receives the parameters
 %      * double array CW - BCH codeword
 %      * double NCELLID  - PHY-layer cell ID
 %      * double SSBINDEX - index of the SSB
@@ -11,7 +11,7 @@
 %      * complex double array MODULATEDSYMBOLS - PBCH modulated symbols
 %      * uint32 array SYMBOLINDICES            - PBCH RE indices
 
-function [modulatedSymbols, symbolIndices] = nrPBCHmodulationSymbolsGenerate(cw, NCellID, SSBindex, Lmax)
+function [modulatedSymbols, symbolIndices] = nrPBCHmodulator(cw, NCellID, SSBindex, Lmax)
 
     % v as described in TS 38.211 Section 7.3.3.1
     if Lmax == 4

@@ -9,8 +9,8 @@
 
 function outputString = convertArrayToString(inputArray)
     outputString = '';
-    for data_value = inputArray
-        outputString = [outputString, sprintf('%d,', data_value)];
+    for dataValue = inputArray
+        outputString = [outputString, sprintf('%d,', dataValue)];
     end
     outputString = outputString(1:end-1);
 end
