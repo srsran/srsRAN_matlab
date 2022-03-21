@@ -1,4 +1,4 @@
-classdef nrPBCHmodulatorUnittest < matlab.unittest.TestCase
+classdef srsPBCHmodulatorUnittest < matlab.unittest.TestCase
 %NRPBCHSYMBOLMODULATORUNITTEST Unit tests for PBCH symbol modulator functions
 %  This class implements unit tests for the PBCH symbol modulator functions using the
 %  matlab.unittest framework. The simplest use consists in creating an object with
@@ -78,7 +78,7 @@ classdef nrPBCHmodulatorUnittest < matlab.unittest.TestCase
             testImpl.saveDataFile(baseFilename, '_test_input', testID, outputPath, 'writeUint8File', cw);
 
             % call the PBCH symbol modulation Matlab functions
-            [modulatedSymbols, symbolIndices] = nrPBCHmodulator(cw, NCellID, SSBindex, Lmax);
+            [modulatedSymbols, symbolIndices] = srsPBCHmodulator(cw, NCellID, SSBindex, Lmax);
 
             % write each complex symbol into a binary file, and the associated indices to another
             testImpl.saveDataFile(baseFilename, '_test_output', testID, outputPath, 'writeResourceGridEntryFile', modulatedSymbols, symbolIndices);
@@ -102,10 +102,10 @@ classdef nrPBCHmodulatorUnittest < matlab.unittest.TestCase
 %             end;
 %
 %             % call the Matlab PHY function
-%             [matModulatedSymbols, matSymbolIndices] = nrPBCHmodulator(cw, NCellID, SSBindex, Lmax);
+%             [matModulatedSymbols, matSymbolIndices] = srsPBCHmodulator(cw, NCellID, SSBindex, Lmax);
 %
 %             % call the SRS PHY function
-%             % TBD: [srsModulatedSymbols, srsSymbolIndices] = nrPBCHmodulatorSRSphyTest(cw, NCellID, SSBindex, Lmax);
+%             % TBD: [srsModulatedSymbols, srsSymbolIndices] = srsPBCHmodulatorPHYtest(cw, NCellID, SSBindex, Lmax);
 %
 %             % compare the results
 %             % TBD: testCase.verifyEqual(matModulatedSymbols, srsModulatedSymbols);
