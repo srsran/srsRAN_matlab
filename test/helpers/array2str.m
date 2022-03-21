@@ -2,12 +2,13 @@
 %  Function converting an array of numeric values to a string.
 %
 %  Call details:
-%    OUTPUTSTRING = ARRAY2STR(INPUTARRAY) receives the input parameters
+%    OUTPUTSTRING = ARRAY2STR(INPUTARRAY, INPUTISFLOAT) receives the input parameters
 %        * double array INPUTARRAY - set of numeric values
+%        * boolean INPUTISFLOAT    - specifies if the input array has integer (false) or float (true) values
 %    and returns
 %        * string OUTPUTSTRING - string generated from the input numeric values
 
-function outputString = array2str(inputArray,inputIsFloat)
+function outputString = array2str(inputArray, inputIsFloat)
     if inputIsFloat
         fmt = '%.3f';
     else
