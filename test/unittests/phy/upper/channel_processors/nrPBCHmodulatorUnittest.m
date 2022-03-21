@@ -72,7 +72,7 @@ classdef nrPBCHmodulatorUnittest < matlab.unittest.TestCase
             SSBfirstSymbol = 0;
             SSBamplitude = 1;
             SSBports = zeros(numPorts, 1);
-            SSBportsStr = convertArrayToString(SSBports);
+            SSBportsStr = array2str(SSBports, false);
 
             % write the BCH cw to a binary file
             testImpl.saveDataFile(baseFilename, '_test_input', testID, outputPath, 'writeUint8File', cw);
@@ -85,7 +85,7 @@ classdef nrPBCHmodulatorUnittest < matlab.unittest.TestCase
 
             % generate the test case entry
             testCaseString = testImpl.testCaseToString('{%d, %d, %d, %d, %.1f, {%s}}', baseFilename, testID, NCellID, SSBindex, ...
-                                                                SSBfirstSubcarrier, SSBfirstSymbol, SSBamplitude, SSBportsStr);
+                                                       SSBfirstSubcarrier, SSBfirstSymbol, SSBamplitude, SSBportsStr);
 
             % add the test to the file header
             testImpl.addTestToChannelProcessorsHeaderFile(testCaseString, baseFilename, outputPath);
