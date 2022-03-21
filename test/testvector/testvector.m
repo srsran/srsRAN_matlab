@@ -63,7 +63,7 @@ classdef testvector
             fprintf(testvectorHeaderFileID, '\n');
             fprintf(testvectorHeaderFileID, '} // srsgnb\n');
             fprintf(testvectorHeaderFileID, '\n');
-            fprintf(testvectorHeaderFileID,'#endif // SRSGNB_UNITTEST_PHY_CHANNEL_PROCESSORS_%s_TEST_DATA_H\n', upper(unitUnderTest));
+            fprintf(testvectorHeaderFileID,'#endif // SRSGNB_UNITTESTS_PHY_CHANNEL_PROCESSORS_%s_TEST_DATA_H\n', upper(unitUnderTest));
             fclose(testvectorHeaderFileID);
         end
 

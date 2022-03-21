@@ -9,7 +9,7 @@
 %        * string OUTPUTSTRING - string generated from the input numeric values
 
 function outputString = array2str(inputArray, inputIsFloat)
-    if inputIsFloat
+    if any(mod(inputArray,1))>0
         fmt = '%.3f';
     else
         fmt = '%d';
