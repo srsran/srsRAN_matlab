@@ -87,7 +87,7 @@ classdef TestVector
         end
 
         function addTestToHeaderFile(obj, testEntryString, unitUnderTest, outputPath)
-%addTestToHeaderFile(obj, TESTENTRYSTRING, UNITUNDERTEST, OUTPUTPATH)
+%addTestToHeaderFile(OBJ, TESTENTRYSTRING, UNITUNDERTEST, OUTPUTPATH)
 %   adds a new test entry to a upper PHY channel processor unit header file.
 %
 %   Input parameters:
@@ -193,7 +193,7 @@ classdef TestVector
 
             filename = [baseFileName direction num2str(testID) '.dat'];
             fullFilename = [outputPath '/' filename];
-            feval(saveFunction, fullFilename, varargin{:});
+            saveFunction(fullFilename, varargin{:});
         end
 
         function testCaseString = testCaseToString(obj, configFormat, testVectName, testID, varargin)

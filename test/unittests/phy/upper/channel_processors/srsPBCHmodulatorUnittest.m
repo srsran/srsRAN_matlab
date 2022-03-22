@@ -59,14 +59,14 @@ classdef srsPBCHmodulatorUnittest < matlab.unittest.TestCase
 
             % use a unique NCellID and cw for each test
             randomizedTestCase = testCase.randomizeTestvector{testID+1};
-            NCellID = testCase.NCellID{randomizedTestCase};
-            cw = zeros(864, 1);
+            NCellIDLoc = testCase.NCellID{randomizedTestCase};
+            cwLoc = zeros(864, 1);
             for index = 1: 864
-                cw(index) = testCase.cw{index,randomizedTestCase};
+                cwLoc(index) = testCase.cw{index,randomizedTestCase};
             end
 
             % current fixed parameter values as required by the C code (e.g., Lmax = 4 is not currently supported, and Lmax = 64 and Lmax = 8 are equivalent in this stage)
-            Lmax = 8;
+            LmaxLoc = 8;
             numPorts = 1;
             SSBfirstSubcarrier = 0;
             SSBfirstSymbol = 0;
@@ -75,16 +75,16 @@ classdef srsPBCHmodulatorUnittest < matlab.unittest.TestCase
             SSBportsStr = array2str(SSBports);
 
             % write the BCH cw to a binary file
-            testImpl.saveDataFile(baseFilename, '_test_input', testID, outputPath, 'writeUint8File', cw);
+            testImpl.saveDataFile(baseFilename, '_test_input', testID, outputPath, @writeUint8File, cwLoc);
 
             % call the PBCH symbol modulation Matlab functions
-            [modulatedSymbols, symbolIndices] = srsPBCHmodulator(cw, NCellID, SSBindex, Lmax);
+            [modulatedSymbols, symbolIndices] = srsPBCHmodulator(cwLoc, NCellIDLoc, SSBindex, LmaxLoc);
 
             % write each complex symbol into a binary file, and the associated indices to another
-            testImpl.saveDataFile(baseFilename, '_test_output', testID, outputPath, 'writeResourceGridEntryFile', modulatedSymbols, symbolIndices);
+            testImpl.saveDataFile(baseFilename, '_test_output', testID, outputPath, @writeResourceGridEntryFile, modulatedSymbols, symbolIndices);
 
             % generate the test case entry
-            testCaseString = testImpl.testCaseToString('{%d, %d, %d, %d, %.1f, {%s}}', baseFilename, testID, NCellID, SSBindex, ...
+            testCaseString = testImpl.testCaseToString('{%d, %d, %d, %d, %.1f, {%s}}', baseFilename, testID, NCellIDLoc, SSBindex, ...
                                                        SSBfirstSubcarrier, SSBfirstSymbol, SSBamplitude, SSBportsStr);
 
             % add the test to the file header

@@ -11,7 +11,7 @@
 %   Example
 %      runTestvector('unittests','pbch_modulator', 'phy/upper/channel_processors', 'srsPBCHmodulatorUnittest')
 
-function runTestvector(testType, srsPHYblock, pathInRepo, unittestClassName)
+function runTestVector(testType, srsPHYblock, pathInRepo, unittestClassName)
     import matlab.unittest.TestSuite
     import matlab.unittest.parameters.Parameter
 
@@ -46,7 +46,7 @@ function runTestvector(testType, srsPHYblock, pathInRepo, unittestClassName)
     unittestFilename = [testPath '/' unittestClassName '.m'];
     extParams = Parameter.fromData('outputPath', {outputPath}, 'baseFilename', {srsPHYblock}, 'testImpl', {testImpl});
     nrPHYtestvectorTests = TestSuite.fromFile(unittestFilename, 'Tag', 'testvector', 'ExternalParameters', extParams);
-    testResults = nrPHYtestvectorTests.run;
+    nrPHYtestvectorTests.run;
 
     % write the remaining header file contents
     testImpl.closeHeaderFile(srsPHYblock, outputPath);
