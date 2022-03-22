@@ -16,9 +16,9 @@
 %
 %   saveDataFile  - Saves the test data to a file.
 %
-%   testCaseString  - Converts the test case parameters to a string.
+%   testCaseToString  - Converts the test case parameters to a string.
 
-classdef testvector
+classdef TestVector
     properties
         objUnderTestPath = 'phy/upper/channel_processors';
         objUnderTestClass = 'phy';
@@ -74,7 +74,7 @@ classdef testvector
     end
 
     methods
-        function obj = testvector(objPath)
+        function obj = TestVector(objPath)
             obj.objUnderTestPath = objPath;
             obj.objUnderTestPath(obj.objUnderTestPath == '/') = '_';
             obj.objUnderTestPath = upper(obj.objUnderTestPath);
@@ -197,7 +197,7 @@ classdef testvector
         end
 
         function testCaseString = testCaseToString(obj, configFormat, testVectName, testID, varargin)
-%TESTCASESTRING(OBJ, CONFIGFORMAT, TESTVECTNAME, TESTID, VARARGIN) converts the
+%testCaseToString(OBJ, CONFIGFORMAT, TESTVECTNAME, TESTID, VARARGIN) converts the
 %   test case parameters to a string.
 %
 %   Input parameters:

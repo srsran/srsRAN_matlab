@@ -34,7 +34,7 @@ function runTestvector(testType, srsPHYblock, pathInRepo, unittestClassName)
     addpath(srcPath, testPath, helpersPath, testvectorPath);
 
     % create a test vector implementation object
-    testImpl = testvector(pathInRepo);
+    testImpl = TestVector(pathInRepo);
 
     % create the output folder and remove old testvectors (if needed)
     testImpl.createOutputFolder(srsPHYblock, outputPath);
