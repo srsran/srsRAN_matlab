@@ -84,14 +84,14 @@ classdef srsPBCHmodulatorUnittest < matlab.unittest.TestCase
             testImpl.saveDataFile(baseFilename, '_test_output', testID, outputPath, @writeResourceGridEntryFile, modulatedSymbols, symbolIndices);
 
             % generate the test case entry
-            testCaseString = testImpl.testCaseToString('{%d, %d, %d, %d, %.1f, {%s}}', baseFilename, testID, NCellIDLoc, SSBindex, ...
+            testCaseString = testImpl.testCaseToString('{%d, %d, %d, %d, %.1f, {%s}}', baseFilename, testID, 1, NCellIDLoc, SSBindex, ...
                                                        SSBfirstSubcarrier, SSBfirstSymbol, SSBamplitude, SSBportsStr);
 
             % add the test to the file header
             testImpl.addTestToHeaderFile(testCaseString, baseFilename, outputPath);
         end
     end
- 
+
 %     methods (Test, TestTags = {'srs_phy_validation'})
 %
 %         function srsPHYvalidationCases(testCase, NCellID, SSBindex, Lmax)

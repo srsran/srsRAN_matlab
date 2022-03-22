@@ -25,7 +25,7 @@ classdef TestVector
         phyObjUnderTestClass = 'channel_processors'
     end
 
-    methods (Access = private) 
+    methods (Access = private)
         function addTestDefinitionToHeaderFile(obj, fileID, unitUnderTest, callingFunc)
             fprintf(fileID, '#ifndef SRSGNB_UNITTESTS_%s_%s_TEST_DATA_H\n', obj.objUnderTestPath, upper(unitUnderTest));
             fprintf(fileID, '#define SRSGNB_UNITTESTS_%s_%s_TEST_DATA_H\n', obj.objUnderTestPath, upper(unitUnderTest));
@@ -44,10 +44,13 @@ classdef TestVector
             addTestDefinitionToHeaderFile(obj, testvectorHeaderFileID, unitUnderTest, callingFunc);
 
             fprintf(testvectorHeaderFileID, '#include "srsgnb/adt/complex.h"\n');
+            if strcmp(obj.phyObjUnderTestClass, 'signal_processors')
+                fprintf(testvectorHeaderFileID, '#include "srsgnb/adt/to_array.h"\n');
+            end
             fprintf(testvectorHeaderFileID, '#include "srsgnb/phy/upper/%s/%s.h"\n', lower(obj.phyObjUnderTestClass), unitUnderTest);
             fprintf(testvectorHeaderFileID, '#include "srsgnb/support/file_vector.h"\n');
             fprintf(testvectorHeaderFileID, '#include <array>\n');
-            if strcmp(obj.phyObjUnderTestClass, 'channel_processors')
+            if strcmp(obj.phyObjUnderTestClass, 'channel_processors') || strcmp(obj.phyObjUnderTestClass, 'signal_processors')
                 fprintf(testvectorHeaderFileID, '#include "../../resource_grid_test_doubles.h"\n');
             end
             fprintf(testvectorHeaderFileID, '\n');
@@ -56,9 +59,11 @@ classdef TestVector
             fprintf(testvectorHeaderFileID, 'struct test_case_t {\n');
 
             switch lower(obj.phyObjUnderTestClass)
-              case 'channel_processors'
+              case {'channel_processors', 'signal_processors'}
                   fprintf(testvectorHeaderFileID, '  %s::config_t                                config;\n', unitUnderTest);
-                  fprintf(testvectorHeaderFileID, '  file_vector<uint8_t>                                    data;\n');
+                  if strcmp(obj.phyObjUnderTestClass, 'channel_processors')
+                      fprintf(testvectorHeaderFileID, '  file_vector<uint8_t>                                    data;\n');
+                  end
                   fprintf(testvectorHeaderFileID, '  file_vector<resource_grid_writer_spy::expected_entry_t> symbols;\n');
               case 'channel_modulation'
                   fprintf(testvectorHeaderFileID, '  std::size_t nsymbols;\n');
@@ -196,7 +201,7 @@ classdef TestVector
             saveFunction(fullFilename, varargin{:});
         end
 
-        function testCaseString = testCaseToString(obj, configFormat, testVectName, testID, varargin)
+        function testCaseString = testCaseToString(obj, configFormat, testVectName, testID, inAndOut, varargin)
 %testCaseToString(OBJ, CONFIGFORMAT, TESTVECTNAME, TESTID, VARARGIN) converts the
 %   test case parameters to a string.
 %
@@ -210,8 +215,12 @@ classdef TestVector
             inFilename = [testVectName '_test_input' num2str(testID) '.dat'];
             outFilename = [testVectName '_test_output' num2str(testID) '.dat'];
 
-            % generate the test case entry
-            testCaseString = sprintf('  {%s,{"%s"},{"%s"}},\n', configStr, inFilename, outFilename);
+            % generate the test case entry (checking first if we generate both input and output data)
+            if inAndOut == 1
+                testCaseString = sprintf('  {%s,{"%s"},{"%s"}},\n', configStr, inFilename, outFilename);
+            else
+                testCaseString = sprintf('  {%s,{"%s"}},\n', configStr, outFilename);
+            end
         end
     end
 end

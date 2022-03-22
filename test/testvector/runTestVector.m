@@ -30,7 +30,8 @@ function runTestVector(testType, srsPHYblock, pathInRepo, unittestClassName)
     % define the absolute output paths
     outputPath = [rootPath{1} '/test/testvector_outputs'];
 
-    % add the simulator folders to the MATLAB path
+    % temporarily add the simulator folders to the MATLAB path
+    oldPath = path;
     addpath(srcPath, testPath, helpersPath, testvectorPath);
 
     % create a test vector implementation object
@@ -53,4 +54,7 @@ function runTestVector(testType, srsPHYblock, pathInRepo, unittestClassName)
 
     % gzip generated testvector files
     testImpl.packResults(srsPHYblock, outputPath);
+
+    % restore path
+    path(oldPath);
 end

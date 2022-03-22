@@ -62,8 +62,8 @@ classdef srsModulationMapperUnittest < matlab.unittest.TestCase
 
             % generate the test case entry
             modSchemeString = modScheme{length(modScheme)};
-              
-            testCaseString = testImpl.testCaseToString('%d, modulation_scheme::%s', baseFilename, testID, nSymbols, modSchemeString);
+
+            testCaseString = testImpl.testCaseToString('%d, modulation_scheme::%s', baseFilename, testID, 1, nSymbols, modSchemeString);
 
             % add the test to the file header
             testImpl.addTestToHeaderFile(testCaseString, baseFilename, outputPath);
