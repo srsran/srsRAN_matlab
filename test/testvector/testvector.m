@@ -1,49 +1,22 @@
-%TESTVECTOR:
-%   Class for testvector generation implementations.
+%TESTVECTOR Test vector generation.
+%   Common functionalitis shared by all test vector generation
+%   implementations.
 %
-%   This class implements a common functionality used by testvector generation implementations,
+%   TESTVECTOR Methods:
 %
-%  TESTVECTOR Methods:
-%    The following methods are available:
-%      * addTestToChannelProcessorsHeaderFile(obj, testEntryString, unitUnderTest, outputPath)
-%        adds a new test entry to a upper PHY channel processor units header file, receives the
-%        input parameters
-%        * string TESTENTRYSTRING - test entry to be added to the header file
-%        * string UNITUNDERTEST   - name of the current channel processor unit under test
-%        * string OUTPUTPATH      - path where the channel processor header file should be created
-%      * closeChannelProcessorsHeaderFile(obj, unitUnderTest, outputPath) adds the closing content
-%        to a header file for the upper PHY channel processor units, receives the input parameters
-%        * string UNITUNDERTEST - name of the current channel processor unit under test
-%        * string OUTPUTPATH    - path where the channel processor header file should be created
-%      * createChannelProcessorsHeaderFile(obj, unitUnderTest, outputPath, callingFunc) creates
-%        a header file for the upper PHY channel processor units, receives the input parameters
-%        * string UNITUNDERTEST - name of the current channel processor unit under test
-%        * string OUTPUTPATH    - path where the channel processor header file should be created
-%        * string CALLINGFUNC   - name of the calling function
-%      * createOutputFolder(obj, baseFileName, outputPath) creates the folder where testvectors
-%        will be stored (deleting the previous testvectors, if any), receives the input parameters
-%        * string BASEFILENAME  - defines the base name of the testvector files
-%        * string OUTPUTPATH    - path where the testvector files should be created
-%      * packResults(obj, headerFilename, baseFileName, outputPath) packs all generated testvectors
-%        in a single .tar.gz file, receives the input parameters
-%        * string HEADERFILENAME  - defines the name of the related header file
-%        * string BASEFILENAME    - defines the base name of the testvector files
-%        * string OUTPUTPATH      - path where the testvector files should be created
-%      * saveDataFile(obj, baseFileName, direction, testID, outputPath, saveFunction, varargin) saves
-%        the test data to a file, receives the input parameters
-%        * string BASEFILENAME - defines the base name of the testvector files
-%        * string DIRECTION    - defines if the file is an input or an output to/from the test
-%        * double TESTID       - unique identifier for the test case
-%        * string OUTPUTPATH   - defines the path where the file should be created
-%        * variable VARARGIN   - specific set of input parameters to the unit under test
-%        * string SAVEFUCNTION - defines which specific file-write function should be called
-%        * variable VARARGIN   - specific set of input parameters to the file-write function
-%      * testCaseString(obj, configFormat, testVectName, testID, varargin) converts the test case
-%        parameters to a string, receives the input parameters
-%        * string CONFIGFORMAT - defines the format of the configuration paramter struct
-%        * string TESTVECTNAME - defines the base name of the testvector files
-%        * double TESTID       - unique identifier for the test case
-%        * variable VARARGIN   - specific set of input parameters to the unit under test
+%   addTestToHeaderFile  - Adds a new test entry to a upper
+%         PHY channel processor unit header file.
+%   closeHeaderFile  - Adds the closing content to a header
+%        file for the upper PHY channel processor units.
+%   createHeaderFile  - Creates a header file for the upper
+%        PHY channel processor units.
+%   createOutputFolder  - Creates the folder where the testvectors will be stored.
+%
+%   packResults  - Packs all generated testvectors in a single '.tar.gz' file.
+%
+%   saveDataFile  - Saves the test data to a file.
+%
+%   testCaseString  - Converts the test case parameters to a string.
 
 classdef testvector
     properties
@@ -114,6 +87,14 @@ classdef testvector
         end
 
         function addTestToHeaderFile(obj, testEntryString, unitUnderTest, outputPath)
+%addTestToHeaderFile(obj, TESTENTRYSTRING, UNITUNDERTEST, OUTPUTPATH)
+%   adds a new test entry to a upper PHY channel processor unit header file.
+%
+%   Input parameters:
+%      TESTENTRYSTRING - Test entry to be added to the header file (string).
+%      UNITUNDERTEST   - Name of the current channel processor unit under test (string).
+%      OUTPUTPATH      - Path where the channel processor header file should be created (string).
+
             % add a new test case entry to the header file
             headerFilename = sprintf('%s/%s_test_data.h', outputPath, unitUnderTest);
             testvectorHeaderFileID = fopen(headerFilename, 'a+');
@@ -122,6 +103,14 @@ classdef testvector
         end
 
         function createHeaderFile(obj, unitUnderTest, outputPath, callingFunc)
+%createHeaderFile(OBJ, UNITUNDERTEST, OUTPUTPATH, CALLINGFUNC)
+%   creates a header file for the upper PHY channel processor units.
+%
+%   Input parameters:
+%      UNITUNDERTEST - Name of the current channel processor unit under test (string).
+%      OUTPUTPATH    - Path where the channel processor header file should be created (string).
+%      CALLINGFUNC   - Name of the calling function (string).
+
             if ~strcmp(obj.objUnderTestClass, 'phy')
               error('testvectors generation is currently supported for "phy" objects only');
             end
@@ -129,6 +118,13 @@ classdef testvector
         end
 
         function closeHeaderFile(obj, unitUnderTest, outputPath)
+%closeHeaderFile(OBJ, UNITUNDERTEST, OUTPUTPATH) adds the
+%   closing content to a header file for the upper PHY channel processor units.
+%
+%   Input parameters:
+%      UNITUNDERTEST - Name of the current channel processor unit under test (string).
+%      OUTPUTPATH    - Path where the channel processor header file should be created.
+
             % write the closing header file contents
             headerFilename = sprintf('%s/%s_test_data.h', outputPath, unitUnderTest);
             testvectorHeaderFileID = fopen(headerFilename, 'a+');
@@ -141,6 +137,13 @@ classdef testvector
         end
 
         function createOutputFolder(obj, baseFileName, outputPath)
+%createOutputFolder(OBJ, BASEFILENAME, OUTPUTPATH) creates the folder where
+%   the test vectors will be stored (deleting the previous test vectors, if any).
+%
+%   Input parameters:
+%      BASEFILENAME  - Defines the base name of the test vector files (string).
+%      OUTPUTPATH    - Path where the test vector files should be created (string).
+
             % delete previous testvectors (if any)
             if isfolder(sprintf('%s', outputPath))
               filenameTemplate = sprintf('%s/%s*.dat', outputPath, baseFileName);
@@ -156,6 +159,14 @@ classdef testvector
         end
 
         function packResults(obj, baseFileName, outputPath)
+%packResults(OBJ, HEADERFILENAME, BASEFILENAME, OUTPUTPATH) packs all generated
+%   test vectors in a single '.tar.gz' file.
+%
+%   Input parameters:
+%      HEADERFILENAME  - Defines the name of the related header file (string).
+%      BASEFILENAME    - Defines the base name of the testvector files (string).
+%      OUTPUTPATH      - Path where the test vector files should be created (string).
+
             % apply clang-format on generated .h file
             headerFilename = sprintf('%s/%s_test_data.h', outputPath, baseFileName);
             system(sprintf('clang-format -i -style=file %s', headerFilename));
@@ -169,12 +180,32 @@ classdef testvector
 
         % varargin is supposed to store list of arguments for saveFunction
         function saveDataFile(obj, baseFileName, direction, testID, outputPath, saveFunction, varargin)
+%saveDataFile(OBJ, BASEFILENAME, DIRECTION, TESTID, OUTPUTPATH, SAVEFUNCTION, VARARGIN)
+%   saves the test data to a file.
+%
+%   Input parameters:
+%      BASEFILENAME - Defines the base name of the testvector files (string).
+%      DIRECTION    - Defines if the file is an input or an output to/from the test (string).
+%      TESTID       - Unique identifier for the test case (integer).
+%      OUTPUTPATH   - Defines the path where the file should be created (string).
+%      SAVEFUCNTION - Defines which specific file-write function should be called (string).
+%      VARARGIN     - Specific set of input parameters to the unit under test (variable length and type).
+
             filename = [baseFileName direction num2str(testID) '.dat'];
             fullFilename = [outputPath '/' filename];
             feval(saveFunction, fullFilename, varargin{:});
         end
 
         function testCaseString = testCaseToString(obj, configFormat, testVectName, testID, varargin)
+%TESTCASESTRING(OBJ, CONFIGFORMAT, TESTVECTNAME, TESTID, VARARGIN) converts the
+%   test case parameters to a string.
+%
+%   Input parameters:
+%      CONFIGFORMAT - Defines the format of the configuration paramter struct (string).
+%      TESTVECTNAME - Defines the base name of the testvector files (string).
+%      TESTID       - Unique identifier for the test case (integer).
+%      VARARGIN     - Specific set of input parameters to the unit under test (variable length and type).
+
             configStr = sprintf(configFormat, varargin{:});
             inFilename = [testVectName '_test_input' num2str(testID) '.dat'];
             outFilename = [testVectName '_test_output' num2str(testID) '.dat'];

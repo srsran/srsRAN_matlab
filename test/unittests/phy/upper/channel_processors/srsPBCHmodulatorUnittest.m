@@ -1,32 +1,26 @@
 classdef srsPBCHmodulatorUnittest < matlab.unittest.TestCase
-%NRPBCHSYMBOLMODULATORUNITTEST Unit tests for PBCH symbol modulator functions
-%  This class implements unit tests for the PBCH symbol modulator functions using the
-%  matlab.unittest framework. The simplest use consists in creating an object with
-%    testCase = PBCH_SYMBOL_MODULATOR_UTEST
-%  and then running all the tests with
-%    testResults = testCase.run
+%SRSPBCHMODULATORUNITTEST Unit tests for PBCH symbol modulator functions.
+%   This class implements unit tests for the PBCH symbol modulator functions using the
+%   matlab.unittest framework. The simplest use consists in creating an object with
+%      testCase = PBCH_SYMBOL_MODULATOR_UTEST
+%   and then running all the tests with
+%      testResults = testCase.run
 %
-%  NRPBCHSYMBOLMODULATORUNITTEST Properties (TestParameter)
-%    SSBindex - SSB index, possible values = [0, ..., 7]
-%    Lmax     - maximum number of SSBs within a SSB set, possible values = [4, 8, 64]
-%    NCellID  - PHY-layer cell ID, possible values = [0, ..., 1007]
-%    cw       - BCH cw, possible values = randi([0 1], 864, 1)
+%   SRSPBCHMODULATORUNITTEST Properties (TestParameter):
 %
-%  NRPBCHSYMBOLMODULATORUNITTEST Methods:
-%    The following methods are available for all test types:
-%      * initialize - adds the required folders to the Matlab path and initializes the random seed
+%   SSBindex - SSB index (0, ..., 7).
+%   Lmax     - Maximum number of SSBs within a SSB set (4, 8, 64).
+%   NCellID  - PHY-layer cell ID (0, ..., 1007).
+%   cw       - BCH codeword (864 bits).
 %
-%    The following methods are available for the testvector generation tests (TestTags = {'testvector'}):
-%      * initializeTestvector      - creates the header file and initializes it
-%      * testvectorGenerationCases - generates testvectors for all possible combinations of SSBindex
-%                                    and Lmax, while using a random NCellID and cw for each test
-%      * closeTestvector           - closes the header file as required
+%   SRSPBCHMODULATORUNITTEST Methods (TestTags = {'testvector'}):
 %
-%    The following methods are available for the SRS PHY validation tests (TestTags = {'srsPHYvalidation'}):
-%      * x                     - TBD
-%      * srsPHYvalidationCases - validates the SRS PHY functions for all possible combinations of SSBindex,
-%                                Lmax and NCellID, while using a random cw for each test
-%      * y                     - TBD
+%   initialize                - Adds the required folders to the MATLAB path and
+%                               initializes the random seed.
+%   testvectorGenerationCases - Generates test vectors for all possible combinations of SSBindex
+%                               and Lmax, while using a random NCellID and cw for each test.
+%
+%   SRSPBCHMODULATORUNITTEST Methods (TestTags = {'srsPHYvalidation'}):
 %
 %  See also MATLAB.UNITTEST.
 
@@ -43,6 +37,9 @@ classdef srsPBCHmodulatorUnittest < matlab.unittest.TestCase
 
     methods (TestClassSetup)
         function initialize(testCase)
+%INITIALIZE Adds the required folders to the MATLAB path and initializes the
+%   random seed.
+
             % add main folder to the Matlab path
             p = path;
             testCase.addTeardown(@path, p);
@@ -51,6 +48,9 @@ classdef srsPBCHmodulatorUnittest < matlab.unittest.TestCase
 
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, testImpl, outputPath, baseFilename, SSBindex)
+%TESTVECTORGENERATIONCASES Generates test vectors for all possible combinations of SSBindex
+%   and Lmax, while using a random NCellID and cw for each test.
+
             % generate a unique test ID
             filenameTemplate = sprintf('%s/%s_test_input*', outputPath, baseFilename);
             file = dir (filenameTemplate);

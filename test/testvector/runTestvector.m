@@ -1,14 +1,15 @@
-%RUNTESTVECTOR:
-%  Function generating unittest testvectors to validate the different PHY functions of SRS GNB.
+%RUNTESTVECTOR Main SRSGNB test interface.
+%   RUNTESTVECTOR('unittests', SRSPHYBLOCK, PATHINREPO, UNITTESTCLASSNAME)
+%   generates test vectors for the SRSPHYBLOCK block of the SRSGNB software.
+%   PATHINREPO specifies the path of the SRSGNB block with respect to the
+%   repository root folder. UNITTESTCASSNAME specifies the MATLAB unit test
+%   class that runs the simulation.
 %
-%  Call details:
-%    RUNTESTVECTOR(TESTTYPE, SRSPHYBLOCK, PATHINREPO, UNITTESTCLASSNAME) receives the input parameter
-%        * string TESTTYPE          - specifies the type of test to be done, currently supported values
-%                                     are 'testvector' and 'srsPHYvalidation'
-%        * string SRSPHYBLOCK       - name of the (C) SRS gNB PHY block under test
-%        * string PATHINREPO        - path to the (C) SRS gNB PHY block under test with respect to the
-%                                     repository root folder
-%        * string UNITTESTCLASSNAME - name of the (Matlab) PHYblockUnittest class to be utilized
+%   RUNTESTVECTOR('srsPHYvalidation', SRSPHYBLOCK, PATHINREPO, UNITTESTCLASSNAME)
+%   tests SRSPHYBLOCK by running a mex version of it.
+%
+%   Example
+%      runTestvector('unittests','pbch_modulator', 'phy/upper/channel_processors', 'srsPBCHmodulatorUnittest')
 
 function runTestvector(testType, srsPHYblock, pathInRepo, unittestClassName)
     import matlab.unittest.TestSuite

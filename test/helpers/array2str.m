@@ -1,12 +1,6 @@
-%ARRAY2STR:
-%  Function converting an array of numeric values to a string.
-%
-%  Call details:
-%    OUTPUTSTRING = ARRAY2STR(INPUTARRAY, INPUTISFLOAT) receives the input parameters
-%        * double array INPUTARRAY - set of numeric values
-%        * boolean INPUTISFLOAT    - specifies if the input array has integer (false) or float (true) values
-%    and returns
-%        * string OUTPUTSTRING - string generated from the input numeric values
+%ARRAY2STR Converts an array of numeric values to a string.
+%   OUTPUTSTRING = ARRAY2STR(INPUTARRAY) converts the numeric array INPUTARRAY
+%   into its character representation OUTPUTSTRING.
 
 function outputString = array2str(inputArray)
     if any(mod(inputArray,1) > 0)

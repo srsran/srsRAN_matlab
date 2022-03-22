@@ -1,13 +1,14 @@
-%WRITERESOURCEGRIDENTRYFILE:
-%  Function generating a new binary file containing a set of complex symbols and its related indices,
-%    formatted to match the 'file_vector<resource_grid_spy::entry_t>' structures used by the SRS gNB.
+%WRITERESOURCEGRIDENTRYFILE Writes resource grid symbols to a binary file.
+%   WRITERESOURCEGRIDENTRYFILE(FILENAME, DATA, INDICES) generates a new binary
+%   file FILENAME containing a set of complex symbols and its related indices,
+%   formatted to match the 'file_vector<resource_grid_spy::entry_t>' structures
+%   used by the SRSGNB.
 %
-%  Call details:
-%    WRITE_RESOURCE_GRID_ENTRY_FILE(FILENAME,  DATA,INDICES) receives the input parameters
-%        * string FILENAME           - name of the file to be generated
-%        * complex double array DATA - set of data samples to be written
-%        * double matrix INDICES     - 3xN matrix with the indices associated to each data sample,
-%                                      each entry comprises [antenna port index, OFDM sybmol index, RE index]
+%   Input parameters:
+%      FILENAME  - Name of the generated file (string).
+%      DATA      - Complex valued symbols (double array of size N).
+%      INDICES   - 3xN matrix with the indices associated to each data sample.
+%                  Each entry comprises [antenna port index, OFDM sybmol index, RE index].
 
 function writeResourceGridEntryFile(filename, data, indices)
     fileID = fopen(filename, 'w');

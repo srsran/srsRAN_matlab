@@ -1,15 +1,9 @@
-%SRSPBCHMODULATOR:
-%  Function generating the PBCH modulation symbols.
+%SRSPBCHMODULATOR Physical broadcast channel.
+%   [MODULATEDSYMBOLS, SYMBOLINDICES] = SRSPBCHMODULATOR(CW, NCELLID, LMAX)
+%   modulates the 864-bit BCH codeword CW and returns the complex symbols
+%   MODULATEDSYMBOLS as well as a column vector of RE indices.
 %
-%  Call details:
-%    [MODULATEDSYMBOLS, SYMBOLINDICES] = SRSPBCHMODULATOR(CW, NCELLID, LMAX) receives the parameters
-%      * double array CW - BCH codeword
-%      * double NCELLID  - PHY-layer cell ID
-%      * double SSBINDEX - index of the SSB
-%      * double LMAX     - parameter defining the maximum number of SSBs within a SSB set
-%    and returns
-%      * complex double array MODULATEDSYMBOLS - PBCH modulated symbols
-%      * uint32 array SYMBOLINDICES            - PBCH RE indices
+%   See also nrPBCH, nrPBCHIndices.
 
 function [modulatedSymbols, symbolIndices] = srsPBCHmodulator(cw, NCellID, SSBindex, Lmax)
 
@@ -19,7 +13,7 @@ function [modulatedSymbols, symbolIndices] = srsPBCHmodulator(cw, NCellID, SSBin
     else
         v = mod(SSBindex, 8); % 3 LSBs of SSB index
     end
-    modulatedSymbols = nrPBCH(cw, NCellID,v);
+    modulatedSymbols = nrPBCH(cw, NCellID, v);
     symbolIndices = nrPBCHIndices(NCellID, 'IndexStyle', 'subscript', 'IndexBase', '0based');
 
 end
