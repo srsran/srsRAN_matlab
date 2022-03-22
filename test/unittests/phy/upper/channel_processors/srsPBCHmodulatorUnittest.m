@@ -88,10 +88,10 @@ classdef srsPBCHmodulatorUnittest < matlab.unittest.TestCase
                                                        SSBfirstSubcarrier, SSBfirstSymbol, SSBamplitude, SSBportsStr);
 
             % add the test to the file header
-            testImpl.addTestToChannelProcessorsHeaderFile(testCaseString, baseFilename, outputPath);
+            testImpl.addTestToHeaderFile(testCaseString, baseFilename, outputPath);
         end
     end
-
+ 
 %     methods (Test, TestTags = {'srs_phy_validation'})
 %
 %         function srsPHYvalidationCases(testCase, NCellID, SSBindex, Lmax)

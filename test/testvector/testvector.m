@@ -46,25 +46,18 @@
 %        * variable VARARGIN   - specific set of input parameters to the unit under test
 
 classdef testvector
-    methods
-        function addTestToChannelProcessorsHeaderFile(obj, testEntryString, unitUnderTest, outputPath)
-            % add a new test case entry to the header file
-            headerFilename = sprintf('%s/%s_test_data.h', outputPath, unitUnderTest);
-            testvectorHeaderFileID = fopen(headerFilename, 'a+');
-            fprintf(testvectorHeaderFileID, '%s', testEntryString);
-            fclose(testvectorHeaderFileID);
-        end
+    properties
+        phyObjUnderTestClass = 'channel_processors'
+    end
 
-        function closeChannelProcessorsHeaderFile(obj, unitUnderTest, outputPath)
-            % write the closing header file contents
-            headerFilename = sprintf('%s/%s_test_data.h', outputPath, unitUnderTest);
-            testvectorHeaderFileID = fopen(headerFilename, 'a+');
-            fprintf(testvectorHeaderFileID, '};\n');
-            fprintf(testvectorHeaderFileID, '\n');
-            fprintf(testvectorHeaderFileID, '} // srsgnb\n');
-            fprintf(testvectorHeaderFileID, '\n');
-            fprintf(testvectorHeaderFileID,'#endif // SRSGNB_UNITTESTS_PHY_CHANNEL_PROCESSORS_%s_TEST_DATA_H\n', upper(unitUnderTest));
-            fclose(testvectorHeaderFileID);
+    methods (Access = private) 
+        function addTestDefinitionToHeaderFile(obj, fileID, unitUnderTest, callingFunc)
+            fprintf(fileID, '#ifndef SRSGNB_UNITTESTS_PHY_CHANNEL_PROCESSORS_%s_TEST_DATA_H\n', upper(unitUnderTest));
+            fprintf(fileID, '#define SRSGNB_UNITTESTS_PHY_CHANNEL_PROCESSORS_%s_TEST_DATA_H\n', upper(unitUnderTest));
+            fprintf(fileID, '\n');
+            fprintf(fileID, '// This file was generated using the following MATLAB scripts:\n');
+            fprintf(fileID, '//   + "%s.m"\n', callingFunc);
+            fprintf(fileID, '\n');
         end
 
         function createChannelProcessorsHeaderFile(obj, unitUnderTest, outputPath, callingFunc)
@@ -73,13 +66,8 @@ classdef testvector
             testvectorHeaderFileID = fopen(headerFilename, 'w');
 
             % add unit test definition
-            fprintf(testvectorHeaderFileID, '#ifndef SRSGNB_UNITTESTS_PHY_CHANNEL_PROCESSORS_%s_TEST_DATA_H\n', upper(unitUnderTest));
-            fprintf(testvectorHeaderFileID, '#define SRSGNB_UNITTESTS_PHY_CHANNEL_PROCESSORS_%s_TEST_DATA_H\n', upper(unitUnderTest));
-            fprintf(testvectorHeaderFileID, '\n');
-            fprintf(testvectorHeaderFileID, '// This file was generated using the following MATLAB scripts:\n');
-            fprintf(testvectorHeaderFileID, '//   + "%s.m"\n', mfilename);
-            fprintf(testvectorHeaderFileID, '//   + "%s.m"\n', callingFunc);
-            fprintf(testvectorHeaderFileID, '\n');
+            addTestDefinitionToHeaderFile(obj, testvectorHeaderFileID, unitUnderTest, callingFunc);
+
             fprintf(testvectorHeaderFileID, '#include "../../resource_grid_test_doubles.h"\n');
             fprintf(testvectorHeaderFileID, '#include "srsgnb/adt/complex.h"\n');
             fprintf(testvectorHeaderFileID, '#include "srsgnb/phy/upper/channel_processors/%s.h"\n', unitUnderTest);
@@ -95,6 +83,68 @@ classdef testvector
             fprintf(testvectorHeaderFileID, '};\n');
             fprintf(testvectorHeaderFileID, '\n');
             fprintf(testvectorHeaderFileID, 'static const std::vector<test_case_t> %s_test_data = {\n', unitUnderTest);
+            fclose(testvectorHeaderFileID);
+        end
+
+        function createChannelModulationHeaderFile(obj, unitUnderTest, outputPath, callingFunc)
+            % create a new header file
+            headerFilename = sprintf('%s/%s_test_data.h', outputPath, unitUnderTest);
+            testvectorHeaderFileID = fopen(headerFilename, 'w');
+
+            % add unit test definition
+            addTestDefinitionToHeaderFile(obj, testvectorHeaderFileID, unitUnderTest, callingFunc);
+
+            fprintf(testvectorHeaderFileID, '#include "srsgnb/phy/upper/channel_modulation/%s.h"\n', unitUnderTest);
+            fprintf(testvectorHeaderFileID, '#include "srsgnb/adt/complex.h"\n');
+            fprintf(testvectorHeaderFileID, '#include "srsgnb/support/file_vector.h"\n');
+            fprintf(testvectorHeaderFileID, '#include <array>\n');            
+            fprintf(testvectorHeaderFileID, '\n');
+            fprintf(testvectorHeaderFileID, 'namespace srsgnb {\n');
+            fprintf(testvectorHeaderFileID, '\n');
+            fprintf(testvectorHeaderFileID, 'struct test_case_t {\n');
+            fprintf(testvectorHeaderFileID, '  std::size_t nsymbols;\n');
+            fprintf(testvectorHeaderFileID, '  modulation_scheme scheme;\n');
+            fprintf(testvectorHeaderFileID, '  file_vector<uint8_t> data;\n');
+            fprintf(testvectorHeaderFileID, '  file_vector<cf_t> symbols;\n');
+            fprintf(testvectorHeaderFileID, '};\n');
+            fprintf(testvectorHeaderFileID, '\n');
+            fprintf(testvectorHeaderFileID, 'static const std::vector<test_case_t> %s_test_data = {\n', unitUnderTest);
+            fclose(testvectorHeaderFileID);
+        end
+    end
+
+    methods
+        function obj = testvector(phyObjClass)
+            obj.phyObjUnderTestClass = phyObjClass;
+        end
+
+        function addTestToHeaderFile(obj, testEntryString, unitUnderTest, outputPath)
+            % add a new test case entry to the header file
+            headerFilename = sprintf('%s/%s_test_data.h', outputPath, unitUnderTest);
+            testvectorHeaderFileID = fopen(headerFilename, 'a+');
+            fprintf(testvectorHeaderFileID, '%s', testEntryString);
+            fclose(testvectorHeaderFileID);
+        end
+
+        function createHeaderFile(obj, unitUnderTest, outputPath, callingFunc)
+            if strcmp(obj.phyObjUnderTestClass, 'channel_processors')
+                createChannelProcessorsHeaderFile(obj, unitUnderTest, outputPath, callingFunc);
+            else
+                if strcmp(obj.phyObjUnderTestClass, 'channel_modulation')
+                    createChannelModulationHeaderFile(obj, unitUnderTest, outputPath, callingFunc);
+                end
+            end
+        end
+
+        function closeHeaderFile(obj, unitUnderTest, outputPath)
+            % write the closing header file contents
+            headerFilename = sprintf('%s/%s_test_data.h', outputPath, unitUnderTest);
+            testvectorHeaderFileID = fopen(headerFilename, 'a+');
+            fprintf(testvectorHeaderFileID, '};\n');
+            fprintf(testvectorHeaderFileID, '\n');
+            fprintf(testvectorHeaderFileID, '} // srsgnb\n');
+            fprintf(testvectorHeaderFileID, '\n');
+            fprintf(testvectorHeaderFileID,'#endif // SRSGNB_UNITTESTS_PHY_CHANNEL_PROCESSORS_%s_TEST_DATA_H\n', upper(unitUnderTest));
             fclose(testvectorHeaderFileID);
         end
 

@@ -14,6 +14,11 @@ function runTestvector(testType, srsPHYblock, pathInRepo, unittestClassName)
     import matlab.unittest.TestSuite
     import matlab.unittest.parameters.Parameter
 
+    % remove last '/' if it is added to the path string
+    if strcmp(pathInRepo(end), '/')
+        pathInRepo = pathInRepo(1 : end -  1);
+    end
+
     % define the input and output paths
     rootPath = extractBetween(pwd,'','test');
     srcPath = [rootPath{1} '/src/' pathInRepo];
@@ -27,14 +32,18 @@ function runTestvector(testType, srsPHYblock, pathInRepo, unittestClassName)
     % add the simulator folders to the MATLAB path
     addpath(srcPath, testPath, helpersPath, testvectorPath);
 
+    % define the class of phy object under test
+    ind = strfind(pathInRepo, '/');
+    phyObjectClass = pathInRepo(ind(end) + 1 : end);
+
     % create a test vector implementation object
-    testImpl = testvector;
+    testImpl = testvector(phyObjectClass);
 
     % create the output folder and remove old testvectors (if needed)
     testImpl.createOutputFolder(srsPHYblock, outputPath);
 
     % create the header file with the initial contents
-    testImpl.createChannelProcessorsHeaderFile(srsPHYblock, outputPath, mfilename);
+    testImpl.createHeaderFile(srsPHYblock, outputPath, unittestClassName);
 
     % run the testvector generation tests from the related unit test class
     unittestFilename = [testPath '/' unittestClassName '.m'];
@@ -43,7 +52,7 @@ function runTestvector(testType, srsPHYblock, pathInRepo, unittestClassName)
     testResults = nrPHYtestvectorTests.run;
 
     % write the remaining header file contents
-    testImpl.closeChannelProcessorsHeaderFile(srsPHYblock, outputPath);
+    testImpl.closeHeaderFile(srsPHYblock, outputPath);
 
     % gzip generated testvector files
     testImpl.packResults(srsPHYblock, outputPath);
