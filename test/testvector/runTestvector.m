@@ -32,12 +32,8 @@ function runTestvector(testType, srsPHYblock, pathInRepo, unittestClassName)
     % add the simulator folders to the MATLAB path
     addpath(srcPath, testPath, helpersPath, testvectorPath);
 
-    % define the class of phy object under test
-    ind = strfind(pathInRepo, '/');
-    phyObjectClass = pathInRepo(ind(end) + 1 : end);
-
     % create a test vector implementation object
-    testImpl = testvector(phyObjectClass);
+    testImpl = testvector(pathInRepo);
 
     % create the output folder and remove old testvectors (if needed)
     testImpl.createOutputFolder(srsPHYblock, outputPath);

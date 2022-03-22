@@ -47,13 +47,15 @@
 
 classdef testvector
     properties
+        objUnderTestPath = 'phy/upper/channel_processors';
+        objUnderTestClass = 'phy';
         phyObjUnderTestClass = 'channel_processors'
     end
 
     methods (Access = private) 
         function addTestDefinitionToHeaderFile(obj, fileID, unitUnderTest, callingFunc)
-            fprintf(fileID, '#ifndef SRSGNB_UNITTESTS_PHY_%s_%s_TEST_DATA_H\n', upper(obj.phyObjUnderTestClass), upper(unitUnderTest));
-            fprintf(fileID, '#define SRSGNB_UNITTESTS_PHY_%s_%s_TEST_DATA_H\n', upper(obj.phyObjUnderTestClass), upper(unitUnderTest));
+            fprintf(fileID, '#ifndef SRSGNB_UNITTESTS_%s_%s_TEST_DATA_H\n', obj.objUnderTestPath, upper(unitUnderTest));
+            fprintf(fileID, '#define SRSGNB_UNITTESTS_%s_%s_TEST_DATA_H\n', obj.objUnderTestPath, upper(unitUnderTest));
             fprintf(fileID, '\n');
             fprintf(fileID, '// This file was generated using the following MATLAB scripts:\n');
             fprintf(fileID, '//   + "%s.m"\n', callingFunc);
@@ -99,8 +101,16 @@ classdef testvector
     end
 
     methods
-        function obj = testvector(phyObjClass)
-            obj.phyObjUnderTestClass = phyObjClass;
+        function obj = testvector(objPath)
+            obj.objUnderTestPath = objPath;
+            obj.objUnderTestPath(obj.objUnderTestPath == '/') = '_';
+            obj.objUnderTestPath = upper(obj.objUnderTestPath);
+
+            % define the class of phy object under test
+            ind = strfind(objPath, '/');
+            obj.objUnderTestClass = objPath(1 : ind(1) - 1);
+            phyObjectClass = objPath(ind(end) + 1 : end);
+            obj.phyObjUnderTestClass = phyObjectClass;
         end
 
         function addTestToHeaderFile(obj, testEntryString, unitUnderTest, outputPath)
@@ -112,6 +122,9 @@ classdef testvector
         end
 
         function createHeaderFile(obj, unitUnderTest, outputPath, callingFunc)
+            if ~strcmp(obj.objUnderTestClass, 'phy')
+              error('testvectors generation is currently supported for "phy" objects only');
+            end
             createPhyClassHeaderFile(obj, unitUnderTest, outputPath, callingFunc);
         end
 
@@ -123,7 +136,7 @@ classdef testvector
             fprintf(testvectorHeaderFileID, '\n');
             fprintf(testvectorHeaderFileID, '} // srsgnb\n');
             fprintf(testvectorHeaderFileID, '\n');
-            fprintf(testvectorHeaderFileID,'#endif // SRSGNB_UNITTESTS_PHY_%s_%s_TEST_DATA_H\n', upper(obj.phyObjUnderTestClass), upper(unitUnderTest));
+            fprintf(testvectorHeaderFileID,'#endif // SRSGNB_UNITTESTS_%s_%s_TEST_DATA_H\n', obj.objUnderTestPath, upper(unitUnderTest));
             fclose(testvectorHeaderFileID);
         end
 
