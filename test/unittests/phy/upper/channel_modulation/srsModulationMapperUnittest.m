@@ -52,13 +52,13 @@ classdef srsModulationMapperUnittest < matlab.unittest.TestCase
             codeword = randi([0 1], nSymbols * modScheme{1}, 1);
 
             % write the codeword to a binary file
-            testImpl.saveDataFile(baseFilename, '_test_input', testID, outputPath, 'writeUint8File', codeword);
+            testImpl.saveDataFile(baseFilename, '_test_input', testID, outputPath, @writeUint8File, codeword);
 
             % call the symbol modulation Matlab functions
             [modulatedSymbols] = srsModulator(codeword, modScheme{2});
 
             % write complex symbols into a binary file
-            testImpl.saveDataFile(baseFilename, '_test_output', testID, outputPath, 'writeComplexFloatFile', modulatedSymbols);
+            testImpl.saveDataFile(baseFilename, '_test_output', testID, outputPath, @writeComplexFloatFile, modulatedSymbols);
 
             % generate the test case entry
             modSchemeString = modScheme{length(modScheme)};

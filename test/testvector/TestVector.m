@@ -209,8 +209,8 @@ classdef TestVector
 %      CONFIGFORMAT - Defines the format of the configuration paramter struct (string).
 %      TESTVECTNAME - Defines the base name of the testvector files (string).
 %      TESTID       - Unique identifier for the test case (integer).
+%      INANDOUT     - Defines if the test will generate input and output files (integer).
 %      VARARGIN     - Specific set of input parameters to the unit under test (variable length and type).
-
             configStr = sprintf(configFormat, varargin{:});
             inFilename = [testVectName '_test_input' num2str(testID) '.dat'];
             outFilename = [testVectName '_test_output' num2str(testID) '.dat'];

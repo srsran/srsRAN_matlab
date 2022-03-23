@@ -23,8 +23,9 @@ function runTestVector(testType, srsPHYblock, pathInRepo, unittestClassName)
     % define the input and output paths
     rootPath = extractBetween(pwd,'','test');
     srcPath = [rootPath{1} '/src/' pathInRepo];
+    srcPHYhelpersPath = [rootPath{1} '/src/phy/helpers'];
     testPath = [rootPath{1} '/test/' testType '/' pathInRepo];
-    helpersPath = [rootPath{1} '/test/helpers'];
+    testHelpersPath = [rootPath{1} '/test/helpers'];
     testvectorPath = [rootPath{1} '/test/testvector'];
 
     % define the absolute output paths
@@ -32,7 +33,7 @@ function runTestVector(testType, srsPHYblock, pathInRepo, unittestClassName)
 
     % temporarily add the simulator folders to the MATLAB path
     oldPath = path;
-    addpath(srcPath, testPath, helpersPath, testvectorPath);
+    addpath(srcPath, srcPHYhelpersPath, testPath, testHelpersPath, testvectorPath);
 
     % create a test vector implementation object
     testImpl = TestVector(pathInRepo);
