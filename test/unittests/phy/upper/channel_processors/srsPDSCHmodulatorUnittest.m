@@ -35,7 +35,9 @@ classdef srsPDSCHmodulatorUnittest < matlab.unittest.TestCase
         baseFilename = {''};
         testImpl = {''};
         carrier_list = {nrCarrierConfig};
+        
         pdsch_list = {nrPDSCHConfig};
+        NID = num2cell(1:5);
     end
 
     methods (TestClassSetup)
@@ -49,7 +51,7 @@ classdef srsPDSCHmodulatorUnittest < matlab.unittest.TestCase
     methods (Test, TestTags = {'testvector'})
 
        
-        function testvectorGenerationCases(testCase, testImpl, outputPath, baseFilename)
+        function testvectorGenerationCases(testCase, testImpl, outputPath, baseFilename, NID)
             % generate a unique test ID
             filenameTemplate = sprintf('%s/%s_test_input*', outputPath, baseFilename);
             file = dir (filenameTemplate);
@@ -58,26 +60,77 @@ classdef srsPDSCHmodulatorUnittest < matlab.unittest.TestCase
             
             carrier = testCase.carrier_list{1};
             pdsch = testCase.pdsch_list{1};
+            
+            pdsch.NID = NID;
 
+            if iscell(pdsch.Modulation)
+                error('Unsupported');
+            else
+                switch pdsch.Modulation
+                    case 'QPSK'
+                        mod_order1 = 2;
+                        modulation_str1 = 'modulation_scheme::QPSK';
+                    case '16QAM'
+                        mod_order1 = 4;
+                        modulation_str1 = 'modulation_scheme::QAM16';
+                    case '64QAM'
+                        mod_order1 = 6;
+                        modulation_str1 = 'modulation_scheme::QAM64';
+                    case '256QAM'
+                        mod_order1 = 8;
+                        modulation_str1 = 'modulation_scheme::QAM256';
+                end
+                mod_order2 = mod_order1;
+                modulation_str2 = modulation_str1;
+            end
+
+            
             % Calculate number of encoded bits
-            nbits = length(nrPDSCHIndices(carrier, pdsch)) * 2;
+            nbits = length(nrPDSCHIndices(carrier, pdsch)) * mod_order1;
             
             % Generate codewords
             cws = randi([0,1], nbits, 1);
             
-
             % write the BCH cw to a binary file
-            testImpl.saveDataFile(baseFilename, '_test_input', testID, outputPath, 'writeUint8File', cws);
+            testImpl.saveDataFile(baseFilename, '_test_input', testID, outputPath, @writeUint8File, cws);
 
             % call the PDSCH symbol modulation Matlab functions
             [modulatedSymbols, symbolIndices] = srsPDSCHmodulator(carrier, pdsch, cws);
 
             % write each complex symbol into a binary file, and the associated indices to another
-            testImpl.saveDataFile(baseFilename, '_test_output', testID, outputPath, 'writeResourceGridEntryFile', modulatedSymbols, symbolIndices);
+            testImpl.saveDataFile(baseFilename, '_test_output', testID, outputPath, @writeResourceGridEntryFile, modulatedSymbols, symbolIndices);
 
-            % generate the test case entry
-            testCaseString = testImpl.testCaseToString('{%d, %d, %d, %d, %.1f, {%s}}', baseFilename, testID, NCellID, PDSCHindex, ...
-                                                       SSBfirstSubcarrier, SSBfirstSymbol, SSBamplitude, SSBportsStr);
+            
+            [prbset,symbolset,dmrssymbols] = nr5g.internal.pxsch.initializeResources(carrier,pdsch,carrier.NSizeGrid);
+            
+            dmrs_symbol_mask = zeros(1,14);
+            dmrs_symbol_mask(dmrssymbols) = 1;
+
+            reserved_str = '';
+            
+            ports_str = '0';
+            
+            dmrs_type_str = sprintf('dmrs_type::TYPE%d', pdsch.DMRS.DMRSConfigurationType);
+
+            config = [ {pdsch.RNTI}, {carrier.NSizeGrid}, {carrier.NStartGrid}, ...
+                {modulation_str1}, {modulation_str2}, {pdsch.PRBSet}, {pdsch.SymbolAllocation(1)}, ...
+                {pdsch.SymbolAllocation(2)}, {dmrs_symbol_mask}, {dmrs_type_str}, {pdsch.DMRS.NumCDMGroupsWithoutData}, {pdsch.NID}, {1}, {reserved_str}, {0}];
+%     
+%     unsigned bwp_start_rb;
+%     modulation_scheme modulation1;
+%     modulation_scheme modulation2;
+%     rb_allocation freq_allocation;
+%     unsigned start_symbol_index;
+%     unsigned nof_symbols;
+%     std::array<bool, MAX_NSYMB_PER_SLOT> dmrs_symb_pos;
+%     dmrs_type dmrs_config_type;
+%     unsigned nof_cdm_groups_without_data;
+%     unsigned n_id;
+%     float scaling;
+%     re_pattern_list reserved;
+%     unsigned pmi;
+%     static_vector<uint8_t, MAX_PORTS> ports;
+            testCaseString = testImpl.testCaseToString(cellarray2str(config), baseFilename, testID, 1);
 
             % add the test to the file header
             testImpl.addTestToHeaderFile(testCaseString, baseFilename, outputPath);
