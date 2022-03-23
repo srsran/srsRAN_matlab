@@ -1,30 +1,27 @@
 classdef srsModulationMapperUnittest < matlab.unittest.TestCase
 %SRSMODULATIONMAPPERUNITTEST Unit tests for the modulation mapper functions
-%  This class implements unit tests for the modulation mapper functions using the
-%  matlab.unittest framework. The simplest use consists in creating an object with
-%    testCase = SRSMODULATIONMAPPERUNITTEST
-%  and then running all the tests with
-%    testResults = testCase.run
+%   This class implements unit tests for the modulation mapper functions using the
+%   matlab.unittest framework. The simplest use consists in creating an object with
+%       testCase = SRSMODULATIONMAPPERUNITTEST
+%   and then running all the tests with
+%       testResults = testCase.run
 %
-%  SRSMODULATIONMAPPERUNITTEST Properties (TestParameter)
-%    modScheme - modulation scheme = [BPSK, QPSK, QAM16, QAM64, QAM256]
-%    nSymbols  - number of modulated output symbols = [257, 997]
+%   SRSMODULATIONMAPPERUNITTEST Properties (TestParameter):
 %
-%  SRSMODULATIONMAPPERUNITTEST Methods:
-%    The following methods are available for all test types:
-%      * initialize - adds the required folders to the Matlab path and initializes the random seed
+%   modScheme - modulation scheme ('BPSK', 'QPSK', 'QAM16', 'QAM64', 'QAM256')
+%   nSymbols  - number of modulated output symbols (257, 997)
 %
-%    The following methods are available for the testvector generation tests (TestTags = {'testvector'}):
-%      * testvectorGenerationCases - generates testvectors for all possible combinations of SSBindex
-%                                    and Lmax, while using a random NCellID and cw for each test
+%   SRSMODULATIONMAPPERUNITTEST Methods (TestTags = {'testvector'}):
 %
-%    The following methods are available for the SRS PHY validation tests (TestTags = {'srsPHYvalidation'}):
-%      * x                     - TBD
-%      * srsPHYvalidationCases - validates the SRS PHY functions for all possible combinations of SSBindex,
-%                                Lmax and NCellID, while using a random cw for each test
-%      * y                     - TBD
+%   initialize                - Adds the required folders to the MATLAB path and
+%                               initializes the random seed.
+%   testvectorGenerationCases - Generates test vectors for all possible combinations
+%                               of modScheme and nSymbols.
+%
+%   SRSMODULATIONMAPPERUNITTEST Methods (TestTags = {'srsPHYvalidation'}):
 %
 %  See also MATLAB.UNITTEST.
+
     properties (TestParameter)
         outputPath = {''};
         baseFilename = {''};
@@ -35,6 +32,8 @@ classdef srsModulationMapperUnittest < matlab.unittest.TestCase
 
     methods (TestClassSetup)
         function initialize(testCase)
+%INITIALIZE Adds the required folders to the MATLAB path and initializes the
+%   random seed.
             % add main folder to the Matlab path
             p = path;
             testCase.addTeardown(@path, p);
@@ -43,6 +42,9 @@ classdef srsModulationMapperUnittest < matlab.unittest.TestCase
 
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, testImpl, outputPath, baseFilename, nSymbols, modScheme)
+%TESTVECTORGENERATIONCASES Generates test vectors for all possible combinations of nSymbols
+%    and modScheme.
+
             % generate a unique test ID
             filenameTemplate = sprintf('%s/%s_test_input*', outputPath, baseFilename);
             file = dir (filenameTemplate);
@@ -62,8 +64,7 @@ classdef srsModulationMapperUnittest < matlab.unittest.TestCase
 
             % generate the test case entry
             modSchemeString = modScheme{length(modScheme)};
-
-            testCaseString = testImpl.testCaseToString('%d, modulation_scheme::%s', baseFilename, testID, 1, nSymbols, modSchemeString);
+            testCaseString = testImpl.testCaseToString('%d, modulation_scheme::%s', baseFilename, testID, true, nSymbols, modSchemeString);
 
             % add the test to the file header
             testImpl.addTestToHeaderFile(testCaseString, baseFilename, outputPath);

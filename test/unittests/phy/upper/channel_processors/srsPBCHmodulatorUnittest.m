@@ -2,7 +2,7 @@ classdef srsPBCHmodulatorUnittest < matlab.unittest.TestCase
 %SRSPBCHMODULATORUNITTEST Unit tests for PBCH symbol modulator functions.
 %   This class implements unit tests for the PBCH symbol modulator functions using the
 %   matlab.unittest framework. The simplest use consists in creating an object with
-%      testCase = PBCH_SYMBOL_MODULATOR_UTEST
+%      testCase = SRSPBCHMODULATORUNITTEST
 %   and then running all the tests with
 %      testResults = testCase.run
 %
@@ -17,8 +17,8 @@ classdef srsPBCHmodulatorUnittest < matlab.unittest.TestCase
 %
 %   initialize                - Adds the required folders to the MATLAB path and
 %                               initializes the random seed.
-%   testvectorGenerationCases - Generates test vectors for all possible combinations of SSBindex
-%                               and Lmax, while using a random NCellID and cw for each test.
+%   testvectorGenerationCases - Generates test vectors for all possible SSBindex values, while
+%                               using a fixed Lmax and a random NCellID and cw for each test.
 %
 %   SRSPBCHMODULATORUNITTEST Methods (TestTags = {'srsPHYvalidation'}):
 %
@@ -48,8 +48,8 @@ classdef srsPBCHmodulatorUnittest < matlab.unittest.TestCase
 
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, testImpl, outputPath, baseFilename, SSBindex)
-%TESTVECTORGENERATIONCASES Generates test vectors for all possible combinations of SSBindex
-%   and Lmax, while using a random NCellID and cw for each test.
+%TESTVECTORGENERATIONCASES Generates test vectors for all possible SSBindex values, while
+%   using a fixed Lmax and a random NCellID and cw for each test.
 
             % generate a unique test ID
             filenameTemplate = sprintf('%s/%s_test_input*', outputPath, baseFilename);
@@ -84,7 +84,7 @@ classdef srsPBCHmodulatorUnittest < matlab.unittest.TestCase
             testImpl.saveDataFile(baseFilename, '_test_output', testID, outputPath, @writeResourceGridEntryFile, modulatedSymbols, symbolIndices);
 
             % generate the test case entry
-            testCaseString = testImpl.testCaseToString('{%d, %d, %d, %d, %.1f, {%s}}', baseFilename, testID, 1, NCellIDLoc, SSBindex, ...
+            testCaseString = testImpl.testCaseToString('{%d, %d, %d, %d, %.1f, {%s}}', baseFilename, testID, true, NCellIDLoc, SSBindex, ...
                                                        SSBfirstSubcarrier, SSBfirstSymbol, SSBamplitude, SSBportsStr);
 
             % add the test to the file header

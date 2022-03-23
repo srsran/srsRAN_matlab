@@ -1,13 +1,9 @@
-%SRSPDCCHDMRS:
-%  Function generating the PDCCH DMRS symbols.
+%SRSPDCCHDMRS Physical control channel demodulation reference signals.
+%   [DMRSSYMBOLS, SYMBOLINDICES] = SRSPDCCHDMRS(CARRIER, PDCCH)
+%   modulates the demodulation reference signals and returns the complex symbols
+%   DMRSSYMBOLS as well as a column vector of RE indices.
 %
-%  Call details:
-%    [DMRSSYMBOLS, SYMBOLINDICES] = SRSPBCHDMRS(CW, NCELLID, LMAX) receives the parameters
-%      * nrCarrierConfig carrier - configured carrier object
-%      * nrPDCCHConfig pdcch     - configured PDCCH object
-%    and returns
-%      * complex double array DMRSSYMBOLS - PDCCH DMRS symbols
-%      * uint32 array SYMBOLINDICES       - PDCCH DMRS RE indices
+%   See also nrCarrierConfig, nrPDCCHConfig and nrPDCCHResources.
 
 function [DMRSsymbols, symbolIndices] = srsPDCCHdmrs(carrier, pdcch)
 

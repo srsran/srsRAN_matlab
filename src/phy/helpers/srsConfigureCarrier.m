@@ -1,16 +1,8 @@
-%SRSCONFIGURECARRIER:
-%  Function generating a nrCarrierConfig object with the requested configuration.
+%SRSCONFIGURECARRIER Generates a carrier object.
+%   CARRIER = SRSCONFIGURECARRIER(NCELLID, NUMEROLOGY, NSIZEGRID, NSTARTGRID, NSLOT, NFRAME)
+%   returns a CARRIER object with the requested configuration.
 %
-%  Call details:
-%    carrier = SRSCONFIGURECARRIER(NCELLID, NUMEROLOGY, NSIZEGRID, NSTARTGRID, NSLOT, NFRAME) receives the parameters
-%      * double NCELLID    - PHY-layer cell ID
-%      * double numerology - defines the subcarrier spacing
-%      * double NSizeGrid  - number of RBs in the carrier resource grid
-%      * double NStartGrid - start of carrier resource grid relative to CRB 0
-%      * double NSlot      - slot number
-%      * double NFrame     - system frame number
-%    and returns
-%      * nrCarrierConfig carrier - configured carrier object
+%   See also nrCarrierConfig.
 
 function carrier = srsConfigureCarrier(NCellID, numerology, NSizeGrid, NStartGrid, NSlot, NFrame)
 

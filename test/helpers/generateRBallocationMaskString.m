@@ -1,12 +1,7 @@
-%GENERATESLOTPOINTCONFIGSTRING:
-%  Function generating a RB allocaton bitmask string.
-%
-%  Call details:
-%    OUTPUTSTRING = GENERATESLOTPOINTCONFIGSTRING(NUMEROLOGY, NFRAME, NSLOT, SLOTSPERSUBFRAME) receives the parameters
-%      * double STARTRB - index of the first allocated RB start of BWP resource grid relative to CRB 0
-%      * double SIZERB  - number of allocated RBs
-%    and returns
-%      * string OUTPUTSTRING - RB allocation bitmask string
+%GENERATERBALLOCATIONMASKSTRING Generates a new RB allocation bitmask string.
+%   OUTPUTSTRING = GENERATERBALLOCATIONMASKSTRING(STARTRB, SIZERB)
+%   generates a RB bitmask allocation string OUTPUTSTRING where the allocated
+%   RBs are those between STARTRB and (STARTRB + SIZERB-1).
 
 function outputString = generateRBallocationMaskString(startRB, sizeRB)
 

@@ -1,14 +1,6 @@
-%GENERATESLOTPOINTCONFIGSTRING:
-%  Function generating a configuration string for the 'slot_point' class.
-%
-%  Call details:
-%    OUTPUTSTRING = GENERATESLOTPOINTCONFIGSTRING(NUMEROLOGY, NFRAME, NSLOT, SLOTSPERSUBFRAME) receives the parameters
-%      * double numerology       - defines the subcarrier spacing
-%      * double NFrame           - system frame number
-%      * double NSlot            - slot number
-%      * double SLOTSPERSUBFRAME - number of slots per subframe
-%    and returns
-%      * string OUTPUTSTRING - configuration string for the 'slot_point' class
+%GENERATESLOTPOINTCONFIGSTRING Generates a new 'slot_point' configuration string.
+%   OUTPUTSTRING = GENERATESLOTPOINTCONFIGSTRING(NUMEROLOGY, NFRAME, NSLOT, SLOTSPERSUBFRAME)
+%   generates a configuration string OUTPUTSTRING for to the 'slot_point' class.
 
 function outputString = generateSlotPointConfigString(numerology, NFrame, NSlot, slotsPerSubframe)
 

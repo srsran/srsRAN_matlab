@@ -1,15 +1,9 @@
-%SRSCONFIGURECORESET:
-%  Function generating a nrCORESETConfig object with the requested configuration.
+%SRSCONFIGURECORESET Generates a control resource set object.
+%   CORESET = SRSCONFIGURECORESET(FREQUENCYRESOURCES, DURATION, CCEREGMAPPING, ...
+%       REGBUNDLESIZE, INTERLEAVERSIZE)
+%   returns a CORESET object with the requested configuration.
 %
-%  Call details:
-%    CORESET = SRSCONFIGURECORESET(FREQUENCYRESOURCES, DURATION, CCEREGMAPPING, REGBUNDLESIZE, INTERLEAVERSIZE) receives the parameters
-%      * binary row vector FREQUENCYRESOURCES - bitmask indicating the frequency domain resource allocation
-%      * double DURATION                      - CORESET duration
-%      * string CCEREGMAPPING                 - CCE-to-REG mapping
-%      * double REGBUNDLESIZE                 - size of REG bundles
-%      * double INTERLEAVERSIZE               - interleaver size
-%    and returns
-%      * nrCORESET CORESET - configured coreset object
+%   See also nrCORESETConfig.
 
 function coreset = srsConfigureCORESET(frequencyResources, duration, CCEREGMapping, REGBundleSize, interleaverSize)
 

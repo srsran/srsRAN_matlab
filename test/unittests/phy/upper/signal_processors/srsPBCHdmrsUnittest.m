@@ -60,6 +60,7 @@ classdef srsPBCHdmrsUnittest < matlab.unittest.TestCase
         function testvectorGenerationCases(testCase, testImpl, outputPath, baseFilename, SSBindex, Lmax, nHF)
 %TESTVECTORGENERATIONCASES Generates test vectors for all possible combinations of SSBindex,
 %   Lmax and nHF, while using a random NCellID for each test.
+
             % generate a unique test ID
             filenameTemplate = sprintf('%s/%s_test_output*', outputPath, baseFilename);
             file = dir (filenameTemplate);
@@ -87,7 +88,7 @@ classdef srsPBCHdmrsUnittest < matlab.unittest.TestCase
                 testImpl.saveDataFile(baseFilename, '_test_output', testID, outputPath, @writeResourceGridEntryFile, DMRSsymbols, symbolIndices);
 
                 % generate the test case entry
-                testCaseString = testImpl.testCaseToString('{%d, %d, %d, %d, %d, %d, %.1f, {%s}}', baseFilename, testID, 0, NCellIDLoc, SSBindex, ...
+                testCaseString = testImpl.testCaseToString('{%d, %d, %d, %d, %d, %d, %.1f, {%s}}', baseFilename, testID, false, NCellIDLoc, SSBindex, ...
                                                            Lmax, SSBfirstSubcarrier, SSBfirstSymbol, nHF, SSBamplitude, SSBportsStr);
 
                 % add the test to the file header
