@@ -8,6 +8,6 @@
 function [DMRSsymbols, symbolIndices] = srsPDCCHdmrs(carrier, pdcch)
 
     % here we are not interested in the resource element indices of the PDCCH
-    [~,DMRSsymbols,symbolIndices] = nrPDCCHResources(carrier, pdcch, 'IndexStyle', 'subscript', 'IndexBase', '0based');
+    [~,DMRSsymbols,symbolIndices] = nrPDCCHSpace(carrier, pdcch, 'IndexStyle', 'subscript', 'IndexBase', '0based');
 
 end

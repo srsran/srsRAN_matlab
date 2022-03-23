@@ -7,7 +7,11 @@
 
 function pdcch = srsConfigurePDCCH(coreset, NStartBWP, NSizeBWP, rnti, aggregationLevel, searchSpaceType, allocatedCandidate)
 
-    pdcch = nrPDCCHConfig('CORESET', coreset);
+    if isempty(coreset)
+        pdcch = nrPDCCHConfig;
+    else
+        pdcch = nrPDCCHConfig('CORESET', coreset);
+    end
     pdcch.NStartBWP = NStartBWP;
     pdcch.NSizeBWP = NSizeBWP;
     pdcch.RNTI = rnti;
