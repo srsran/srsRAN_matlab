@@ -1,17 +1,28 @@
 classdef srsPBCHdmrsUnittest < matlab.unittest.TestCase
-%SRSPBCHDMRSUNITTEST Unit tests for PBCH DMRS processor functions
-%  This class implements unit tests for the PBCH DMRS processor functions using the
-%  matlab.unittest framework. The simplest use consists in creating an object with
-%    testCase = SRSPBCHDMRSUNITTEST
-%  and then running all the tests with
-%    testResults = testCase.run
+%SRSPBCHDMRSUNITTEST Unit tests for PBCH DMRS processor functions.
+%   This class implements unit tests for the PBCH DMRS processor functions using the
+%   matlab.unittest framework. The simplest use consists in creating an object with
+%       testCase = SRSPBCHDMRSUNITTEST
+%   and then running all the tests with
+%       testResults = testCase.run
 %
-%  SRSPBCHDMRSUNITTEST Properties (TestParameter)
-%    SSBindex - SSB index, possible values = [0, ..., 7]
-%    Lmax     - maximum number of SSBs within a SSB set, possible values = [4, 8, 64]
-%    NCellID  - PHY-layer cell ID, possible values = [0, ..., 1007]
-%    nHF      - half-frame indicator, possible values = [0, 1]
+%   SRSPBCHDMRSUNITTEST Properties (TestParameter):
 %
+%   SSBindex - SSB index (0, ..., 7).
+%   Lmax     - Maximum number of SSBs within a SSB set (4, 8, 64).
+%   NCellID  - PHY-layer cell ID (0, ..., 1007).
+%   nHF      - half-frame indicato (0, 1)
+%
+%   SRSPBCHDMRSUNITTEST Methods (TestTags = {'testvector'}):
+%
+%   initialize                - Adds the required folders to the MATLAB path and
+%                               initializes the random seed.
+%   testvectorGenerationCases - Generates test vectors for all possible combinations of SSBindex,
+%                               Lmax and nHF, while using a random NCellID for each test.
+%
+%   SRSPBCHMODULATORUNITTEST Methods (TestTags = {'srsPHYvalidation'}):
+%
+%  See also MATLAB.UNITTEST.
 %  SRSPBCHDMRSUNITTEST Methods:
 %    The following methods are available for the testvector generation tests (TestTags = {'testvector'}):
 %      * testvectorGenerationCases - generates testvectors for all possible combinations of SSBindex,
@@ -36,6 +47,9 @@ classdef srsPBCHdmrsUnittest < matlab.unittest.TestCase
 
     methods (TestClassSetup)
         function initialize(testCase)
+%INITIALIZE Adds the required folders to the MATLAB path and initializes the
+%   random seed.
+
             % add main folder to the Matlab path
             p = path;
             testCase.addTeardown(@path, p);
@@ -44,34 +58,36 @@ classdef srsPBCHdmrsUnittest < matlab.unittest.TestCase
 
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, testImpl, outputPath, baseFilename, SSBindex, Lmax, nHF)
+%TESTVECTORGENERATIONCASES Generates test vectors for all possible combinations of SSBindex,
+%   Lmax and nHF, while using a random NCellID for each test.
             % generate a unique test ID
             filenameTemplate = sprintf('%s/%s_test_output*', outputPath, baseFilename);
             file = dir (filenameTemplate);
             filenames = {file.name};
             testID = length(filenames);
 
-            % use a unique NCellID and cw for each test
+            % use a unique NCellID for each test
             randomizedTestCase = testCase.randomizeTestvector{testID+1};
-            NCellID = testCase.NCellID{randomizedTestCase};
+            NCellIDLoc = testCase.NCellID{randomizedTestCase};
+
+            % current fixed parameter values
+            numPorts = 1;
+            SSBfirstSubcarrier = 0;
+            SSBfirstSymbol = 0;
+            SSBamplitude = 1;
+            SSBports = zeros(numPorts, 1);
+            SSBportsStr = array2str(SSBports);
 
             % check if the current SSBindex value is possible with the current Lmax
             if Lmax > SSBindex
-                % current fixed parameter values as required by the C code (e.g., Lmax = 4 is not currently supported, and Lmax = 64 and Lmax = 8 are equivalent in this stage)
-                numPorts = 1;
-                SSBfirstSubcarrier = 0;
-                SSBfirstSymbol = 0;
-                SSBamplitude = 1;
-                SSBports = zeros(numPorts, 1);
-                SSBportsStr = array2str(SSBports);
-
                 % call the PBCH DMRS symbol processor Matlab functions
-                [DMRSsymbols, symbolIndices] = srsPBCHdmrs(NCellID, SSBindex, Lmax, nHF);
+                [DMRSsymbols, symbolIndices] = srsPBCHdmrs(NCellIDLoc, SSBindex, Lmax, nHF);
 
                 % write each complex symbol into a binary file, and the associated indices to another
-                testImpl.saveDataFile(baseFilename, '_test_output', testID, outputPath, 'writeResourceGridEntryFile', DMRSsymbols, symbolIndices);
+                testImpl.saveDataFile(baseFilename, '_test_output', testID, outputPath, @writeResourceGridEntryFile, DMRSsymbols, symbolIndices);
 
                 % generate the test case entry
-                testCaseString = testImpl.testCaseToString('{%d, %d, %d, %d, %d, %d, %.1f, {%s}}', baseFilename, testID, 0, NCellID, SSBindex, ...
+                testCaseString = testImpl.testCaseToString('{%d, %d, %d, %d, %d, %d, %.1f, {%s}}', baseFilename, testID, 0, NCellIDLoc, SSBindex, ...
                                                            Lmax, SSBfirstSubcarrier, SSBfirstSymbol, nHF, SSBamplitude, SSBportsStr);
 
                 % add the test to the file header
