@@ -1,11 +1,11 @@
 %SRSCONFIGUREPDCCH Generates a physical control channel object.
 %   PDCCH = SRSCONFIGUREPDCCH(CORESET, NSTARTBWP, NSIZEBWP, RNTI, AGGREGATIONLEVEL, ...
-%       SEARCHSPACETYPE, ALLOCATEDCANDIDATE)
+%       SEARCHSPACETYPE, ALLOCATEDCANDIDATE, DMRSSCRAMBLINGID)
 %   returns a PDCCH object with the requested configuration.
 %
 %   See also nrPDCCHConfig.
 
-function pdcch = srsConfigurePDCCH(coreset, NStartBWP, NSizeBWP, rnti, aggregationLevel, searchSpaceType, allocatedCandidate)
+function pdcch = srsConfigurePDCCH(coreset, NStartBWP, NSizeBWP, rnti, aggregationLevel, searchSpaceType, allocatedCandidate, DMRSscramblingID)
 
     if isempty(coreset)
         pdcch = nrPDCCHConfig;
@@ -18,5 +18,6 @@ function pdcch = srsConfigurePDCCH(coreset, NStartBWP, NSizeBWP, rnti, aggregati
     pdcch.AggregationLevel = aggregationLevel;
     pdcch.SearchSpace.SearchSpaceType = searchSpaceType;
     pdcch.AllocatedCandidate = allocatedCandidate;
+    pdcch.DMRSScramblingID = DMRSscramblingID;
 
 end

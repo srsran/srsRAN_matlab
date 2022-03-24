@@ -77,24 +77,24 @@ classdef srsPDCCHdmrsUnittest < matlab.unittest.TestCase
 
             % use a unique NCellID, NSlot and rnti for each test
             randomizedCellID = testCase.randomizeTestvector{testID+1};
-            NCellIDLoc = testCase.NCellID{randomizedCellID};
+            NCellIDLoc = 0;%testCase.NCellID{randomizedCellID};
             if numerology == 0
                 randomizedSlot = testCase.randomizeSlotNum0{testID+1};
             else
                 randomizedSlot = testCase.randomizeSlotNum1{testID+1};
             end
-            NSlotLoc = testCase.NSlot{randomizedSlot};
+            NSlotLoc = 0;%testCase.NSlot{randomizedSlot};
 
             % current fixed parameter values (e.g., maximum grid size with current interleaving
             %   configuration, CORESET will use all available frequency resources)
-            NSizeGrid = 216;
+            NSizeGrid = 96;
             NStartGrid = 0;
             NFrame = 0;
             maxFrequencyResources = floor(NSizeGrid / 6);
             frequencyResources = int2bit(2^maxFrequencyResources - 1, maxFrequencyResources).';
             interleaverSize = 2;
             REGBundleSize = 6;
-            searchSpaceType = 'common';
+            searchSpaceType = 'ue';
             rnti = 0;
             NStartBWP = 0;
             NSizeBWP = NSizeGrid;
@@ -102,7 +102,7 @@ classdef srsPDCCHdmrsUnittest < matlab.unittest.TestCase
             numPorts = 1;
             referencePointKrb = 0;
             startSymbolIndex = 0;
-            nID = 0;
+            nID = NCellIDLoc;
             DMRSamplitude = 1;
             PDCCHports = zeros(numPorts, 1);
             PDCCHportsStr = array2str(PDCCHports);
@@ -118,7 +118,7 @@ classdef srsPDCCHdmrsUnittest < matlab.unittest.TestCase
                 coreset = srsConfigureCORESET(frequencyResources, duration, CCEREGMapping, REGBundleSize, interleaverSize);
 
                 % configure the PDCCH according to the test parameters
-                pdcch = srsConfigurePDCCH(coreset, NStartBWP, NSizeBWP, rnti, aggregationLevel, searchSpaceType, allocatedCandidate);
+                pdcch = srsConfigurePDCCH(coreset, NStartBWP, NSizeBWP, rnti, aggregationLevel, searchSpaceType, allocatedCandidate, nID);
 
                 % call the PDCCH DMRS symbol processor Matlab functions
                 [DMRSsymbols, symbolIndices] = srsPDCCHdmrs(carrier, pdcch);
@@ -133,7 +133,7 @@ classdef srsPDCCHdmrsUnittest < matlab.unittest.TestCase
                 slotPointConfig = generateSlotPointConfigString(numerology, NFrame, NSlotLoc, carrier.SlotsPerSubframe);
 
                 % generate a RB allocation mask string
-                rbAllocationMask = generateRBallocationMaskString(NStartBWP, NSizeBWP);
+                rbAllocationMask = generateRBallocationMaskString(symbolIndicesVector);
 
                 % generate the test case entry
                 testCaseString = testImpl.testCaseToString('{{%s}, %d, {%s}, %d, %d, %d, %.1f, {%s}}', baseFilename, testID, false, slotPointConfig, ...
