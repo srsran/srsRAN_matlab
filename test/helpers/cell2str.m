@@ -5,7 +5,7 @@
 function [outoutString] = cell2str(inputCell)
     mat = cell2mat(inputCell);
 
-    if iscellstr(inputCell)
+    if isstring(inputCell) || iscellstr(inputCell)
         outoutString = mat;
     elseif length(mat) == 1
         outoutString = num2str(mat);

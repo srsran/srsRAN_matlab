@@ -203,7 +203,7 @@ classdef TestVector
             saveFunction(fullFilename, varargin{:});
         end
 
-        function testCaseString = testCaseToString(obj, configFormat, testVectName, testID, inAndOut, varargin)
+        function testCaseString = testCaseToString(obj, testVectName, testID, inAndOut, testCaseParams)
 %testCaseToString(OBJ, CONFIGFORMAT, TESTVECTNAME, TESTID, VARARGIN) converts the
 %   test case parameters to a string.
 %
@@ -213,7 +213,7 @@ classdef TestVector
 %      TESTID       - Unique identifier for the test case (integer).
 %      INANDOUT     - Defines if the test will generate input and output files (boolean).
 %      VARARGIN     - Specific set of input parameters to the unit under test (variable length and type).
-            configStr = sprintf(configFormat, varargin{:});
+            configStr = cellarray2str(testCaseParams);
             inFilename = [testVectName '_test_input' num2str(testID) '.dat'];
             outFilename = [testVectName '_test_output' num2str(testID) '.dat'];
 
