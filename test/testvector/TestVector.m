@@ -176,7 +176,7 @@ classdef TestVector
 
             % apply clang-format on generated .h file
             headerFilename = sprintf('%s/%s_test_data.h', outputPath, baseFileName);
-            system(sprintf('clang-format -i -style=file %s', headerFilename));
+            system(sprintf('LD_LIBRARY_PATH=/usr/lib clang-format -i -style=file %s', headerFilename));
 
             % gzip generated testvectors
             current_pwd = pwd();
