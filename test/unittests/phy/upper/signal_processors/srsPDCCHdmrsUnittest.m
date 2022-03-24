@@ -90,6 +90,7 @@ classdef srsPDCCHdmrsUnittest < matlab.unittest.TestCase
             NSizeGrid = 96;
             NStartGrid = 0;
             NFrame = 0;
+            cyclicPrefix = 'normal';
             maxFrequencyResources = floor(NSizeGrid / 6);
             frequencyResources = int2bit(2^maxFrequencyResources - 1, maxFrequencyResources).';
             interleaverSize = 2;
@@ -112,7 +113,7 @@ classdef srsPDCCHdmrsUnittest < matlab.unittest.TestCase
                (strcmp(CCEREGMapping, 'noninterleaved') || ...
                 (strcmp(CCEREGMapping, 'interleaved') && mod(sum(frequencyResources) * duration, interleaverSize * REGBundleSize) == 0))
                 % configure the carrier according to the test parameters
-                carrier = srsConfigureCarrier(NCellIDLoc, numerology, NSizeGrid, NStartGrid, NSlotLoc, NFrame);
+                carrier = srsConfigureCarrier(NCellIDLoc, numerology, NSizeGrid, NStartGrid, NSlotLoc, NFrame, cyclicPrefix);
 
                 % configure the CORESET according to the test parameters
                 coreset = srsConfigureCORESET(frequencyResources, duration, CCEREGMapping, REGBundleSize, interleaverSize);
@@ -136,8 +137,8 @@ classdef srsPDCCHdmrsUnittest < matlab.unittest.TestCase
                 rbAllocationMask = generateRBallocationMaskString(symbolIndicesVector);
 
                 % generate the test case entry
-                testCaseString = testImpl.testCaseToString('{{%s}, %d, {%s}, %d, %d, %d, %.1f, {%s}}', baseFilename, testID, false, slotPointConfig, ...
-                                                          referencePointKrb, rbAllocationMask, startSymbolIndex, duration, nID, DMRSamplitude, PDCCHportsStr);
+                testCaseString = testImpl.testCaseToString('{{%s}, cyclic_prefix::%s, %d, {%s}, %d, %d, %d, %.1f, {%s}}', baseFilename, testID, false, slotPointConfig, ...
+                                                          upper(cyclicPrefix), referencePointKrb, rbAllocationMask, startSymbolIndex, duration, nID, DMRSamplitude, PDCCHportsStr);
 
                 % add the test to the file header
                 testImpl.addTestToHeaderFile(testCaseString, baseFilename, outputPath);
