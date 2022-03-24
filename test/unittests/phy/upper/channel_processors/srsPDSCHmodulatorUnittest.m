@@ -34,10 +34,10 @@ classdef srsPDSCHmodulatorUnittest < matlab.unittest.TestCase
         outputPath = {''};
         baseFilename = {''};
         testImpl = {''};
-        carrier_list = {nrCarrierConfig};
         
-        pdsch_list = {nrPDSCHConfig};
-        NID = num2cell(1:5);
+        SymbolAllocation = [{[0, 14]}, {[1, 13]}, {[2, 12]}];
+        Modulation = [{'QPSK'}, {'16QAM'}, {'64QAM'}, {'256QAM'}]
+        DMRSAdditionalPosition = [{0}, {1}, {2}, {3}];
     end
 
     methods (TestClassSetup)
@@ -51,17 +51,27 @@ classdef srsPDSCHmodulatorUnittest < matlab.unittest.TestCase
     methods (Test, TestTags = {'testvector'})
 
        
-        function testvectorGenerationCases(testCase, testImpl, outputPath, baseFilename, NID)
-            % generate a unique test ID
+        function testvectorGenerationCases(testCase, testImpl, outputPath, baseFilename, SymbolAllocation, Modulation, DMRSAdditionalPosition)
+            % Generate a unique test ID
             filenameTemplate = sprintf('%s/%s_test_input*', outputPath, baseFilename);
             file = dir (filenameTemplate);
             filenames = {file.name};
             testID = length(filenames);
+
+            % Generate default carrier configuration
+            carrier = nrCarrierConfig;
             
-            carrier = testCase.carrier_list{1};
-            pdsch = testCase.pdsch_list{1};
+            % Generate default PDSCH configuration
+            pdsch = nrPDSCHConfig;
             
-            pdsch.NID = NID;
+            % Set test specific
+            pdsch.SymbolAllocation = SymbolAllocation;
+            pdsch.Modulation = Modulation;
+            pdsch.DMRS.DMRSAdditionalPosition = DMRSAdditionalPosition;
+            
+            % Set randomized values
+            pdsch.NID = randi([1, 1023], 1, 1);
+            pdsch.RNTI = randi([1, 65535], 1, 1);
 
             if iscell(pdsch.Modulation)
                 error('Unsupported');
@@ -104,17 +114,19 @@ classdef srsPDSCHmodulatorUnittest < matlab.unittest.TestCase
             [prbset,symbolset,dmrssymbols] = nr5g.internal.pxsch.initializeResources(carrier,pdsch,carrier.NSizeGrid);
             
             dmrs_symbol_mask = zeros(1,14);
-            dmrs_symbol_mask(dmrssymbols) = 1;
+            dmrs_symbol_mask(dmrssymbols + 1) = 1;
 
-            reserved_str = '';
+            reserved_str = '{}';
             
-            ports_str = '0';
+            ports_str = '{0}';
+            
+            rb_allocation_str = ['rb_allocation({', array2str(pdsch.PRBSet), '}, vrb_to_prb_mapping_type::NON_INTERLEAVED)'];
             
             dmrs_type_str = sprintf('dmrs_type::TYPE%d', pdsch.DMRS.DMRSConfigurationType);
 
             config = [ {pdsch.RNTI}, {carrier.NSizeGrid}, {carrier.NStartGrid}, ...
-                {modulation_str1}, {modulation_str2}, {pdsch.PRBSet}, {pdsch.SymbolAllocation(1)}, ...
-                {pdsch.SymbolAllocation(2)}, {dmrs_symbol_mask}, {dmrs_type_str}, {pdsch.DMRS.NumCDMGroupsWithoutData}, {pdsch.NID}, {1}, {reserved_str}, {0}];
+                {modulation_str1}, {modulation_str2}, {rb_allocation_str}, {pdsch.SymbolAllocation(1)}, ...
+                {pdsch.SymbolAllocation(2)}, {dmrs_symbol_mask}, {dmrs_type_str}, {pdsch.DMRS.NumCDMGroupsWithoutData}, {pdsch.NID}, {1}, {reserved_str}, {0}, {ports_str}];
 %     
 %     unsigned bwp_start_rb;
 %     modulation_scheme modulation1;
