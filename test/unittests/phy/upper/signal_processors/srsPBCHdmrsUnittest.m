@@ -77,7 +77,7 @@ classdef srsPBCHdmrsUnittest < matlab.unittest.TestCase
             SSBfirstSymbol = 0;
             SSBamplitude = 1;
             SSBports = zeros(numPorts, 1);
-            SSBportsStr = array2str(SSBports);
+            SSBportsStr = cellarray2str({SSBports}, true);
 
             % check if the current SSBindex value is possible with the current Lmax
             if Lmax > SSBindex
@@ -88,8 +88,8 @@ classdef srsPBCHdmrsUnittest < matlab.unittest.TestCase
                 testImpl.saveDataFile(baseFilename, '_test_output', testID, outputPath, @writeResourceGridEntryFile, DMRSsymbols, symbolIndices);
 
                 % generate the test case entry
-                testCaseString = testImpl.testCaseToString('{%d, %d, %d, %d, %d, %d, %.1f, {%s}}', baseFilename, testID, false, NCellIDLoc, SSBindex, ...
-                                                           Lmax, SSBfirstSubcarrier, SSBfirstSymbol, nHF, SSBamplitude, SSBportsStr);
+                testCaseString = testImpl.testCaseToString(baseFilename, testID, false, {NCellIDLoc, SSBindex, Lmax, ...
+                                                           SSBfirstSubcarrier, SSBfirstSymbol, nHF, SSBamplitude, SSBportsStr}, true);
 
                 % add the test to the file header
                 testImpl.addTestToHeaderFile(testCaseString, baseFilename, outputPath);

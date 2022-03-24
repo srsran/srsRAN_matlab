@@ -72,7 +72,7 @@ classdef srsPBCHmodulatorUnittest < matlab.unittest.TestCase
             SSBfirstSymbol = 0;
             SSBamplitude = 1;
             SSBports = zeros(numPorts, 1);
-            SSBportsStr = array2str(SSBports);
+            SSBportsStr = cellarray2str({SSBports}, true);
 
             % write the BCH cw to a binary file
             testImpl.saveDataFile(baseFilename, '_test_input', testID, outputPath, @writeUint8File, cwLoc);
@@ -84,8 +84,8 @@ classdef srsPBCHmodulatorUnittest < matlab.unittest.TestCase
             testImpl.saveDataFile(baseFilename, '_test_output', testID, outputPath, @writeResourceGridEntryFile, modulatedSymbols, symbolIndices);
 
             % generate the test case entry
-            testCaseString = testImpl.testCaseToString('{%d, %d, %d, %d, %.1f, {%s}}', baseFilename, testID, true, NCellIDLoc, SSBindex, ...
-                                                       SSBfirstSubcarrier, SSBfirstSymbol, SSBamplitude, SSBportsStr);
+            testCaseString = testImpl.testCaseToString(baseFilename, testID, true, {NCellIDLoc, SSBindex, SSBfirstSubcarrier, ...
+                                                       SSBfirstSymbol, SSBamplitude, SSBportsStr}, true);
 
             % add the test to the file header
             testImpl.addTestToHeaderFile(testCaseString, baseFilename, outputPath);

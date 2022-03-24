@@ -144,7 +144,7 @@ classdef srsPDCCHmodulatorUnittest < matlab.unittest.TestCase
 
                 % generate the test case entry
                 testCaseString = testImpl.testCaseToString(baseFilename, testID, true, {rbAllocationMaskStr, ...
-                    startSymbolIndex, duration, nID, rnti, double(1.0), PDCCHportsStr});
+                                   startSymbolIndex, duration, nID, rnti, 1.0, PDCCHportsStr}, true);
 
                 % add the test to the file header
                 testImpl.addTestToHeaderFile(testCaseString, baseFilename, outputPath);

@@ -63,8 +63,8 @@ classdef srsModulationMapperUnittest < matlab.unittest.TestCase
             testImpl.saveDataFile(baseFilename, '_test_output', testID, outputPath, @writeComplexFloatFile, modulatedSymbols);
 
             % generate the test case entry
-            modSchemeString = modScheme{length(modScheme)};
-            testCaseString = testImpl.testCaseToString('%d, modulation_scheme::%s', baseFilename, testID, true, nSymbols, modSchemeString);
+            modSchemeString = ['modulation_scheme::', modScheme{length(modScheme)}];
+            testCaseString = testImpl.testCaseToString(baseFilename, testID, true, {nSymbols, modSchemeString}, false);
 
             % add the test to the file header
             testImpl.addTestToHeaderFile(testCaseString, baseFilename, outputPath);

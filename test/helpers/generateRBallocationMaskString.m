@@ -11,6 +11,6 @@ function outputString = generateRBallocationMaskString(symbolIndicesVector)
       rbIdx = floor(REidx / 12);
       rbAllocation(rbIdx + 1) = 1;
     end
-    outputString = array2str(rbAllocation);
+    outputString = cellarray2str({rbAllocation}, true);
 
 end

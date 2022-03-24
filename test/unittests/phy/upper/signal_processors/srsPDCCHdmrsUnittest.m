@@ -105,9 +105,9 @@ classdef srsPDCCHdmrsUnittest < matlab.unittest.TestCase
             referencePointKrb = 0;
             startSymbolIndex = 0;
             nID = NCellIDLoc;
-            DMRSamplitude = 1;
+            DMRSamplitude = 1.0;
             PDCCHports = zeros(numPorts, 1);
-            PDCCHportsStr = array2str(PDCCHports);
+            PDCCHportsStr = cellarray2str({PDCCHports}, true);
 
             % only encode the PDCCH when it fits
             if sum(frequencyResources) * duration >= aggregationLevel && ...
@@ -132,14 +132,15 @@ classdef srsPDCCHdmrsUnittest < matlab.unittest.TestCase
                 testImpl.saveDataFile(baseFilename, '_test_output', testID, outputPath, @writeResourceGridEntryFile, DMRSsymbolsVector, symbolIndicesVector);
 
                 % generate a 'slot_point' configuration string
-                slotPointConfig = generateSlotPointConfigString(numerology, NFrame, NSlotLoc, carrier.SlotsPerSubframe);
+                slotPointConfig = cellarray2str({numerology, NFrame, floor(NSlotLoc / carrier.SlotsPerSubframe), ...
+                                                 rem(NSlotLoc, carrier.SlotsPerSubframe)}, true);
 
                 % generate a RB allocation mask string
                 rbAllocationMask = generateRBallocationMaskString(symbolIndicesVector);
 
                 % generate the test case entry
-                testCaseString = testImpl.testCaseToString('{{%s}, cyclic_prefix::%s, %d, {%s}, %d, %d, %d, %.1f, {%s}}', baseFilename, testID, false, slotPointConfig, ...
-                                                          upper(cyclicPrefix), referencePointKrb, rbAllocationMask, startSymbolIndex, duration, nID, DMRSamplitude, PDCCHportsStr);
+                testCaseString = testImpl.testCaseToString(baseFilename, testID, false, {slotPointConfig, ['cyclic_prefix::', upper(cyclicPrefix)], ...
+                                      referencePointKrb, rbAllocationMask, startSymbolIndex, duration, nID, DMRSamplitude, PDCCHportsStr}, true);
 
                 % add the test to the file header
                 testImpl.addTestToHeaderFile(testCaseString, baseFilename, outputPath);
