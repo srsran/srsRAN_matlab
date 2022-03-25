@@ -40,14 +40,6 @@ classdef srsPDSCHmodulatorUnittest < matlab.unittest.TestCase
         DMRSAdditionalPosition = [{0}, {1}, {2}, {3}];
     end
 
-    methods (TestClassSetup)
-        function initialize(testCase)
-            % add main folder to the Matlab path
-            p = path;
-            testCase.addTeardown(@path, p);
-        end
-    end
-
     methods (Test, TestTags = {'testvector'})
 
        
@@ -64,7 +56,7 @@ classdef srsPDSCHmodulatorUnittest < matlab.unittest.TestCase
             % Generate default PDSCH configuration
             pdsch = nrPDSCHConfig;
             
-            % Set test specific
+            % Set specific parameters
             pdsch.SymbolAllocation = SymbolAllocation;
             pdsch.Modulation = Modulation;
             pdsch.DMRS.DMRSAdditionalPosition = DMRSAdditionalPosition;
@@ -78,28 +70,28 @@ classdef srsPDSCHmodulatorUnittest < matlab.unittest.TestCase
             else
                 switch pdsch.Modulation
                     case 'QPSK'
-                        mod_order1 = 2;
-                        modulation_str1 = 'modulation_scheme::QPSK';
+                        modOrder1 = 2;
+                        modString1 = 'modulation_scheme::QPSK';
                     case '16QAM'
-                        mod_order1 = 4;
-                        modulation_str1 = 'modulation_scheme::QAM16';
+                        modOrder1 = 4;
+                        modString1 = 'modulation_scheme::QAM16';
                     case '64QAM'
-                        mod_order1 = 6;
-                        modulation_str1 = 'modulation_scheme::QAM64';
+                        modOrder1 = 6;
+                        modString1 = 'modulation_scheme::QAM64';
                     case '256QAM'
-                        mod_order1 = 8;
-                        modulation_str1 = 'modulation_scheme::QAM256';
+                        modOrder1 = 8;
+                        modString1 = 'modulation_scheme::QAM256';
                 end
-                mod_order2 = mod_order1;
-                modulation_str2 = modulation_str1;
+                modOrder2 = modOrder1;
+                modString2 = modString1;
             end
 
             
             % Calculate number of encoded bits
-            nbits = length(nrPDSCHIndices(carrier, pdsch)) * mod_order1;
+            nBits = length(nrPDSCHIndices(carrier, pdsch)) * modOrder1;
             
             % Generate codewords
-            cws = randi([0,1], nbits, 1);
+            cws = randi([0,1], nBits, 1);
             
             % write the BCH cw to a binary file
             testImpl.saveDataFile(baseFilename, '_test_input', testID, outputPath, @writeUint8File, cws);
@@ -110,11 +102,10 @@ classdef srsPDSCHmodulatorUnittest < matlab.unittest.TestCase
             % write each complex symbol into a binary file, and the associated indices to another
             testImpl.saveDataFile(baseFilename, '_test_output', testID, outputPath, @writeResourceGridEntryFile, modulatedSymbols, symbolIndices);
 
-            
-            [prbset,symbolset,dmrssymbols] = nr5g.internal.pxsch.initializeResources(carrier,pdsch,carrier.NSizeGrid);
-            
-            dmrs_symbol_mask = zeros(1,14);
-            dmrs_symbol_mask(dmrssymbols + 1) = 1;
+            % Generate DMRS symbol mask
+            [~,~,dmrsSymbols] = nr5g.internal.pxsch.initializeResources(carrier, pdsch, carrier.NSizeGrid);
+            dmrsSymbolMask = zeros(1, 14);
+            dmrsSymbolMask (dmrsSymbols + 1) = 1;
 
             reserved_str = '{}';
             
@@ -125,50 +116,13 @@ classdef srsPDSCHmodulatorUnittest < matlab.unittest.TestCase
             dmrs_type_str = sprintf('dmrs_type::TYPE%d', pdsch.DMRS.DMRSConfigurationType);
 
             config = [ {pdsch.RNTI}, {carrier.NSizeGrid}, {carrier.NStartGrid}, ...
-                {modulation_str1}, {modulation_str2}, {rb_allocation_str}, {pdsch.SymbolAllocation(1)}, ...
-                {pdsch.SymbolAllocation(2)}, {dmrs_symbol_mask}, {dmrs_type_str}, {pdsch.DMRS.NumCDMGroupsWithoutData}, {pdsch.NID}, {1}, {reserved_str}, {0}, {ports_str}];
-%     
-%     unsigned bwp_start_rb;
-%     modulation_scheme modulation1;
-%     modulation_scheme modulation2;
-%     rb_allocation freq_allocation;
-%     unsigned start_symbol_index;
-%     unsigned nof_symbols;
-%     std::array<bool, MAX_NSYMB_PER_SLOT> dmrs_symb_pos;
-%     dmrs_type dmrs_config_type;
-%     unsigned nof_cdm_groups_without_data;
-%     unsigned n_id;
-%     float scaling;
-%     re_pattern_list reserved;
-%     unsigned pmi;
-%     static_vector<uint8_t, MAX_PORTS> ports;
+                {modString1}, {modString1}, {rb_allocation_str}, {pdsch.SymbolAllocation(1)}, ...
+                {pdsch.SymbolAllocation(2)}, {dmrsSymbolMask }, {dmrs_type_str}, {pdsch.DMRS.NumCDMGroupsWithoutData}, {pdsch.NID}, {1}, {reserved_str}, {0}, {ports_str}];
+
             testCaseString = testImpl.testCaseToString(cellarray2str(config), baseFilename, testID, 1);
 
             % add the test to the file header
             testImpl.addTestToHeaderFile(testCaseString, baseFilename, outputPath);
         end
     end
- 
-%     methods (Test, TestTags = {'srs_phy_validation'})
-%
-%         function srsPHYvalidationCases(testCase, NCellID, PDSCHindex, Lmax)
-%             % use a cw for each test
-%             cw = zeros(864, 1);
-%             for index = 1: 864
-%                 cw(index) = testCase.cw{index, NCellID+1};
-%             end;
-%
-%             % call the Matlab PHY function
-%             [matModulatedSymbols, matSymbolIndices] = srsPDSCHmodulator(cw, NCellID, PDSCHindex, Lmax);
-%
-%             % call the SRS PHY function
-%             % TBD: [srsModulatedSymbols, srsSymbolIndices] = srsPDSCHmodulatorPHYtest(cw, NCellID, PDSCHindex, Lmax);
-%
-%             % compare the results
-%             % TBD: testCase.verifyEqual(matModulatedSymbols, srsModulatedSymbols);
-%             % TBD: testCase.verifyEqual(matSymbolIndices, srsSymbolIndices);
-%         end
-%     end
-
-
 end
