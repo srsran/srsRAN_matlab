@@ -1,11 +1,15 @@
-function [str_out] = cell2str(arg)
-    mat = cell2mat(arg);
+%CELL2STR Converts an any cell type value into a string.
+%   OUTPUTSTRING = CELL2STR(ARG) converts the input INPUTCELL into its 
+%   character representation OUTPUTSTRING.
 
-    if iscellstr(arg)
-        str_out = mat;
+function [outoutString] = cell2str(inputCell)
+    mat = cell2mat(inputCell);
+
+    if iscellstr(inputCell)
+        outoutString = mat;
     elseif length(mat) == 1
-        str_out = num2str(mat);
+        outoutString = num2str(mat);
     else
-        str_out = ['{', array2str(mat), '}'];
+        outoutString = ['{', array2str(mat), '}'];
     end
 end

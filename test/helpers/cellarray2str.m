@@ -1,10 +1,14 @@
-function [str_out] = cellarray2str(args)
-str_out = '{';
+%CELLARRAY2STR Converts any cell array type into a string.
+%   OUTPUTSTRING = CELLARRAY2STR(ARG) converts the input INPUTCELLARRAY 
+%   into its character representation OUTPUTSTRING.
 
-for arg = args(1:end-1)
-    str_out = [str_out, cell2str(arg), ', '];
+function [outputString] = cellarray2str(inputCellArray)
+outputString = '{';
+
+for arg = inputCellArray(1:end-1)
+    outputString = [outputString, cell2str(arg), ', '];
 end
 
-str_out = [str_out, cell2str(args(end)), '}'];
+outputString = [outputString, cell2str(inputCellArray(end)), '}'];
 
 end

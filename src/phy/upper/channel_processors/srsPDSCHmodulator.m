@@ -1,15 +1,9 @@
-%SRSPDSCHMODULATOR:
-%  Function generating the PDSCH modulation symbols.
+%SRSPDSCHMODULATOR Physical Downlink Shared Channel.
+%   [MODULATEDSYMBOLS, SYMBOLINDICES] = SRSPDSCHMODULATOR(CARRIER, PDSCH, CWS)
+%   modulates up to two PDSCH codewords CWS and returns the complex symbols
+%   MODULATEDSYMBOLS as well as a column vector of RE indices.
 %
-%  Call details:
-%    [MODULATEDSYMBOLS, SYMBOLINDICES] = SRSPDSCHMODULATOR(CW, NCELLID, LMAX) receives the parameters
-%      * double array cws - PDSCH codewords
-%      * struct carrier   - Provides carrier parameters
-%      * struct pdsch     - Provides PDSCH transmission parameters
-%    and returns
-%      * complex double array MODULATEDSYMBOLS - PDSCH modulated symbols
-%      * uint32 array SYMBOLINDICES            - PDSCH RE indices
-
+%   See also nrPDSCH, nrPDSCHIndices.
 function [modulatedSymbols, symbolIndices] = srsPDSCHmodulator(carrier, pdsch, cws)
     modulatedSymbols = nrPDSCH(carrier, pdsch, cws);
 
