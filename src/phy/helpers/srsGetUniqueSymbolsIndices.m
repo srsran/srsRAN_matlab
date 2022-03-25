@@ -1,18 +1,20 @@
-%SRSGETUNIQUESYMBOLSINDICES Puts all unique symbol and indices pairs of a cell in vector format.
+%SRSGETUNIQUESYMBOLSINDICES Puts all unique symbol and index pairs of a cell in vector format.
 %   [SYMBOLVECTOR, SYMBOLINDICESVECTOR] = SRSGETUNIQUESYMBOLSINDICES(SYMBOLS, SYMBOLINDICES)
-%   returns a vector with complex symbols SYMBOLVECTOR and a vector with the relate indices with
+%   returns a vector with complex symbols SYMBOLVECTOR and a vector with the relate indices,
+%   making sure that no repeated entries are present. The input arguments are a cell structure
+%   comprising several sets of symbols and indices.
 
 function [symbolVector, symbolIndicesVector] = srsGetUniqueSymbolsIndices(symbols, symbolIndices)
 
     % initialize the output vectors
-    symbolVector = zeros(1,1);
-    symbolIndicesVector = zeros(1,3);
+    symbolVector = zeros(1, 1);
+    symbolIndicesVector = zeros(1, 3);
 
     % find the number of sets of symbols and indices
-    nofSets = size(symbols);
-    tmpVector = zeros(1,3);
+    nofSets = size(symbols, 1);
+    tmpVector = zeros(1, 3);
     nofAddedValues = 0;
-    for setIdx = 1:nofSets(1)
+    for setIdx = 1:nofSets
         symbolSet = symbols{setIdx};
         indicesSet = symbolIndices{setIdx};
 

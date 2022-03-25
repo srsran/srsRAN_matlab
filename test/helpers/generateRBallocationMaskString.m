@@ -5,10 +5,10 @@
 
 function outputString = generateRBallocationMaskString(symbolIndicesVector)
 
-    rbAllocation = zeros(275,1); % maximum possible RB size
+    rbAllocation = zeros(275, 1); % maximum possible RB size
     for index = 1:length(symbolIndicesVector)
-      REidx = symbolIndicesVector(index,1);
-      rbIdx = floor(REidx/12);
+      REidx = symbolIndicesVector(index, 1);
+      rbIdx = floor(REidx / 12);
       rbAllocation(rbIdx + 1) = 1;
     end
     outputString = array2str(rbAllocation);

@@ -77,7 +77,7 @@ classdef srsPBCHmodulatorUnittest < matlab.unittest.TestCase
             % write the BCH cw to a binary file
             testImpl.saveDataFile(baseFilename, '_test_input', testID, outputPath, @writeUint8File, cwLoc);
 
-            % call the PBCH symbol modulation Matlab functions
+            % call the PBCH symbol modulation MATLAB functions
             [modulatedSymbols, symbolIndices] = srsPBCHmodulator(cwLoc, NCellIDLoc, SSBindex, LmaxLoc);
 
             % write each complex symbol into a binary file, and the associated indices to another

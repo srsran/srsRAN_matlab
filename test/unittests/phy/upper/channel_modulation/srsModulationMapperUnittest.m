@@ -56,7 +56,7 @@ classdef srsModulationMapperUnittest < matlab.unittest.TestCase
             % write the codeword to a binary file
             testImpl.saveDataFile(baseFilename, '_test_input', testID, outputPath, @writeUint8File, codeword);
 
-            % call the symbol modulation Matlab functions
+            % call the symbol modulation MATLAB functions
             [modulatedSymbols] = srsModulator(codeword, modScheme{2});
 
             % write complex symbols into a binary file

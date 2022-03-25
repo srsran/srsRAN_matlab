@@ -81,7 +81,7 @@ classdef srsPBCHdmrsUnittest < matlab.unittest.TestCase
 
             % check if the current SSBindex value is possible with the current Lmax
             if Lmax > SSBindex
-                % call the PBCH DMRS symbol processor Matlab functions
+                % call the PBCH DMRS symbol processor MATLAB functions
                 [DMRSsymbols, symbolIndices] = srsPBCHdmrs(NCellIDLoc, SSBindex, Lmax, nHF);
 
                 % write each complex symbol into a binary file, and the associated indices to another
