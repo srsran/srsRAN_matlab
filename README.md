@@ -7,17 +7,23 @@ Call *runTestVector* with the tag *unittests* to generate the set of unit test t
 - modulation mapper:
 
 ```
-runTestvector('unittests','modulation_mapper', 'phy/upper/channel_modulation', 'srsModulationMapperUnittest');
+runTestVector('unittests','modulation_mapper', 'phy/upper/channel_modulation', 'srsModulationMapperUnittest');
 ```
 
 - PBCH modulator:
 
 ```
-runTestvector('unittests','pbch_modulator', 'phy/upper/channel_processors', 'srsPBCHmodulatorUnittest');
+runTestVector('unittests','pbch_modulator', 'phy/upper/channel_processors', 'srsPBCHmodulatorUnittest');
 ```
 
 - PBCH DMRS processor:
 
 ```
-runTestvector('unittests','dmrs_pbch_processor', 'phy/upper/signal_processors', 'srsPBCHdmrsUnittest');
+runTestVector('unittests','dmrs_pbch_processor', 'phy/upper/signal_processors', 'srsPBCHdmrsUnittest');
+```
+
+- PDCCH DMRS processor
+
+```
+runTestVector('unittests','dmrs_pdcch_processor', 'phy/upper/signal_processors', 'srsPDCCHdmrsUnittest');
 ```

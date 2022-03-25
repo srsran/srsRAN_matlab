@@ -74,6 +74,7 @@ classdef TestVector
             fprintf(testvectorHeaderFileID, '};\n');
             fprintf(testvectorHeaderFileID, '\n');
             fprintf(testvectorHeaderFileID, 'static const std::vector<test_case_t> %s_test_data = {\n', unitUnderTest);
+            fprintf(testvectorHeaderFileID, '// clang-format off\n');
             fclose(testvectorHeaderFileID);
         end
     end
@@ -133,6 +134,7 @@ classdef TestVector
             % write the closing header file contents
             headerFilename = sprintf('%s/%s_test_data.h', outputPath, unitUnderTest);
             testvectorHeaderFileID = fopen(headerFilename, 'a+');
+            fprintf(testvectorHeaderFileID, '// clang-format on\n');
             fprintf(testvectorHeaderFileID, '};\n');
             fprintf(testvectorHeaderFileID, '\n');
             fprintf(testvectorHeaderFileID, '} // srsgnb\n');
