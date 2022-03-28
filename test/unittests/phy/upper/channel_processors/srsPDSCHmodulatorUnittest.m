@@ -53,13 +53,11 @@ classdef srsPDSCHmodulatorUnittest < matlab.unittest.TestCase
             % Generate default carrier configuration
             carrier = nrCarrierConfig;
 
-            % Generate default PDSCH configuration
-            pdsch = nrPDSCHConfig;
+            % configure the PDSCH DMRS symbols according to the test parameters
+            DMRS = srsConfigurePDSCHdmrs(DMRSAdditionalPosition);
 
-            % Set specific parameters
-            pdsch.SymbolAllocation = SymbolAllocation;
-            pdsch.Modulation = Modulation;
-            pdsch.DMRS.DMRSAdditionalPosition = DMRSAdditionalPosition;
+            % configure the PDSCH according to the test parameters
+            pdsch = srsConfigurePDSCH(SymbolAllocation, Modulation);
 
             % Set randomized values
             pdsch.NID = randi([1, 1023], 1, 1);

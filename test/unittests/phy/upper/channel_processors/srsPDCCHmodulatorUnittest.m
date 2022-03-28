@@ -10,23 +10,23 @@ classdef srsPDCCHmodulatorUnittest < matlab.unittest.TestCase
 %
 %   NCellID          - PHY-layer cell ID (0, ..., 1007).
 %   NSlot            - slot index (0, ..., 10).
-%   rnti             - radio network temporary ID (0, ..., 65535)
+%   RNTI             - radio network temporary ID (0, ..., 65535)
 %   port             - port index used for PDCCH transmission (0, ..., 7).
-%   interleaverSize  - interleaver size used in a CORESET mapping {2, 3, 6}.
-%   REGbundleSize    - REG bundle size used in a CORESET mapping {Ns, 6}, where Ns is a CORESET duration
+%   InterleaverSize  - interleaver size used in a CORESET mapping {2, 3, 6}.
+%   REGBundleSize    - REG bundle size used in a CORESET mapping {Ns, 6}, where Ns is a CORESET Duration
 %
 %   srsPDCCHmodulatorUnittest test properties:
 %
-%   duration         - CORESET duration (1, 2, 3)
+%   Duration         - CORESET Duration (1, 2, 3)
 %   CCEREGMapping    - CCE-to-REG mapping ('noninteleaved', 'interleaved')
-%   aggregationLevel - PDCCH aggregation level (1, 2, 4, 8, 16)
+%   AggregationLevel - PDCCH aggregation level (1, 2, 4, 8, 16)
 %
 %   SRSPDCCHDMRSUNITTEST Methods (TestTags = {'testvector'}):
 %
 %   initialize                - Adds the required folders to the MATLAB path and
 %                               registers callback action performed on a test teardown.
-%   testvectorGenerationCases - Generates test vectors for all possible combinations of CORESET duration,
-%                               CORESET CCEREGMapping and aggregationLevel, while using a random
+%   testvectorGenerationCases - Generates test vectors for all possible combinations of CORESET Duration,
+%                               CORESET CCEREGMapping and AggregationLevel, while using a random
 %                               parameters as described above.
 %
 %   srsPDCCHmodulatorUnittest Methods (TestTags = {'srsPHYvalidation'}):
@@ -39,18 +39,18 @@ classdef srsPDCCHmodulatorUnittest < matlab.unittest.TestCase
         nCellID = num2cell(0:1:1007);
         nSlot  = num2cell(0:1:10);
         port   = num2cell(randi([0 7], 1, 60));
-        % possible REGBundle sizes  for each CORESET duration
-        REGbundleSizes = [[2, 6]; [2, 6]; [3, 6]];
-        interleaverSizes = [2, 3, 6];
+        % possible REGBundle sizes  for each CORESET Duration
+        REGBundleSizes = [[2, 6]; [2, 6]; [3, 6]];
+        InterleaverSizes = [2, 3, 6];
     end
 
     properties (TestParameter)
         outputPath = {''};
         baseFilename = {''};
         testImpl = {''};
-        duration = {1, 2, 3};
+        Duration = {1, 2, 3};
         CCEREGMapping = {'noninterleaved', 'interleaved'};
-        aggregationLevel= {1, 2, 4, 8, 16};
+        AggregationLevel= {1, 2, 4, 8, 16};
     end
 
     methods (TestClassSetup)
@@ -65,9 +65,9 @@ classdef srsPDCCHmodulatorUnittest < matlab.unittest.TestCase
     end
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(testCase, testImpl, outputPath, baseFilename, duration, CCEREGMapping, aggregationLevel)
+        function testvectorGenerationCases(testCase, testImpl, outputPath, baseFilename, Duration, CCEREGMapping, AggregationLevel)
 %TESTVECTORGENERATIONCASES Generates test vectors for all possible combinations of numerology,
-% duration, CCEREGMapping, aggregationLevel while using a random nCellID, RNTI and codeword for each test.
+% Duration, CCEREGMapping, AggregationLevel while using a random nCellID, RNTI and codeword for each test.
 
             % generate a unique test ID
             filenameTemplate = sprintf('%s/%s_test_output*', outputPath, baseFilename);
@@ -75,19 +75,19 @@ classdef srsPDCCHmodulatorUnittest < matlab.unittest.TestCase
             filenames = {file.name};
             testID = length(filenames);
 
-            % use a unique nCellID, nSlot and rnti for each test
+            % use a unique nCellID, nSlot and RNTI for each test
             randomizedCellID = testCase.randomizeTestvector{testID+1};
             testCellID = testCase.nCellID{randomizedCellID};
             randomizedSlot = testCase.randomizeSlot{testID+1};
             slotIndex = testCase.nSlot{randomizedSlot};
-            rnti = randi([0, 65535], 1, 1);
-            maxAllowedStartSymbol = 14 - duration;
+            RNTI = randi([0, 65535], 1, 1);
+            maxAllowedStartSymbol = 14 - Duration;
             startSymbolIndex = randi([1, maxAllowedStartSymbol], 1, 1);
             if strcmp(CCEREGMapping, 'interleaved')
-                interleaverSize = testCase.interleaverSizes(randi([1,3], 1, 1));
-                REGBundleSize = testCase.REGbundleSizes(duration, randi([1,2], 1, 1));
+                InterleaverSize = testCase.InterleaverSizes(randi([1,3], 1, 1));
+                REGBundleSize = testCase.REGBundleSizes(Duration, randi([1,2], 1, 1));
             else
-                interleaverSize = 2;
+                InterleaverSize = 2;
                 REGBundleSize = 6;
             end
             % currently fixed to 1 port of random number from [0, 7]
@@ -101,37 +101,37 @@ classdef srsPDCCHmodulatorUnittest < matlab.unittest.TestCase
             NStartGrid = 0;
             NFrame = 0;
             maxFrequencyResources = floor(NSizeGrid / 6);
-            frequencyResources = int2bit(2^maxFrequencyResources - 1, maxFrequencyResources).';
-            searchSpaceType = 'ue';
+            FrequencyResources = int2bit(2^maxFrequencyResources - 1, maxFrequencyResources).';
+            SearchSpaceType = 'ue';
             NStartBWP = 0;
             NSizeBWP = NSizeGrid;
-            allocatedCandidate = 1;
+            AllocatedCandidate = 1;
             nID = testCellID;
 
             % only encode the PDCCH when it fits
-            if sum(frequencyResources) * duration >= aggregationLevel && ...
+            if sum(FrequencyResources) * Duration >= AggregationLevel && ...
                (strcmp(CCEREGMapping, 'noninterleaved') || ...
-                (strcmp(CCEREGMapping, 'interleaved') && mod(sum(frequencyResources) * duration, interleaverSize * REGBundleSize) == 0))
+                (strcmp(CCEREGMapping, 'interleaved') && mod(sum(FrequencyResources) * Duration, InterleaverSize * REGBundleSize) == 0))
                 % configure the carrier according to the test parameters
                 carrier = srsConfigureCarrier(testCellID, 0, NSizeGrid, NStartGrid, slotIndex, NFrame, cyclicPrefix);
 
                 % configure the CORESET according to the test parameters
-                coreset = srsConfigureCORESET(frequencyResources, duration, CCEREGMapping, REGBundleSize, interleaverSize);
+                CORESET = srsConfigureCORESET(FrequencyResources, Duration, CCEREGMapping, REGBundleSize, InterleaverSize);
 
                 % configure the PDCCH according to the test parameters
-                pdcch = srsConfigurePDCCH(coreset, NStartBWP, NSizeBWP, rnti, aggregationLevel, searchSpaceType, allocatedCandidate, nID);
+                pdcch = srsConfigurePDCCH(CORESET, NStartBWP, NSizeBWP, RNTI, AggregationLevel, SearchSpaceType, AllocatedCandidate, nID);
 
                 % set startSymbol using random value generated above
                 pdcch.SearchSpace.StartSymbolWithinSlot = startSymbolIndex;
 
                 % generate random codeword, 54REs per CCE, 2 bits per QPSK symbol
-                codeWord = randi([0 1], 54 * 2 * aggregationLevel, 1);
+                codeWord = randi([0 1], 54 * 2 * AggregationLevel, 1);
 
                 % write the codeWord to a binary file
                 testImpl.saveDataFile(baseFilename, '_test_input', testID, outputPath, @writeUint8File, codeWord);
 
                 % call the PDCCH modulator MATLAB functions
-                [PDCCHsymbols, symbolIndices] = srsPDCCHmodulator(codeWord, carrier, pdcch, nID, rnti);
+                [PDCCHsymbols, symbolIndices] = srsPDCCHmodulator(codeWord, carrier, pdcch, nID, RNTI);
                 symbolIndices(:, 3) = int32(PDCCHports);
 
                 % write each complex symbol into a binary file, and the associated indices to another
@@ -144,7 +144,7 @@ classdef srsPDCCHmodulatorUnittest < matlab.unittest.TestCase
 
                 % generate the test case entry
                 testCaseString = testImpl.testCaseToString(baseFilename, testID, true, {rbAllocationMaskStr, ...
-                                   startSymbolIndex, duration, nID, rnti, 1.0, PDCCHportsStr}, true);
+                                   startSymbolIndex, Duration, nID, RNTI, 1.0, PDCCHportsStr}, true);
 
                 % add the test to the file header
                 testImpl.addTestToHeaderFile(testCaseString, baseFilename, outputPath);

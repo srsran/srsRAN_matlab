@@ -1,17 +1,29 @@
 %SRSCONFIGURECORESET Generates a control resource set object.
-%   CORESET = SRSCONFIGURECORESET(FREQUENCYRESOURCES, DURATION, CCEREGMAPPING, ...
-%       REGBUNDLESIZE, INTERLEAVERSIZE)
-%   returns a CORESET object with the requested configuration.
+%   CORESET = SRSCONFIGURECORESET(VARARGIN) returns a CORESET object with the requested configuration.
+%   The names of the input parameters are assumed to be coinciding with those of the properties
+%   of nrCORESETConfig, with the exception of the suffix 'Loc' which is accepted.
 %
 %   See also nrCORESETConfig.
 
-function coreset = srsConfigureCORESET(frequencyResources, duration, CCEREGMapping, REGBundleSize, interleaverSize)
+function CORESET = srsConfigureCORESET(varargin)
 
-    coreset = nrCORESETConfig;
-    coreset.FrequencyResources = frequencyResources;
-    coreset.Duration = duration;
-    coreset.CCEREGMapping = CCEREGMapping;
-    coreset.REGBundleSize = REGBundleSize;
-    coreset.InterleaverSize = interleaverSize;
+    CORESET = nrCORESETConfig;
+    nofInputParams = length(varargin);
+    for index = 1:nofInputParams
+        paramName = erase(inputname(index), 'Loc');
+        switch(paramName)
+            case 'FrequencyResources'
+                CORESET.FrequencyResources = varargin{index};
+            case 'Duration'
+                CORESET.Duration = varargin{index};
+            case 'CCEREGMapping'
+              CORESET.CCEREGMapping = varargin{index};
+            case 'REGBundleSize'
+              CORESET.REGBundleSize = varargin{index};
+            case 'InterleaverSize'
+              CORESET.InterleaverSize = varargin{index};
+        end
+    end
+
 
 end

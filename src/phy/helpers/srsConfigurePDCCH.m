@@ -1,23 +1,34 @@
 %SRSCONFIGUREPDCCH Generates a physical control channel object.
-%   PDCCH = SRSCONFIGUREPDCCH(CORESET, NSTARTBWP, NSIZEBWP, RNTI, AGGREGATIONLEVEL, ...
-%       SEARCHSPACETYPE, ALLOCATEDCANDIDATE, DMRSSCRAMBLINGID)
-%   returns a PDCCH object with the requested configuration.
+%   PDCCH = SRSCONFIGUREPDCCH(VARARGIN) returns a PDCCH object with the requested configuration.
+%   The names of the input parameters are assumed to be coinciding with those of the properties
+%   of nrPDCCHConfig, with the exception of the suffix 'Loc' which is accepted.
 %
 %   See also nrPDCCHConfig.
 
-function pdcch = srsConfigurePDCCH(coreset, NStartBWP, NSizeBWP, rnti, aggregationLevel, searchSpaceType, allocatedCandidate, DMRSscramblingID)
+function pdcch = srsConfigurePDCCH(varargin)
 
-    if isempty(coreset)
-        pdcch = nrPDCCHConfig;
-    else
-        pdcch = nrPDCCHConfig('CORESET', coreset);
+    pdcch = nrPDCCHConfig;
+    nofInputParams = length(varargin);
+    for index = 1:nofInputParams
+        paramName = erase(inputname(index), 'Loc');
+        switch(paramName)
+            case 'CORESET'
+                pdcch.CORESET = varargin{index};
+            case 'NStartBWP'
+                pdcch.NStartBWP = varargin{index};
+            case 'NSizeBWP'
+                pdcch.NSizeBWP = varargin{index};
+            case 'RNTI'
+                pdcch.RNTI = varargin{index};
+            case 'AggregationLevel'
+                pdcch.AggregationLevel = varargin{index};
+            case 'SearchSpaceType'
+                pdcch.SearchSpace.SearchSpaceType = varargin{index};
+            case 'AllocatedCandidate'
+                pdcch.AllocatedCandidate = varargin{index};
+            case 'DMRSScramblingID'
+                pdcch.DMRSScramblingID = varargin{index};
+        end
     end
-    pdcch.NStartBWP = NStartBWP;
-    pdcch.NSizeBWP = NSizeBWP;
-    pdcch.RNTI = rnti;
-    pdcch.AggregationLevel = aggregationLevel;
-    pdcch.SearchSpace.SearchSpaceType = searchSpaceType;
-    pdcch.AllocatedCandidate = allocatedCandidate;
-    pdcch.DMRSScramblingID = DMRSscramblingID;
 
 end

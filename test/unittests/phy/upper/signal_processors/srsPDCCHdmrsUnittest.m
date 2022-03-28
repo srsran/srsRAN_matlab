@@ -10,18 +10,18 @@ classdef srsPDCCHdmrsUnittest < matlab.unittest.TestCase
 %
 %   NCellID          - PHY-layer cell ID (0, ..., 1007).
 %   NSlot            - slot index (0, ..., 19).
-%   rnti             - radio network temporary ID (0, ..., 65535)
+%   RNTI             - radio network temporary ID (0, ..., 65535)
 %   numerology       - defines the subcarrier spacing (0, 1)
-%   duration         - CORESET duration (1, 2, 3)
+%   Duration         - CORESET Duration (1, 2, 3)
 %   CCEREGMapping    - CCE-to-REG mapping ('interleaved', 'noninteleaved')
-%   aggregationLevel - PDCCH aggregation level (1, 2, 4, 8, 16)
+%   AggregationLevel - PDCCH aggregation level (1, 2, 4, 8, 16)
 %
 %   SRSPDCCHDMRSUNITTEST Methods (TestTags = {'testvector'}):
 %
 %   initialize                - Adds the required folders to the MATLAB path and
 %                               initializes the random seed.
 %   testvectorGenerationCases - Generates test vectors for all possible combinations of numerology,
-%                               duration, CCEREGMapping and aggregationLevel, while using a random
+%                               Duration, CCEREGMapping and AggregationLevel, while using a random
 %                               NCellID and NSlot for each test, jointly with some fixed parameters.
 %
 %   SRSPBCHMODULATORUNITTEST Methods (TestTags = {'srsPHYvalidation'}):
@@ -30,7 +30,7 @@ classdef srsPDCCHdmrsUnittest < matlab.unittest.TestCase
 %  SRSPBCHDMRSUNITTEST Methods:
 %    The following methods are available for the testvector generation tests (TestTags = {'testvector'}):
 %      * testvectorGenerationCases - generates testvectors for all possible combinations of numerology,
-%                                    duration, CCEREGMapping and aggregationLevel, while using a random
+%                                    Duration, CCEREGMapping and AggregationLevel, while using a random
 %                                    NCellID and NSlot for each test, jointly with some fixed parameters.
 %
 %    The following methods are available for the SRS PHY validation tests (TestTags = {'srsPHYvalidation'}):
@@ -46,11 +46,11 @@ classdef srsPDCCHdmrsUnittest < matlab.unittest.TestCase
         randomizeSlotNum1 = num2cell(randi([1, 20], 1, 60));
         NCellID = num2cell(0:1:1007);
         NSlot = num2cell(0:1:19);
-        rnti = num2cell(0:1:65535);
+        RNTI = num2cell(0:1:65535);
         numerology = {0, 1};
-        duration = {1, 2, 3};
+        Duration = {1, 2, 3};
         CCEREGMapping = {'interleaved','noninterleaved'};
-        aggregationLevel= {1, 2, 4, 8, 16};
+        AggregationLevel= {1, 2, 4, 8, 16};
     end
 
     methods (TestClassSetup)
@@ -65,9 +65,9 @@ classdef srsPDCCHdmrsUnittest < matlab.unittest.TestCase
     end
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(testCase, testImpl, outputPath, baseFilename, numerology, duration, CCEREGMapping, aggregationLevel)
+        function testvectorGenerationCases(testCase, testImpl, outputPath, baseFilename, numerology, Duration, CCEREGMapping, AggregationLevel)
 %TESTVECTORGENERATIONCASES Generates test vectors for all possible combinations of numerology,
-%   duration, CCEREGMapping and aggregationLevel, while using a random NCellID and NSlot for
+%   Duration, CCEREGMapping and AggregationLevel, while using a random NCellID and NSlot for
 %   each test, jointly with some fixed parameters.
 
             % generate a unique test ID
@@ -76,7 +76,7 @@ classdef srsPDCCHdmrsUnittest < matlab.unittest.TestCase
             filenames = {file.name};
             testID = length(filenames);
 
-            % use a unique NCellID, NSlot and rnti for each test
+            % use a unique NCellID, NSlot and RNTI for each test
             randomizedCellID = testCase.randomizeTestvector{testID+1};
             NCellIDLoc = testCase.NCellID{randomizedCellID};
             if numerology == 0
@@ -93,34 +93,34 @@ classdef srsPDCCHdmrsUnittest < matlab.unittest.TestCase
             NFrame = 0;
             cyclicPrefix = 'normal';
             maxFrequencyResources = floor(NSizeGrid / 6);
-            frequencyResources = int2bit(2^maxFrequencyResources - 1, maxFrequencyResources).';
-            interleaverSize = 2;
+            FrequencyResources = int2bit(2^maxFrequencyResources - 1, maxFrequencyResources).';
+            InterleaverSize = 2;
             REGBundleSize = 6;
-            searchSpaceType = 'ue';
-            rnti = 0;
+            SearchSpaceType = 'ue';
+            RNTI = 0;
             NStartBWP = 0;
             NSizeBWP = NSizeGrid;
-            allocatedCandidate = 1;
+            AllocatedCandidate = 1;
             numPorts = 1;
             referencePointKrb = 0;
             startSymbolIndex = 0;
-            nID = NCellIDLoc;
+            DMRSScramblingID = NCellIDLoc;
             DMRSamplitude = 1.0;
             PDCCHports = zeros(numPorts, 1);
             PDCCHportsStr = cellarray2str({PDCCHports}, true);
 
             % only encode the PDCCH when it fits
-            if sum(frequencyResources) * duration >= aggregationLevel && ...
+            if sum(FrequencyResources) * Duration >= AggregationLevel && ...
                (strcmp(CCEREGMapping, 'noninterleaved') || ...
-                (strcmp(CCEREGMapping, 'interleaved') && mod(sum(frequencyResources) * duration, interleaverSize * REGBundleSize) == 0))
+                (strcmp(CCEREGMapping, 'interleaved') && mod(sum(FrequencyResources) * Duration, InterleaverSize * REGBundleSize) == 0))
                 % configure the carrier according to the test parameters
                 carrier = srsConfigureCarrier(NCellIDLoc, numerology, NSizeGrid, NStartGrid, NSlotLoc, NFrame, cyclicPrefix);
 
                 % configure the CORESET according to the test parameters
-                coreset = srsConfigureCORESET(frequencyResources, duration, CCEREGMapping, REGBundleSize, interleaverSize);
+                CORESET = srsConfigureCORESET(FrequencyResources, Duration, CCEREGMapping, REGBundleSize, InterleaverSize);
 
                 % configure the PDCCH according to the test parameters
-                pdcch = srsConfigurePDCCH(coreset, NStartBWP, NSizeBWP, rnti, aggregationLevel, searchSpaceType, allocatedCandidate, nID);
+                pdcch = srsConfigurePDCCH(CORESET, NStartBWP, NSizeBWP, RNTI, AggregationLevel, SearchSpaceType, AllocatedCandidate, DMRSScramblingID);
 
                 % call the PDCCH DMRS symbol processor MATLAB functions
                 [DMRSsymbols, symbolIndices] = srsPDCCHdmrs(carrier, pdcch);
@@ -140,7 +140,7 @@ classdef srsPDCCHdmrsUnittest < matlab.unittest.TestCase
 
                 % generate the test case entry
                 testCaseString = testImpl.testCaseToString(baseFilename, testID, false, {slotPointConfig, ['cyclic_prefix::', upper(cyclicPrefix)], ...
-                                      referencePointKrb, rbAllocationMask, startSymbolIndex, duration, nID, DMRSamplitude, PDCCHportsStr}, true);
+                                      referencePointKrb, rbAllocationMask, startSymbolIndex, Duration, DMRSScramblingID, DMRSamplitude, PDCCHportsStr}, true);
 
                 % add the test to the file header
                 testImpl.addTestToHeaderFile(testCaseString, baseFilename, outputPath);

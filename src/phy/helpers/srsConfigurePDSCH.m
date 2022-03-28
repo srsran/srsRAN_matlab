@@ -1,25 +1,40 @@
 %SRSCONFIGUREPDSCH Generates a physical shared channel object.
-%   PDSCH = SRSCONFIGUREPDSCH(DMRSCONFIG, NSTARTBWP, NSIZEBWP, SCRAMBLINGID, RNTI,...
-%       RESERVEDRE, MODULATION, NUMLAYERS, MAPPINGTYPE, SYMBOLALLOCATION, PRBSET)
-%   returns a PDSCH object with the requested configuration.
+%   PDSCH = SRSCONFIGUREPDSCH(VARARGIN) returns a PDSCH object with the requested configuration.
+%   The names of the input parameters are assumed to be coinciding with those of the properties
+%   of nrPDSCHConfig, with the exception of the suffix 'Loc' which is accepted.
 %
 %   See also nrPDSCHConfig and nrPDSCHDMRSConfig.
 
-function pdsch = srsConfigurePDSCH(DMRSconfig, NStartBWP, NSizeBWP, scramblingID, rnti, reservedRE, modulation, numLayers, mappingType, symbolAlocation, PRBset)
-    if isempty(DMRSconfig)
-        pdsch = nrPDSCHConfig;
-    else
-        pdsch = nrPDSCHConfig('DMRS', DMRSconfig);
+function pdsch = srsConfigurePDSCH(varargin)
+
+    pdsch = nrPDSCHConfig;
+    nofInputParams = length(varargin);
+    for index = 1:nofInputParams
+        paramName = erase(inputname(index), 'Loc');
+        switch(paramName)
+            case 'DMRS'
+                pdsch.DMRS = varargin{index};
+            case 'NStartBWP'
+                pdsch.NStartBWP = varargin{index};
+            case 'NSizeBWP'
+                pdsch.NSizeBWP = varargin{index};
+            case 'NID'
+                pdsch.NID = varargin{index};
+            case 'RNTI'
+                pdsch.RNTI = varargin{index};
+            case 'ReservedRE'
+                pdsch.ReservedRE = varargin{index};
+            case 'Modulation'
+                pdsch.Modulation = varargin{index};
+            case 'NumLayers'
+                pdsch.NumLayers = varargin{index};
+            case 'MappingType'
+                pdsch.MappingType = varargin{index};
+            case 'SymbolAllocation'
+                pdsch.SymbolAllocation = varargin{index};
+            case 'PRBSet'
+                pdsch.PRBSet = varargin{index};
+        end
     end
-    pdsch.NStartBWP = NStartBWP;
-    pdsch.NSizeBWP = NSizeBWP;
-    pdsch.NID = scramblingID;
-    pdsch.RNTI = rnti;
-    pdsch.ReservedRE = reservedRE;
-    pdsch.Modulation = modulation;
-    pdsch.NumLayers = numLayers;
-    pdsch.MappingType = mappingType;
-    pdsch.SymbolAllocation = symbolAlocation;
-    pdsch.PRBSet = PRBset;
 
 end

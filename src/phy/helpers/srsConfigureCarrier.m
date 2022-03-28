@@ -1,18 +1,32 @@
 %SRSCONFIGURECARRIER Generates a carrier object.
-%   CARRIER = SRSCONFIGURECARRIER(NCELLID, NUMEROLOGY, NSIZEGRID, NSTARTGRID, NSLOT, NFRAME, CYCLICPREFIX)
-%   returns a CARRIER object with the requested configuration.
+%   CARRIER = SRSCONFIGURECARRIER(VARARGIN) returns a CARRIER object with the requested configuration.
+%   The names of the input parameters are assumed to be coinciding with those of the properties
+%   of nrCarrierConfig, with the exception of the suffix 'Loc' which is accepted.
 %
 %   See also nrCarrierConfig.
 
-function carrier = srsConfigureCarrier(NCellID, numerology, NSizeGrid, NStartGrid, NSlot, NFrame, cyclicPrefix)
+function carrier = srsConfigureCarrier(varargin)
 
     carrier = nrCarrierConfig;
-    carrier.NCellID = NCellID;
-    carrier.SubcarrierSpacing = 15 * (2 .^ numerology);
-    carrier.NSizeGrid = NSizeGrid;
-    carrier.NStartGrid = NStartGrid;
-    carrier.NSlot = NSlot;
-    carrier.NFrame = NFrame;
-    carrier.CyclicPrefix = cyclicPrefix;
+    nofInputParams = length(varargin);
+    for index = 1:nofInputParams
+        paramName = erase(inputname(index), 'Loc');
+        switch(paramName)
+            case 'NCellID'
+                carrier.NCellID = varargin{index};
+            case 'SubcarrierSpacing'
+                carrier.SubcarrierSpacing = varargin{index};
+            case 'NSizeGrid'
+                carrier.NSizeGrid = varargin{index};
+            case 'NStartGrid'
+                carrier.NStartGrid = varargin{index};
+            case 'NSlot'
+                carrier.NSlot = varargin{index};
+            case 'NFrame'
+                carrier.NFrame = varargin{index};
+            case 'CyclicPrefix'
+                carrier.CyclicPrefix = varargin{index};
+        end
+    end
 
 end
