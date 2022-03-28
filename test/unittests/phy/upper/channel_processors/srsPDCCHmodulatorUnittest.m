@@ -140,7 +140,7 @@ classdef srsPDCCHmodulatorUnittest < matlab.unittest.TestCase
                 % generate a RB allocation mask string
                 rbAllocationMask = repelem({'false'}, NSizeGrid, 1);
                 rbAllocationMask(fix(double(symbolIndices(:, 1)) / 12) + 1) = {'true'}; % + 1 due to MATLAB indexing
-                rbAllocationMaskStr = cellarray2str(rbAllocationMask');
+                rbAllocationMaskStr = cellarray2str(rbAllocationMask', true);
 
                 % generate the test case entry
                 testCaseString = testImpl.testCaseToString(baseFilename, testID, true, {rbAllocationMaskStr, ...

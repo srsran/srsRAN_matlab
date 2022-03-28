@@ -119,7 +119,7 @@ classdef srsPDSCHmodulatorUnittest < matlab.unittest.TestCase
                 {modString1}, {modString1}, {rb_allocation_str}, {pdsch.SymbolAllocation(1)}, ...
                 {pdsch.SymbolAllocation(2)}, {dmrsSymbolMask }, {dmrs_type_str}, {pdsch.DMRS.NumCDMGroupsWithoutData}, {pdsch.NID}, {1}, {reserved_str}, {0}, {ports_str}];
 
-            testCaseString = testImpl.testCaseToString(cellarray2str(config), baseFilename, testID, 1);
+            testCaseString = testImpl.testCaseToString(baseFilename, testID, true, config, true);
 
             % add the test to the file header
             testImpl.addTestToHeaderFile(testCaseString, baseFilename, outputPath);

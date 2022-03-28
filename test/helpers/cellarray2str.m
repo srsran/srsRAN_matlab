@@ -3,7 +3,7 @@
 %   into its character representation OUTPUTSTRING.
 %    ISSTRUCT argument defines whether to use curly brackets wrapping OUTPUTSTRING
 
-function [outputString] = cellarray2str(inputCellArray)
+function [outputString] = cellarray2str(inputCellArray, isStruct)
     if isStruct
         outputString = '{';
     else
