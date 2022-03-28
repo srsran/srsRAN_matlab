@@ -45,11 +45,17 @@ classdef TestVector
 
             fprintf(testvectorHeaderFileID, '#include "srsgnb/adt/complex.h"\n');
             if strcmp(obj.phyObjUnderTestClass, 'signal_processors')
-                fprintf(testvectorHeaderFileID, '#include "srsgnb/adt/to_array.h"\n');
+                if ~strcmp(unitUnderTest, 'dmrs_pdsch_processor')
+                    fprintf(testvectorHeaderFileID, '#include "srsgnb/adt/to_array.h"\n');
+                end
             end
             fprintf(testvectorHeaderFileID, '#include "srsgnb/phy/upper/%s/%s.h"\n', lower(obj.phyObjUnderTestClass), unitUnderTest);
             fprintf(testvectorHeaderFileID, '#include "srsgnb/support/file_vector.h"\n');
-            fprintf(testvectorHeaderFileID, '#include <array>\n');
+            if ~strcmp(unitUnderTest, 'dmrs_pdsch_processor')
+              fprintf(testvectorHeaderFileID, '#include <array>\n');
+            else
+              fprintf(testvectorHeaderFileID, '#include <vector>\n');
+            end
             if strcmp(obj.phyObjUnderTestClass, 'channel_processors') || strcmp(obj.phyObjUnderTestClass, 'signal_processors')
                 fprintf(testvectorHeaderFileID, '#include "../../resource_grid_test_doubles.h"\n');
             end
