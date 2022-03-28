@@ -22,6 +22,12 @@ runTestVector('unittests','pbch_modulator', 'phy/upper/channel_processors', 'srs
 runTestVector('unittests','dmrs_pbch_processor', 'phy/upper/signal_processors', 'srsPBCHdmrsUnittest');
 ```
 
+- PDCCH modulator:
+
+```
+runTestVector('unittests','pdcch_modulator', 'phy/upper/channel_processors', 'srsPDCCHmodulatorUnittest');
+```
+
 - PDCCH DMRS processor
 
 ```
@@ -32,4 +38,10 @@ runTestVector('unittests','dmrs_pdcch_processor', 'phy/upper/signal_processors',
 
 ```
 runTestVector('unittests','pdsch_modulator', 'phy/upper/channel_processors', 'srsPDSCHmodulatorUnittest');
+```
+
+- PDSCH DMRS processor
+
+```
+runTestVector('unittests','dmrs_pdsch_processor', 'phy/upper/signal_processors', 'srsPDSCHdmrsUnittest');
 ```

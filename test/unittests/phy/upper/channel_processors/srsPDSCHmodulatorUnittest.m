@@ -9,7 +9,7 @@ classdef srsPDSCHmodulatorUnittest < matlab.unittest.TestCase
 %   SRSPDSCHMODULATORUNITTEST Properties (TestParameter):
 %
 %   SymbolAllocation       - Array that indicates the start (0, ..., 13)
-%                            and length (1, ..., 14) of the PDSCH 
+%                            and length (1, ..., 14) of the PDSCH
 %                            transmission.
 %   Modulation             - Possible modulation schemes used for the PDSCH
 %                            transmission (QPSK, 16QAM, 64QAM, 256QAM).
@@ -18,12 +18,12 @@ classdef srsPDSCHmodulatorUnittest < matlab.unittest.TestCase
 %
 %   SRSPDSCHMODULATORUNITTEST Methods (TestTags = {'testvector'}):
 %
-%   initialize                - Adds the required folders to the MATLAB 
+%   initialize                - Adds the required folders to the MATLAB
 %                               path and initializes the random seed.
 %   testvectorGenerationCases - Generates test vectors for all possible
-%                               combinations of SymbolAllocation, 
-%                               Modulation and DMRSAdditionalPosition, 
-%                               while using random NID, RNTI and codeword 
+%                               combinations of SymbolAllocation,
+%                               Modulation and DMRSAdditionalPosition,
+%                               while using random NID, RNTI and codeword
 %                               for each test.
 %
 %   SRSPDSCHMODULATORUNITTEST Methods (TestTags = {'srsPHYvalidation'}):
@@ -34,7 +34,7 @@ classdef srsPDSCHmodulatorUnittest < matlab.unittest.TestCase
         outputPath = {''};
         baseFilename = {''};
         testImpl = {''};
-        
+
         SymbolAllocation = [{[0, 14]}, {[1, 13]}, {[2, 12]}];
         Modulation = [{'QPSK'}, {'16QAM'}, {'64QAM'}, {'256QAM'}]
         DMRSAdditionalPosition = [{0}, {1}, {2}, {3}];
@@ -42,7 +42,7 @@ classdef srsPDSCHmodulatorUnittest < matlab.unittest.TestCase
 
     methods (Test, TestTags = {'testvector'})
 
-       
+
         function testvectorGenerationCases(testCase, testImpl, outputPath, baseFilename, SymbolAllocation, Modulation, DMRSAdditionalPosition)
             % Generate a unique test ID
             filenameTemplate = sprintf('%s/%s_test_input*', outputPath, baseFilename);
@@ -52,15 +52,15 @@ classdef srsPDSCHmodulatorUnittest < matlab.unittest.TestCase
 
             % Generate default carrier configuration
             carrier = nrCarrierConfig;
-            
+
             % Generate default PDSCH configuration
             pdsch = nrPDSCHConfig;
-            
+
             % Set specific parameters
             pdsch.SymbolAllocation = SymbolAllocation;
             pdsch.Modulation = Modulation;
             pdsch.DMRS.DMRSAdditionalPosition = DMRSAdditionalPosition;
-            
+
             % Set randomized values
             pdsch.NID = randi([1, 1023], 1, 1);
             pdsch.RNTI = randi([1, 65535], 1, 1);
@@ -86,13 +86,13 @@ classdef srsPDSCHmodulatorUnittest < matlab.unittest.TestCase
                 modString2 = modString1;
             end
 
-            
+
             % Calculate number of encoded bits
             nBits = length(nrPDSCHIndices(carrier, pdsch)) * modOrder1;
-            
+
             % Generate codewords
             cws = randi([0,1], nBits, 1);
-            
+
             % write the BCH cw to a binary file
             testImpl.saveDataFile(baseFilename, '_test_input', testID, outputPath, @writeUint8File, cws);
 
@@ -103,21 +103,20 @@ classdef srsPDSCHmodulatorUnittest < matlab.unittest.TestCase
             testImpl.saveDataFile(baseFilename, '_test_output', testID, outputPath, @writeResourceGridEntryFile, modulatedSymbols, symbolIndices);
 
             % Generate DMRS symbol mask
-            [~, ~, dmrsSymbols] = nr5g.internal.pxsch.initializeResources(carrier, pdsch, carrier.NSizeGrid);
-            dmrsSymbolMask = zeros(1, 14);
-            dmrsSymbolMask (dmrsSymbols + 1) = 1;
+            [~, symbolIndices] = srsPDSCHdmrs(carrier, pdsch);
+            dmrsSymbolMask = generateSymbolAllocationMaskString(symbolIndices);
 
             reserved_str = '{}';
-            
+
             ports_str = '{0}';
-            
+
             rb_allocation_str = ['rb_allocation({', array2str(pdsch.PRBSet), '}, vrb_to_prb_mapping_type::NON_INTERLEAVED)'];
-            
+
             dmrs_type_str = sprintf('dmrs_type::TYPE%d', pdsch.DMRS.DMRSConfigurationType);
 
             config = [ {pdsch.RNTI}, {carrier.NSizeGrid}, {carrier.NStartGrid}, ...
                 {modString1}, {modString1}, {rb_allocation_str}, {pdsch.SymbolAllocation(1)}, ...
-                {pdsch.SymbolAllocation(2)}, {dmrsSymbolMask }, {dmrs_type_str}, {pdsch.DMRS.NumCDMGroupsWithoutData}, {pdsch.NID}, {1}, {reserved_str}, {0}, {ports_str}];
+                {pdsch.SymbolAllocation(2)}, {dmrsSymbolMask}, {dmrs_type_str}, {pdsch.DMRS.NumCDMGroupsWithoutData}, {pdsch.NID}, {1}, {reserved_str}, {0}, {ports_str}];
 
             testCaseString = testImpl.testCaseToString(baseFilename, testID, true, config, true);
 
