@@ -14,7 +14,7 @@ classdef srsPDSCHmodulatorUnittest < matlab.unittest.TestCase
 %   Modulation             - Possible modulation schemes used for the PDSCH
 %                            transmission (QPSK, 16QAM, 64QAM, 256QAM).
 %   DMRSAdditionalPosition - Number of DMRS additional positions in
-%                            timedomain (0, ... 3).
+%                            time domain (0, ... 3).
 %
 %   SRSPDSCHMODULATORUNITTEST Methods (TestTags = {'testvector'}):
 %
@@ -46,7 +46,7 @@ classdef srsPDSCHmodulatorUnittest < matlab.unittest.TestCase
         function testvectorGenerationCases(testCase, testImpl, outputPath, baseFilename, SymbolAllocation, Modulation, DMRSAdditionalPosition)
             % Generate a unique test ID
             filenameTemplate = sprintf('%s/%s_test_input*', outputPath, baseFilename);
-            file = dir (filenameTemplate);
+            file = dir(filenameTemplate);
             filenames = {file.name};
             testID = length(filenames);
 
@@ -103,7 +103,7 @@ classdef srsPDSCHmodulatorUnittest < matlab.unittest.TestCase
             testImpl.saveDataFile(baseFilename, '_test_output', testID, outputPath, @writeResourceGridEntryFile, modulatedSymbols, symbolIndices);
 
             % Generate DMRS symbol mask
-            [~,~,dmrsSymbols] = nr5g.internal.pxsch.initializeResources(carrier, pdsch, carrier.NSizeGrid);
+            [~, ~, dmrsSymbols] = nr5g.internal.pxsch.initializeResources(carrier, pdsch, carrier.NSizeGrid);
             dmrsSymbolMask = zeros(1, 14);
             dmrsSymbolMask (dmrsSymbols + 1) = 1;
 
