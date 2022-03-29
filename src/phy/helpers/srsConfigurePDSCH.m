@@ -1,7 +1,7 @@
 %SRSCONFIGUREPDSCH Generates a physical shared channel object.
 %   PDSCH = SRSCONFIGUREPDSCH(VARARGIN) returns a PDSCH object with the requested configuration.
-%   The names of the input parameters are assumed to be coinciding with those of the properties
-%   of nrPDSCHConfig, with the exception of the suffix 'Loc' which is accepted.
+%   The names of the input parameters are assumed to coincide with those of the properties of
+%   nrPDSCHConfig, with the exception of the suffix 'Loc' which is accepted.
 %
 %   See also nrPDSCHConfig and nrPDSCHDMRSConfig.
 

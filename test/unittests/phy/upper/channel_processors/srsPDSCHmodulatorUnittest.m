@@ -102,7 +102,7 @@ classdef srsPDSCHmodulatorUnittest < matlab.unittest.TestCase
 
             % Generate DMRS symbol mask
             [~, symbolIndices] = srsPDSCHdmrs(carrier, pdsch);
-            dmrsSymbolMask = generateSymbolAllocationMaskString(symbolIndices);
+            dmrsSymbolMask = symbolAllocationMask2string(symbolIndices);
 
             reserved_str = '{}';
 

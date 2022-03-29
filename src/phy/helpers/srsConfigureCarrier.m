@@ -1,7 +1,7 @@
 %SRSCONFIGURECARRIER Generates a carrier object.
 %   CARRIER = SRSCONFIGURECARRIER(VARARGIN) returns a CARRIER object with the requested configuration.
-%   The names of the input parameters are assumed to be coinciding with those of the properties
-%   of nrCarrierConfig, with the exception of the suffix 'Loc' which is accepted.
+%   The names of the input parameters are assumed to coincide with those of the properties of
+%   nrCarrierConfig, with the exception of the suffix 'Loc' which is accepted.
 %
 %   See also nrCarrierConfig.
 

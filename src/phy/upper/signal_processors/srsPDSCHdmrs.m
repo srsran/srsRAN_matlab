@@ -1,4 +1,4 @@
-%SRSPDSCHDMRS Physical shared channel demodulation reference signals.
+%SRSPDSCHDMRS Physical downlink shared channel demodulation reference signals.
 %   [DMRSSYMBOLS, SYMBOLINDICES] = SRSPDSCHDMRS(CARRIER, PDSCH)
 %   modulates the demodulation reference signals and returns the complex symbols
 %   DMRSSYMBOLS as well as a column vector of RE indices.

@@ -1,9 +1,9 @@
-%GENERATESYMBOLALLOCATIONMASKSTRING Generates a new RB allocation bitmask string.
-%   OUTPUTSTRING = GENERATESYMBOLALLOCATIONMASKSTRING(SYMBOLINDICESVECTOR)
+%SYMBOLALLOCATIONMASK2STRING Generates a new OFDM symbol allocation bitmask string.
+%   OUTPUTSTRING = SYMBOLALLOCATIONMASK2STRING(SYMBOLINDICESVECTOR)
 %   generates a symbol bitmask allocation string OUTPUTSTRING from a vector of indices
 %   SYMBOLINDICESVECTOR.
 
-function outputString = generateSymbolAllocationMaskString(symbolIndicesVector)
+function outputString = symbolAllocationMask2string(symbolIndicesVector)
 
     symbolAllocation = zeros(14, 1); % maximum possible number of symbols
     for symbolIndex = symbolIndicesVector(:, 2)

@@ -68,7 +68,7 @@ classdef srsPBCHdmrsUnittest < matlab.unittest.TestCase
             testID = length(filenames);
 
             % use a unique NCellID for each test
-            randomizedTestCase = testCase.randomizeTestvector{testID+1};
+            randomizedTestCase = testCase.randomizeTestvector{testID + 1};
             NCellIDLoc = testCase.NCellID{randomizedTestCase};
 
             % current fixed parameter values

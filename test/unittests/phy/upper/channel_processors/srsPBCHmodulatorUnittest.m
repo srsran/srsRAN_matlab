@@ -58,7 +58,7 @@ classdef srsPBCHmodulatorUnittest < matlab.unittest.TestCase
             testID = length(filenames);
 
             % use a unique NCellID and cw for each test
-            randomizedTestCase = testCase.randomizeTestvector{testID+1};
+            randomizedTestCase = testCase.randomizeTestvector{testID + 1};
             NCellIDLoc = testCase.NCellID{randomizedTestCase};
             cwLoc = zeros(864, 1);
             for index = 1: 864

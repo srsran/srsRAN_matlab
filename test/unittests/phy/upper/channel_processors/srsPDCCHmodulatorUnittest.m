@@ -76,16 +76,16 @@ classdef srsPDCCHmodulatorUnittest < matlab.unittest.TestCase
             testID = length(filenames);
 
             % use a unique nCellID, nSlot and RNTI for each test
-            randomizedCellID = testCase.randomizeTestvector{testID+1};
+            randomizedCellID = testCase.randomizeTestvector{testID + 1};
             testCellID = testCase.nCellID{randomizedCellID};
-            randomizedSlot = testCase.randomizeSlot{testID+1};
+            randomizedSlot = testCase.randomizeSlot{testID + 1};
             slotIndex = testCase.nSlot{randomizedSlot};
             RNTI = randi([0, 65535], 1, 1);
             maxAllowedStartSymbol = 14 - Duration;
             startSymbolIndex = randi([1, maxAllowedStartSymbol], 1, 1);
             if strcmp(CCEREGMapping, 'interleaved')
-                InterleaverSize = testCase.InterleaverSizes(randi([1,3], 1, 1));
-                REGBundleSize = testCase.REGBundleSizes(Duration, randi([1,2], 1, 1));
+                InterleaverSize = testCase.InterleaverSizes(randi([1, 3], 1, 1));
+                REGBundleSize = testCase.REGBundleSizes(Duration, randi([1, 2], 1, 1));
             else
                 InterleaverSize = 2;
                 REGBundleSize = 6;
@@ -97,7 +97,7 @@ classdef srsPDCCHmodulatorUnittest < matlab.unittest.TestCase
             % current fixed parameter values (e.g., maximum grid size with current interleaving
             %   configuration, CORESET will use all available frequency resources)
             cyclicPrefix = 'normal';
-            NSizeGrid = 216;
+            NSizeGrid = 52;%216;
             NStartGrid = 0;
             NFrame = 0;
             maxFrequencyResources = floor(NSizeGrid / 6);
@@ -109,9 +109,12 @@ classdef srsPDCCHmodulatorUnittest < matlab.unittest.TestCase
             nID = testCellID;
 
             % only encode the PDCCH when it fits
-            if sum(FrequencyResources) * Duration >= AggregationLevel && ...
-               (strcmp(CCEREGMapping, 'noninterleaved') || ...
-                (strcmp(CCEREGMapping, 'interleaved') && mod(sum(FrequencyResources) * Duration, InterleaverSize * REGBundleSize) == 0))
+            isAggregationOK = (sum(FrequencyResources) * Duration >= AggregationLevel);
+            isREGbundleSizeOK = (mod(sum(FrequencyResources) * Duration, InterleaverSize * REGBundleSize) == 0);
+            isCCEREGMappingOK = (strcmp(CCEREGMapping, 'noninterleaved') || ...
+                (strcmp(CCEREGMapping, 'interleaved') &&  isREGbundleSizeOK));
+
+            if (isAggregationOK && isCCEREGMappingOK)
                 % configure the carrier according to the test parameters
                 carrier = srsConfigureCarrier(testCellID, 0, NSizeGrid, NStartGrid, slotIndex, NFrame, cyclicPrefix);
 
@@ -138,9 +141,7 @@ classdef srsPDCCHmodulatorUnittest < matlab.unittest.TestCase
                 testImpl.saveDataFile(baseFilename, '_test_output', testID, outputPath, @writeResourceGridEntryFile, PDCCHsymbols, symbolIndices);
 
                 % generate a RB allocation mask string
-                rbAllocationMask = repelem({'false'}, NSizeGrid, 1);
-                rbAllocationMask(fix(double(symbolIndices(:, 1)) / 12) + 1) = {'true'}; % + 1 due to MATLAB indexing
-                rbAllocationMaskStr = cellarray2str(rbAllocationMask', true);
+                rbAllocationMaskStr = RBallocationMask2string(symbolIndices);
 
                 % generate the test case entry
                 testCaseString = testImpl.testCaseToString(baseFilename, testID, true, {rbAllocationMaskStr, ...

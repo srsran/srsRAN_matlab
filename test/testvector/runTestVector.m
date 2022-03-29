@@ -22,18 +22,15 @@ function runTestVector(testType, srsPHYblock, pathInRepo, unittestClassName)
 
     % define the input and output paths
     rootPath = extractBetween(pwd,'','test');
-    srcPath = [rootPath{1} '/src/' pathInRepo];
-    srcPHYhelpersPath = [rootPath{1} '/src/phy/helpers'];
-    testPath = [rootPath{1} '/test/' testType '/' pathInRepo];
-    testHelpersPath = [rootPath{1} '/test/helpers'];
-    testvectorPath = [rootPath{1} '/test/testvector'];
+    srcPath = [rootPath{1} '/src/'];
+    testPath = [rootPath{1} '/test/'];
 
     % define the absolute output paths
     outputPath = [rootPath{1} '/test/testvector_outputs'];
 
     % temporarily add the simulator folders to the MATLAB path
     oldPath = path;
-    addpath(srcPath, srcPHYhelpersPath, testPath, testHelpersPath, testvectorPath);
+    addpath(genpath(srcPath), genpath(testPath));
 
     % create a test vector implementation object
     testImpl = TestVector(pathInRepo);
@@ -45,7 +42,7 @@ function runTestVector(testType, srsPHYblock, pathInRepo, unittestClassName)
     testImpl.createHeaderFile(srsPHYblock, outputPath, unittestClassName);
 
     % run the testvector generation tests from the related unit test class
-    unittestFilename = [testPath '/' unittestClassName '.m'];
+    unittestFilename = [testPath testType '/' pathInRepo '/' unittestClassName '.m'];
     extParams = Parameter.fromData('outputPath', {outputPath}, 'baseFilename', {srsPHYblock}, 'testImpl', {testImpl});
     nrPHYtestvectorTests = TestSuite.fromFile(unittestFilename, 'Tag', 'testvector', 'ExternalParameters', extParams);
     nrPHYtestvectorTests.run;

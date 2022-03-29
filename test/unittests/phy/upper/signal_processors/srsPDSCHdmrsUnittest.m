@@ -79,12 +79,12 @@ classdef srsPDSCHdmrsUnittest < matlab.unittest.TestCase
             testID = length(filenames);
 
             % use a unique NCellID, NSlot, scrambling ID and PRB allocation for each test
-            randomizedCellID = testCase.randomizeTestvector{testID+1};
+            randomizedCellID = testCase.randomizeTestvector{testID + 1};
             NCellIDLoc = testCase.NCellID{randomizedCellID};
             if numerology == 0
-                randomizedSlot = testCase.randomizeSlotNum0{testID+1};
+                randomizedSlot = testCase.randomizeSlotNum0{testID + 1};
             else
-                randomizedSlot = testCase.randomizeSlotNum1{testID+1};
+                randomizedSlot = testCase.randomizeSlotNum1{testID + 1};
             end
             NSlotLoc = testCase.NSlot{randomizedSlot};
             NSCID = testCase.randomizeScramblingInit{testID+1};
@@ -138,10 +138,10 @@ classdef srsPDSCHdmrsUnittest < matlab.unittest.TestCase
                                                  rem(NSlotLoc, carrier.SlotsPerSubframe)}, true);
 
                 % generate a symbol allocation mask string
-                symbolAllocationMask = generateSymbolAllocationMaskString(symbolIndices);
+                symbolAllocationMask = symbolAllocationMask2string(symbolIndices);
 
                 % generate a RB allocation mask string
-                rbAllocationMask = generateRBallocationMaskString(PRBstart, PRBend);
+                rbAllocationMask = RBallocationMask2string(PRBstart, PRBend);
 
                 % generate the test case entry
                 testCaseString = testImpl.testCaseToString( baseFilename, testID, false, {slotPointConfig, referencePointKrb, ['dmrs_type::TYPE', num2str(DMRSConfigurationType)], ...

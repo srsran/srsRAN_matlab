@@ -1,7 +1,7 @@
-%SRSCONFIGUREPDSCHDMRS Generates a physical shared channel demodulation reference signals configuraiton object.
+%SRSCONFIGUREPDSCHDMRS Generates a configuration object for the PDSCH demodulation reference signals.
 %   DMRSCONFIG = SRSCONFIGUREPDSCHDMRS(VARARGIN) returns a PDSCH DMRS configuration object.
-%   The names of the input parameters are assumed to be coinciding with those of the properties
-%   of nrPDSCHDMRSConfig, with the exception of the suffix 'Loc' which is accepted.
+%   The names of the input parameters are assumed to coincide with those of the properties of
+%   nrPDSCHDMRSConfig, with the exception of the suffix 'Loc' which is accepted.
 %
 %   See also nrPDSCHDMRSConfig.
 
