@@ -4,6 +4,7 @@
 %    ISSTRUCT argument defines whether to use curly brackets wrapping OUTPUTSTRING
 
 function [outputString] = cellarray2str(inputCellArray, isStruct)
+    import srsTest.helpers.cell2str
     if isStruct
         outputString = '{';
     else

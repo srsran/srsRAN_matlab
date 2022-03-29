@@ -353,17 +353,18 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
             saveFunction(fullFilename, varargin{:});
         end
 
-        function testCaseString = testCaseToString(configFormat, testVectName, testID, inAndOut, varargin)
-        %testCaseToString(OBJ, CONFIGFORMAT, TESTVECTNAME, TESTID, VARARGIN) converts the
+        function testCaseString = testCaseToString(testVectName, testID, inAndOut, testCaseParams, isStruct)
+        %testCaseToString(OBJ, TESTVECTNAME, TESTID, INANDOUT, TESTCASEPARAMS, ISSTRUCT) converts the
         %   test case parameters to a string.
         %
         %   Input parameters:
-        %      CONFIGFORMAT - Defines the format of the configuration paramter struct (string).
-        %      TESTVECTNAME - Defines the base name of the testvector files (string).
-        %      TESTID       - Unique identifier for the test case (integer).
-        %      INANDOUT     - Defines if the test will generate input and output files (boolean).
-        %      VARARGIN     - Specific set of input parameters to the unit under test (variable length and type).
-            configStr = sprintf(configFormat, varargin{:});
+        %      TESTVECTNAME   - Defines the base name of the testvector files (string).
+        %      TESTID         - Unique identifier for the test case (integer).
+        %      INANDOUT       - Defines if the test will generate input and output files (boolean).
+        %      TESTCASEPARAMS - Cell array of test parameters.
+        %      ISSTRUCT       - If TRUE, surrounds the output string with curly brackets.
+            import srsTest.helpers.cellarray2str;
+            configStr = cellarray2str(testCaseParams, isStruct);
             inFilename = [testVectName '_test_input' num2str(testID) '.dat'];
             outFilename = [testVectName '_test_output' num2str(testID) '.dat'];
 
