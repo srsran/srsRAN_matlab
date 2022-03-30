@@ -19,13 +19,8 @@
 %   srsBlockUnittest Methods (Abstract, Access = protected):
 %
 %   addTestIncludesToHeaderFile  - Adds include directives to the test header file.
-%   addTestDetailsToHeaderFile   - Adds details (e.g., type/variable declarations)
+%   addTestDefinitionToHeaderFile   - Adds details (e.g., type/variable declarations)
 %                                  to the test header file.
-%
-%   srsBlockUnittest Methods:
-%
-%   closeHeaderFile  - Adds the closing content to the test header file before
-%                      closing it.
 %
 %   srsBlockUnittest Methods (Access = protected):
 %
@@ -35,28 +30,33 @@
 %         header file for a block of type "channel_processors".
 %   addTestIncludesToHeaderFilePHYsigproc  - Adds include directives to the
 %         header file for a block of type "signal_processors".
-%   addTestDetailsToHeaderFilePHYchmod    - Adds test details to the
+%   addTestDefinitionToHeaderFilePHYchmod    - Adds test details to the
 %         header file for a block of type "channel_modulators".
-%   addTestDetailsToHeaderFilePHYchproc   - Adds test details to the
+%   addTestDefinitionToHeaderFilePHYchproc   - Adds test details to the
 %         header file for a block of type "channel_processors".
-%   addTestDetailsToHeaderFilePHYsigproc  - Adds test details to the
+%   addTestDefinitionToHeaderFilePHYsigproc  - Adds test details to the
 %         header file for a block of type "signal_processors".
+%   saveDataFile                          - Records test data to a file.
+%   testCaseToString                      - Generates a test vector entry for the...
+%                                           header file.
 %
 %   srsBlockUnittest Methods (Access = private):
 %
-%   addTestDefinitionToHeaderFile  - Adds opening guards to a test header file.
-%   createClassHeaderFile          - Creates the header file describing the test vectors.
-%   teardown                       - Closes the header file and copies it, as
-%                                    well as the binary data files, to the output folder.
+%   createHeaderFile               - Creates the header file describing the test vectors.
+%   closeHeaderFile                - Adds the closing content to the test header file
+%                                    before closing it.
+%   addOpendingToHeaderFile  - Adds opening guards to a test header file.
+%   copyTestVectors                - Copies all the binary data files and the decription
+%                                    header file to the output folder.
+%   packResults                    - Packs all generated test vectors in a
+%                                    single '.tar.gz' file.
+%   createOutputFolder             - Creates the folder where the test vectors will be
+%                                    stored (deleting the previous test vectors, if any).
 %
 %   srsBlockUnittest Methods (Static, Access = protected):
 %
 %   addTestToHeaderFile  - Adds a new test entry to a upper PHY channel processor
 %                          unit header file.
-%   createOutputFolder   - Creates the folder where the test vectors will be
-%                          stored (deleting the previous test vectors, if any).
-%   packResults          - Packs all generated test vectors in a single '.tar.gz' file.
-%   saveDataFile         - Saves the test data to a file.
 %
 %   See also matlab.unittest.TestCase
 
@@ -102,10 +102,10 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
             tmp = obj.applyFixture(TemporaryFolderFixture);
             obj.tmpOutputPath = tmp.Folder;
 
-            obj.headerFileID = obj.createClassHeaderFile;
+            obj.headerFileID = obj.createHeaderFile;
 
             % Add teardown steps, in reverse order (it's a LIFO stack).
-            obj.addTeardown(@obj.teardown, outputPath);
+            obj.addTeardown(@obj.copyTestVectors, outputPath);
 
             obj.addTeardown(@obj.closeHeaderFile, obj.headerFileID);
         end
@@ -117,24 +117,8 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
 
         %Adds details (e.g., type/variable declarations) to the test header file.
         %Abstract method.
-        addTestDetailsToHeaderFile(obj, fileID)
+        addTestDefinitionToHeaderFile(obj, fileID)
     end % of methods (Abstract, Access = protected)
-
-    methods
-        function closeHeaderFile(obj, fileID)
-        %closeHeaderFile(OBJ, FILEID) Adds the closing content to the
-        %   test header file with MATLAB identifier FILEID before closing it.
-
-            % write the closing header file contents
-            fprintf(fileID, '// clang-format on\n');
-            fprintf(fileID, '};\n');
-            fprintf(fileID, '\n');
-            fprintf(fileID, '} // srsgnb\n');
-            fprintf(fileID, '\n');
-            fprintf(fileID,'#endif // SRSGNB_UNITTESTS_%s_TEST_DATA_H\n', obj.pathInRepo);
-            fclose(fileID);
-        end
-    end % of methods
 
     methods (Access = protected)
         function addTestIncludesToHeaderFilePHYsigproc(obj, fileID)
@@ -171,13 +155,13 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
 
             fprintf(fileID, '#include "srsgnb/adt/complex.h"\n');
             fprintf(fileID, '#include "srsgnb/phy/upper/%s/%s.h"\n', ...
-                lower(obj.srsBlockType), obj.srsBlock);
+                obj.srsBlockType, obj.srsBlock);
             fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
             fprintf(fileID, '#include <array>\n');
         end
 
-        function addTestDetailsToHeaderFilePHYsigproc(~, fileID)
-        %addTestDetailsToHeaderFilePHYchproc(OBJ, FILEID) adds test details (e.g., type
+        function addTestDefinitionToHeaderFilePHYsigproc(~, fileID)
+        %addTestDefinitionToHeaderFilePHYchproc(OBJ, FILEID) adds test details (e.g., type
         %   and variable declarations) to the header file pointed by FILEID, which
         %   describes the test vectors. This method is meant for blocks of type
         %   "phy/upper/signal_processors".
@@ -189,8 +173,8 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
             fprintf(fileID, '};\n');
         end
 
-        function addTestDetailsToHeaderFilePHYchproc(obj, fileID)
-        %addTestDetailsToHeaderFilePHYchproc(OBJ, FILEID) adds test details (e.g., type
+        function addTestDefinitionToHeaderFilePHYchproc(obj, fileID)
+        %addTestDefinitionToHeaderFilePHYchproc(OBJ, FILEID) adds test details (e.g., type
         %   and variable declarations) to the header file pointed by FILEID, which
         %   describes the test vectors. This method is meant for blocks of type
         %   "phy/upper/channel_processors".
@@ -203,8 +187,8 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
             fprintf(fileID, '};\n');
         end
 
-        function addTestDetailsToHeaderFilePHYchmod(~, fileID)
-        %addTestDetailsToHeaderFilePHYchmod(OBJ, FILEID) adds test details (e.g., type
+        function addTestDefinitionToHeaderFilePHYchmod(~, fileID)
+        %addTestDefinitionToHeaderFilePHYchmod(OBJ, FILEID) adds test details (e.g., type
         %   and variable declarations) to the header file pointed by FILEID, which
         %   describes the test vectors. This method is meant for blocks of type
         %   "phy/upper/channel_modulation".
@@ -216,11 +200,90 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
             fprintf(fileID, 'file_vector<cf_t>    symbols;\n');
             fprintf(fileID, '};\n');
         end
+
+        % varargin is supposed to store list of arguments for saveFunction
+        function saveDataFile(obj, suffix, testID, saveFunction, varargin)
+        %saveDataFile Records test data
+        %   saveDataFile(OBJ, SUFFIX, TESTID, SAVEFUNCTION, VAR) saves the data in
+        %   variable VAR, relative to test number TESTID, to a binary file using the function
+        %   pointed by the function handle SAVEFUCNTION. SUFFIX is a character string
+        %   that is appended to the file name (e.g., 'test_input' or 'test_output').
+        %   saveDataFile(OBJ, DIRECTION, TESTID, SAVEFUNCTION, VAR1, VAR2, ...) saves
+        %   the data of all variables VAR1, VAR2, ...
+
+            filename = [obj.srsBlock suffix num2str(testID) '.dat'];
+            fullFilename = [obj.tmpOutputPath '/' filename];
+            saveFunction(fullFilename, varargin{:});
+        end
+
+        function testCaseString = testCaseToString(obj, testID, inAndOut, testCaseParams, isStruct)
+        %testCaseToString Generates a test entry for the header file.
+        %   testCaseToString(OBJ, TESTID, INANDOUT, TESTCASEPARAMS, ISSTRUCT) generates a
+        %   data string for test number TESTID. The INANDOUT flag specifies whether the
+        %   test includes both input and output test vectors (TRUE) or ouptut only (FALSE).
+        %   The data string is generated from the parameters in the cell array TESTCASEPARAMS.
+        %   The flag ISSTRUCT instructs the method to surround the output string with
+        %   curly brackets (TRUE) or not (FALSE).
+
+            import srsTest.helpers.cellarray2str;
+            configStr = cellarray2str(testCaseParams, isStruct);
+            inFilename = [obj.srsBlock '_test_input' num2str(testID) '.dat'];
+            outFilename = [obj.srsBlock '_test_output' num2str(testID) '.dat'];
+
+            % generate the test case entry (checking first if we generate both input and output data)
+            if inAndOut
+                testCaseString = sprintf('  {%s,{"%s"},{"%s"}},\n', configStr, inFilename, outFilename);
+            else
+                testCaseString = sprintf('  {%s,{"%s"}},\n', configStr, outFilename);
+            end
+        end
     end % of methods (Access = protected)
 
     methods (Access = private)
-        function addTestDefinitionToHeaderFile(obj, fileID)
-        %addTestDefinitionToHeaderFile Adds opening guards to a test header file.
+        function fileID = createHeaderFile(obj)
+        %createHeaderFile Creates the header file describing the test vectors.
+
+            % create a new header file
+            headerFilename = sprintf('%s/%s_test_data.h', obj.tmpOutputPath, obj.srsBlock);
+            fileID = fopen(headerFilename, 'w');
+
+            % add unit test definition
+            addOpeningToHeaderFile(obj, fileID);
+
+            addTestIncludesToHeaderFile(obj, fileID);
+
+            fprintf(fileID, '\n');
+            fprintf(fileID, 'namespace srsgnb {\n');
+            fprintf(fileID, '\n');
+
+            addTestDefinitionToHeaderFile(obj, fileID);
+
+            fprintf(fileID, '\n');
+            fprintf(fileID, ...
+                'static const std::vector<test_case_t> %s_test_data = {\n', obj.srsBlock);
+            fprintf(fileID, '// clang-format off\n');
+        end
+
+        function closeHeaderFile(obj, fileID)
+        %closeHeaderFile(OBJ, FILEID) Adds the closing content to the
+        %   test header file with MATLAB identifier FILEID before closing it.
+
+            % write the closing header file contents
+            fprintf(fileID, '// clang-format on\n');
+            fprintf(fileID, '};\n');
+            fprintf(fileID, '\n');
+            fprintf(fileID, '} // srsgnb\n');
+            fprintf(fileID, '\n');
+            fprintf(fileID,'#endif // SRSGNB_UNITTESTS_%s_TEST_DATA_H\n', obj.pathInRepo);
+
+            headerFilename = fopen(fileID);
+            fclose(fileID);
+
+            system(sprintf('LD_LIBRARY_PATH=/usr/lib clang-format -i -style=file %s', headerFilename));
+        end
+
+        function addOpeningToHeaderFile(obj, fileID)
+        %addOpeningToHeaderFile Adds opening guards to a test header file.
 
             fprintf(fileID, '#ifndef SRSGNB_UNITTESTS_%s_TEST_DATA_H\n', obj.pathInRepo);
             fprintf(fileID, '#define SRSGNB_UNITTESTS_%s_TEST_DATA_H\n', obj.pathInRepo);
@@ -230,41 +293,46 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
             fprintf(fileID, '\n');
         end
 
-        function fileID = createClassHeaderFile(obj)
-        %createClassHeaderFile Creates the header file describing the test vectors.
-
-            % create a new header file
-            headerFilename = sprintf('%s/%s_test_data.h', obj.tmpOutputPath, obj.srsBlock);
-            fileID = fopen(headerFilename, 'w');
-
-            % add unit test definition
-            addTestDefinitionToHeaderFile(obj, fileID);
-
-            addTestIncludesToHeaderFile(obj, fileID);
-
-            fprintf(fileID, '\n');
-            fprintf(fileID, 'namespace srsgnb {\n');
-            fprintf(fileID, '\n');
-
-            addTestDetailsToHeaderFile(obj, fileID);
-
-            fprintf(fileID, '\n');
-            fprintf(fileID, ...
-                'static const std::vector<test_case_t> %s_test_data = {\n', obj.srsBlock);
-            fprintf(fileID, '// clang-format off\n');
-        end
-
-        function teardown(obj, outputPath)
-        %teardown Closes the header file and copies it, as well as the binary data files,
-        %   to the output folder.
+        function copyTestVectors(obj, outputPath)
+        %copyTestVectors(OBJ, OUTPUTPATH) Copies all the binary data files and the decription
+        %   header file to the output folder.
 
             tmp = dir([obj.tmpOutputPath, filesep, '*.dat']);
             if ~isempty(tmp)
-                obj.packResults(obj.srsBlock, obj.tmpOutputPath);
-                obj.createOutputFolder(obj.srsBlock, outputPath);
+                obj.packResults;
+                obj.createOutputFolder(outputPath);
                 cmd = sprintf('cp %s/%s_test_data.{h,tar.gz} %s', obj.tmpOutputPath, ...
                     obj.srsBlock, outputPath);
                 system(cmd);
+            end
+        end
+
+        function packResults(obj)
+        %packResults(OBJ) packs all generated test vectors in a single '.tar.gz' file.
+
+            % gzip generated testvectors
+            current_pwd = pwd();
+            system(sprintf('cd %s && find . -regex ".*.dat" | grep "%s" | xargs tar -czf %s_test_data.tar.gz && cd %s', ...
+                obj.tmpOutputPath, obj.srsBlock, obj.srsBlock, current_pwd));
+            system(sprintf('rm -rf %s/%s*.dat', obj.tmpOutputPath, obj.srsBlock));
+        end
+
+        function createOutputFolder(obj, outputPath)
+        %createOutputFolder(OBJ, OUTPUTPATH) creates the folder, as defined by the path
+        %   OUTPUTPATH, where the test vectors will be stored (deleting the previous
+        %   test vectors, if any).
+
+            % delete previous testvectors (if any)
+            if isfolder(outputPath)
+                filenameTemplate = sprintf('%s/%s*.dat', outputPath, obj.srsBlock);
+                file = dir (filenameTemplate);
+                filenames = {file.name};
+                if ~isempty(filenames)
+                    system(sprintf('rm -rf %s/%s*.dat', outputPath, obj.srsBlock));
+                end
+                % create the output directory
+            else
+                mkdir(outputPath)
             end
         end
     end % of methods (Access = private)
@@ -276,89 +344,6 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
 
             % add a new test case entry to the header file
             fprintf(fileID, '%s', testEntryString);
-        end
-
-        function createOutputFolder(baseFileName, outputPath)
-        %createOutputFolder(OBJ, BASEFILENAME, OUTPUTPATH) creates the folder where
-        %   the test vectors will be stored (deleting the previous test vectors, if any).
-        %
-        %   Input parameters:
-        %      BASEFILENAME  - Defines the base name of the test vector files (string).
-        %      OUTPUTPATH    - Path where the test vector files should be created (string).
-
-            % delete previous testvectors (if any)
-            if isfolder(sprintf('%s', outputPath))
-                filenameTemplate = sprintf('%s/%s*.dat', outputPath, baseFileName);
-                file = dir (filenameTemplate);
-                filenames = {file.name};
-                if ~isempty(filenames)
-                    system(sprintf('rm -rf %s/%s*.dat', outputPath, baseFileName));
-                end
-                % create the output directory
-            else
-                mkdir(sprintf('%s', outputPath))
-            end
-        end
-
-        function packResults(baseFileName, outputPath)
-        %packResults(OBJ, HEADERFILENAME, BASEFILENAME, OUTPUTPATH) packs all generated
-        %   test vectors in a single '.tar.gz' file.
-        %
-        %   Input parameters:
-        %      HEADERFILENAME  - Defines the name of the related header file (string).
-        %      BASEFILENAME    - Defines the base name of the testvector files (string).
-        %      OUTPUTPATH      - Path where the test vector files should be created (string).
-
-            % apply clang-format on generated .h file
-            headerFilename = sprintf('%s/%s_test_data.h', outputPath, baseFileName);
-            system(sprintf('LD_LIBRARY_PATH=/usr/lib clang-format -i -style=file %s', headerFilename));
-
-            % gzip generated testvectors
-            current_pwd = pwd();
-            system(sprintf('cd %s && find . -regex ".*.dat" | grep "%s" | xargs tar -czf %s_test_data.tar.gz && cd %s', ...
-                outputPath, baseFileName, baseFileName, current_pwd));
-            system(sprintf('rm -rf %s/%s*.dat', outputPath, baseFileName));
-        end
-
-        % varargin is supposed to store list of arguments for saveFunction
-        function saveDataFile(baseFileName, direction, testID, outputPath, saveFunction, varargin)
-        %saveDataFile(OBJ, BASEFILENAME, DIRECTION, TESTID, OUTPUTPATH, SAVEFUNCTION, VARARGIN)
-        %   saves the test data to a file.
-        %
-        %   Input parameters:
-        %      BASEFILENAME - Defines the base name of the testvector files (string).
-        %      DIRECTION    - Defines if the file is an input or an output to/from the test (string).
-        %      TESTID       - Unique identifier for the test case (integer).
-        %      OUTPUTPATH   - Defines the path where the file should be created (string).
-        %      SAVEFUCNTION - Defines which specific file-write function should be called (string).
-        %      VARARGIN     - Specific set of input parameters to the unit under test (variable length and type).
-
-            filename = [baseFileName direction num2str(testID) '.dat'];
-            fullFilename = [outputPath '/' filename];
-            saveFunction(fullFilename, varargin{:});
-        end
-
-        function testCaseString = testCaseToString(testVectName, testID, inAndOut, testCaseParams, isStruct)
-        %testCaseToString(OBJ, TESTVECTNAME, TESTID, INANDOUT, TESTCASEPARAMS, ISSTRUCT) converts the
-        %   test case parameters to a string.
-        %
-        %   Input parameters:
-        %      TESTVECTNAME   - Defines the base name of the testvector files (string).
-        %      TESTID         - Unique identifier for the test case (integer).
-        %      INANDOUT       - Defines if the test will generate input and output files (boolean).
-        %      TESTCASEPARAMS - Cell array of test parameters.
-        %      ISSTRUCT       - If TRUE, surrounds the output string with curly brackets.
-            import srsTest.helpers.cellarray2str;
-            configStr = cellarray2str(testCaseParams, isStruct);
-            inFilename = [testVectName '_test_input' num2str(testID) '.dat'];
-            outFilename = [testVectName '_test_output' num2str(testID) '.dat'];
-
-            % generate the test case entry (checking first if we generate both input and output data)
-            if inAndOut
-                testCaseString = sprintf('  {%s,{"%s"},{"%s"}},\n', configStr, inFilename, outFilename);
-            else
-                testCaseString = sprintf('  {%s,{"%s"}},\n', configStr, outFilename);
-            end
         end
     end % of methods (Static, Access = protected)
 end

@@ -29,7 +29,7 @@
 %   srsPBCHModulatorUnittest Methods (Access = protected):
 %
 %   addTestIncludesToHeaderFile  - Adds include directives to the test header file.
-%   addTestDetailsToHeaderFile   - Adds details (e.g., type/variable declarations)
+%   addTestDefinitionToHeaderFile   - Adds details (e.g., type/variable declarations)
 %                                  to the test header file.
 %
 %   See also matlab.unittest.
@@ -70,9 +70,9 @@ classdef srsPBCHModulatorUnittest < srsTest.srsBlockUnittest
             addTestIncludesToHeaderFilePHYchproc(obj, fileID);
         end
 
-        function addTestDetailsToHeaderFile(obj, fileID)
+        function addTestDefinitionToHeaderFile(obj, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
-            addTestDetailsToHeaderFilePHYchproc(obj, fileID);
+            addTestDefinitionToHeaderFilePHYchproc(obj, fileID);
         end
     end
 
@@ -102,8 +102,8 @@ classdef srsPBCHModulatorUnittest < srsTest.srsBlockUnittest
 
             % write the BCH cw to a binary file
             import srsTest.helpers.writeUint8File;
-            testCase.saveDataFile(baseFilename, '_test_input', testID, ...
-                testCase.tmpOutputPath, @writeUint8File, cw);
+            testCase.saveDataFile('_test_input', testID, ...
+                @writeUint8File, cw);
 
             % call the PBCH symbol modulation MATLAB functions
             import srsMatlabWrappers.phy.upper.channel_processors.srsPBCHmodulator
@@ -111,11 +111,11 @@ classdef srsPBCHModulatorUnittest < srsTest.srsBlockUnittest
 
             % write each complex symbol and the associated indices to a binary file
             import srsTest.helpers.writeResourceGridEntryFile
-            testCase.saveDataFile(baseFilename, '_test_output', testID, testCase.tmpOutputPath, ...
-                @writeResourceGridEntryFile, modulatedSymbols, symbolIndices);
+            testCase.saveDataFile('_test_output', testID, @writeResourceGridEntryFile, ...
+                modulatedSymbols, symbolIndices);
 
             % generate the test case entry
-            testCaseString = testCase.testCaseToString(baseFilename, testID, true, ...
+            testCaseString = testCase.testCaseToString(testID, true, ...
                 {NCellIDLoc, SSBindex, SSBfirstSubcarrier, SSBfirstSymbol, ...
                     SSBamplitude, SSBportsStr}, true);
 
