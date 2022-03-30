@@ -85,9 +85,7 @@ classdef srsPBCHModulatorUnittest < srsTest.srsBlockUnittest
         %   using a random NCellID and a random codeword.
 
             % generate a unique test ID by looking at the number of files generated so far
-            baseFilename = testCase.srsBlock;
-            filenameTemplate = sprintf('%s/%s_test_input*', testCase.tmpOutputPath, baseFilename);
-            testID = numel(dir(filenameTemplate));
+            testID = testCase.generateTestID;
 
             % use a unique NCellID and cw for each test
             randomizedTestCase = testCase.randomizeTestvector(testID + 1);
@@ -105,8 +103,7 @@ classdef srsPBCHModulatorUnittest < srsTest.srsBlockUnittest
 
             % write the BCH cw to a binary file
             import srsTest.helpers.writeUint8File;
-            testCase.saveDataFile('_test_input', testID, ...
-                @writeUint8File, cw);
+            testCase.saveDataFile('_test_input', testID, @writeUint8File, cw);
 
             % call the PBCH symbol modulation MATLAB functions
             import srsMatlabWrappers.phy.upper.channel_processors.srsPBCHmodulator

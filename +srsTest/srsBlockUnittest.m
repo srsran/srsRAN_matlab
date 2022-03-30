@@ -37,6 +37,7 @@
 %   addTestDefinitionToHeaderFilePHYsigproc - Adds test details to the
 %         header file for a block of type "signal_processors".
 %
+%   generateTestID     - Generates an identifier for the current test.
 %   saveDataFile       - Records test data to a file.
 %   testCaseToString   - Generates a test vector entry for the header file.
 %
@@ -199,6 +200,13 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
             fprintf(fileID, 'file_vector<uint8_t> data;\n');
             fprintf(fileID, 'file_vector<cf_t>    symbols;\n');
             fprintf(fileID, '};\n');
+        end
+
+        function testID = generateTestID(obj)
+        %generateTestID Generates an identifier for the current test.
+            filenameTemplateIn = sprintf('%s/%s_test_input*', obj.tmpOutputPath, obj.srsBlock);
+            filenameTemplateOut = sprintf('%s/%s_test_output*', obj.tmpOutputPath, obj.srsBlock);
+            testID = max(numel(dir(filenameTemplateIn)), numel(dir(filenameTemplateOut)));
         end
 
         % varargin is supposed to store list of arguments for saveFunction

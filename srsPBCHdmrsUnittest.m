@@ -85,9 +85,7 @@ classdef srsPBCHdmrsUnittest < srsTest.srsBlockUnittest
         %   Lmax and nHF, while using a random NCellID.
 
             % generate a unique test ID by looking at the number of files generated so far
-            baseFilename = testCase.srsBlock;
-            filenameTemplate = sprintf('%s/%s_test_output*', testCase.tmpOutputPath, baseFilename);
-            testID = numel(dir(filenameTemplate));
+            testID = testCase.generateTestID;
 
             % use a unique NCellID for each test
             randomizedTestCase = testCase.randomizeTestvector(testID + 1);

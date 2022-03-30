@@ -77,9 +77,7 @@ classdef srsModulationMapperUnittest < srsTest.srsBlockUnittest
         %   for the given number of symbols NSYMBOLS and modulation scheme and MODSCHEME.
 
             % generate a unique test ID by looking at the number of files generated so far
-            baseFilename = testCase.srsBlock;
-            filenameTemplate = sprintf('%s/%s_test_input*', testCase.tmpOutputPath, baseFilename);
-            testID = numel(dir(filenameTemplate));
+            testID = testCase.generateTestID;
 
             % generate random test input as a bit sequence
             codeword = randi([0 1], nSymbols * modScheme{1}, 1);
