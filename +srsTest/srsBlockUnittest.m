@@ -5,8 +5,8 @@
 %   srsBlockUnittest Properties (Abstract, Constant):
 %
 %   srsBlock      - Name of the tested block (e.g., 'pbch_modulator').
-%   srsBlockType  - Type of the tested block (e.g., 'channel_processors').
-%   srsBlockLayer - Layer of the tested block (e.g., 'phy/upper').
+%   srsBlockType  - Type of the tested block, including layer
+%                   (e.g., 'phy/upper/channel_processors').
 %
 %   srsBlockUnittest Properties (Abstract, ClassSetupParameter):
 %
@@ -65,11 +65,9 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
         %Name of the tested block (e.g., 'pbch_modulator'). Abstract property.
         srsBlock      (1, :) char
 
-        %Type of the tested block (e.g., 'channel_processors'). Abstract property.
+        %Type of the tested block, including layer (e.g., 'phy/upper/channel_processors').
+        %Abstract property.
         srsBlockType  (1, :) char
-
-        %Layer of the tested block (e.g., 'phy/upper'). Abstract property.
-        srsBlockLayer (1, :) char
     end % of properties (Abstract, Constant)
 
     properties (Abstract, ClassSetupParameter)
@@ -91,9 +89,9 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
         %initializeClass Test class setup
         %   Creates the temporary working folder, defines its teardown, and creates the
         %   header file for the test vectors.
-            tmp = obj.srsBlockLayer;
+            tmp = obj.srsBlockType;
             tmp(tmp == filesep) = '_';
-            obj.pathInRepo = upper([tmp, '_', obj.srsBlockType, '_', obj.srsBlock]);
+            obj.pathInRepo = upper([tmp, '_', obj.srsBlock]);
 
             import matlab.unittest.fixtures.TemporaryFolderFixture;
 

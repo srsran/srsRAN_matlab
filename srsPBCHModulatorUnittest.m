@@ -39,11 +39,8 @@ classdef srsPBCHModulatorUnittest < srsTest.srsBlockUnittest
         %Name of the tested block.
         srsBlock = 'pbch_modulator'
 
-        %Type of the tested block.
-        srsBlockType = 'channel_processors'
-
-        %Layer of the tested block.
-        srsBlockLayer = 'phy/upper'
+        %Type of the tested block, including layer.
+        srsBlockType = 'phy/upper/channel_processors'
     end
 
     properties (ClassSetupParameter)
