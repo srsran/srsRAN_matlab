@@ -1,4 +1,4 @@
-%srsBlockUnittest Test vector generation (Abstract class).
+%srsBlockUnittest Unit test template for SRSGNB blocks (Abstract class).
 %   Common functionalities shared by all SRS unit tests. Derives from
 %   'matlab.unittest.TestCase'.
 %
@@ -10,7 +10,7 @@
 %
 %   srsBlockUnittest Properties (Abstract, ClassSetupParameter):
 %
-%   outputPath  - Path to results folder (all contents will be erased).
+%   outputPath  - Path to results folder (contents may be erased).
 %
 %   srsBlockUnittest Methods (TestClassSetup):
 %
@@ -18,34 +18,34 @@
 %
 %   srsBlockUnittest Methods (Abstract, Access = protected):
 %
-%   addTestIncludesToHeaderFile  - Adds include directives to the test header file.
-%   addTestDefinitionToHeaderFile   - Adds details (e.g., type/variable declarations)
-%                                  to the test header file.
+%   addTestIncludesToHeaderFile    - Adds include directives to the test header file.
+%   addTestDefinitionToHeaderFile  - Adds details (e.g., type/variable declarations)
+%                                    to the test header file.
 %
 %   srsBlockUnittest Methods (Access = protected):
 %
-%   addTestIncludesToHeaderFilePHYchmod    - Adds include directives to the
+%   addTestIncludesToHeaderFilePHYchmod     - Adds include directives to the
 %         header file for a block of type "channel_modulators".
-%   addTestIncludesToHeaderFilePHYchproc   - Adds include directives to the
+%   addTestIncludesToHeaderFilePHYchproc    - Adds include directives to the
 %         header file for a block of type "channel_processors".
-%   addTestIncludesToHeaderFilePHYsigproc  - Adds include directives to the
+%   addTestIncludesToHeaderFilePHYsigproc   - Adds include directives to the
 %         header file for a block of type "signal_processors".
-%   addTestDefinitionToHeaderFilePHYchmod    - Adds test details to the
+%   addTestDefinitionToHeaderFilePHYchmod   - Adds test details to the
 %         header file for a block of type "channel_modulators".
-%   addTestDefinitionToHeaderFilePHYchproc   - Adds test details to the
+%   addTestDefinitionToHeaderFilePHYchproc  - Adds test details to the
 %         header file for a block of type "channel_processors".
-%   addTestDefinitionToHeaderFilePHYsigproc  - Adds test details to the
+%   addTestDefinitionToHeaderFilePHYsigproc - Adds test details to the
 %         header file for a block of type "signal_processors".
-%   saveDataFile                          - Records test data to a file.
-%   testCaseToString                      - Generates a test vector entry for the...
-%                                           header file.
+%
+%   saveDataFile       - Records test data to a file.
+%   testCaseToString   - Generates a test vector entry for the header file.
 %
 %   srsBlockUnittest Methods (Access = private):
 %
 %   createHeaderFile               - Creates the header file describing the test vectors.
 %   closeHeaderFile                - Adds the closing content to the test header file
 %                                    before closing it.
-%   addOpendingToHeaderFile  - Adds opening guards to a test header file.
+%   addOpendingToHeaderFile        - Adds opening guards to a test header file.
 %   copyTestVectors                - Copies all the binary data files and the decription
 %                                    header file to the output folder.
 %   packResults                    - Packs all generated test vectors in a

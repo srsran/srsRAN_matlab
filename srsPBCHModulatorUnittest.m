@@ -7,9 +7,9 @@
 %
 %   srsPBCHModulatorUnittest Properties (Constant):
 %
-%   srsBlock      - The tested block ('pbch_modulator').
-%   srsBlockType  - The type of the tested block ('channel_processors').
-%   srsBlockLayer - The layer of the tested block ('phy/upper').
+%   srsBlock      - The tested block (i.e., 'pbch_modulator').
+%   srsBlockType  - The type of the tested block, including layer
+%                   (i.e., 'phy/upper/channel_processors').
 %
 %   srsPBCHModulatorUnittest Properties (ClassSetupParameter):
 %
@@ -28,9 +28,9 @@
 %
 %   srsPBCHModulatorUnittest Methods (Access = protected):
 %
-%   addTestIncludesToHeaderFile  - Adds include directives to the test header file.
+%   addTestIncludesToHeaderFile     - Adds include directives to the test header file.
 %   addTestDefinitionToHeaderFile   - Adds details (e.g., type/variable declarations)
-%                                  to the test header file.
+%                                     to the test header file.
 %
 %   See also matlab.unittest.
 
@@ -55,8 +55,9 @@ classdef srsPBCHModulatorUnittest < srsTest.srsBlockUnittest
         %PHY-layer cell ID (0...1007).
         NCellID = num2cell(0:1007)
 
-        % Lmax = 4 is not currently supported, and Lmax = 64 and Lmax = 8
-        % are equivalent at this stage.
+        %Maximum number of SSBs within a SSB set (4, 8 (default), 64).
+        %Lmax = 4 is not currently supported, and Lmax = 64 and Lmax = 8
+        %are equivalent at this stage.
         Lmax = {8}
     end
 
@@ -71,15 +72,17 @@ classdef srsPBCHModulatorUnittest < srsTest.srsBlockUnittest
         end
 
         function addTestDefinitionToHeaderFile(obj, fileID)
-        %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
+        %addTestDefinitionToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
             addTestDefinitionToHeaderFilePHYchproc(obj, fileID);
         end
     end
 
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, SSBindex, Lmax)
-        %testvectorGenerationCases Generates test vectors for a given SSB index and Lmax
-        %   using random NCellID and cw for each test.
+        %testvectorGenerationCases Generates 'pbch_modulator' test vectors.
+        %   testvectorGenerationCases(TESTCASE, SSBINDEX, LMAX) generates a 'pbch_modulator'
+        %   test vector for the given SSB index SSBINDEX and the given LMAX,
+        %   using a random NCellID and a random codeword.
 
             % generate a unique test ID by looking at the number of files generated so far
             baseFilename = testCase.srsBlock;
