@@ -65,14 +65,14 @@ classdef srsPBCHModulatorUnittest < srsTest.srsBlockUnittest
     end
 
     methods (Access = protected)
-        function addTestIncludesToHeaderFile(obj, fileID, unitUnderTest)
+        function addTestIncludesToHeaderFile(obj, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
-            addTestIncludesToHeaderFilePHYchproc(obj, fileID, unitUnderTest);
+            addTestIncludesToHeaderFilePHYchproc(obj, fileID);
         end
 
-        function addTestDetailsToHeaderFile(obj, fileID, unitUnderTest)
+        function addTestDetailsToHeaderFile(obj, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
-            addTestDetailsToHeaderFilePHYchproc(obj, fileID, unitUnderTest);
+            addTestDetailsToHeaderFilePHYchproc(obj, fileID);
         end
     end
 
@@ -120,7 +120,7 @@ classdef srsPBCHModulatorUnittest < srsTest.srsBlockUnittest
                     SSBamplitude, SSBportsStr}, true);
 
             % add the test to the file header
-            testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString, baseFilename);
+            testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);
         end
     end
 

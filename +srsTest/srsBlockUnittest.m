@@ -24,7 +24,8 @@
 %
 %   srsBlockUnittest Methods:
 %
-%   closeHeaderFile  - Adds the closing content to the test header file.
+%   closeHeaderFile  - Adds the closing content to the test header file before
+%                      closing it.
 %
 %   srsBlockUnittest Methods (Access = protected):
 %
@@ -101,7 +102,7 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
             tmp = obj.applyFixture(TemporaryFolderFixture);
             obj.tmpOutputPath = tmp.Folder;
 
-            obj.headerFileID = obj.createClassHeaderFile(obj.srsBlock, obj.tmpOutputPath, class(obj));
+            obj.headerFileID = obj.createClassHeaderFile;
 
             % Add teardown steps, in reverse order (it's a LIFO stack).
             obj.addTeardown(@obj.teardown, outputPath);
@@ -112,21 +113,17 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
 
     methods (Abstract, Access = protected)
         %Adds include directives to the test header file. Abstract method.
-        addTestIncludesToHeaderFile(obj, fileID, unitUnderTest)
+        addTestIncludesToHeaderFile(obj, fileID)
 
         %Adds details (e.g., type/variable declarations) to the test header file.
         %Abstract method.
-        addTestDetailsToHeaderFile(obj, fileID, unitUnderTest)
+        addTestDetailsToHeaderFile(obj, fileID)
     end % of methods (Abstract, Access = protected)
 
     methods
         function closeHeaderFile(obj, fileID)
-        %closeHeaderFile(OBJ, FILEID, UNITUNDERTEST) Adds the closing content to the
-        %   test header file.
-        %
-        %   Input parameters:
-        %      FILEID        - MATLAB file identifier of the header file.
-        %      UNITUNDERTEST - Name of the unit under test (string).
+        %closeHeaderFile(OBJ, FILEID) Adds the closing content to the
+        %   test header file with MATLAB identifier FILEID before closing it.
 
             % write the closing header file contents
             fprintf(fileID, '// clang-format on\n');
@@ -140,83 +137,79 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
     end % of methods
 
     methods (Access = protected)
-        function addTestIncludesToHeaderFilePHYsigproc(obj, fileID, unitUnderTest)
-        %addTestIncludesToHeaderFilePHYsigproc(OBJ, TESTVECTORHEADERFILEID, UNITUNDERTEST)
-        %   Adds include directives to the header file pointed by TESTVECTORHEADERFILEID,
-        %   which describes the UNITUNDERTEST test vectors. UNITUNDERTEST is of type
-        %   "signal_processors".
+        function addTestIncludesToHeaderFilePHYsigproc(obj, fileID)
+        %addTestIncludesToHeaderFilePHYsigproc(OBJ, FILEID) adds include directives to
+        %   the header file pointed by FILEID, which describes the test vectors. This
+        %   method is meant for blocks of type "phy/upper/signal_processors".
 
             fprintf(fileID, '#include "srsgnb/adt/complex.h"\n');
             fprintf(fileID, '#include "srsgnb/adt/to_array.h"\n');
             fprintf(fileID, '#include "srsgnb/phy/upper/%s/%s.h"\n', ...
-                lower(obj.srsBlockType), unitUnderTest);
+                obj.srsBlockType, obj.srsBlock);
             fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
             fprintf(fileID, '#include <array>\n');
             fprintf(fileID, '#include "../../resource_grid_test_doubles.h"\n');
         end
 
-        function addTestIncludesToHeaderFilePHYchproc(obj, fileID, unitUnderTest)
-        %addTestIncludesToHeaderFilePHYchproc(OBJ, TESTVECTORHEADERFILEID, UNITUNDERTEST)
-        %   Adds include directives to the header file pointed by TESTVECTORHEADERFILEID,
-        %   which describes the UNITUNDERTEST test vectors. UNITUNDERTEST is of type
-        %   "channel_processors".
+        function addTestIncludesToHeaderFilePHYchproc(obj, fileID)
+        %addTestIncludesToHeaderFilePHYsigproc(OBJ, FILEID) adds include directives to
+        %   the header file pointed by FILEID, which describes the test vectors. This
+        %   method is meant for blocks of type "phy/upper/channel_processors".
 
             fprintf(fileID, '#include "srsgnb/adt/complex.h"\n');
             fprintf(fileID, '#include "srsgnb/phy/upper/%s/%s.h"\n', ...
-                lower(obj.srsBlockType), unitUnderTest);
+                obj.srsBlockType, obj.srsBlock);
             fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
             fprintf(fileID, '#include <array>\n');
             fprintf(fileID, '#include "../../resource_grid_test_doubles.h"\n');
         end
 
-        function addTestIncludesToHeaderFilePHYchmod(obj, fileID, unitUnderTest)
-        %addTestIncludesToHeaderFilePHYchmod(OBJ, TESTVECTORHEADERFILEID, UNITUNDERTEST)
-        %   Adds include directives to the header file pointed by TESTVECTORHEADERFILEID,
-        %   which describes the UNITUNDERTEST test vectors. UNITUNDERTEST is of type
-        %   "channel_modulators".
+        function addTestIncludesToHeaderFilePHYchmod(obj, fileID)
+        %addTestIncludesToHeaderFilePHYsigproc(OBJ, FILEID) adds include directives to
+        %   the header file pointed by FILEID, which describes the test vectors. This
+        %   method is meant for blocks of type "phy/upper/channel_modulation".
 
             fprintf(fileID, '#include "srsgnb/adt/complex.h"\n');
             fprintf(fileID, '#include "srsgnb/phy/upper/%s/%s.h"\n', ...
-                lower(obj.srsBlockType), unitUnderTest);
+                lower(obj.srsBlockType), obj.srsBlock);
             fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
             fprintf(fileID, '#include <array>\n');
         end
 
-        function addTestDetailsToHeaderFilePHYsigproc(~, fileID, unitUnderTest)
-        %addTestDetailsToHeaderFilePHYsigproc(OBJ, TESTVECTORHEADERFILEID, UNITUNDERTEST)
-        %   Adds test details (e.g., type/variable declarations) to the header file
-        %   pointed by TESTVECTORHEADERFILEID, which describes the UNITUNDERTEST test
-        %   vectors. UNITUNDERTEST is of type "signal_processors".
+        function addTestDetailsToHeaderFilePHYsigproc(~, fileID)
+        %addTestDetailsToHeaderFilePHYchproc(OBJ, FILEID) adds test details (e.g., type
+        %   and variable declarations) to the header file pointed by FILEID, which
+        %   describes the test vectors. This method is meant for blocks of type
+        %   "phy/upper/signal_processors".
 
             fprintf(fileID, 'struct test_case_t {\n');
-            fprintf(fileID, '%s::config_t config;\n', unitUnderTest);
+            fprintf(fileID, '%s::config_t config;\n', obj.srsBlock);
             fprintf(fileID, ...
                 'file_vector<resource_grid_writer_spy::expected_entry_t> symbols;\n');
             fprintf(fileID, '};\n');
         end
 
-        function addTestDetailsToHeaderFilePHYchproc(~, fileID, unitUnderTest)
-        %addTestDetailsToHeaderFilePHYchproc(OBJ, TESTVECTORHEADERFILEID, UNITUNDERTEST)
-        %   Adds test details (e.g., type/variable declarations) to the header file
-        %   pointed by TESTVECTORHEADERFILEID, which describes the UNITUNDERTEST test
-        %   vectors. UNITUNDERTEST is of type "channel_processors".
+        function addTestDetailsToHeaderFilePHYchproc(obj, fileID)
+        %addTestDetailsToHeaderFilePHYchproc(OBJ, FILEID) adds test details (e.g., type
+        %   and variable declarations) to the header file pointed by FILEID, which
+        %   describes the test vectors. This method is meant for blocks of type
+        %   "phy/upper/channel_processors".
 
             fprintf(fileID, 'struct test_case_t {\n');
-            fprintf(fileID, '%s::config_t config;\n', unitUnderTest);
+            fprintf(fileID, '%s::config_t config;\n', obj.srsBlock);
             fprintf(fileID, 'file_vector<uint8_t> data;\n');
             fprintf(fileID, ...
                 'file_vector<resource_grid_writer_spy::expected_entry_t> symbols;\n');
             fprintf(fileID, '};\n');
         end
 
-        function addTestDetailsToHeaderFilePHYchmod(~, fileID, ~)
-        %addTestDetailsToHeaderFilePHYchmod(OBJ, TESTVECTORHEADERFILEID, UNITUNDERTEST)
-        %   Adds test details (e.g., type/variable declarations) to the header file
-        %   pointed by TESTVECTORHEADERFILEID, which describes the UNITUNDERTEST test
-        %   vectors. UNITUNDERTEST is of type "channel_modulators".
+        function addTestDetailsToHeaderFilePHYchmod(~, fileID)
+        %addTestDetailsToHeaderFilePHYchmod(OBJ, FILEID) adds test details (e.g., type
+        %   and variable declarations) to the header file pointed by FILEID, which
+        %   describes the test vectors. This method is meant for blocks of type
+        %   "phy/upper/channel_modulation".
 
             fprintf(fileID, 'struct test_case_t {\n');
-
             fprintf(fileID, 'std::size_t          nsymbols;\n');
             fprintf(fileID, 'modulation_scheme    scheme;\n');
             fprintf(fileID, 'file_vector<uint8_t> data;\n');
@@ -226,38 +219,38 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
     end % of methods (Access = protected)
 
     methods (Access = private)
-        function addTestDefinitionToHeaderFile(obj, fileID, callingFunc)
+        function addTestDefinitionToHeaderFile(obj, fileID)
         %addTestDefinitionToHeaderFile Adds opening guards to a test header file.
 
             fprintf(fileID, '#ifndef SRSGNB_UNITTESTS_%s_TEST_DATA_H\n', obj.pathInRepo);
             fprintf(fileID, '#define SRSGNB_UNITTESTS_%s_TEST_DATA_H\n', obj.pathInRepo);
             fprintf(fileID, '\n');
             fprintf(fileID, '// This file was generated using the following MATLAB class:\n');
-            fprintf(fileID, '//   + "%s.m"\n', callingFunc);
+            fprintf(fileID, '//   + "%s.m"\n', class(obj));
             fprintf(fileID, '\n');
         end
 
-        function fileID = createClassHeaderFile(obj, unitUnderTest, outputPath, callingFunc)
+        function fileID = createClassHeaderFile(obj)
         %createClassHeaderFile Creates the header file describing the test vectors.
 
             % create a new header file
-            headerFilename = sprintf('%s/%s_test_data.h', outputPath, unitUnderTest);
+            headerFilename = sprintf('%s/%s_test_data.h', obj.tmpOutputPath, obj.srsBlock);
             fileID = fopen(headerFilename, 'w');
 
             % add unit test definition
-            addTestDefinitionToHeaderFile(obj, fileID, callingFunc);
+            addTestDefinitionToHeaderFile(obj, fileID);
 
-            addTestIncludesToHeaderFile(obj, fileID, unitUnderTest);
+            addTestIncludesToHeaderFile(obj, fileID);
 
             fprintf(fileID, '\n');
             fprintf(fileID, 'namespace srsgnb {\n');
             fprintf(fileID, '\n');
 
-            addTestDetailsToHeaderFile(obj, fileID, unitUnderTest);
+            addTestDetailsToHeaderFile(obj, fileID);
 
             fprintf(fileID, '\n');
             fprintf(fileID, ...
-                'static const std::vector<test_case_t> %s_test_data = {\n', unitUnderTest);
+                'static const std::vector<test_case_t> %s_test_data = {\n', obj.srsBlock);
             fprintf(fileID, '// clang-format off\n');
         end
 
@@ -277,14 +270,9 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
     end % of methods (Access = private)
 
     methods (Static, Access = protected)
-        function addTestToHeaderFile(fileID, testEntryString, unitUnderTest)
-        %addTestToHeaderFile(OBJ, FILEID, TESTENTRYSTRING, UNITUNDERTEST)
-        %   adds a new test entry to a upper PHY channel processor unit header file.
-        %
-        %   Input parameters:
-        %      FILEID          - MATLAB file identifier of the header file.
-        %      TESTENTRYSTRING - Test entry to be added to the header file (string).
-        %      UNITUNDERTEST   - Name of the current channel processor unit under test (string).
+        function addTestToHeaderFile(fileID, testEntryString)
+        %addTestToHeaderFile(OBJ, FILEID, TESTENTRYSTRING) adds the test entry
+        %   TESTENTRYSTRING to the test header file with MATLAB identifier FILEID.
 
             % add a new test case entry to the header file
             fprintf(fileID, '%s', testEntryString);
