@@ -22,6 +22,7 @@ function outputString = RBallocationMask2string(varargin)
                 rbAllocation(rbIdx + 1) = 1;
             end
     end
+    import srsTest.helpers.cellarray2str
     outputString = cellarray2str({rbAllocation}, false);
 
 end

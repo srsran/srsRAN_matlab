@@ -3,6 +3,8 @@
 %   character representation OUTPUTSTRING.
 
 function [outoutString] = cell2str(inputCell)
+    import srsTest.helpers.array2str
+
     mat = cell2mat(inputCell);
 
     if isstring(inputCell) || iscellstr(inputCell)
