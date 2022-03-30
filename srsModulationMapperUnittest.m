@@ -1,73 +1,109 @@
-classdef srsModulationMapperUnittest < matlab.unittest.TestCase
-%SRSMODULATIONMAPPERUNITTEST Unit tests for the modulation mapper functions
+%srsModulationMapperUnittest Unit tests for the modulation mapper functions.
 %   This class implements unit tests for the modulation mapper functions using the
 %   matlab.unittest framework. The simplest use consists in creating an object with
-%       testCase = SRSMODULATIONMAPPERUNITTEST
+%       testCase = srsModulationMapperUnittest
 %   and then running all the tests with
 %       testResults = testCase.run
 %
-%   SRSMODULATIONMAPPERUNITTEST Properties (TestParameter):
+%   srsModulationMapperUnittest Properties (Constant):
 %
-%   modScheme - modulation scheme ('BPSK', 'QPSK', 'QAM16', 'QAM64', 'QAM256')
-%   nSymbols  - number of modulated output symbols (257, 997)
+%   srsBlock      - The tested block (i.e., 'modulation_mapper').
+%   srsBlockType  - The type of the tested block, including layer
+%                   (i.e., '/phy/upper/channel_modulation').
 %
-%   SRSMODULATIONMAPPERUNITTEST Methods (TestTags = {'testvector'}):
+%   srsModulationMapperUnittest Properties (ClassSetupParameter):
 %
-%   initialize                - Adds the required folders to the MATLAB path and
-%                               initializes the random seed.
-%   testvectorGenerationCases - Generates test vectors for all possible combinations
-%                               of modScheme and nSymbols.
+%   outputPath - Path to the folder where the test results are stored.
 %
-%   SRSMODULATIONMAPPERUNITTEST Methods (TestTags = {'srsPHYvalidation'}):
+%   srsModulationMapperUnittest Properties (TestParameter):
 %
-%  See also MATLAB.UNITTEST.
+%   modScheme - Modulation scheme (see extended documentation for details).
+%   nSymbols  - Number of modulated output symbols (257, 997).
+%
+%   srsModulationMapperUnittest Methods (TestTags = {'testvector'}):
+%
+%   testvectorGenerationCases - Generates a test vectors for the given modulation
+%                               scheme and number of symbols.
+%
+%   srsModulationMapperUnittest Methods (Access = protected):
+%
+%   addTestIncludesToHeaderFile     - Adds include directives to the test header file.
+%   addTestDefinitionToHeaderFile   - Adds details (e.g., type/variable declarations)
+%                                     to the test header file.
+%
+%  See also matlab.unittest.
+
+classdef srsModulationMapperUnittest < srsTest.srsBlockUnittest
+    properties (Constant)
+        %Name of the tested block.
+        srsBlock = 'modulation_mapper'
+
+        %Type of the tested block, including layers.
+        srsBlockType = 'phy/upper/channel_modulation'
+    end
+
+    properties (ClassSetupParameter)
+        %Path to results folder (old 'modulation_mapper' tests will be erased).
+        outputPath = {['testModulationMapper', datestr(now, 30)]}
+    end
 
     properties (TestParameter)
-        outputPath = {''};
-        baseFilename = {''};
-        testImpl = {''};
-        nSymbols = {257, 997};
-        modScheme = {{1, 'BPSK'}, {2, 'QPSK'}, {4, '16QAM', 'QAM16'}, {6, '64QAM', 'QAM64'}, {8, '256QAM', 'QAM256'}};
-    end
+        %Number of modulated output symbols (257, 997).
+        nSymbols = {257, 997}
 
-    methods (TestClassSetup)
-        function initialize(testCase)
-%INITIALIZE Adds the required folders to the MATLAB path and initializes the
-%   random seed.
-            % add main folder to the Matlab path
-            p = path;
-            testCase.addTeardown(@path, p);
+        %Modulation scheme, described as a three-entry cell array. The first
+        %entry is the modulation order, the second and the third are the
+        %corresponding labels for MATLAB and SRSGNB, respectively.
+        %Example: modScheme = {4, '16QAM', 'QAM16'}
+        modScheme = {{1, 'BPSK', 'BPSK'}, {2, 'QPSK', 'QPSK'}, {4, '16QAM', 'QAM16'}, ...
+            {6, '64QAM', 'QAM64'}, {8, '256QAM', 'QAM256'}}
+    end % of properties (TestParameter)
+
+    methods (Access = protected)
+        function addTestIncludesToHeaderFile(obj, fileID)
+        %addTestIncludesToHeaderFile Adds include directives to the test header file.
+            addTestIncludesToHeaderFilePHYchmod(obj, fileID);
         end
-    end
+
+        function addTestDefinitionToHeaderFile(obj, fileID)
+        %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
+            addTestDefinitionToHeaderFilePHYchmod(obj, fileID);
+        end
+    end % of methods (Access = protected)
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(testCase, testImpl, outputPath, baseFilename, nSymbols, modScheme)
-%TESTVECTORGENERATIONCASES Generates test vectors for all possible combinations of nSymbols
-%    and modScheme.
+        function testvectorGenerationCases(testCase, nSymbols, modScheme)
+        %testvectorGenerationCases(TESTCASE, NSYMBOLS, MODSCHEME) Generates a test vector
+        %   for the given number of symbols NSYMBOLS and modulation scheme and MODSCHEME.
 
-            % generate a unique test ID
-            filenameTemplate = sprintf('%s/%s_test_input*', outputPath, baseFilename);
-            file = dir (filenameTemplate);
-            filenames = {file.name};
-            testID = length(filenames);
+            % generate a unique test ID by looking at the number of files generated so far
+            baseFilename = testCase.srsBlock;
+            filenameTemplate = sprintf('%s/%s_test_input*', testCase.tmpOutputPath, baseFilename);
+            testID = numel(dir(filenameTemplate));
+
             % generate random test input as a bit sequence
             codeword = randi([0 1], nSymbols * modScheme{1}, 1);
 
             % write the codeword to a binary file
-            testImpl.saveDataFile(baseFilename, '_test_input', testID, outputPath, @writeUint8File, codeword);
+            import srsTest.helpers.writeUint8File;
+            testCase.saveDataFile('_test_input', testID, @writeUint8File, codeword);
 
             % call the symbol modulation MATLAB functions
-            [modulatedSymbols] = srsModulator(codeword, modScheme{2});
+            import srsMatlabWrappers.phy.upper.channel_modulation.srsModulator
+            modulatedSymbols = srsModulator(codeword, modScheme{2});
 
             % write complex symbols into a binary file
-            testImpl.saveDataFile(baseFilename, '_test_output', testID, outputPath, @writeComplexFloatFile, modulatedSymbols);
+            import srsTest.helpers.writeComplexFloatFile;
+            testCase.saveDataFile('_test_output', testID, ...
+                @writeComplexFloatFile, modulatedSymbols);
 
             % generate the test case entry
-            modSchemeString = ['modulation_scheme::', modScheme{length(modScheme)}];
-            testCaseString = testImpl.testCaseToString(baseFilename, testID, true, {nSymbols, modSchemeString}, false);
+            modSchemeString = ['modulation_scheme::', modScheme{3}];
+            testCaseString = testCase.testCaseToString(testID, true, ...
+                {nSymbols, modSchemeString}, false);
 
             % add the test to the file header
-            testImpl.addTestToHeaderFile(testCaseString, baseFilename, outputPath);
-        end
-    end
-end
+            testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);
+        end % of function testvectorGenerationCases
+    end % of methods (Test, TestTags = {'testvector'})
+end % of classdef srsModulationMapperUnittest
