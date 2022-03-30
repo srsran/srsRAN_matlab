@@ -59,7 +59,7 @@ classdef srsPBCHModulatorUnittest < srsTest.srsBlockUnittest
         %Lmax = 4 is not currently supported, and Lmax = 64 and Lmax = 8
         %are equivalent at this stage.
         Lmax = {8}
-    end
+    end % of properties (TestParameter)
 
     properties (Constant, Hidden)
         randomizeTestvector = randperm(1008)
@@ -75,7 +75,7 @@ classdef srsPBCHModulatorUnittest < srsTest.srsBlockUnittest
         %addTestDefinitionToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
             addTestDefinitionToHeaderFilePHYchproc(obj, fileID);
         end
-    end
+    end % of methods (Access = protected)
 
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, SSBindex, Lmax)
@@ -124,7 +124,6 @@ classdef srsPBCHModulatorUnittest < srsTest.srsBlockUnittest
 
             % add the test to the file header
             testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);
-        end
-    end
-
-end
+        end % of function testvectorGenerationCases
+    end % of methods (Test, TestTags = {'testvector'})
+end % of classdef srsPBCHModulatorUnittest

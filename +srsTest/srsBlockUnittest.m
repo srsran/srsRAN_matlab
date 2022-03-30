@@ -160,7 +160,7 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
             fprintf(fileID, '#include <array>\n');
         end
 
-        function addTestDefinitionToHeaderFilePHYsigproc(~, fileID)
+        function addTestDefinitionToHeaderFilePHYsigproc(obj, fileID)
         %addTestDefinitionToHeaderFilePHYchproc(OBJ, FILEID) adds test details (e.g., type
         %   and variable declarations) to the header file pointed by FILEID, which
         %   describes the test vectors. This method is meant for blocks of type
@@ -346,4 +346,4 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
             fprintf(fileID, '%s', testEntryString);
         end
     end % of methods (Static, Access = protected)
-end
+end % of classdef srsBlockUnittest

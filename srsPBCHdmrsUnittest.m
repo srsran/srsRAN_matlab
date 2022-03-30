@@ -1,74 +1,96 @@
-classdef srsPBCHdmrsUnittest < matlab.unittest.TestCase
-%SRSPBCHDMRSUNITTEST Unit tests for PBCH DMRS processor functions.
+%srsPBCHdmrsUnittest Unit tests for PBCH DMRS processor functions.
 %   This class implements unit tests for the PBCH DMRS processor functions using the
 %   matlab.unittest framework. The simplest use consists in creating an object with
-%       testCase = SRSPBCHDMRSUNITTEST
+%       testCase = srsPBCHdmrsUnittest
 %   and then running all the tests with
 %       testResults = testCase.run
 %
-%   SRSPBCHDMRSUNITTEST Properties (TestParameter):
+%   srsPBCHdmrsUnittest Properties (Constant):
 %
-%   SSBindex - SSB index (0, ..., 7).
+%   srsBlock      - The tested block (i.e., 'dmrs_pbch_processor').
+%   srsBlockType  - The type of the tested block, including layer
+%                   (i.e., 'phy/upper/signal_processors').
+%
+%   srsPBCHdmrsUnittest Properties (ClassSetupParameter):
+%
+%   outputPath - Path to the folder where the test results are stored.
+%
+%   srsPBCHdmrsUnittest Properties (TestParameter):
+%
+%   SSBindex - SSB index (0...7).
 %   Lmax     - Maximum number of SSBs within a SSB set (4, 8, 64).
-%   NCellID  - PHY-layer cell ID (0, ..., 1007).
-%   nHF      - half-frame indicato (0, 1)
+%   NCellID  - PHY-layer cell ID (0...1007).
+%   nHF      - Half-frame indicator (0, 1).
 %
-%   SRSPBCHDMRSUNITTEST Methods (TestTags = {'testvector'}):
+%   srsPBCHdmrsUnittest Methods (TestTags = {'testvector'}):
 %
-%   initialize                - Adds the required folders to the MATLAB path and
-%                               initializes the random seed.
-%   testvectorGenerationCases - Generates test vectors for all possible combinations of SSBindex,
-%                               Lmax and nHF, while using a random NCellID for each test.
+%   testvectorGenerationCases   - Generates test vectors for the given SSBindex,
+%                                 Lmax and nHF, while using a random NCellID.
 %
-%   SRSPBCHMODULATORUNITTEST Methods (TestTags = {'srsPHYvalidation'}):
+%   srsPBCHdmrsUnittest Methods (Access = protected):
 %
-%  See also MATLAB.UNITTEST.
-%  SRSPBCHDMRSUNITTEST Methods:
-%    The following methods are available for the testvector generation tests (TestTags = {'testvector'}):
-%      * testvectorGenerationCases - generates testvectors for all possible combinations of SSBindex,
-%                                    Lmax and nHF, while using a random NCellID for each test
+%   addTestIncludesToHeaderFile     - Adds include directives to the test header file.
+%   addTestDefinitionToHeaderFile   - Adds details (e.g., type/variable declarations)
+%                                     to the test header file.
 %
-%    The following methods are available for the SRS PHY validation tests (TestTags = {'srsPHYvalidation'}):
-%      * srsPHYvalidationCases - validates the SRS PHY functions for all possible combinations of SSBindex,
-%                                Lmax, nHF and NCellID
-%
-%  See also MATLAB.UNITTEST.
+%  See also matlab.unittest.
+
+classdef srsPBCHdmrsUnittest < srsTest.srsBlockUnittest
+    properties (Constant)
+        %Name of the tested block.
+        srsBlock = 'dmrs_pbch_processor'
+
+        %Type of the tested block.
+        srsBlockType = 'phy/upper/signal_processors'
+    end
+
+    properties (ClassSetupParameter)
+        %Path to results folder (old 'dmrs_pbch_processor' tests will be erased).
+        outputPath = {['testPBCHdmrs', datestr(now, 30)]}
+    end
 
     properties (TestParameter)
-        outputPath = {''};
-        baseFilename = {''};
-        testImpl = {''};
-        randomizeTestvector = num2cell(randi([1, 1008], 1, 54));
-        NCellID = num2cell(0:1:1007);
-        SSBindex = {0, 1, 2, 3, 4, 6, 16, 32, 48};
-        Lmax = {4, 8, 64};
-        nHF = {0, 1};
+        %PHY-layer cell ID (0...1007).
+        NCellID = num2cell(0:1007)
+
+        %SSB index (0...7).
+        SSBindex = {0, 1, 2, 3, 4, 6, 16, 32, 48}
+
+        %Maximum number of SSBs within a SSB set (4, 8, 64).
+        Lmax = {4, 8, 64}
+
+        %Half-frame indicato (0, 1)
+        nHF = {0, 1}
+    end % of properties (TestParameter)
+
+    properties (Constant, Hidden)
+        randomizeTestvector = randperm(1008)
     end
 
-    methods (TestClassSetup)
-        function initialize(testCase)
-%INITIALIZE Adds the required folders to the MATLAB path and initializes the
-%   random seed.
-
-            % add main folder to the Matlab path
-            p = path;
-            testCase.addTeardown(@path, p);
+    methods (Access = protected)
+        function addTestIncludesToHeaderFile(obj, fileID)
+        %addTestIncludesToHeaderFile Adds include directives to the test header file.
+            addTestIncludesToHeaderFilePHYsigproc(obj, fileID);
         end
-    end
+
+        function addTestDefinitionToHeaderFile(obj, fileID)
+        %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
+            addTestDefinitionToHeaderFilePHYsigproc(obj, fileID);
+        end
+    end % methods (Access = protected)
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(testCase, testImpl, outputPath, baseFilename, SSBindex, Lmax, nHF)
-%TESTVECTORGENERATIONCASES Generates test vectors for all possible combinations of SSBindex,
-%   Lmax and nHF, while using a random NCellID for each test.
+        function testvectorGenerationCases(testCase, SSBindex, Lmax, nHF)
+        %testvectorGenerationCases Generates test vectors for the given SSBindex,
+        %   Lmax and nHF, while using a random NCellID.
 
-            % generate a unique test ID
-            filenameTemplate = sprintf('%s/%s_test_output*', outputPath, baseFilename);
-            file = dir (filenameTemplate);
-            filenames = {file.name};
-            testID = length(filenames);
+            % generate a unique test ID by looking at the number of files generated so far
+            baseFilename = testCase.srsBlock;
+            filenameTemplate = sprintf('%s/%s_test_output*', testCase.tmpOutputPath, baseFilename);
+            testID = numel(dir(filenameTemplate));
 
             % use a unique NCellID for each test
-            randomizedTestCase = testCase.randomizeTestvector{testID + 1};
+            randomizedTestCase = testCase.randomizeTestvector(testID + 1);
             NCellIDLoc = testCase.NCellID{randomizedTestCase};
 
             % current fixed parameter values
@@ -77,40 +99,28 @@ classdef srsPBCHdmrsUnittest < matlab.unittest.TestCase
             SSBfirstSymbol = 0;
             SSBamplitude = 1;
             SSBports = zeros(numPorts, 1);
+            import srsTest.helpers.cellarray2str;
             SSBportsStr = cellarray2str({SSBports}, true);
 
             % check if the current SSBindex value is possible with the current Lmax
             if Lmax > SSBindex
+                import srsMatlabWrappers.phy.upper.signal_processors.srsPBCHdmrs
                 % call the PBCH DMRS symbol processor MATLAB functions
                 [DMRSsymbols, symbolIndices] = srsPBCHdmrs(NCellIDLoc, SSBindex, Lmax, nHF);
 
                 % write each complex symbol into a binary file, and the associated indices to another
-                testImpl.saveDataFile(baseFilename, '_test_output', testID, outputPath, @writeResourceGridEntryFile, DMRSsymbols, symbolIndices);
+                import srsTest.helpers.writeResourceGridEntryFile
+                testCase.saveDataFile('_test_output', testID, ...
+                    @writeResourceGridEntryFile, DMRSsymbols, symbolIndices);
 
                 % generate the test case entry
-                testCaseString = testImpl.testCaseToString(baseFilename, testID, false, {NCellIDLoc, SSBindex, Lmax, ...
-                                                           SSBfirstSubcarrier, SSBfirstSymbol, nHF, SSBamplitude, SSBportsStr}, true);
+                testCaseString = testCase.testCaseToString(testID, false, ...
+                    {NCellIDLoc, SSBindex, Lmax, SSBfirstSubcarrier, SSBfirstSymbol, ...
+                        nHF, SSBamplitude, SSBportsStr}, true);
 
                 % add the test to the file header
-                testImpl.addTestToHeaderFile(testCaseString, baseFilename, outputPath);
+                testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);
             end
-        end
-    end
-
-%     methods (Test, TestTags = {'srs_phy_validation'})
-%
-%         function srsPHYvalidationCases(testCase, NCellID, SSBindex, Lmax, nHF)
-%             % call the Matlab PHY function
-%             [matDMRSsymbols, matSymbolIndices] = srsPBCHdmrs(NCellID, SSBindex, Lmax, nHF);
-%
-%             % call the SRS PHY function
-%             % TBD: [srsDMRSsymbols, srsSymbolIndices] = srsPBCHdmrsPHYtest(NCellID, SSBindex, Lmax, nHF);
-%
-%             % compare the results
-%             % TBD: testCase.verifyEqual(matDMRSsymbols, srsDMRSsymbols);
-%             % TBD: testCase.verifyEqual(matSymbolIndices, srsSymbolIndices);
-%         end
-%     end
-
-
-end
+        end % function testvectorGenerationCases
+    end % of methods (Test, TestTags = {'testvector'})
+end % of classdef srsPBCHdmrsUnittest
