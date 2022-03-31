@@ -339,7 +339,7 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
             % delete previous testvectors (if any)
             if isfolder(outputPath)
                 filenameTemplate = sprintf('%s/%s*.dat', outputPath, obj.srsBlock);
-                file = dir (filenameTemplate);
+                file = dir(filenameTemplate);
                 filenames = {file.name};
                 if ~isempty(filenames)
                     system(sprintf('rm -rf %s/%s*.dat', outputPath, obj.srsBlock));
