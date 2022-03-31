@@ -128,11 +128,17 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
         %   method is meant for blocks of type "phy/upper/signal_processors".
 
             fprintf(fileID, '#include "srsgnb/adt/complex.h"\n');
-            fprintf(fileID, '#include "srsgnb/adt/to_array.h"\n');
+            if ~strcmp(obj.srsBlock, 'dmrs_pdsch_processor')
+                fprintf(fileID, '#include "srsgnb/adt/to_array.h"\n');
+            end
             fprintf(fileID, '#include "srsgnb/phy/upper/%s/%s.h"\n', ...
                 obj.srsBlockType, obj.srsBlock);
             fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
-            fprintf(fileID, '#include <array>\n');
+            if ~strcmp(obj.srsBlock, 'dmrs_pdsch_processor')
+                fprintf(fileID, '#include <array>\n');
+            else
+                fprintf(fileID, '#include <vector>\n');
+            end
             fprintf(fileID, '#include "../../resource_grid_test_doubles.h"\n');
         end
 

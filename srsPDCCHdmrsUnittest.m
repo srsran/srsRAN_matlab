@@ -7,7 +7,7 @@
 %
 %   srsPDCCHdmrsUnittest Properties (Constant):
 %
-%   srsBlock      - The tested block (i.e., 'dmrs_pddch_processor').
+%   srsBlock      - The tested block (i.e., 'dmrs_pdcch_processor').
 %   srsBlockType  - The type of the tested block, including layer
 %                   (i.e., 'phy/upper/signal_processors').
 %
@@ -47,7 +47,7 @@ classdef srsPDCCHdmrsUnittest < srsTest.srsBlockUnittest
     end
 
     properties (ClassSetupParameter)
-        %Path to results folder (old 'dmrs_pddch_processor' tests will be erased).
+        %Path to results folder (old 'dmrs_pdcch_processor' tests will be erased).
         outputPath = {['testPDCCHdmrs', datestr(now, 30)]}
     end
 

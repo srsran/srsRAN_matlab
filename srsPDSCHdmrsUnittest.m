@@ -1,110 +1,127 @@
-classdef srsPDSCHdmrsUnittest < matlab.unittest.TestCase
-%SRSPDSCHDMRSUNITTEST Unit tests for PDSCH DMRS processor functions.
+%srsPDSCHdmrsUnittest Unit tests for PDSCH DMRS processor functions.
 %   This class implements unit tests for the PDSCH DMRS processor functions using the
 %   matlab.unittest framework. The simplest use consists in creating an object with
-%       testCase = SRSPDSCHDMRSUNITTEST
+%       testCase = srsPDSCHdmrsUnittest
 %   and then running all the tests with
 %       testResults = testCase.run
 %
-%   SRSPDSCHDMRSUNITTEST Properties (TestParameter):
+%   srsPDSCHdmrsUnittest Properties (Constant):
 %
-%   NCellID                 - PHY-layer cell ID (0, ..., 1007).
-%   NSlot                   - slot index (0, ..., 19).
-%   RNTI                    - radio network temporary ID (0, ..., 65535)
-%   numerology              - defines the subcarrier spacing (0, 1)
-%   NumLayers               - number of transmisson layers (1, 2, 4, 8)
-%   DMRSTypeAPosition       - position of first DMRS OFDM symbol (2, 3)
-%   DMRSAdditionalPosition  - maximum number of DMRS additional positions (0, 1, 2, 3)
-%   DMRSLength              - number of consecutive front-loaded DMRS OFDM symbols (1, 2)
-%   DMRSConfigurationType   - DMRS configuration type (1, 2)
-%   NumCDMGroupsWithoutData - number of DM-RS CDM groups without data (1, 2, 3)
+%   srsBlock      - The tested block (i.e., 'dmrs_pdsch_processor').
+%   srsBlockType  - The type of the tested block, including layer
+%                   (i.e., 'phy/upper/signal_processors').
 %
-%   SRSPDSCHDMRSUNITTEST Methods (TestTags = {'testvector'}):
+%   srsPDSCHdmrsUnittest Properties (ClassSetupParameter):
 %
-%   initialize                - Adds the required folders to the MATLAB path and
-%                               initializes the random seed.
-%   testvectorGenerationCases - Generates test vectors for all possible combinations of numerology,
-%                               NumLayers, DMRSTypeAPosition, DMRSAdditionalPosition, DMRSLength and
-%                               DMRSConfigurationType, while using a random NCellID, NSlot and PRB
-%                               set for each test, jointly with some fixed parameters.
+%   outputPath - Path to the folder where the test results are stored.
 %
-%   SRSPDSCHDMRSUNITTEST Methods (TestTags = {'srsPHYvalidation'}):
+%   srsPDSCHdmrsUnittest Properties (TestParameter):
 %
-%  See also MATLAB.UNITTEST.
+%   numerology              - Defines the subcarrier spacing (0, 1).
+%   NumLayers               - Number of transmission layers (1, 2, 4, 8).
+%   DMRSTypeAPosition       - Position of the first DMRS OFDM symbol (2, 3).
+%   DMRSAdditionalPosition  - Maximum number of DMRS additional positions (0, 1, 2, 3).
+%   DMRSLength              - Number of consecutive front-loaded DMRS OFDM symbols (1, 2).
+%   DMRSConfigurationType   - DMRS configuration type (1, 2).
+%
+%   srsPDSCHdmrsUnittest Methods (TestTags = {'testvector'}):
+%
+%   testvectorGenerationCases - Generates a test vectors according to the provided
+%                               parameters.
+%
+%   srsPDSCHdmrsUnittest Methods (Access = protected):
+%
+%   addTestIncludesToHeaderFile     - Adds include directives to the test header file.
+%   addTestDefinitionToHeaderFile   - Adds details (e.g., type/variable declarations)
+%                                     to the test header file.
+%
+%  See also matlab.unittest.
+classdef srsPDSCHdmrsUnittest < srsTest.srsBlockUnittest
+    properties (Constant)
+        %Name of the tested block.
+        srsBlock = 'dmrs_pdsch_processor'
+
+        %Type of the tested block.
+        srsBlockType = 'phy/upper/signal_processors'
+    end
+
+    properties (Constant, Hidden)
+        norNCellID = 1008
+        randomizeTestvector = randperm(srsPDSCHdmrsUnittest.norNCellID);
+    end
+
+    properties (ClassSetupParameter)
+        %Path to results folder (old 'dmrs_pdsch_processor' tests will be erased).
+        outputPath = {['testPDSCHdmrs', datestr(now, 30)]}
+    end
 
     properties (TestParameter)
-        outputPath = {''};
-        baseFilename = {''};
-        testImpl = {''};
-        randomizeTestvector = num2cell(randi([1, 1008], 1, 768));
-        randomizeSlotNum0 = num2cell(randi([1, 10], 1, 768));
-        randomizeSlotNum1 = num2cell(randi([1, 20], 1, 768));
-        randomizeScramblingInit = num2cell(randi([0, 1], 1, 768));
-        randomizePRBSet0 = num2cell(randi([0,136], 1, 768))
-        randomizePRBSet1 = num2cell(randi([137,271], 1, 768));
-        NCellID = num2cell(0:1:1007);
-        NSlot = num2cell(0:1:19);
-        RNTI = num2cell(0:1:65535);
-        numerology = {0, 1};
-        NumLayers = {1, 2, 4, 8};
-        DMRSTypeAPosition = {2, 3};
-        DMRSAdditionalPosition = {0, 1, 2, 3};
-        DMRSLength = {1, 2};
-        DMRSConfigurationType = {1, 2};
-        NumCDMGroupsWithoutData = {1, 2, 3};
+        %Defines the subcarrier spacing (0, 1).
+        numerology = {0, 1}
+
+        %Number of transmission layers (1, 2, 4, 8).
+        NumLayers = {1, 2, 4, 8}
+
+        %Position of the first DMRS OFDM symbol (2, 3).
+        DMRSTypeAPosition = {2, 3}
+
+        %Maximum number of DMRS additional positions (0, 1, 2, 3).
+        DMRSAdditionalPosition = {0, 1, 2, 3}
+
+        %Number of consecutive front-loaded DMRS OFDM symbols (1, 2).
+        DMRSLength = {1, 2}
+
+        %DMRS configuration type (1, 2).
+        DMRSConfigurationType = {1, 2}
     end
 
-    methods (TestClassSetup)
-        function initialize(testCase)
-%INITIALIZE Adds the required folders to the MATLAB path and initializes the
-%   random seed.
-
-            % add main folder to the Matlab path
-            p = path;
-            testCase.addTeardown(@path, p);
+    methods (Access = protected)
+        function addTestIncludesToHeaderFile(obj, fileID)
+        %addTestIncludesToHeaderFile Adds include directives to the test header file.
+            addTestIncludesToHeaderFilePHYsigproc(obj, fileID);
         end
-    end
+
+        function addTestDefinitionToHeaderFile(obj, fileID)
+        %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
+            addTestDefinitionToHeaderFilePHYsigproc(obj, fileID);
+        end
+    end % of methods (Access = protected)
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(testCase, testImpl, outputPath, baseFilename, numerology, NumLayers, DMRSTypeAPosition, DMRSAdditionalPosition, DMRSLength, DMRSConfigurationType)
-%TESTVECTORGENERATIONCASES Generates test vectors for all possible combinations of numerology,
-%   NumLayers, DMRSTypeAPosition, DMRSAdditionalPosition, DMRSLength and DMRSConfigurationType,
-%   while using a random NCellID, NSlot and PRB set for each test, jointly with some fixed
-%   parameters.
+        function testvectorGenerationCases(testCase, numerology, NumLayers, ...
+                DMRSTypeAPosition, DMRSAdditionalPosition, DMRSLength, DMRSConfigurationType)
+        %testvectorGenerationCases Generates a test vector for the given numerology,
+        %   NumLayers, DMRSTypeAPosition, DMRSAdditionalPosition, DMRSLength and
+        %   DMRSConfigurationType. NCellID, NSlot and PRB are randomly generated.
 
             % generate a unique test ID
-            filenameTemplate = sprintf('%s/%s_test_output*', outputPath, baseFilename);
-            file = dir (filenameTemplate);
-            filenames = {file.name};
-            testID = length(filenames);
+            testID = testCase.generateTestID;
 
             % use a unique NCellID, NSlot, scrambling ID and PRB allocation for each test
-            randomizedCellID = testCase.randomizeTestvector{testID + 1};
-            NCellIDLoc = testCase.NCellID{randomizedCellID};
+            NCellID = testCase.randomizeTestvector(testID + 1) - 1;
             if numerology == 0
-                randomizedSlot = testCase.randomizeSlotNum0{testID + 1};
+                NSlot = randi([0, 9]);
             else
-                randomizedSlot = testCase.randomizeSlotNum1{testID + 1};
+                NSlot = randi([0, 19]);
             end
-            NSlotLoc = testCase.NSlot{randomizedSlot};
-            NSCID = testCase.randomizeScramblingInit{testID+1};
-            PRBstart = testCase.randomizePRBSet0{testID+1};
-            PRBend = testCase.randomizePRBSet1{testID+1};
+            NSCID = randi([0, 1]);
+            PRBstart = randi([0, 136]);
+            PRBend = randi([136, 271]);
 
             % current fixed parameter values (e.g., number of CDM groups without data)
             NSizeGrid = 272;
             NStartGrid = 0;
             NFrame = 0;
             CyclicPrefix = 'normal';
-            RNTILoc = 0;
+            RNTI = 0;
             NStartBWP = 0;
             NSizeBWP = NSizeGrid;
             numPorts = 1;
             referencePointKrb = 0;
             startSymbolIndex = 0;
-            NIDNSCID = NCellIDLoc;
+            NIDNSCID = NCellID;
             NumCDMGroupsWithoutDataLoc = 2;
-            NID = NCellIDLoc;
+            NID = NCellID;
             ReservedRE = [];
             Modulation = '16QAM';
             MappingType = 'A';
@@ -112,6 +129,7 @@ classdef srsPDSCHdmrsUnittest < matlab.unittest.TestCase
             PRBSet = [PRBstart:PRBend];
             pmi = 0;
             PDSCHports = zeros(numPorts, 1);
+            import srsTest.helpers.cellarray2str
             PDSCHportsStr = cellarray2str({PDSCHports}, true);
 
             % skip those invalid configuration cases
@@ -119,37 +137,54 @@ classdef srsPDSCHdmrsUnittest < matlab.unittest.TestCase
             if isDMRSLengthOK
                 % configure the carrier according to the test parameters
                 SubcarrierSpacing = 15 * (2 .^ numerology);
-                carrier = srsConfigureCarrier(NCellIDLoc, SubcarrierSpacing, NSizeGrid, NStartGrid, NSlotLoc, NFrame, CyclicPrefix);
+                import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
+                carrier = srsConfigureCarrier(NCellID, SubcarrierSpacing, ...
+                    NSizeGrid, NStartGrid, NSlot, NFrame, CyclicPrefix);
 
                 % configure the PDSCH DMRS symbols according to the test parameters
-                DMRS = srsConfigurePDSCHdmrs(DMRSConfigurationType, DMRSTypeAPosition, DMRSAdditionalPosition, DMRSLength, NIDNSCID, NSCID, NumCDMGroupsWithoutDataLoc);
+                import srsMatlabWrappers.phy.helpers.srsConfigurePDSCHdmrs
+                DMRS = srsConfigurePDSCHdmrs(DMRSConfigurationType, ...
+                    DMRSTypeAPosition, DMRSAdditionalPosition, DMRSLength, ...
+                    NIDNSCID, NSCID, NumCDMGroupsWithoutDataLoc);
 
                 % configure the PDSCH according to the test parameters
-                pdsch = srsConfigurePDSCH(DMRS, NStartBWP, NSizeBWP, NID, RNTILoc, ReservedRE, Modulation, NumLayers, MappingType, SymbolAllocation, PRBSet);
+                import srsMatlabWrappers.phy.helpers.srsConfigurePDSCH
+                pdsch = srsConfigurePDSCH(DMRS, NStartBWP, NSizeBWP, NID, RNTI, ...
+                    ReservedRE, Modulation, NumLayers, MappingType, ...
+                    SymbolAllocation, PRBSet);
 
                 % call the PDSCH DMRS symbol processor MATLAB functions
+                import srsMatlabWrappers.phy.upper.signal_processors.srsPDSCHdmrs
                 [DMRSsymbols, symbolIndices] = srsPDSCHdmrs(carrier, pdsch);
 
+                import srsTest.helpers.writeResourceGridEntryFile
                 % write each complex symbol into a binary file, and the associated indices to another
-                testImpl.saveDataFile(baseFilename, '_test_output', testID, outputPath, @writeResourceGridEntryFile, DMRSsymbols, symbolIndices);
+                testCase.saveDataFile('_test_output', testID, ...
+                    @writeResourceGridEntryFile, DMRSsymbols, symbolIndices);
 
                 % generate a 'slot_point' configuration string
-                slotPointConfig = cellarray2str({numerology, NFrame, floor(NSlotLoc / carrier.SlotsPerSubframe), ...
-                                                 rem(NSlotLoc, carrier.SlotsPerSubframe)}, true);
+                slotPointConfig = cellarray2str({numerology, NFrame, ...
+                    floor(NSlot / carrier.SlotsPerSubframe), ...
+                    rem(NSlot, carrier.SlotsPerSubframe)}, true);
 
+                import srsTest.helpers.symbolAllocationMask2string
                 % generate a symbol allocation mask string
                 symbolAllocationMask = symbolAllocationMask2string(symbolIndices);
 
+                import srsTest.helpers.RBallocationMask2string
                 % generate a RB allocation mask string
                 rbAllocationMask = RBallocationMask2string(PRBstart, PRBend);
 
                 % generate the test case entry
-                testCaseString = testImpl.testCaseToString( baseFilename, testID, false, {slotPointConfig, referencePointKrb, ['dmrs_type::TYPE', num2str(DMRSConfigurationType)], ...
-                                      NIDNSCID, NSCID, NumCDMGroupsWithoutDataLoc, pmi, symbolAllocationMask, rbAllocationMask, PDSCHportsStr}, true);
+                testCaseString = testCase.testCaseToString(testID, false, ...
+                    {slotPointConfig, referencePointKrb, ...
+                        ['dmrs_type::TYPE', num2str(DMRSConfigurationType)], ...
+                        NIDNSCID, NSCID, NumCDMGroupsWithoutDataLoc, pmi, ...
+                        symbolAllocationMask, rbAllocationMask, PDSCHportsStr}, true);
 
                 % add the test to the file header
-                testImpl.addTestToHeaderFile(testCaseString, baseFilename, outputPath);
+                testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);
             end
-        end
-    end
-end
+        end % of function testvectorGenerationCases
+    end % of methods (Test, TestTags = {'testvector'})
+end % of classdef srsPDSCHdmrsUnittest

@@ -4,7 +4,7 @@
 %   SYMBOLINDICESVECTOR.
 
 function outputString = symbolAllocationMask2string(symbolIndicesVector)
-
+    import srsTest.helpers.cellarray2str
     symbolAllocation = zeros(14, 1); % maximum possible number of symbols
     for symbolIndex = symbolIndicesVector(:, 2)
       symbolAllocation(symbolIndex + 1) = 1;
