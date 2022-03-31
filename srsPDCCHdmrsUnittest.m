@@ -97,6 +97,16 @@ classdef srsPDCCHdmrsUnittest < srsTest.srsBlockUnittest
         %testvectorGenerationCases Generates a test vector for the given numerology, Duration,
         %   CCEREGMapping and AggregationLevel, while using a random NCellID and a random NSlot.
 
+            import srsTest.helpers.cellarray2str
+            import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
+            import srsMatlabWrappers.phy.helpers.srsConfigureCORESET
+            import srsMatlabWrappers.phy.helpers.srsConfigurePDCCH
+            import srsMatlabWrappers.phy.upper.signal_processors.srsPDCCHdmrs
+            import srsMatlabWrappers.phy.helpers.srsGetUniqueSymbolsIndices
+            import srsTest.helpers.writeResourceGridEntryFile
+            import srsTest.helpers.cellarray2str
+            import srsTest.helpers.RBallocationMask2string
+
             % generate a unique test ID by looking at the number of files generated so far
             testID = testCase.generateTestID;
 
@@ -132,7 +142,6 @@ classdef srsPDCCHdmrsUnittest < srsTest.srsBlockUnittest
             DMRSScramblingID = NCellIDLoc;
             DMRSamplitude = 1.0;
             PDCCHports = zeros(numPorts, 1);
-            import srsTest.helpers.cellarray2str;
             PDCCHportsStr = cellarray2str({PDCCHports}, true);
 
             % only encode the PDCCH when it fits
@@ -143,43 +152,35 @@ classdef srsPDCCHdmrsUnittest < srsTest.srsBlockUnittest
 
             if (isAggregationOK && isCCEREGMappingOK)
 
-                import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
                 % configure the carrier according to the test parameters
                 SubcarrierSpacing = 15 * (2 .^ numerology);
                 carrier = srsConfigureCarrier(NCellIDLoc, SubcarrierSpacing, NSizeGrid, ...
                     NStartGrid, NSlotLoc, NFrame, CyclicPrefix);
 
-                import srsMatlabWrappers.phy.helpers.srsConfigureCORESET
                 % configure the CORESET according to the test parameters
                 CORESET = srsConfigureCORESET(FrequencyResources, Duration, ...
                     CCEREGMapping, REGBundleSize, InterleaverSize);
 
-                import srsMatlabWrappers.phy.helpers.srsConfigurePDCCH
                 % configure the PDCCH according to the test parameters
                 pdcch = srsConfigurePDCCH(CORESET, NStartBWP, NSizeBWP, RNTILoc, ...
                     AggregationLevel, SearchSpaceType, AllocatedCandidate, DMRSScramblingID);
 
-                import srsMatlabWrappers.phy.upper.signal_processors.srsPDCCHdmrs
                 % call the PDCCH DMRS symbol processor MATLAB functions
                 [DMRSsymbols, symbolIndices] = srsPDCCHdmrs(carrier, pdcch);
 
-                import srsMatlabWrappers.phy.helpers.srsGetUniqueSymbolsIndices
                 % put all generated DMRS symbols and indices in a single cell
                 [DMRSsymbolsVector, symbolIndicesVector] = ...
                     srsGetUniqueSymbolsIndices(DMRSsymbols, symbolIndices);
 
-                import srsTest.helpers.writeResourceGridEntryFile
                 % write each complex symbol into a binary file, and the associated indices to another
                 testCase.saveDataFile('_test_output', testID, @writeResourceGridEntryFile, ...
                     DMRSsymbolsVector, symbolIndicesVector);
 
-                import srsTest.helpers.cellarray2str
                 % generate a 'slot_point' configuration string
                 slotPointConfig = cellarray2str({numerology, NFrame, ...
                     floor(NSlotLoc / carrier.SlotsPerSubframe), ...
                     rem(NSlotLoc, carrier.SlotsPerSubframe)}, true);
 
-                import srsTest.helpers.RBallocationMask2string
                 % generate a RB allocation mask string
                 rbAllocationMask = RBallocationMask2string(symbolIndicesVector);
 

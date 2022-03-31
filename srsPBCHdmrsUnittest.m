@@ -84,6 +84,10 @@ classdef srsPBCHdmrsUnittest < srsTest.srsBlockUnittest
         %testvectorGenerationCases Generates test vectors for the given SSBindex,
         %   Lmax and nHF, while using a random NCellID.
 
+            import srsTest.helpers.cellarray2str
+            import srsMatlabWrappers.phy.upper.signal_processors.srsPBCHdmrs
+            import srsTest.helpers.writeResourceGridEntryFile
+
             % generate a unique test ID by looking at the number of files generated so far
             testID = testCase.generateTestID;
 
@@ -97,17 +101,14 @@ classdef srsPBCHdmrsUnittest < srsTest.srsBlockUnittest
             SSBfirstSymbol = 0;
             SSBamplitude = 1;
             SSBports = zeros(numPorts, 1);
-            import srsTest.helpers.cellarray2str;
             SSBportsStr = cellarray2str({SSBports}, true);
 
             % check if the current SSBindex value is possible with the current Lmax
             if Lmax > SSBindex
-                import srsMatlabWrappers.phy.upper.signal_processors.srsPBCHdmrs
                 % call the PBCH DMRS symbol processor MATLAB functions
                 [DMRSsymbols, symbolIndices] = srsPBCHdmrs(NCellIDLoc, SSBindex, Lmax, nHF);
 
                 % write each complex symbol into a binary file, and the associated indices to another
-                import srsTest.helpers.writeResourceGridEntryFile
                 testCase.saveDataFile('_test_output', testID, ...
                     @writeResourceGridEntryFile, DMRSsymbols, symbolIndices);
 

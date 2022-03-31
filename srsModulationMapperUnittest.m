@@ -76,6 +76,10 @@ classdef srsModulationMapperUnittest < srsTest.srsBlockUnittest
         %testvectorGenerationCases(TESTCASE, NSYMBOLS, MODSCHEME) Generates a test vector
         %   for the given number of symbols NSYMBOLS and modulation scheme and MODSCHEME.
 
+            import srsTest.helpers.writeUint8File
+            import srsMatlabWrappers.phy.upper.channel_modulation.srsModulator
+            import srsTest.helpers.writeComplexFloatFile
+
             % generate a unique test ID by looking at the number of files generated so far
             testID = testCase.generateTestID;
 
@@ -83,15 +87,12 @@ classdef srsModulationMapperUnittest < srsTest.srsBlockUnittest
             codeword = randi([0 1], nSymbols * modScheme{1}, 1);
 
             % write the codeword to a binary file
-            import srsTest.helpers.writeUint8File;
             testCase.saveDataFile('_test_input', testID, @writeUint8File, codeword);
 
             % call the symbol modulation MATLAB functions
-            import srsMatlabWrappers.phy.upper.channel_modulation.srsModulator
             modulatedSymbols = srsModulator(codeword, modScheme{2});
 
             % write complex symbols into a binary file
-            import srsTest.helpers.writeComplexFloatFile;
             testCase.saveDataFile('_test_output', testID, ...
                 @writeComplexFloatFile, modulatedSymbols);
 

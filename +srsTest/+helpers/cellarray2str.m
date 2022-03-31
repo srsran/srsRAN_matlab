@@ -12,7 +12,7 @@ function [outputString] = cellarray2str(inputCellArray, isStruct)
     end
 
     for arg = inputCellArray(1:end-1)
-        outputString = [outputString, cell2str(arg), ', '];
+        outputString = [outputString, cell2str(arg), ', ']; %#ok<AGROW>
     end
 
     outputString = [outputString, cell2str(inputCellArray(end))];

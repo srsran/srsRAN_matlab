@@ -95,6 +95,15 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
         %   CCEREGMapping and AggregationLevel, while using randomly generated NCellID,
         %   RNTI and codeword.
 
+            import srsTest.helpers.array2str
+            import srsTest.helpers.writeResourceGridEntryFile
+            import srsMatlabWrappers.phy.upper.channel_processors.srsPDCCHmodulator
+            import srsTest.helpers.writeUint8File
+            import srsMatlabWrappers.phy.helpers.srsConfigurePDCCH
+            import srsMatlabWrappers.phy.helpers.srsConfigureCORESET
+            import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
+            import srsTest.helpers.RBallocationMask2string
+
             % generate a unique test ID
             testID = testCase.generateTestID;
 
@@ -113,7 +122,6 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
             end
             % currently fixed to 1 port of random number from [0, 7]
             PDCCHports = randi([0, 7]);
-            import srsTest.helpers.array2str;
             PDCCHportsStr = ['{', array2str(PDCCHports), '}'];
 
             % current fixed parameter values (e.g., maximum grid size with current interleaving
@@ -137,18 +145,15 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
                 (strcmp(CCEREGMapping, 'interleaved') &&  isREGbundleSizeOK));
 
             if (isAggregationOK && isCCEREGMappingOK)
-                import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
                 % configure the carrier according to the test parameters
                 carrier = srsConfigureCarrier(testCellID, 0, NSizeGrid, NStartGrid, ...
                     slotIndex, NFrame, cyclicPrefix);
 
                 % configure the CORESET according to the test parameters
-                import srsMatlabWrappers.phy.helpers.srsConfigureCORESET
                 CORESET = srsConfigureCORESET(FrequencyResources, Duration, ...
                     CCEREGMapping, REGBundleSize, InterleaverSize);
 
                 % configure the PDCCH according to the test parameters
-                import srsMatlabWrappers.phy.helpers.srsConfigurePDCCH
                 pdcch = srsConfigurePDCCH(CORESET, NStartBWP, NSizeBWP, RNTI, ...
                     AggregationLevel, SearchSpaceType, AllocatedCandidate, nID);
 
@@ -159,20 +164,16 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
                 codeWord = randi([0 1], 54 * 2 * AggregationLevel, 1);
 
                 % write the codeWord to a binary file
-                import srsTest.helpers.writeUint8File
                 testCase.saveDataFile('_test_input', testID, @writeUint8File, codeWord);
 
                 % call the PDCCH modulator MATLAB functions
-                import srsMatlabWrappers.phy.upper.channel_processors.srsPDCCHmodulator
                 [PDCCHsymbols, symbolIndices] = srsPDCCHmodulator(codeWord, carrier, pdcch, nID, RNTI);
                 symbolIndices(:, 3) = int32(PDCCHports);
 
                 % write each complex symbol into a binary file, and the associated indices to another
-                import srsTest.helpers.writeResourceGridEntryFile
                 testCase.saveDataFile('_test_output', testID, ...
                     @writeResourceGridEntryFile, PDCCHsymbols, symbolIndices);
 
-                import srsTest.helpers.RBallocationMask2string
                 % generate a RB allocation mask string
                 rbAllocationMaskStr = RBallocationMask2string(symbolIndices);
 

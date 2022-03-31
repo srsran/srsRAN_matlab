@@ -84,6 +84,11 @@ classdef srsPBCHModulatorUnittest < srsTest.srsBlockUnittest
         %   test vector for the given SSB index SSBINDEX and the given LMAX,
         %   using a random NCellID and a random codeword.
 
+            import srsTest.helpers.cellarray2str
+            import srsTest.helpers.writeUint8File
+            import srsMatlabWrappers.phy.upper.channel_processors.srsPBCHmodulator
+            import srsTest.helpers.writeResourceGridEntryFile
+
             % generate a unique test ID by looking at the number of files generated so far
             testID = testCase.generateTestID;
 
@@ -98,19 +103,15 @@ classdef srsPBCHModulatorUnittest < srsTest.srsBlockUnittest
             SSBfirstSymbol = 0;
             SSBamplitude = 1;
             SSBports = zeros(numPorts, 1);
-            import srsTest.helpers.cellarray2str;
             SSBportsStr = cellarray2str({SSBports}, true);
 
             % write the BCH cw to a binary file
-            import srsTest.helpers.writeUint8File;
             testCase.saveDataFile('_test_input', testID, @writeUint8File, cw);
 
             % call the PBCH symbol modulation MATLAB functions
-            import srsMatlabWrappers.phy.upper.channel_processors.srsPBCHmodulator
             [modulatedSymbols, symbolIndices] = srsPBCHmodulator(cw, NCellIDLoc, SSBindex, Lmax);
 
             % write each complex symbol and the associated indices to a binary file
-            import srsTest.helpers.writeResourceGridEntryFile
             testCase.saveDataFile('_test_output', testID, @writeResourceGridEntryFile, ...
                 modulatedSymbols, symbolIndices);
 

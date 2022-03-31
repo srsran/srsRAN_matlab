@@ -94,6 +94,15 @@ classdef srsPDSCHdmrsUnittest < srsTest.srsBlockUnittest
         %   NumLayers, DMRSTypeAPosition, DMRSAdditionalPosition, DMRSLength and
         %   DMRSConfigurationType. NCellID, NSlot and PRB are randomly generated.
 
+            import srsTest.helpers.cellarray2str
+            import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
+            import srsMatlabWrappers.phy.helpers.srsConfigurePDSCHdmrs
+            import srsMatlabWrappers.phy.helpers.srsConfigurePDSCH
+            import srsMatlabWrappers.phy.upper.signal_processors.srsPDSCHdmrs
+            import srsTest.helpers.writeResourceGridEntryFile
+            import srsTest.helpers.symbolAllocationMask2string
+            import srsTest.helpers.RBallocationMask2string
+
             % generate a unique test ID
             testID = testCase.generateTestID;
 
@@ -118,7 +127,6 @@ classdef srsPDSCHdmrsUnittest < srsTest.srsBlockUnittest
             NSizeBWP = NSizeGrid;
             numPorts = 1;
             referencePointKrb = 0;
-            startSymbolIndex = 0;
             NIDNSCID = NCellID;
             NumCDMGroupsWithoutDataLoc = 2;
             NID = NCellID;
@@ -126,10 +134,9 @@ classdef srsPDSCHdmrsUnittest < srsTest.srsBlockUnittest
             Modulation = '16QAM';
             MappingType = 'A';
             SymbolAllocation = [1 13];
-            PRBSet = [PRBstart:PRBend];
+            PRBSet = PRBstart:PRBend;
             pmi = 0;
             PDSCHports = zeros(numPorts, 1);
-            import srsTest.helpers.cellarray2str
             PDSCHportsStr = cellarray2str({PDSCHports}, true);
 
             % skip those invalid configuration cases
@@ -137,27 +144,22 @@ classdef srsPDSCHdmrsUnittest < srsTest.srsBlockUnittest
             if isDMRSLengthOK
                 % configure the carrier according to the test parameters
                 SubcarrierSpacing = 15 * (2 .^ numerology);
-                import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
                 carrier = srsConfigureCarrier(NCellID, SubcarrierSpacing, ...
                     NSizeGrid, NStartGrid, NSlot, NFrame, CyclicPrefix);
 
                 % configure the PDSCH DMRS symbols according to the test parameters
-                import srsMatlabWrappers.phy.helpers.srsConfigurePDSCHdmrs
                 DMRS = srsConfigurePDSCHdmrs(DMRSConfigurationType, ...
                     DMRSTypeAPosition, DMRSAdditionalPosition, DMRSLength, ...
                     NIDNSCID, NSCID, NumCDMGroupsWithoutDataLoc);
 
                 % configure the PDSCH according to the test parameters
-                import srsMatlabWrappers.phy.helpers.srsConfigurePDSCH
                 pdsch = srsConfigurePDSCH(DMRS, NStartBWP, NSizeBWP, NID, RNTI, ...
                     ReservedRE, Modulation, NumLayers, MappingType, ...
                     SymbolAllocation, PRBSet);
 
                 % call the PDSCH DMRS symbol processor MATLAB functions
-                import srsMatlabWrappers.phy.upper.signal_processors.srsPDSCHdmrs
                 [DMRSsymbols, symbolIndices] = srsPDSCHdmrs(carrier, pdsch);
 
-                import srsTest.helpers.writeResourceGridEntryFile
                 % write each complex symbol into a binary file, and the associated indices to another
                 testCase.saveDataFile('_test_output', testID, ...
                     @writeResourceGridEntryFile, DMRSsymbols, symbolIndices);
@@ -167,11 +169,9 @@ classdef srsPDSCHdmrsUnittest < srsTest.srsBlockUnittest
                     floor(NSlot / carrier.SlotsPerSubframe), ...
                     rem(NSlot, carrier.SlotsPerSubframe)}, true);
 
-                import srsTest.helpers.symbolAllocationMask2string
                 % generate a symbol allocation mask string
                 symbolAllocationMask = symbolAllocationMask2string(symbolIndices);
 
-                import srsTest.helpers.RBallocationMask2string
                 % generate a RB allocation mask string
                 rbAllocationMask = RBallocationMask2string(PRBstart, PRBend);
 

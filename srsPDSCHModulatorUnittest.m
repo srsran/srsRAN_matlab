@@ -17,9 +17,8 @@
 %
 %   srsPDSCHModulatorUnittest Properties (TestParameter):
 %
-%   SymbolAllocation       - Symbols allocated to the PDSCH transmission.
-%   Modulation             - Modulation scheme.
-%   DMRSAdditionalPosition - Number of DMRS additional positions.
+%   SymbolAllocation  - Symbols allocated to the PDSCH transmission.
+%   Modulation        - Modulation scheme.
 %
 %   srsPDSCHModulatorUnittest Methods (TestTags = {'testvector'}):
 %
@@ -55,9 +54,6 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
 
         %Modulation scheme ('QPSK', '16QAM', '64QAM', '256QAM').
         Modulation = {'QPSK', '16QAM', '64QAM', '256QAM'}
-
-        %Number of DMRS additional positions (0, 1, 2, 3).
-        DMRSAdditionalPosition = {0, 1, 2, 3}
     end
 
     methods (Access = protected)
@@ -73,11 +69,19 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
     end % of methods (Access = protected)
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(testCase, SymbolAllocation, Modulation, ...
-                DMRSAdditionalPosition)
+        function testvectorGenerationCases(testCase, SymbolAllocation, Modulation)
         %testvectorGenerationCases Generates a test vector for the given SymbolAllocation,
-        %   Modulation scheme and DMRSAdditionalPosition. Other parameters (e.g., the RNTI)
+        %   Modulation scheme. Other parameters (e.g., the RNTI)
         %   are generated randomly.
+
+            import srsMatlabWrappers.phy.helpers.srsConfigurePDSCHdmrs
+            import srsMatlabWrappers.phy.helpers.srsConfigurePDSCH
+            import srsTest.helpers.writeUint8File
+            import srsMatlabWrappers.phy.upper.channel_processors.srsPDSCHmodulator
+            import srsTest.helpers.writeResourceGridEntryFile
+            import srsMatlabWrappers.phy.upper.signal_processors.srsPDSCHdmrs
+            import srsTest.helpers.symbolAllocationMask2string
+            import srsTest.helpers.array2str
 
             % Generate a unique test ID
             testID = testCase.generateTestID;
@@ -85,12 +89,7 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
             % Generate default carrier configuration
             carrier = nrCarrierConfig;
 
-            % configure the PDSCH DMRS symbols according to the test parameters
-            import srsMatlabWrappers.phy.helpers.srsConfigurePDSCHdmrs
-            DMRS = srsConfigurePDSCHdmrs(DMRSAdditionalPosition);
-
             % configure the PDSCH according to the test parameters
-            import srsMatlabWrappers.phy.helpers.srsConfigurePDSCH
             pdsch = srsConfigurePDSCH(SymbolAllocation, Modulation);
 
             % Set randomized values
@@ -114,8 +113,6 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
                         modOrder1 = 8;
                         modString1 = 'modulation_scheme::QAM256';
                 end
-                modOrder2 = modOrder1;
-                modString2 = modString1;
             end
 
 
@@ -126,29 +123,23 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
             cws = randi([0,1], nBits, 1);
 
             % write the BCH cw to a binary file
-            import srsTest.helpers.writeUint8File
             testCase.saveDataFile('_test_input', testID, @writeUint8File, cws);
 
             % call the PDSCH symbol modulation Matlab functions
-            import srsMatlabWrappers.phy.upper.channel_processors.srsPDSCHmodulator
             [modulatedSymbols, symbolIndices] = srsPDSCHmodulator(carrier, pdsch, cws);
 
             % write each complex symbol into a binary file, and the associated indices to another
-            import srsTest.helpers.writeResourceGridEntryFile
             testCase.saveDataFile('_test_output', testID, ...
                 @writeResourceGridEntryFile, modulatedSymbols, symbolIndices);
 
             % Generate DMRS symbol mask
-            import srsMatlabWrappers.phy.upper.signal_processors.srsPDSCHdmrs
             [~, symbolIndices] = srsPDSCHdmrs(carrier, pdsch);
-            import srsTest.helpers.symbolAllocationMask2string
             dmrsSymbolMask = symbolAllocationMask2string(symbolIndices);
 
             reserved_str = '{}';
 
             ports_str = '{0}';
 
-            import srsTest.helpers.array2str
             rb_allocation_str = ['rb_allocation({', array2str(pdsch.PRBSet), '}, vrb_to_prb_mapping_type::NON_INTERLEAVED)'];
 
             dmrs_type_str = sprintf('dmrs_type::TYPE%d', pdsch.DMRS.DMRSConfigurationType);
