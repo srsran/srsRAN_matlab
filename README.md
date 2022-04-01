@@ -2,46 +2,16 @@
 
 ## Unit Tests
 
-Call *runTestVector* with the tag *unittests* to generate the set of unit test testvectors of a specific block. The function also expects as inputs the name of the Matlab unit test class and the location of the unit under test within the repository hierarchy. The following blocks are currently supported:
-
-- modulation mapper:
+Call *runSRSGNBUnittest* with the *testvector* tag to generate the set of unit test testvectors of all supported blocks with the command:
 
 ```
-runTestVector('unittests','modulation_mapper', 'phy/upper/channel_modulation', 'srsModulationMapperUnittest');
+runSRSGNBUnittest('all', 'testvector')
 ```
 
-- PBCH modulator:
+To generate the testvectors for a specific block, for instance *pbch_encoder*, simply run the command:
 
 ```
-runTestVector('unittests','pbch_modulator', 'phy/upper/channel_processors', 'srsPBCHmodulatorUnittest');
+runSRSGNBUnittest('pbch_encoder', 'testvector')
 ```
 
-- PBCH DMRS processor:
-
-```
-runTestVector('unittests','dmrs_pbch_processor', 'phy/upper/signal_processors', 'srsPBCHdmrsUnittest');
-```
-
-- PDCCH modulator:
-
-```
-runTestVector('unittests','pdcch_modulator', 'phy/upper/channel_processors', 'srsPDCCHmodulatorUnittest');
-```
-
-- PDCCH DMRS processor
-
-```
-runTestVector('unittests','dmrs_pdcch_processor', 'phy/upper/signal_processors', 'srsPDCCHdmrsUnittest');
-```
-
-- PDSCH modulator:
-
-```
-runTestVector('unittests','pdsch_modulator', 'phy/upper/channel_processors', 'srsPDSCHmodulatorUnittest');
-```
-
-- PDSCH DMRS processor
-
-```
-runTestVector('unittests','dmrs_pdsch_processor', 'phy/upper/signal_processors', 'srsPDSCHdmrsUnittest');
-```
+All generated files will be automatically placed in an auto-generated folder named *testvector_outputs*.

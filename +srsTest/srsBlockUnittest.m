@@ -147,12 +147,16 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
         %   the header file pointed by FILEID, which describes the test vectors. This
         %   method is meant for blocks of type "phy/upper/channel_processors".
 
-            fprintf(fileID, '#include "srsgnb/adt/complex.h"\n');
+            if ~strcmp(obj.srsBlock, 'pbch_encoder')
+                fprintf(fileID, '#include "srsgnb/adt/complex.h"\n');
+            end
             fprintf(fileID, '#include "srsgnb/%s/%s.h"\n', ...
                 obj.srsBlockType, obj.srsBlock);
             fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
-            fprintf(fileID, '#include <array>\n');
-            fprintf(fileID, '#include "../../resource_grid_test_doubles.h"\n');
+            if ~strcmp(obj.srsBlock, 'pbch_encoder')
+                fprintf(fileID, '#include <array>\n');
+                fprintf(fileID, '#include "../../resource_grid_test_doubles.h"\n');
+            end
         end
 
         function addTestIncludesToHeaderFilePHYchmod(obj, fileID)
@@ -187,10 +191,15 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
         %   "phy/upper/channel_processors".
 
             fprintf(fileID, 'struct test_case_t {\n');
-            fprintf(fileID, '%s::config_t config;\n', obj.srsBlock);
-            fprintf(fileID, 'file_vector<uint8_t> data;\n');
-            fprintf(fileID, ...
-                'file_vector<resource_grid_writer_spy::expected_entry_t> symbols;\n');
+            if strcmp(obj.srsBlock, 'pbch_encoder')
+                fprintf(fileID, '  %s::pbch_msg_t           pbch_msg;\n', obj.srsBlock);
+                fprintf(fileID, '  file_vector<uint8_t>     encoded;\n');
+            else
+                fprintf(fileID, '%s::config_t config;\n', obj.srsBlock);
+                fprintf(fileID, 'file_vector<uint8_t> data;\n');
+                fprintf(fileID, ...
+                    'file_vector<resource_grid_writer_spy::expected_entry_t> symbols;\n');
+            end
             fprintf(fileID, '};\n');
         end
 

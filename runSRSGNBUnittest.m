@@ -46,6 +46,7 @@ function mustBeSRSBlock(a)
         'pbch_modulator', ...
         'pdcch_modulator', ...
         'pdsch_modulator', ...
+        'pbch_encoder', ...
         };
     mustBeMember(a, validBlocks);
 end
@@ -66,6 +67,8 @@ function unittestClass = name2Class(name)
             unittestClass = ?srsPDCCHModulatorUnittest;
         case 'pdsch_modulator'
             unittestClass = ?srsPDSCHModulatorUnittest;
+        case 'pbch_encoder'
+            unittestClass = ?srsPBCHEncoderUnittest;
         otherwise
             error('SRSGNB:runSRSGNBUnittest:unknownBlock', ...
                 'No unit test for block %s.\n', name);
