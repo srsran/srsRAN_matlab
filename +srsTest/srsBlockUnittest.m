@@ -260,9 +260,9 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
 
             % generate the test case entry (checking first if we generate both input and output data)
             if inAndOut
-                testCaseString = sprintf('  {%s,{"%s"},{"%s"}},\n', configStr, inFilename, outFilename);
+                testCaseString = sprintf('  {%s, {"%s"}, {"%s"}},\n', configStr, inFilename, outFilename);
             else
-                testCaseString = sprintf('  {%s,{"%s"}},\n', configStr, outFilename);
+                testCaseString = sprintf('  {%s, {"%s"}},\n', configStr, outFilename);
             end
         end
     end % of methods (Access = protected)
