@@ -44,7 +44,7 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
         srsBlock = 'pdcch_modulator'
 
         %Type of the tested block.
-        srsBlockType = 'phy/upper/channel_procesors'
+        srsBlockType = 'phy/upper/channel_processors'
 
         %Number of possible PHY cell identifiers - NCellID takes values in (0...1007).
         nofNCellID = 1008
