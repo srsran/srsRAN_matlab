@@ -304,10 +304,7 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
             fprintf(fileID, '\n');
             fprintf(fileID,'#endif // SRSGNB_UNITTESTS_%s_TEST_DATA_H\n', obj.pathInRepo);
 
-            headerFilename = fopen(fileID);
             fclose(fileID);
-
-            system(sprintf('LD_LIBRARY_PATH=/usr/lib clang-format -i -style=file %s', headerFilename));
         end
 
         function addOpeningToHeaderFile(obj, fileID)
@@ -332,6 +329,11 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
                 cmd = sprintf('cp %s/%s_test_data.{h,tar.gz} %s', obj.tmpOutputPath, ...
                     obj.srsBlock, outputPath);
                 system(cmd);
+
+                % apply clang-format to header file
+                formatCmd = sprintf(['LD_LIBRARY_PATH=/usr/lib clang-format -i', ...
+                    ' -style=file %s/%s_test_data.h'], outputPath, obj.srsBlock);
+                system(formatCmd);
             end
         end
 
