@@ -1,29 +1,29 @@
-%srsLDPCsegmenterUnittest Unit tests for the LDPC segmentation functions.
+%srsLDPCSegmenterUnittest Unit tests for the LDPC segmentation functions.
 %   This class implements unit tests for the LDPC segmentation functions using the
 %   matlab.unittest framework. The simplest use consists in creating an object with
-%       testCase = srsLDPCsegmenterUnittest
+%       testCase = srsLDPCSegmenterUnittest
 %   and then running all the tests with
 %       testResults = testCase.run
 %
-%   srsLDPCsegmenterUnittest Properties (Constant):
+%   srsLDPCSegmenterUnittest Properties (Constant):
 %
 %   srsBlock      - The tested block (i.e., 'ldpc_segmenter').
 %   srsBlockType  - The type of the tested block, including layer
 %                   (i.e., '/phy/upper/channel_coding/ldpc').
 %
-%   srsLDPCsegmenterUnittest Properties (ClassSetupParameter):
+%   srsLDPCSegmenterUnittest Properties (ClassSetupParameter):
 %
 %   outputPath - Path to the folder where the test results are stored.
 %
-%   srsLDPCsegmenterUnittest Properties (TestParameter):
+%   srsLDPCSegmenterUnittest Properties (TestParameter):
 %
 %   cases  - Configurations to test.
 %
-%   srsLDPCsegmenterUnittest Methods (TestTags = {'testvector'}):
+%   srsLDPCSegmenterUnittest Methods (TestTags = {'testvector'}):
 %
 %   testvectorGenerationCases - Generates a test vectors for the given configuration.
 %
-%   srsLDPCsegmenterUnittest Methods (Access = protected):
+%   srsLDPCSegmenterUnittest Methods (Access = protected):
 %
 %   addTestIncludesToHeaderFile     - Adds include directives to the test header file.
 %   addTestDefinitionToHeaderFile   - Adds details (e.g., type/variable declarations)
@@ -31,7 +31,7 @@
 %
 %  See also matlab.unittest, nrCodeBlockSegmentLDPC.
 
-classdef srsLDPCsegmenterUnittest < srsTest.srsBlockUnittest
+classdef srsLDPCSegmenterUnittest < srsTest.srsBlockUnittest
     properties (Constant)
         %Name of the tested block.
         srsBlock = 'ldpc_segmenter'
@@ -56,15 +56,15 @@ classdef srsLDPCsegmenterUnittest < srsTest.srsBlockUnittest
                  struct('length', 40000, 'bg', 1), ...
                  struct('length', 96, 'bg', 2), ...
                  struct('length', 320, 'bg', 2), ...
-                 struct('length', 320, 'bg', 2), ...
                  struct('length', 600, 'bg', 2), ...
                  struct('length', 4000, 'bg', 2), ...
-                 struct('length', 12000, 'bg', 2)};
+                 struct('length', 12000, 'bg', 2), ...
+                 struct('length', 40000, 'bg', 2)};
     end
 
     methods (Access = protected)
         function addTestIncludesToHeaderFile(~, fileID)
-        %addTestIncludesToHeaderFilePHY(OBJ, FILEID) adds include directives to
+        %addTestIncludesToHeaderFile(OBJ, FILEID) adds include directives to
         %   the header file pointed by FILEID, which describes the test vectors.
 
             fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
@@ -116,7 +116,8 @@ classdef srsLDPCsegmenterUnittest < srsTest.srsBlockUnittest
 
             % add the test to the file header
             obj.addTestToHeaderFile(obj.headerFileID, testCaseString);
-        end
-    end
 
-end
+        end % of function addTestIncludesToHeaderFile
+    end % of methods (Access = protected)
+
+end % of classdef srsLDPCSegmenterUnittest
