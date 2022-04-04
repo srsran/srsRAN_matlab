@@ -1,5 +1,5 @@
-%SRSCONFIGURECORESET Generates a control resource set object.
-%   CORESET = SRSCONFIGURECORESET(VARARGIN) returns a CORESET object with the requested configuration.
+%srsConfigureCORESET Generates a control resource set object.
+%   CORESET = srsConfigureCORESET(VARARGIN) returns a CORESET object with the requested configuration.
 %   The names of the input parameters are assumed to coincide with those of the properties of
 %   nrCORESETConfig, with the exception of the suffix 'Loc' which is accepted.
 %

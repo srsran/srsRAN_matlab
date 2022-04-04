@@ -1,5 +1,5 @@
-%CELL2STR Converts an any cell type value into a string.
-%   OUTPUTSTRING = CELL2STR(ARG) converts the input INPUTCELL into its 
+%cell2str Converts an any cell type value into a string.
+%   OUTPUTSTRING = cell2str(ARG) converts the input INPUTCELL into its
 %   character representation OUTPUTSTRING.
 
 function [outoutString] = cell2str(inputCell)

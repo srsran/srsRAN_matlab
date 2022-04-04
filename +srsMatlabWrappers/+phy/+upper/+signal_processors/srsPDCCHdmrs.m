@@ -1,5 +1,5 @@
-%SRSPDCCHDMRS Physical control channel demodulation reference signals.
-%   [DMRSSYMBOLS, SYMBOLINDICES] = SRSPDCCHDMRS(CARRIER, PDCCH)
+%srsPDCCHdmrs Physical control channel demodulation reference signals.
+%   [DMRSSYMBOLS, SYMBOLINDICES] = srsPDCCHdmrs(CARRIER, PDCCH)
 %   modulates the demodulation reference signals and returns the complex symbols
 %   DMRSSYMBOLS as well as a column vector of RE indices.
 %

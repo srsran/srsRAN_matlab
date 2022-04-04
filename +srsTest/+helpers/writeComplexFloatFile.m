@@ -1,11 +1,7 @@
-%WRITECOMPLEXFLOATFILE:
-%  Function generating a new binary file containing a set of input data values, formatted to match
-%    the 'file_vector<cf_t>' object used by the SRS gNB.
-%
-%  Call details:
-%    WRITECOMPLEXFLOATFILE(FILENAME, DATA) receives the input parameters
-%        * string FILENAME   - name of the file to be generated
-%        * float array DATA  - set of data values to be written
+%writeComplexFloatFile Writes complex symbols to a binary file.
+%   writeComplexFloatFile(FILENAME, DATA) generates a new binary file FILENAME
+%    containing a set of complex symbols, formatted to match the 'file_vector<cf_t>'
+%    object used by the SRS gNB.
 
 function writeComplexFloatFile(filename, data)
     fileID = fopen(filename, 'w');

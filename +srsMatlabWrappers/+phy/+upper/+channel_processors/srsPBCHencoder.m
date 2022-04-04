@@ -1,5 +1,5 @@
-%SRSPBCHENCODER Physical broadcast channel encoding.
-%   CW = SRSPBCHENCODER(PAYLOAD, NCELLID, SSBINDEX, LMAX, SFN, HRF, KSSB)
+%srsPBCHEncoder Physical broadcast channel encoding.
+%   CW = srsPBCHEncoder(PAYLOAD, NCELLID, SSBINDEX, LMAX, SFN, HRF, KSSB)
 %   encodes the 24-bit BCH payload PAYLOAD and returns the codeword CW.
 %
 %   See also nrBCH.

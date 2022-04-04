@@ -1,5 +1,5 @@
-%SRSMODULATOR Generation of modulated symbols from an input bit array.
-%   [MODULATEDSYMBOLS] = MODULATED_SYMBOLS_GENERATE(CW, SHEME)
+%srsModulator Generation of modulated symbols from an input bit array.
+%   [MODULATEDSYMBOLS] = srsModulator(CW, SHEME)
 %   modulates the input bit sequence accordig to the requested SCHEME
 %   and returns the complex symbols MODULATEDSYMBOLS.
 %

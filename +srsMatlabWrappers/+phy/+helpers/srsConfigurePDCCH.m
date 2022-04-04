@@ -1,5 +1,5 @@
-%SRSCONFIGUREPDCCH Generates a physical control channel object.
-%   PDCCH = SRSCONFIGUREPDCCH(VARARGIN) returns a PDCCH object with the requested configuration.
+%srsConfigurePDCCH Generates a physical control channel object.
+%   PDCCH = srsConfigurePDCCH(VARARGIN) returns a PDCCH object with the requested configuration.
 %   The names of the input parameters are assumed to coincide with those of the properties of
 %   nrPDCCHConfig, with the exception of the suffix 'Loc' which is accepted.
 %

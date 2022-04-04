@@ -1,5 +1,5 @@
-%SRSPBCHMODULATOR Physical broadcast channel.
-%   [MODULATEDSYMBOLS, SYMBOLINDICES] = SRSPBCHMODULATOR(CW, NCELLID, LMAX)
+%srsPBCHmodulator Physical broadcast channel.
+%   [MODULATEDSYMBOLS, SYMBOLINDICES] = srsPBCHmodulator(CW, NCELLID, LMAX)
 %   modulates the 864-bit BCH codeword CW and returns the complex symbols
 %   MODULATEDSYMBOLS as well as a column vector of RE indices.
 %

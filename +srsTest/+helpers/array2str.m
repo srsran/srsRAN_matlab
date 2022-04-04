@@ -1,5 +1,5 @@
-%ARRAY2STR Converts an array of numeric values to a string.
-%   OUTPUTSTRING = ARRAY2STR(INPUTARRAY) converts the numeric array INPUTARRAY
+%array2str Converts an array of numeric values to a string.
+%   OUTPUTSTRING = array2str(INPUTARRAY) converts the numeric array INPUTARRAY
 %   into its character representation OUTPUTSTRING.
 
 function outputString = array2str(inputArray)

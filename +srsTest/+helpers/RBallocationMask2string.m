@@ -1,5 +1,5 @@
-%RBALLOCATIONMASK2STRING Generates a new RB allocation bitmask string.
-%   OUTPUTSTRING = RBALLOCATIONMASK2STRING(VARARGIN)
+%RBallocationMask2string Generates a new RB allocation bitmask string.
+%   OUTPUTSTRING = RBallocationMask2string(VARARGIN)
 %   generates an RB bitmask allocation string OUTPUTSTRING from either a vector
 %   of indices SYMBOLINDICESVECTOR or from a start index PRBSTART and an end
 %   index PRBEND.

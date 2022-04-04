@@ -1,5 +1,5 @@
-%CELLARRAY2STR Converts any cell array type into a string.
-%   OUTPUTSTRING = CELLARRAY2STR(ARG) converts the input INPUTCELLARRAY 
+%cellarray2str Converts any cell array type into a string.
+%   OUTPUTSTRING = cellarray2str(ARG) converts the input INPUTCELLARRAY
 %   into its character representation OUTPUTSTRING.
 %    ISSTRUCT argument defines whether to use curly brackets wrapping OUTPUTSTRING
 

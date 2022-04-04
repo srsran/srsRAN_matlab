@@ -1,5 +1,5 @@
-%SYMBOLALLOCATIONMASK2STRING Generates a new OFDM symbol allocation bitmask string.
-%   OUTPUTSTRING = SYMBOLALLOCATIONMASK2STRING(SYMBOLINDICESVECTOR)
+%symbolAllocationMask2string Generates a new OFDM symbol allocation bitmask string.
+%   OUTPUTSTRING = symbolAllocationMask2string(SYMBOLINDICESVECTOR)
 %   generates a symbol bitmask allocation string OUTPUTSTRING from a vector of indices
 %   SYMBOLINDICESVECTOR.
 

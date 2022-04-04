@@ -1,5 +1,5 @@
-%SRSPBCHDMRS Physical broadcast channel demodulation reference signals.
-%   [DMRSSYMBOLS, SYMBOLINDICES] = SRSPBCHDMRS(NCELLID, SSBINDEX, LMAX, NHF)
+%srsPBCHdmrs Physical broadcast channel demodulation reference signals.
+%   [DMRSSYMBOLS, SYMBOLINDICES] = srsPBCHdmrs(NCELLID, SSBINDEX, LMAX, NHF)
 %   modulates the demodulation reference signals and returns the complex symbols
 %   DMRSSYMBOLS as well as a column vector of RE indices.
 %

@@ -1,5 +1,5 @@
-%SRSPDSCHMODULATOR Physical Downlink Shared Channel.
-%   [MODULATEDSYMBOLS, SYMBOLINDICES] = SRSPDSCHMODULATOR(CARRIER, PDSCH, CWS)
+%srsPDSCHmodulator Physical Downlink Shared Channel.
+%   [MODULATEDSYMBOLS, SYMBOLINDICES] = srsPDSCHmodulator(CARRIER, PDSCH, CWS)
 %   modulates up to two PDSCH codewords CWS and returns the complex symbols
 %   MODULATEDSYMBOLS as well as a column vector of RE indices.
 %
