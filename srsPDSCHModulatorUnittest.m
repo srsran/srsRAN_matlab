@@ -48,7 +48,7 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
 
     properties (TestParameter)
         %Symbols allocated to the PDSCH transmission. The symbol allocation is described
-        %   by a two-elemnt array with the starting symbol (0...13) and the length (1...14)
+        %   by a two-element array with the starting symbol (0...13) and the length (1...14)
         %   of the PDSCH transmission. Example: [0, 14].
         SymbolAllocation = {[0, 14], [1, 13], [2, 12]}
 
@@ -122,7 +122,7 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
             % Generate codewords
             cws = randi([0,1], nBits, 1);
 
-            % write the BCH cw to a binary file
+            % write the DLSCH cw to a binary file
             testCase.saveDataFile('_test_input', testID, @writeUint8File, cws);
 
             % call the PDSCH symbol modulation Matlab functions
@@ -136,18 +136,19 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
             [~, symbolIndices] = srsPDSCHdmrs(carrier, pdsch);
             dmrsSymbolMask = symbolAllocationMask2string(symbolIndices);
 
-            reserved_str = '{}';
+            % generate the test case entry
+            reservedString = '{}';
 
-            ports_str = '{0}';
+            portsString = '{0}';
 
-            rb_allocation_str = ['rb_allocation({', array2str(pdsch.PRBSet), '}, vrb_to_prb_mapping_type::NON_INTERLEAVED)'];
+            RBAllocationString = ['rb_allocation({', array2str(pdsch.PRBSet), '}, vrb_to_prb_mapping_type::NON_INTERLEAVED)'];
 
-            dmrs_type_str = sprintf('dmrs_type::TYPE%d', pdsch.DMRS.DMRSConfigurationType);
+            DMRSTypeString = sprintf('dmrs_type::TYPE%d', pdsch.DMRS.DMRSConfigurationType);
 
             config = [ {pdsch.RNTI}, {carrier.NSizeGrid}, {carrier.NStartGrid}, ...
-                {modString1}, {modString1}, {rb_allocation_str}, {pdsch.SymbolAllocation(1)}, ...
-                {pdsch.SymbolAllocation(2)}, {dmrsSymbolMask}, {dmrs_type_str}, ...
-                {pdsch.DMRS.NumCDMGroupsWithoutData}, {pdsch.NID}, {1}, {reserved_str}, {0}, {ports_str}];
+                {modString1}, {modString1}, {RBAllocationString}, {pdsch.SymbolAllocation(1)}, ...
+                {pdsch.SymbolAllocation(2)}, {dmrsSymbolMask}, {DMRSTypeString}, ...
+                {pdsch.DMRS.NumCDMGroupsWithoutData}, {pdsch.NID}, {1}, {reservedString}, {0}, {portsString}];
 
             testCaseString = testCase.testCaseToString(testID, true, config, true);
 

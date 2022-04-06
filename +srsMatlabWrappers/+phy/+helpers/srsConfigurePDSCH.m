@@ -1,4 +1,4 @@
-%srsConfigurePDSCH Generates a physical shared channel object.
+%srsConfigurePDSCH Generates a physical downlink shared channel object.
 %   PDSCH = srsConfigurePDSCH(VARARGIN) returns a PDSCH object with the requested configuration.
 %   The names of the input parameters are assumed to coincide with those of the properties of
 %   nrPDSCHConfig, with the exception of the suffix 'Loc' which is accepted.
