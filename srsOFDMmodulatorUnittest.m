@@ -52,8 +52,8 @@ classdef srsOFDMmodulatorUnittest < srsTest.srsBlockUnittest
         %Defines the subcarrier spacing (0, 1, 2, 3, 4).
         numerology = {0, 1, 2, 3, 4}
 
-        %Size of the DFT (128, 256, 384, 512, 768, 1024, 1536, 2048, 3072, 4096).
-        DFTsize = {128, 256, 384, 512, 768, 1024, 1536, 2048, 3072, 4096}
+        %Size of the DFT (128, 256, 512, 1024, 2048, 4096). Only standard values.
+        DFTsize = {128, 256, 512, 1024, 2048, 4096}
 
         %Cyclic prefix type ('normal', 'extended').
         CyclicPrefix = {'normal', 'extended'}
