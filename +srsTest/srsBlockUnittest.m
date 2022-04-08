@@ -143,7 +143,7 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
         end
 
         function addTestIncludesToHeaderFilePHYchproc(obj, fileID)
-        %addTestIncludesToHeaderFilePHYsigproc(OBJ, FILEID) adds include directives to
+        %addTestIncludesToHeaderFilePHYchproc(OBJ, FILEID) adds include directives to
         %   the header file pointed by FILEID, which describes the test vectors. This
         %   method is meant for blocks of type "phy/upper/channel_processors".
 
@@ -160,7 +160,7 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
         end
 
         function addTestIncludesToHeaderFilePHYchmod(obj, fileID)
-        %addTestIncludesToHeaderFilePHYsigproc(OBJ, FILEID) adds include directives to
+        %addTestIncludesToHeaderFilePHYchmod(OBJ, FILEID) adds include directives to
         %   the header file pointed by FILEID, which describes the test vectors. This
         %   method is meant for blocks of type "phy/upper/channel_modulation".
 
@@ -171,7 +171,7 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
         end
 
         function addTestDefinitionToHeaderFilePHYsigproc(obj, fileID)
-        %addTestDefinitionToHeaderFilePHYchproc(OBJ, FILEID) adds test details (e.g., type
+        %addTestDefinitionToHeaderFilePHYsigproc(OBJ, FILEID) adds test details (e.g., type
         %   and variable declarations) to the header file pointed by FILEID, which
         %   describes the test vectors. This method is meant for blocks of type
         %   "phy/upper/signal_processors".
