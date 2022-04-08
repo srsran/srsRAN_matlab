@@ -23,7 +23,6 @@
 %
 %   srsPDCCHEncoderUnittest Methods (Test, TestTags = {'testvector'}):
 %
-%
 %   testvectorGenerationCases - Generates a test vector according to the provided
 %                               parameters.
 %
@@ -53,7 +52,7 @@ classdef srsPDCCHEncoderUnittest < srsTest.srsBlockUnittest
     end
 
     properties (TestParameter)
-        %PDCCH aggregation level (1, 2, 4, 8, 16).
+        % PDCCH aggregation level (1, 2, 4, 8, 16).
         aggregationLevel= {1, 2, 4, 8, 16}
 
         % DCI formats.
@@ -74,8 +73,8 @@ classdef srsPDCCHEncoderUnittest < srsTest.srsBlockUnittest
 
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, aggregationLevel, DCIlength)
-        %testvectorGenerationCases Generates a test vector for the given
-        %aggregation level, while using randomly generated RNTI and codeword.
+        % testvectorGenerationCases Generates a test vector for the given
+        % aggregation level, while using randomly generated RNTI and codeword.
 
             import srsTest.helpers.cellarray2str
             import srsTest.helpers.writeUint8File
