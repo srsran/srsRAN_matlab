@@ -100,15 +100,12 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
         %   are generated randomly.
 
             import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
-            %import srsMatlabWrappers.phy.helpers.srsConfigurePDSCHdmrs
+            import srsMatlabWrappers.phy.helpers.srsConfigureDLSCHEncoder
             import srsMatlabWrappers.phy.helpers.srsConfigurePDSCH
             import srsMatlabWrappers.phy.helpers.srsGetTargetCodeRate
             import srsMatlabWrappers.phy.helpers.srsGetModulation
-            import srsMatlabWrappers.phy.helpers.srsConfigureDLSCHEncoder
+            import srsMatlabWrappers.phy.helpers.srsFormatModulation
             import srsTest.helpers.writeUint8File
-            %import srsTest.helpers.array2str
-            %import srsTest.helpers.symbolAllocationMask2string
-            %import srsTest.helpers.RBallocationMask2string
 
             % Generate a unique test ID
             testID = testCase.generateTestID;
@@ -178,7 +175,7 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
                 % generate the test case entry
                 testCaseString = testCase.testCaseToString(testID, true, ...
                     {['ldpc::base_graph_t::BG', num2str(info.BGN)], RV, ...
-                        ['modulation_scheme::', Modulation], DLSCHEncoder.LimitedBufferSize, ...
+                        ['modulation_scheme::', srsFormatModulation(Modulation)], DLSCHEncoder.LimitedBufferSize, ...
                         NumLayersLoc, nofREs}, true);
 
                 % add the test to the file header
