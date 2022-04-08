@@ -191,8 +191,13 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
         %   "phy/upper/channel_processors".
 
             fprintf(fileID, 'struct test_case_t {\n');
-            if strcmp(obj.srsBlock, 'pbch_encoder')
-                fprintf(fileID, '  %s::pbch_msg_t           pbch_msg;\n', obj.srsBlock);
+            if endsWith(obj.srsBlock, 'encoder')
+                if strcmp(obj.srsBlock, 'pbch_encoder')
+                    fprintf(fileID, '  %s::pbch_msg_t           pbch_msg;\n', obj.srsBlock);
+                else
+                    fprintf(fileID, '%s::config_t config;\n', obj.srsBlock);
+                    fprintf(fileID, 'file_vector<uint8_t>  message;\n');
+                end
                 fprintf(fileID, '  file_vector<uint8_t>     encoded;\n');
             else
                 fprintf(fileID, '%s::config_t config;\n', obj.srsBlock);

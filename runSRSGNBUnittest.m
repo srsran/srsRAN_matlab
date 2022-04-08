@@ -46,6 +46,7 @@ function mustBeSRSBlock(a)
         'pbch_encoder', ...
         'pbch_modulator', ...
         'pdcch_modulator', ...
+        'pdcch_encoder', ...
         'pdsch_modulator', ...
         };
     mustBeMember(a, validBlocks);
@@ -65,6 +66,8 @@ function unittestClass = name2Class(name)
             unittestClass = ?srsPBCHEncoderUnittest;
         case 'pbch_modulator'
             unittestClass = ?srsPBCHModulatorUnittest;
+        case 'pdcch_encoder'
+            unittestClass = ?srsPDCCHEncoderUnittest;
         case 'pdcch_modulator'
             unittestClass = ?srsPDCCHModulatorUnittest;
         case 'pdsch_modulator'
