@@ -17,13 +17,6 @@
 %
 %   srsPDSCHEncoderUnittest Properties (TestParameter):
 %
-
-% TBD: BASE ON PDSCH DMRS + PDSCH MODULATOR (SYMBOLALLOC 1,13, 2,12... 0,14?)
-%      FIX DMRS CONFIG? -> CIRCLE MCS WITH A 2 PRB ALLOCATION CASES X EACH -> FULL + ARBITRARY PRB ALLOC
-%      FIX MCS TABLE?
-%      FIX NUMLAYERS? FIX NUMEROLOGY?
-%      FIX RV & HARQ ID?
-
 %   NumLayers               - Number of transmission layers (1, 2, 4, 8).
 %   SymbolAllocation        - Symbols allocated to the PDSCH transmission.
 %   PRBAllocation           - PRBs allocated to the PDSCH transmission.
@@ -158,13 +151,16 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
                 % generate the TB to be encoded
                 TBSize = nrTBS(Modulation, NumLayersLoc, numel(PRBSet), PDSCHInfo.NREPerPRB, TargetCodeRate);
                 TB = randi([0 1], TBSize, 1);
-                % write the TB to a binary file
-                testCase.saveDataFile('_test_input', testID, @writeUint8File, TB);
+
+                % write the packed format of the TB to a binary file
+                TBPkd = reshape(TB, 8, [])' * 2.^(7:-1:0)';
+                testCase.saveDataFile('_test_input', testID, @writeUint8File, TBPkd);
+
                 % add the generated TB to the encoder
                 setTransportBlock(DLSCHEncoder, TB, cwIdx, HARQProcessID);
 
                 % call the PDSCH encoding Matlab functions
-                cw = DLSCHEncoder(Modulation, NumLayersLoc, encodedTBLength, RV, HARQProcessID); %,0);?
+                cw = DLSCHEncoder(Modulation, NumLayersLoc, encodedTBLength, RV, HARQProcessID);
 
                 % write the encoded TB to a binary file
                 testCase.saveDataFile('_test_output', testID, @writeUint8File, cw);
@@ -173,9 +169,14 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
                 info = nrDLSCHInfo(TBSize, TargetCodeRate);
 
                 % generate the test case entry
+                Nref = DLSCHEncoder.LimitedBufferSize;
+                % 25344 is the maximum coded length of a code block and implies no limit on the buffer size
+                if Nref >= 25344
+                  Nref = 0;
+                end
                 testCaseString = testCase.testCaseToString(testID, true, ...
                     {['ldpc::base_graph_t::BG', num2str(info.BGN)], RV, ...
-                        ['modulation_scheme::', srsFormatModulation(Modulation)], DLSCHEncoder.LimitedBufferSize, ...
+                        ['modulation_scheme::', srsFormatModulation(Modulation)], Nref, ...
                         NumLayersLoc, nofREs}, true);
 
                 % add the test to the file header
