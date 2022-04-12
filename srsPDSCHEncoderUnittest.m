@@ -89,8 +89,8 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, SymbolAllocation, PRBAllocation, mcs)
         %testvectorGenerationCases Generates a test vector for the given SymbolAllocation,
-        %   Modulation scheme. Other parameters (e.g., the RNTI)
-        %   are generated randomly.
+        %   PRBAllocation and mcs. Other parameters (e.g., the HARQProcessID) are
+        %   generated randomly.
 
             import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
             import srsMatlabWrappers.phy.helpers.srsConfigureDLSCHEncoder
