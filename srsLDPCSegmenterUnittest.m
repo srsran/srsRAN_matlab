@@ -91,6 +91,7 @@ classdef srsLDPCSegmenterUnittest < srsTest.srsBlockUnittest
         %testvectorGenerationCases Generates a test vectors for the given configuration.
 
             import srsMatlabWrappers.phy.upper.channel_coding.ldpc.srsLDPCsegmenter
+            import srsTest.helpers.bitPack
             import srsTest.helpers.writeUint8File
 
             % generate a unique test ID
@@ -103,7 +104,7 @@ classdef srsLDPCSegmenterUnittest < srsTest.srsBlockUnittest
             segments = srsLDPCsegmenter(transBlock, cases.bg);
 
             % write packed format of transport block
-            transBlockPkd = reshape(transBlock, 8, [])' * 2.^(7:-1:0)';
+            transBlockPkd = bitPack(transBlock);
             obj.saveDataFile('_test_input', testID, @writeUint8File, transBlockPkd);
 
             % write concatenated segments

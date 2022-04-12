@@ -98,6 +98,7 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
             import srsMatlabWrappers.phy.helpers.srsGetTargetCodeRate
             import srsMatlabWrappers.phy.helpers.srsGetModulation
             import srsMatlabWrappers.phy.helpers.srsFormatModulation
+            import srsTest.helpers.bitPack
             import srsTest.helpers.writeUint8File
 
             % Generate a unique test ID
@@ -153,7 +154,7 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
                 TB = randi([0 1], TBSize, 1);
 
                 % write the packed format of the TB to a binary file
-                TBPkd = reshape(TB, 8, [])' * 2.^(7:-1:0)';
+                TBPkd = bitPack(TB);
                 testCase.saveDataFile('_test_input', testID, @writeUint8File, TBPkd);
 
                 % add the generated TB to the encoder
