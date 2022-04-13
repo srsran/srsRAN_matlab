@@ -168,7 +168,6 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
             fprintf(fileID, '#include "srsgnb/%s/%s.h"\n', ...
                 obj.srsBlockType, obj.srsBlock);
             fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
-            fprintf(fileID, '#include <array>\n');
         end
 
         function addTestDefinitionToHeaderFilePHYsigproc(obj, fileID)
@@ -264,6 +263,29 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
             else
                 testCaseString = sprintf('  {%s, {"%s"}},\n', configStr, outFilename);
             end
+        end
+
+        % TODO: use this version everywhere and delete previous one.
+        function testCaseString = testCaseToString2(obj, testID, testCaseParams, isStruct, varargin)
+        %testCaseToString2 Generates a test entry for the header file.
+        %   testCaseToString2(OBJ, TESTID, TESTCASEPARAMS, ISSTRUCT) generates a data
+        %   string for test number TESTID. The data string is generated from the
+        %   parameters in the cell array TESTCASEPARAMS. The flag ISSTRUCT instructs
+        %   the method to surround the output string with curly brackets (TRUE) or not (FALSE).
+        %   testCaseToString2(..., SUFFIX1, SUFFIX2, ...) adds a reference to data files
+        %   with suffixes SUFFIX1, SUFFIX2, and so on, to the test entry.
+
+            import srsTest.helpers.cellarray2str;
+            configStr = cellarray2str(testCaseParams, isStruct);
+            testCaseString = ['  {', configStr];
+
+            nFiles = nargin - 4;
+            for iIn = 1:nFiles
+                suffix = varargin{iIn};
+                filename = [obj.srsBlock suffix num2str(testID) '.dat'];
+                testCaseString = [testCaseString ', {"', filename, '"}']; %#ok<AGROW>
+            end
+            testCaseString = sprintf('%s},\n', testCaseString);
         end
     end % of methods (Access = protected)
 
