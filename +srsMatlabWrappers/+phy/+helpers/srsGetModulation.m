@@ -1,6 +1,7 @@
 %srsGetModulation Returns the modulation scheme corresponding to a given Qm.
 %   MODULATION = srsGetModulation(QM) returns the modulation scheme given a
-%   specific modulation order QM. Two different modulation strings are returned:
+%   specific modulation order QM (according to the 3GPP convention: i.e., the
+%   number of bits per symbol). Two different modulation strings are returned:
 %   the first formatted as required by MATLAB, the second as defined by SRS.
 
 function modulation = srsGetModulation(Qm)

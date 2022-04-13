@@ -61,28 +61,28 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
         %   full usage (0) and partial usage (1).
         PRBAllocation = {0, 1}
 
-        %Modulation and coding scheme index
+        %Modulation and coding scheme index.
         mcs = num2cell(0:28)
     end
 
     methods (Access = protected)
         function addTestIncludesToHeaderFile(obj, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
-            %addTestIncludesToHeaderFilePHYchproc(obj, fileID);
-            % for very specific header types, we'll skip the generic 'srsBlockUnittest' function
+
             fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
             fprintf(fileID, '#include "srsgnb/phy/upper/codeblock_metadata.h"\n');
+
         end
 
         function addTestDefinitionToHeaderFile(obj, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
-            %addTestDefinitionToHeaderFilePHYchproc(obj, fileID);
-            % for very specific header types, we'll skip the generic 'srsBlockUnittest' function
+
             fprintf(fileID, 'struct test_case_t {\n');
             fprintf(fileID, '  segment_config           config;\n', obj.srsBlock);
             fprintf(fileID, '  file_vector<uint8_t>     transport_block;\n');
             fprintf(fileID, '  file_vector<uint8_t>     encoded;\n');
             fprintf(fileID, '};\n');
+
         end
     end % of methods (Access = protected)
 
@@ -95,7 +95,7 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
             import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
             import srsMatlabWrappers.phy.helpers.srsConfigureDLSCHEncoder
             import srsMatlabWrappers.phy.helpers.srsConfigurePDSCH
-            import srsMatlabWrappers.phy.helpers.srsGetTargetCodeRate
+            import srsMatlabWrappers.phy.helpers.srsExpandMCS
             import srsMatlabWrappers.phy.helpers.srsGetModulation
             import srsTest.helpers.bitPack
             import srsTest.helpers.writeUint8File
@@ -133,16 +133,13 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
                 carrier = srsConfigureCarrier(NSizeGrid, NStartGrid);
 
                 % get the target code rate (R) and modulation order (Qm) corresponding to the current modulation and scheme configuration
-                [R, Qm] = srsGetTargetCodeRate(mcsTable, mcs);
+                [R, Qm] = srsExpandMCS(mcs, mcsTable);
                 TargetCodeRate = R/1024;
                 Modulation = srsGetModulation(Qm);
                 ModulationLoc = Modulation{1};
 
                 % configure the PDSCH according to the test parameters
                 pdsch = srsConfigurePDSCH(NStartBWP, NSizeBWP, ModulationLoc, NumLayersLoc, SymbolAllocation, PRBSet);
-
-                % configure the PDSCH encoder
-                DLSCHEncoder = srsConfigureDLSCHEncoder(MultipleHARQProcesses, TargetCodeRate);
 
                 % get the encoded TB length
                 [PDSCHIndices, PDSCHInfo] = nrPDSCHIndices(carrier, pdsch);
@@ -156,6 +153,9 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
                 % write the packed format of the TB to a binary file
                 TBPkd = bitPack(TB);
                 testCase.saveDataFile('_test_input', testID, @writeUint8File, TBPkd);
+
+                % configure the PDSCH encoder
+                DLSCHEncoder = srsConfigureDLSCHEncoder(MultipleHARQProcesses, TargetCodeRate);
 
                 % add the generated TB to the encoder
                 setTransportBlock(DLSCHEncoder, TB, cwIdx, HARQProcessID);

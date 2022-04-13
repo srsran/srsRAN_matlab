@@ -1,4 +1,4 @@
-%srsConfigureDLSCHEncoder Generates a physical downling shared channel encoder object.
+%srsConfigureDLSCHEncoder Generates a physical downlink shared channel encoder object.
 %   DLSCHENCODER = srsConfigureDLSCHEncoder(VARARGIN) returns a DLSCH encoder object
 %   with the requested configuration. The names of the input parameters are assumed to
 %   coincide with those of the properties of nrDLSCH, with the exception of the suffix

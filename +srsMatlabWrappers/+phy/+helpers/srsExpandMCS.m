@@ -1,10 +1,11 @@
-%srsGetTargetCodeRate Returns the target code rate for a given configuration.
-%   [TARGETCODERATE, QM] = srsGetTargetCodeRate(MCSTABLE, MCS) returns the target code
-%   rate TARGETCODERATE and modulation order QM given a specific modulation and coding
-%   scheme index MCS (0-28) and associated table MCSTABLE ('qam64', 'qam256', 'qam64LowSE'),
-%   as defined in TS 38.214 Section 5.1.3.1.
+%srsExpandMCS Returns the target code rate for a given configuration.
+%   [TARGETCODERATE, QM] = srsExpandMCS(MCSTABLE, MCS) returns the target code
+%   rate TARGETCODERATE and modulation order QM (according to the 3GPP convention:
+%   i.e., the number of bits per symbol) given a specific modulation and coding
+%   scheme index MCS (0-28) and associated table MCSTABLE ('qam64', 'qam256',
+%   'qam64LowSE'), as defined in TS 38.214 Section 5.1.3.1.
 
-function [targetCodeRate, Qm] = srsGetTargetCodeRate(mcsTable, mcs)
+function [targetCodeRate, Qm] = srsExpandMCS(mcs, mcsTable)
 
     % TS 38.214, Table 5.1.3.1-1: MCS index table 1 for PDSCH
     codeRateTables.qam64 = {{120, 2}, {157, 2}, {193, 2}, {251, 2}, ...
