@@ -11,19 +11,7 @@ function CORESET = srsConfigureCORESET(varargin)
     nofInputParams = length(varargin);
     for index = 1:nofInputParams
         paramName = erase(inputname(index), 'Loc');
-        switch(paramName)
-            case 'FrequencyResources'
-                CORESET.FrequencyResources = varargin{index};
-            case 'Duration'
-                CORESET.Duration = varargin{index};
-            case 'CCEREGMapping'
-              CORESET.CCEREGMapping = varargin{index};
-            case 'REGBundleSize'
-              CORESET.REGBundleSize = varargin{index};
-            case 'InterleaverSize'
-              CORESET.InterleaverSize = varargin{index};
-        end
+        CORESET = setfield(CORESET, paramName, varargin{index});
     end
-
 
 end

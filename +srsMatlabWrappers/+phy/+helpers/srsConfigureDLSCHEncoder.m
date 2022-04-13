@@ -12,14 +12,7 @@ function DLSCHEncoder = srsConfigureDLSCHEncoder(varargin)
     nofInputParams = length(varargin);
     for index = 1:nofInputParams
         paramName = erase(inputname(index), 'Loc');
-        switch(paramName)
-            case 'MultipleHARQProcesses'
-                DLSCHEncoder.MultipleHARQProcesses = varargin{index};
-            case 'TargetCodeRate'
-                DLSCHEncoder.TargetCodeRate = varargin{index};
-            case 'LimitedBufferSize'
-                DLSCHEncoder.LimitedBufferSize = varargin{index};
-        end
+        DLSCHEncoder = setfield(DLSCHEncoder, paramName, varargin{index});
     end
 
 end

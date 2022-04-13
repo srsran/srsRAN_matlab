@@ -97,7 +97,6 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
             import srsMatlabWrappers.phy.helpers.srsConfigurePDSCH
             import srsMatlabWrappers.phy.helpers.srsGetTargetCodeRate
             import srsMatlabWrappers.phy.helpers.srsGetModulation
-            import srsMatlabWrappers.phy.helpers.srsFormatModulation
             import srsTest.helpers.bitPack
             import srsTest.helpers.writeUint8File
 
@@ -137,9 +136,10 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
                 [R, Qm] = srsGetTargetCodeRate(mcsTable, mcs);
                 TargetCodeRate = R/1024;
                 Modulation = srsGetModulation(Qm);
+                ModulationLoc = Modulation{1};
 
                 % configure the PDSCH according to the test parameters
-                pdsch = srsConfigurePDSCH(NStartBWP, NSizeBWP, Modulation, NumLayersLoc, SymbolAllocation, PRBSet);
+                pdsch = srsConfigurePDSCH(NStartBWP, NSizeBWP, ModulationLoc, NumLayersLoc, SymbolAllocation, PRBSet);
 
                 % configure the PDSCH encoder
                 DLSCHEncoder = srsConfigureDLSCHEncoder(MultipleHARQProcesses, TargetCodeRate);
@@ -150,7 +150,7 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
                 encodedTBLength = nofREs * Qm;
 
                 % generate the TB to be encoded
-                TBSize = nrTBS(Modulation, NumLayersLoc, numel(PRBSet), PDSCHInfo.NREPerPRB, TargetCodeRate);
+                TBSize = nrTBS(ModulationLoc, NumLayersLoc, numel(PRBSet), PDSCHInfo.NREPerPRB, TargetCodeRate);
                 TB = randi([0 1], TBSize, 1);
 
                 % write the packed format of the TB to a binary file
@@ -161,7 +161,7 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
                 setTransportBlock(DLSCHEncoder, TB, cwIdx, HARQProcessID);
 
                 % call the PDSCH encoding Matlab functions
-                cw = DLSCHEncoder(Modulation, NumLayersLoc, encodedTBLength, RV, HARQProcessID);
+                cw = DLSCHEncoder(ModulationLoc, NumLayersLoc, encodedTBLength, RV, HARQProcessID);
 
                 % write the encoded TB to a binary file
                 testCase.saveDataFile('_test_output', testID, @writeUint8File, cw);
@@ -177,7 +177,7 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
                 end
                 testCaseString = testCase.testCaseToString(testID, true, ...
                     {['ldpc::base_graph_t::BG', num2str(info.BGN)], RV, ...
-                        ['modulation_scheme::', srsFormatModulation(Modulation)], Nref, ...
+                        ['modulation_scheme::', Modulation{2}], Nref, ...
                         NumLayersLoc, nofREs}, true);
 
                 % add the test to the file header

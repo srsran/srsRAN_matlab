@@ -109,7 +109,7 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
 
             % use a unique nCellID, nSlot and RNTI for each test
             testCellID = testCase.randomizeTestvector(testID + 1) - 1;
-            slotIndex = testCase.randomizeSlot(testID + 1);
+            NSlot = testCase.randomizeSlot(testID + 1);
             RNTI = randi([0, 65535]);
             maxAllowedStartSymbol = 14 - Duration;
             startSymbolIndex = randi([1, maxAllowedStartSymbol]);
@@ -126,7 +126,7 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
 
             % current fixed parameter values (e.g., maximum grid size with current interleaving
             %   configuration, CORESET will use all available frequency resources)
-            cyclicPrefix = 'normal';
+            CyclicPrefix = 'normal';
             NSizeGrid = 52;
             NStartGrid = 0;
             NFrame = 0;
@@ -136,7 +136,7 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
             NStartBWP = 0;
             NSizeBWP = NSizeGrid;
             AllocatedCandidate = 1;
-            nID = testCellID;
+            DMRSScramblingID = testCellID;
 
             % only encode the PDCCH when it fits
             isAggregationOK = (sum(FrequencyResources) * Duration >= AggregationLevel);
@@ -146,8 +146,8 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
 
             if (isAggregationOK && isCCEREGMappingOK)
                 % configure the carrier according to the test parameters
-                carrier = srsConfigureCarrier(testCellID, 0, NSizeGrid, NStartGrid, ...
-                    slotIndex, NFrame, cyclicPrefix);
+                carrier = srsConfigureCarrier(NSizeGrid, NStartGrid, ...
+                    NSlot, NFrame, CyclicPrefix);
 
                 % configure the CORESET according to the test parameters
                 CORESET = srsConfigureCORESET(FrequencyResources, Duration, ...
@@ -155,7 +155,7 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
 
                 % configure the PDCCH according to the test parameters
                 pdcch = srsConfigurePDCCH(CORESET, NStartBWP, NSizeBWP, RNTI, ...
-                    AggregationLevel, SearchSpaceType, AllocatedCandidate, nID);
+                    AggregationLevel, SearchSpaceType, AllocatedCandidate, DMRSScramblingID);
 
                 % set startSymbol using random value generated above
                 pdcch.SearchSpace.StartSymbolWithinSlot = startSymbolIndex;
@@ -167,7 +167,7 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
                 testCase.saveDataFile('_test_input', testID, @writeUint8File, codeWord);
 
                 % call the PDCCH modulator MATLAB functions
-                [PDCCHsymbols, symbolIndices] = srsPDCCHmodulator(codeWord, carrier, pdcch, nID, RNTI);
+                [PDCCHsymbols, symbolIndices] = srsPDCCHmodulator(codeWord, carrier, pdcch, DMRSScramblingID, RNTI);
                 symbolIndices(:, 3) = int32(PDCCHports);
 
                 % write each complex symbol into a binary file, and the associated indices to another
@@ -179,7 +179,7 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
 
                 % generate the test case entry
                 testCaseString = testCase.testCaseToString(testID, true, {rbAllocationMaskStr, ...
-                                   startSymbolIndex, Duration, nID, RNTI, 1.0, PDCCHportsStr}, true);
+                                   startSymbolIndex, Duration, DMRSScramblingID, RNTI, 1.0, PDCCHportsStr}, true);
 
                 % add the test to the file header
                 testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);

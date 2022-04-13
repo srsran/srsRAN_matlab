@@ -11,23 +11,10 @@ function pdcch = srsConfigurePDCCH(varargin)
     nofInputParams = length(varargin);
     for index = 1:nofInputParams
         paramName = erase(inputname(index), 'Loc');
-        switch(paramName)
-            case 'CORESET'
-                pdcch.CORESET = varargin{index};
-            case 'NStartBWP'
-                pdcch.NStartBWP = varargin{index};
-            case 'NSizeBWP'
-                pdcch.NSizeBWP = varargin{index};
-            case 'RNTI'
-                pdcch.RNTI = varargin{index};
-            case 'AggregationLevel'
-                pdcch.AggregationLevel = varargin{index};
-            case 'SearchSpaceType'
-                pdcch.SearchSpace.SearchSpaceType = varargin{index};
-            case 'AllocatedCandidate'
-                pdcch.AllocatedCandidate = varargin{index};
-            case 'DMRSScramblingID'
-                pdcch.DMRSScramblingID = varargin{index};
+        if strcmp(paramName, 'SearchSpaceType')
+            pdcch.SearchSpace.SearchSpaceType = varargin{index};
+        else
+            pdcch = setfield(pdcch, paramName, varargin{index});
         end
     end
 

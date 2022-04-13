@@ -11,22 +11,7 @@ function carrier = srsConfigureCarrier(varargin)
     nofInputParams = length(varargin);
     for index = 1:nofInputParams
         paramName = erase(inputname(index), 'Loc');
-        switch(paramName)
-            case 'NCellID'
-                carrier.NCellID = varargin{index};
-            case 'SubcarrierSpacing'
-                carrier.SubcarrierSpacing = varargin{index};
-            case 'NSizeGrid'
-                carrier.NSizeGrid = varargin{index};
-            case 'NStartGrid'
-                carrier.NStartGrid = varargin{index};
-            case 'NSlot'
-                carrier.NSlot = varargin{index};
-            case 'NFrame'
-                carrier.NFrame = varargin{index};
-            case 'CyclicPrefix'
-                carrier.CyclicPrefix = varargin{index};
-        end
+        carrier = setfield(carrier, paramName, varargin{index});
     end
 
 end
