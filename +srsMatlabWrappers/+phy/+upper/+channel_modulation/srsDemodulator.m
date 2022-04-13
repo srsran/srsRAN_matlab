@@ -18,7 +18,7 @@ function llrs = srsDemodulator(symbols, scheme, noiseVar)
     end
 
     if (numel(noiseVar) > 1)
-        assert(size(symbols) == size(noiseVar), 'Input NOISEVAR has invalid size.');
+        assert(numel(symbols) == numel(noiseVar), 'Input NOISEVAR has invalid size.');
     end
 
     % generate NR constellation
@@ -41,9 +41,12 @@ function llrs = srsDemodulator(symbols, scheme, noiseVar)
         constLabels = [2 3 0 1];
         nConstPoints = 4;
 
-        llrsTmp = qamdemod(symbols, nConstPoints, constLabels, ...
+        % To apply different noise variances, symbols must be in a row.
+        % The output will be a matrix where each column contains the LLRs corresponding
+        % to the symbol with the same index.
+        llrsTmp = qamdemod(symbols.', nConstPoints, constLabels, ...
             'UnitAveragePower', true, 'NoiseVariance', noiseVar, 'OutputType', 'approxllr');
-        llrs = llrsTmp(1:2:end) + llrsTmp(2:2:end);
+        llrs = (llrsTmp(1,:) + llrsTmp(2,:)).';
     else
         nConstPoints = 2^nBits;
 
@@ -58,7 +61,11 @@ function llrs = srsDemodulator(symbols, scheme, noiseVar)
         constLabels = tmp2(:, 2);
 
         % demodulate the symbols with the computed constellation
-        llrs = qamdemod(symbols, nConstPoints, constLabels, ...
+        % To apply different noise variances, symbols must be in a row.
+        % The output will be a matrix where each column contains the LLRs corresponding
+        % to the symbol with the same index.
+        llrsTmp = qamdemod(symbols.', nConstPoints, constLabels, ...
             'UnitAveragePower', true, 'NoiseVariance', noiseVar, 'OutputType', 'approxllr');
+        llrs = llrsTmp(:);
     end
 
