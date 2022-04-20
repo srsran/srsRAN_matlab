@@ -52,8 +52,8 @@ classdef srsOFDMmodulatorUnittest < srsTest.srsBlockUnittest
         %Defines the subcarrier spacing (0, 1, 2, 3, 4).
         numerology = {0, 1, 2, 3, 4}
 
-        %Size of the DFT (128, 256, 512, 1024, 2048, 4096). Only standard values.
-        DFTsize = {128, 256, 512, 1024, 2048, 4096}
+        %Size of the DFT (256, 512, 1024, 2048, 4096). Only standard values.
+        DFTsize = {256, 512, 1024, 2048, 4096}
 
         %Cyclic prefix type ('normal', 'extended').
         CyclicPrefix = {'normal', 'extended'}
@@ -130,7 +130,12 @@ classdef srsOFDMmodulatorUnittest < srsTest.srsBlockUnittest
                     @writeResourceGridEntryFile, inputData, inputIndices);
 
                 % call the OFDM modulation Matlab functions
-                timeDomainData = nrOFDMModulate(carrier, reshape(inputData, [NSizeGrid * 12, carrier.SymbolsPerSlot]));
+                timeDomainData = nrOFDMModulate(carrier, reshape(inputData, [NSizeGrid * 12, carrier.SymbolsPerSlot]), ...
+                    'Windowing',0);
+
+                % apply the requested scale and homogenize the output values with those of srsgnb
+                srsGNBscaleFactor = DFTsize / (2 .^ numerology);
+                timeDomainData = timeDomainData * scale * srsGNBscaleFactor;
 
                 % write the time-domain data into a binary file
                 testCase.saveDataFile('_test_output', testID, ...
