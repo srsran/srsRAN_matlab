@@ -119,8 +119,8 @@ classdef srsLDPCEncoderUnittest < srsTest.srsBlockUnittest
             obj.saveDataFile('_test_output', testID, @writeUint8File, codeblocks(:));
 
             % generate the test case entry
-            testCaseString = obj.testCaseToString(testID, true, ...
-                {nMessages, baseGraph, liftSize}, false);
+            testCaseString = obj.testCaseToString(testID, {nMessages, ...
+                baseGraph, liftSize}, false, '_test_input', '_test_output');
 
             % add the test to the file header
             obj.addTestToHeaderFile(obj.headerFileID, testCaseString);

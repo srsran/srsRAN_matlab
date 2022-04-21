@@ -112,8 +112,9 @@ classdef srsLDPCSegmenterUnittest < srsTest.srsBlockUnittest
 
             [segmentLength, nSegments] = size(segments);
             % generate the test case entry
-            testCaseString = obj.testCaseToString(testID, true, ...
-                {cases.length, cases.bg, nSegments, segmentLength}, false);
+            testCaseString = obj.testCaseToString(testID, ...
+                {cases.length, cases.bg, nSegments, segmentLength}, false, ...
+                '_test_input', '_test_output');
 
             % add the test to the file header
             obj.addTestToHeaderFile(obj.headerFileID, testCaseString);

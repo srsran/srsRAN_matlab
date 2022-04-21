@@ -98,8 +98,9 @@ classdef srsModulationMapperUnittest < srsTest.srsBlockUnittest
 
             % generate the test case entry
             modSchemeString = ['modulation_scheme::', modScheme{3}];
-            testCaseString = testCase.testCaseToString(testID, true, ...
-                {nSymbols, modSchemeString}, false);
+            testCaseString = testCase.testCaseToString(testID, ...
+                {nSymbols, modSchemeString}, false, '_test_input', ...
+                '_test_output');
 
             % add the test to the file header
             testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);

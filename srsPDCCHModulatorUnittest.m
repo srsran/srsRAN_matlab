@@ -178,8 +178,9 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
                 rbAllocationMaskStr = RBallocationMask2string(symbolIndices);
 
                 % generate the test case entry
-                testCaseString = testCase.testCaseToString(testID, true, {rbAllocationMaskStr, ...
-                                   startSymbolIndex, Duration, DMRSScramblingID, RNTI, 1.0, PDCCHportsStr}, true);
+                testCaseString = testCase.testCaseToString(testID, {rbAllocationMaskStr, ...
+                                   startSymbolIndex, Duration, DMRSScramblingID, RNTI, 1.0, PDCCHportsStr}, ...
+                                   true, '_test_input', '_test_output');
 
                 % add the test to the file header
                 testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);

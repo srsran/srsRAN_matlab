@@ -165,9 +165,9 @@ classdef srsLDPCRateMatcherUnittest < srsTest.srsBlockUnittest
 
             % generate the test case entry
             modSchemeString = ['modulation_scheme::', modScheme{3}];
-            testCaseString = obj.testCaseToString(testID, true, ...
+            testCaseString = obj.testCaseToString(testID, ...
                 {outLength, rv, modSchemeString, obj.Nref, ...
-                    logical2str(isLBRM), nFiller}, false);
+                    logical2str(isLBRM), nFiller}, false, '_test_input', '_test_output');
 
             % add the test to the file header
             obj.addTestToHeaderFile(obj.headerFileID, testCaseString);

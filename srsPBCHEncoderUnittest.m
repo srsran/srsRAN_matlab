@@ -127,8 +127,9 @@ classdef srsPBCHEncoderUnittest < srsTest.srsBlockUnittest
                 testCase.saveDataFile('_test_output', testID, @writeUint8File, cw);
 
                 % generate the test case entry
-                testCaseString = testCase.testCaseToString(testID, false, {NCellIDLoc, SSBindex, Lmax, hrf, ...
-                    payload, SFNLoc, kSSBLoc}, true);
+                testCaseString = testCase.testCaseToString(testID, ...
+                    {NCellIDLoc, SSBindex, Lmax, hrf, payload, SFNLoc, kSSBLoc}, ...
+                    true, '_test_output');
 
                 % add the test to the file header
                 testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);

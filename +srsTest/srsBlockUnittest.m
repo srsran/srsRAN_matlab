@@ -243,32 +243,9 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
             saveFunction(fullFilename, varargin{:});
         end
 
-        function testCaseString = testCaseToString(obj, testID, inAndOut, testCaseParams, isStruct)
+        function testCaseString = testCaseToString(obj, testID, testCaseParams, isStruct, varargin)
         %testCaseToString Generates a test entry for the header file.
-        %   testCaseToString(OBJ, TESTID, INANDOUT, TESTCASEPARAMS, ISSTRUCT) generates a
-        %   data string for test number TESTID. The INANDOUT flag specifies whether the
-        %   test includes both input and output test vectors (TRUE) or ouptut only (FALSE).
-        %   The data string is generated from the parameters in the cell array TESTCASEPARAMS.
-        %   The flag ISSTRUCT instructs the method to surround the output string with
-        %   curly brackets (TRUE) or not (FALSE).
-
-            import srsTest.helpers.cellarray2str;
-            configStr = cellarray2str(testCaseParams, isStruct);
-            inFilename = [obj.srsBlock '_test_input' num2str(testID) '.dat'];
-            outFilename = [obj.srsBlock '_test_output' num2str(testID) '.dat'];
-
-            % generate the test case entry (checking first if we generate both input and output data)
-            if inAndOut
-                testCaseString = sprintf('  {%s, {"%s"}, {"%s"}},\n', configStr, inFilename, outFilename);
-            else
-                testCaseString = sprintf('  {%s, {"%s"}},\n', configStr, outFilename);
-            end
-        end
-
-        % TODO: use this version everywhere and delete previous one.
-        function testCaseString = testCaseToString2(obj, testID, testCaseParams, isStruct, varargin)
-        %testCaseToString2 Generates a test entry for the header file.
-        %   testCaseToString2(OBJ, TESTID, TESTCASEPARAMS, ISSTRUCT) generates a data
+        %   testCaseToString(OBJ, TESTID, TESTCASEPARAMS, ISSTRUCT) generates a data
         %   string for test number TESTID. The data string is generated from the
         %   parameters in the cell array TESTCASEPARAMS. The flag ISSTRUCT instructs
         %   the method to surround the output string with curly brackets (TRUE) or not (FALSE).

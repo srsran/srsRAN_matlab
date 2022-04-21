@@ -107,7 +107,9 @@ classdef srsPDCCHEncoderUnittest < srsTest.srsBlockUnittest
                 testCase.saveDataFile('_test_output', testID, @writeUint8File, encodedMsg);
 
                 % generate the test case entry
-                testCaseString = testCase.testCaseToString(testID, true, struct2cell(encoderConfig)', true);
+                testCaseString = testCase.testCaseToString(testID, ...
+                    struct2cell(encoderConfig)', true, ...
+                    '_test_input', '_test_output');
 
                 % add the test to the file header
                 testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);

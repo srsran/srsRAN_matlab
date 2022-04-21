@@ -150,7 +150,8 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
                 {pdsch.SymbolAllocation(2)}, {dmrsSymbolMask}, {DMRSTypeString}, ...
                 {pdsch.DMRS.NumCDMGroupsWithoutData}, {pdsch.NID}, {1}, {reservedString}, {0}, {portsString}];
 
-            testCaseString = testCase.testCaseToString(testID, true, config, true);
+            testCaseString = testCase.testCaseToString(testID, config, true, ...
+                '_test_input', '_test_output');
 
             % add the test to the file header
             testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);

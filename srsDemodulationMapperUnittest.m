@@ -128,7 +128,7 @@ classdef srsDemodulationMapperUnittest < srsTest.srsBlockUnittest
 
             % generate the test case entry
             modSchemeString = ['modulation_scheme::', modScheme{3}];
-            testCaseString = testCase.testCaseToString2(testID, {nSymbols, modSchemeString}, false, ...
+            testCaseString = testCase.testCaseToString(testID, {nSymbols, modSchemeString}, false, ...
                 '_test_input', '_test_noisevar', '_test_soft_bits', '_test_hard_bits');
 
             % add the test to the file header

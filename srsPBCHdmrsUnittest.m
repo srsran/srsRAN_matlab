@@ -113,9 +113,9 @@ classdef srsPBCHdmrsUnittest < srsTest.srsBlockUnittest
                     @writeResourceGridEntryFile, DMRSsymbols, symbolIndices);
 
                 % generate the test case entry
-                testCaseString = testCase.testCaseToString(testID, false, ...
+                testCaseString = testCase.testCaseToString(testID, ...
                     {NCellIDLoc, SSBindex, Lmax, SSBfirstSubcarrier, SSBfirstSymbol, ...
-                        nHF, SSBamplitude, SSBportsStr}, true);
+                        nHF, SSBamplitude, SSBportsStr}, true, '_test_output');
 
                 % add the test to the file header
                 testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);

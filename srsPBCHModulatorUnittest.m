@@ -116,9 +116,9 @@ classdef srsPBCHModulatorUnittest < srsTest.srsBlockUnittest
                 modulatedSymbols, symbolIndices);
 
             % generate the test case entry
-            testCaseString = testCase.testCaseToString(testID, true, ...
+            testCaseString = testCase.testCaseToString(testID, ...
                 {NCellIDLoc, SSBindex, SSBfirstSubcarrier, SSBfirstSymbol, ...
-                    SSBamplitude, SSBportsStr}, true);
+                    SSBamplitude, SSBportsStr}, true, '_test_input', '_test_output');
 
             % add the test to the file header
             testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);
