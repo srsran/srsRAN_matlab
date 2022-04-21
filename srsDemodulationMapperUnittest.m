@@ -65,7 +65,7 @@ classdef srsDemodulationMapperUnittest < srsTest.srsBlockUnittest
             addTestIncludesToHeaderFilePHYchmod(obj, fileID);
         end
 
-        function addTestDefinitionToHeaderFile(obj, fileID)
+        function addTestDefinitionToHeaderFile(~, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
             fprintf(fileID, 'struct test_case_t {\n');
             fprintf(fileID, 'std::size_t          nsymbols;\n');
@@ -113,17 +113,15 @@ classdef srsDemodulationMapperUnittest < srsTest.srsBlockUnittest
             % write noisy symbols to a binary file
             testCase.saveDataFile('_test_input', testID, @writeComplexFloatFile, noisySymbols);
 
-            % demodulate
+            % demodulate (note that srsDemodulator returns integer values
+            % that can be directly assigned to int8_t variables)
             softBits = srsDemodulator(noisySymbols, modScheme{2}, noiseVar);
 
-            % quantize
-            softBitsQuant = quantize(softBits, modScheme{2});
-
             % write soft bits to a binary file
-            testCase.saveDataFile('_test_soft_bits', testID, @writeInt8File, softBitsQuant);
+            testCase.saveDataFile('_test_soft_bits', testID, @writeInt8File, softBits);
 
             % hard decision
-            hardBits = (1 - (softBitsQuant > 0)) / 2;
+            hardBits = (1 - (softBits > 0)) / 2;
 
             % write hard bits into a binary file
             testCase.saveDataFile('_test_hard_bits', testID, @writeUint8File, hardBits);
@@ -138,20 +136,3 @@ classdef srsDemodulationMapperUnittest < srsTest.srsBlockUnittest
         end % of function testvectorGenerationCases
     end % of methods (Test, TestTags = {'testvector'})
 end % of classdef srsDemodulationMapperUnittest
-
-function softBitsQuant = quantize(softBits, mod)
-    rangeLimitInt = 64;
-    switch mod
-        case {'BPSK', 'QPSK'}
-            rangeLimitFloat = 200;
-        case '16QAM'
-            rangeLimitFloat = 100;
-        otherwise % TODO decide range for 64QAM and 256QAM
-            rangeLimitFloat = 50;
-    end
-    softBitsQuant = softBits;
-    clipIdx = (abs(softBits) > rangeLimitFloat);
-    softBitsQuant(clipIdx) = rangeLimitFloat * sign(softBitsQuant(clipIdx));
-    softBitsQuant = round(softBitsQuant * rangeLimitInt / rangeLimitFloat);
-end
-

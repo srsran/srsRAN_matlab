@@ -1,16 +1,19 @@
 %srsDemodulator Soft demodulator for NR constellations.
-%   LLRS = srsDemodulator(SYMBOLS, SCHEME) computes the log-likelihood ratios LLRS
+%   LLRSQ = srsDemodulator(SYMBOLS, SCHEME) computes the log-likelihood ratios LLRSQ
 %   corresponding to the (noisy) modulated symbols SYMBOLS, and the modulation
 %   scheme SCHEME. SYMBOLS is an array of complex values. SCHEME is a character
 %   array denoting one of the possible NR constellations, namely 'BPSK', 'QPSK',
-%   '16QAM', '64QAM', or '256QAM'.
+%   '16QAM', '64QAM', or '256QAM'. The LLRSQ are quantized and take integer
+%   values in the range -128 to 127 (mimicking a int8_t variable).
 %
-%   LLRS = srsDemodulator(..., NOISEVAR) specifies the noise variance for the input
+%   LLRSQ = srsDemodulator(..., NOISEVAR) specifies the noise variance for the input
 %   symbols. If NOISEVAR is an array of positive values, then it must have the same
 %   number of elements as SYMBOLS (SYMBOLS have different noise variances). If
 %   NOISEVAR is a positive scalar, then it is assumed that the noise variance is
 %   the same across all SYMBOLS. The default is NOISEVAR = 1e-10.
-function llrs = srsDemodulator(symbols, scheme, noiseVar)
+%
+%   See also nrSymbolDemodulate, qamdemod.
+function llrsq = srsDemodulator(symbols, scheme, noiseVar)
     arguments
         symbols (:, 1) double
         scheme  (1, :) char {mustBeMember(scheme, {'BPSK', 'QPSK', '16QAM', '64QAM', '256QAM'})}
@@ -68,4 +71,21 @@ function llrs = srsDemodulator(symbols, scheme, noiseVar)
             'UnitAveragePower', true, 'NoiseVariance', noiseVar, 'OutputType', 'approxllr');
         llrs = llrsTmp(:);
     end
+    llrsq = quantize(llrs, scheme);
+end
 
+function softBitsQuant = quantize(softBits, mod)
+    rangeLimitInt = 64;
+    switch mod
+        case {'BPSK', 'QPSK'}
+            rangeLimitFloat = 200;
+        case '16QAM'
+            rangeLimitFloat = 100;
+        otherwise % TODO decide range for 64QAM and 256QAM
+            rangeLimitFloat = 50;
+    end
+    softBitsQuant = softBits;
+    clipIdx = (abs(softBits) > rangeLimitFloat);
+    softBitsQuant(clipIdx) = rangeLimitFloat * sign(softBitsQuant(clipIdx));
+    softBitsQuant = round(softBitsQuant * rangeLimitInt / rangeLimitFloat);
+end
