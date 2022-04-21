@@ -12,7 +12,21 @@ function [outputString] = cellarray2str(inputCellArray, isStruct)
     end
 
     for arg = inputCellArray(1:end-1)
-        outputString = [outputString, cell2str(arg), ', ']; %#ok<AGROW>
+        % manage subcells within the input cell
+        if iscell(arg{1})
+            if isStruct
+              outputString = [outputString, '{'];
+            end
+            for subArg = arg{1}(1:end-1)
+              outputString = [outputString, cell2str(subArg), ', ']; %#ok<AGROW>
+            end
+            outputString = [outputString, cell2str(arg{1}(end))];
+            if isStruct
+                outputString = [outputString, '}, '];
+            end
+        else
+            outputString = [outputString, cell2str(arg), ', ']; %#ok<AGROW>
+        end
     end
 
     outputString = [outputString, cell2str(inputCellArray(end))];
