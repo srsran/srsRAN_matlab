@@ -7,8 +7,8 @@ function [symbols, indices] = srsRandomGridEntry(carrier, portIdx)
 
     nofSymbols = carrier.SymbolsPerSlot;
     nofSubcarriers = carrier.NSizeGrid * 12;
-    randDataI = (-1-1).*rand(1,nofSymbols * nofSubcarriers) + 1;
-    randDataQ = (-1-1).*rand(1,nofSymbols * nofSubcarriers) + 1;
+    randDataI = (-1-1).*rand(1, nofSymbols * nofSubcarriers) + 1;
+    randDataQ = (-1-1).*rand(1, nofSymbols * nofSubcarriers) + 1;
     symbols = randDataI + j * randDataQ;
     indices = zeros(nofSymbols * nofSubcarriers, 3);
     symbolOffset = 0;

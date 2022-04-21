@@ -89,7 +89,7 @@ classdef srsOFDMmodulatorUnittest < srsTest.srsBlockUnittest
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, numerology, DFTsize, CyclicPrefix)
         %testvectorGenerationCases Generates a test vector for the given numerology,
-        %   DFTsize, CyclicPrefinx and NSlot. Port index and scale are randomly generated.
+        %   DFTsize and CyclicPrefix. NSlot, port index and scale are randomly generated.
 
             import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
             import srsMatlabWrappers.phy.helpers.srsRandomGridEntry
@@ -102,7 +102,7 @@ classdef srsOFDMmodulatorUnittest < srsTest.srsBlockUnittest
             % use a unique port index and scale for each test
             portIdx = randi([0, 15]);
             payload = randi([0 1], 24, 1);
-            scale = (-1-1).*rand(1,1) + 1;
+            scale = (-1-1).*rand(1, 1) + 1;
             NSlotLoc = randi([0 pow2(numerology)-1]);
 
             % current fixed parameter values
@@ -131,10 +131,10 @@ classdef srsOFDMmodulatorUnittest < srsTest.srsBlockUnittest
 
                 % call the OFDM modulation Matlab functions
                 timeDomainData = nrOFDMModulate(carrier, reshape(inputData, [NSizeGrid * 12, carrier.SymbolsPerSlot]), ...
-                    'Windowing',0);
+                    'Windowing', 0);
 
                 % apply the requested scale and homogenize the output values with those of srsgnb
-                srsGNBscaleFactor = DFTsize / (2 .^ numerology);
+                srsGNBscaleFactor = DFTsize;
                 timeDomainData = timeDomainData * scale * srsGNBscaleFactor;
 
                 % write the time-domain data into a binary file
