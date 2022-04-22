@@ -14,8 +14,8 @@ function copySRStestvectors(origin, destination, targetBlock, srsDir)
     arguments
         origin      (1, :) char {mustBeFolder}
         destination (1, :) char {mustBeFolder}
-        targetBlock (1, :) char                = 'all'
-        srsDir      (1, :) char {mustBeFolder} = '.'
+        targetBlock (1, :) char {mustBeSRSBlock} = 'all'
+        srsDir      (1, :) char {mustBeFolder}   = '.'
     end
 
     % Find all .m files in the working directory.
@@ -66,3 +66,9 @@ function copySRStestvectors(origin, destination, targetBlock, srsDir)
         end % of if ismember
     end % of for iFile
 end % of function
+
+function mustBeSRSBlock(a)
+    validBlocks = union({'all'}, srsTest.listSRSblocks);
+    mustBeMember(a, validBlocks);
+end
+
