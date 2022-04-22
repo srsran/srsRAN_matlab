@@ -50,7 +50,7 @@ classdef srsOFDMmodulatorUnittest < srsTest.srsBlockUnittest
 
     properties (TestParameter)
         %Defines the subcarrier spacing (0, 1, 2, 3, 4).
-        numerology = {0, 1, 2, 3, 4}
+        numerology = {0, 1, 2}%, 3, 4}
 
         %Size of the DFT (256, 512, 1024, 2048, 4096). Only standard values.
         DFTsize = {256, 512, 1024, 2048, 4096}
@@ -103,11 +103,16 @@ classdef srsOFDMmodulatorUnittest < srsTest.srsBlockUnittest
             portIdx = randi([0, 15]);
             payload = randi([0 1], 24, 1);
             scale = (-1-1).*rand(1, 1) + 1;
-            NSlotLoc = randi([0 pow2(numerology)-1]);
+            if numerology == 3
+              NSlotLoc = 5;
+            else
+              NSlotLoc = randi([0 pow2(numerology)-1]);
+            end
 
             % current fixed parameter values
             NStartGrid = 0;
             NFrame = 0;
+            CarrierFrequency = 2400000000;
 
             % calculate the number of RBs to be used
             NSizeGrid = floor(192 * (DFTsize / 4096));
@@ -129,9 +134,8 @@ classdef srsOFDMmodulatorUnittest < srsTest.srsBlockUnittest
                 testCase.saveDataFile('_test_input', testID, ...
                     @writeResourceGridEntryFile, inputData, inputIndices);
 
-                % call the OFDM modulation Matlab functions
                 timeDomainData = nrOFDMModulate(carrier, reshape(inputData, [NSizeGrid * 12, carrier.SymbolsPerSlot]), ...
-                    'Windowing', 0);
+                    'Windowing', 0, 'CarrierFrequency', CarrierFrequency);
 
                 % apply the requested scale and homogenize the output values with those of srsgnb
                 srsGNBscaleFactor = DFTsize;
@@ -144,8 +148,8 @@ classdef srsOFDMmodulatorUnittest < srsTest.srsBlockUnittest
                 % generate the test case entry
                 testCaseString = testCase.testCaseToString(testID, true, ...
                     {{numerology, NSizeGrid, DFTsize, ...
-                        ['cyclic_prefix::', upper(CyclicPrefix)], scale}, ...
-                        portIdx, NSlotLoc}, true);
+                        ['cyclic_prefix::', upper(CyclicPrefix)], scale, ...
+                        CarrierFrequency}, portIdx, NSlotLoc}, true);
 
                 % add the test to the file header
                 testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);
