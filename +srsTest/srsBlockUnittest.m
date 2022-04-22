@@ -259,7 +259,7 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
             nFiles = nargin - 4;
             for iIn = 1:nFiles
                 suffix = varargin{iIn};
-                filename = [obj.srsBlock suffix num2str(testID) '.dat'];
+                filename = ['test_data/' obj.srsBlock suffix num2str(testID) '.dat'];
                 testCaseString = [testCaseString ', {"', filename, '"}']; %#ok<AGROW>
             end
             testCaseString = sprintf('%s},\n', testCaseString);
