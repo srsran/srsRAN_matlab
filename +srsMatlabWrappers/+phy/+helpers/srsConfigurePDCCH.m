@@ -14,7 +14,7 @@ function pdcch = srsConfigurePDCCH(varargin)
         if strcmp(paramName, 'SearchSpaceType')
             pdcch.SearchSpace.SearchSpaceType = varargin{index};
         else
-            pdcch = setfield(pdcch, paramName, varargin{index});
+            pdcch.(paramName) = varargin{index};
         end
     end
 

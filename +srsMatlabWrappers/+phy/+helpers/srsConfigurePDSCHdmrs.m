@@ -11,7 +11,7 @@ function DMRSconfig = srsConfigurePDSCHdmrs(varargin)
     nofInputParams = length(varargin);
     for index = 1:nofInputParams
         paramName = erase(inputname(index), 'Loc');
-        DMRSconfig = setfield(DMRSconfig, paramName, varargin{index});
+        DMRSconfig.(paramName) = varargin{index};
     end
 
 end

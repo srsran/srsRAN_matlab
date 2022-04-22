@@ -11,7 +11,7 @@ function carrier = srsConfigureCarrier(varargin)
     nofInputParams = length(varargin);
     for index = 1:nofInputParams
         paramName = erase(inputname(index), 'Loc');
-        carrier = setfield(carrier, paramName, varargin{index});
+        carrier.(paramName) = varargin{index};
     end
 
 end

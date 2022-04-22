@@ -66,7 +66,7 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
     end
 
     methods (Access = protected)
-        function addTestIncludesToHeaderFile(obj, fileID)
+        function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
 
             fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
@@ -74,11 +74,11 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
 
         end
 
-        function addTestDefinitionToHeaderFile(obj, fileID)
+        function addTestDefinitionToHeaderFile(~, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
 
             fprintf(fileID, 'struct test_case_t {\n');
-            fprintf(fileID, '  segment_config           config;\n', obj.srsBlock);
+            fprintf(fileID, '  segment_config           config;\n');
             fprintf(fileID, '  file_vector<uint8_t>     transport_block;\n');
             fprintf(fileID, '  file_vector<uint8_t>     encoded;\n');
             fprintf(fileID, '};\n');

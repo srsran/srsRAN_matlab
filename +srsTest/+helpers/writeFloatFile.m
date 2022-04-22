@@ -5,7 +5,6 @@
 
 function writeFloatFile(filename, data)
     fileID = fopen(filename, 'w');
-    dataLength = length(data);
     fwrite(fileID, data, 'float32');
     fclose(fileID);
 end

@@ -12,7 +12,7 @@ function DLSCHEncoder = srsConfigureDLSCHEncoder(varargin)
     nofInputParams = length(varargin);
     for index = 1:nofInputParams
         paramName = erase(inputname(index), 'Loc');
-        DLSCHEncoder = setfield(DLSCHEncoder, paramName, varargin{index});
+        DLSCHEncoder.(paramName) = varargin{index};
     end
 
 end

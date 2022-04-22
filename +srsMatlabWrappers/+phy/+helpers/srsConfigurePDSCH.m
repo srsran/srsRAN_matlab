@@ -11,7 +11,7 @@ function pdsch = srsConfigurePDSCH(varargin)
     nofInputParams = length(varargin);
     for index = 1:nofInputParams
         paramName = erase(inputname(index), 'Loc');
-        pdsch = setfield(pdsch, paramName, varargin{index});
+        pdsch.(paramName) = varargin{index};
     end
 
 end

@@ -5,7 +5,6 @@
 
 function writeInt8File(filename, data)
     fileID = fopen(filename, 'w');
-    dataLength = length(data);
     fwrite(fileID, data, 'int8');
     fclose(fileID);
 end
