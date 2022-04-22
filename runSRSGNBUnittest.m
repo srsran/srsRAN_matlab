@@ -8,8 +8,11 @@
 %   BLOCKNAME by running a MEX version of it.
 %
 %   runSRSGNBUnittest('all', ...) runs all the tests of the specified type.
+%
+%   TEST = runSRSGNBUnittest(...) returns a Test object TEST withouth running it.
+%   The test can be later executed with the command TEST.run.
 
-function runSRSGNBUnittest(blockName, testType)
+function test = runSRSGNBUnittest(blockName, testType)
     arguments
         blockName char {mustBeSRSBlock}
         testType  char {mustBeMember(testType, {'testvector'})}
@@ -30,9 +33,12 @@ function runSRSGNBUnittest(blockName, testType)
         nrPHYtestvectorTests = TestSuite.fromFolder('.', 'Tag', testType, ...
             'ExternalParameters', extParams);
     end
-    nrPHYtestvectorTests.run;
-
-end
+    if nargout == 1
+        test = nrPHYtestvectorTests;
+    else
+        nrPHYtestvectorTests.run;
+    end % of if nargout == 1
+end % of runSRSGNBUnittest
 
 function mustBeSRSBlock(a)
     validBlocks = union({'all'}, srsTest.listSRSblocks);

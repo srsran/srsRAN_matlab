@@ -26,7 +26,9 @@
 %
 %   CheckTests Methods (Test):
 %
-%   runTest - Main test method.
+%   runTest   - Main test method.
+%   checkList - Secondary test to ensure the list of SRS blocks is not
+%               over-populated.
 %
 %   Example
 %      runtests('CheckTests')
@@ -130,7 +132,35 @@ classdef CheckTests < matlab.unittest.TestCase
             msg = sprintf('Class %s has no tests with tag ''testvector''.',  className);
             obj.assertFalse(isempty(tagged), msg);
 
-        end
-    end
-end
+            % Check whether runSRSGNBUnittest can run the current test.
+            try
+                rtest = runSRSGNBUnittest(blockVal, 'testvector');
+            catch
+                msg = sprintf('runSRSGNBUnittest cannot run a test for block %s.', blockVal);
+                obj.assertFail(msg);
+            end
+            msg = sprintf('runSRSGNBUnittest maps block %s to class %s instead of class %s.', ...
+                blockVal, rtest(1).TestClass, className);
+            obj.assertMatches(rtest(1).TestClass, className, msg);
+
+        end % of function runTest(obj, testName)
+
+        function checkList(obj)
+        %checkList checks that all blocks in listSRSblocks have a test.
+
+            blocks = srsTest.listSRSblocks();
+            nBlocks = numel(blocks);
+
+            for iBlock = 1:nBlocks
+                % Check whether runSRSGNBUnittest has a test for the current block.
+                try
+                    [~] = runSRSGNBUnittest(blocks{iBlock}, 'testvector');
+                catch
+                    msg = sprintf('runSRSGNBUnittest does not have a test for block %s.', blocks{iBlock});
+                    obj.assertFail(msg);
+                end
+            end % of for iBlock
+        end % of function checkList
+    end % of methods (Test)
+end % of classdef CheckTests
 
