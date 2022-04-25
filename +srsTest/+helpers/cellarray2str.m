@@ -11,20 +11,18 @@ function [outputString] = cellarray2str(inputCellArray, isStruct)
         outputString = '';
     end
 
+    addComa = false;
     for arg = inputCellArray(1:end-1)
         % manage subcells within the input cell
         if iscell(arg{1})
-            if isStruct
-              outputString = [outputString, '{'];
-            end
-            for subArg = arg{1}(1:end-1)
-              outputString = [outputString, cell2str(subArg), ', ']; %#ok<AGROW>
-            end
-            outputString = [outputString, cell2str(arg{1}(end))];
-            if isStruct
-                outputString = [outputString, '}, '];
-            end
+            import srsTest.helpers.cellarray2str
+            tmp = cellarray2str({arg{1}{:}}, true);
+            outputString = [outputString, tmp];
+            addComa = true;
         else
+            if addComa
+                outputString = [outputString, ', '];
+            end;
             outputString = [outputString, cell2str(arg), ', ']; %#ok<AGROW>
         end
     end
