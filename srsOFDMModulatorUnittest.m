@@ -68,8 +68,10 @@ classdef srsOFDMModulatorUnittest < srsTest.srsBlockUnittest
             addTestIncludesToHeaderFilePHYchmod(obj, fileID);
         end
 
-        function addTestDefinitionToHeaderFile(obj, fileID)
-        %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
+        function addTestDefinitionToHeaderFile(~, fileID)
+        %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations)
+        %   to the test header file.
+
             fprintf(fileID, 'struct ofdm_modulator_test_configuration {\n');
             fprintf(fileID, 'ofdm_modulator_configuration config;\n');
             fprintf(fileID, 'uint8_t port_idx;\n');
