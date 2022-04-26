@@ -22,6 +22,7 @@ function [outputString] = cellarray2str(inputCellArray, isStruct)
         else
             if addComa
                 outputString = [outputString, ', '];
+                addComa = false;
             end;
             outputString = [outputString, cell2str(arg), ', ']; %#ok<AGROW>
         end

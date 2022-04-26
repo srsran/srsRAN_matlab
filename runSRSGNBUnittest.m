@@ -77,6 +77,8 @@ function unittestClass = name2Class(name)
             unittestClass = ?srsPDSCHEncoderUnittest;
         case 'pdsch_modulator'
             unittestClass = ?srsPDSCHModulatorUnittest;
+        case 'ssb_processor'
+            unittestClass = ?srsSSBProcessorUnittest;
         otherwise
             error('SRSGNB:runSRSGNBUnittest:unknownBlock', ...
                 'No unit test for block %s.\n', name);
