@@ -83,6 +83,8 @@ function unittestClass = name2Class(name)
             unittestClass = ?srsPDSCHEncoderUnittest;
         case 'pdsch_modulator'
             unittestClass = ?srsPDSCHModulatorUnittest;
+        case 'short_block_encoder'
+            unittestClass = ?srsShortBlockEncoderUnittest;
         case 'ssb_processor'
             unittestClass = ?srsSSBProcessorUnittest;
         otherwise
