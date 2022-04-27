@@ -24,7 +24,7 @@
 %
 %   srsPDSCHEncoderUnittest Methods (TestTags = {'testvector'}):
 %
-%   testvectorGenerationCases - Generates a test vectors according to the provided
+%   testvectorGenerationCases - Generates a test vector according to the provided
 %                               parameters.
 %
 %   srsPDSCHEncoderUnittest Methods (Access = protected):

@@ -21,7 +21,7 @@
 %
 %   srsLDPCSegmenterUnittest Methods (TestTags = {'testvector'}):
 %
-%   testvectorGenerationCases - Generates a test vectors for the given configuration.
+%   testvectorGenerationCases - Generates a test vector for the given configuration.
 %
 %   srsLDPCSegmenterUnittest Methods (Access = protected):
 %
@@ -88,7 +88,7 @@ classdef srsLDPCSegmenterUnittest < srsTest.srsBlockUnittest
 
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(obj, cases)
-        %testvectorGenerationCases Generates a test vectors for the given configuration.
+        %testvectorGenerationCases Generates a test vector for the given configuration.
 
             import srsMatlabWrappers.phy.upper.channel_coding.ldpc.srsLDPCsegmenter
             import srsTest.helpers.bitPack

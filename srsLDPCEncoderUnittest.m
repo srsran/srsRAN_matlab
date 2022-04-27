@@ -22,7 +22,7 @@
 %
 %   srsLDPCEncoderUnittest Methods (TestTags = {'testvector'}):
 %
-%   testvectorGenerationCases - Generates a test vectors for the given base graph
+%   testvectorGenerationCases - Generates a test vector for the given base graph
 %                               and lifting size.
 %
 %   srsLDPCEncoderUnittest Methods (Access = protected):
@@ -80,7 +80,7 @@ classdef srsLDPCEncoderUnittest < srsTest.srsBlockUnittest
 
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(obj, baseGraph, liftSize)
-        %testvectorGenerationCases Generates a test vectors for the given base graph
+        %testvectorGenerationCases Generates a test vector for the given base graph
         %   and lifting size.
 
             import srsTest.helpers.writeUint8File

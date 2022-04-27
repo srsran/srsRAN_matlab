@@ -28,7 +28,7 @@
 %
 %   srsLDPCRateMatcherUnittest Methods (TestTags = {'testvector'}):
 %
-%   testvectorGenerationCases - Generates a test vectors for the given configuration.
+%   testvectorGenerationCases - Generates a test vector for the given configuration.
 %
 %   srsLDPCRateMatcherUnittest Methods (Access = protected):
 %
@@ -109,7 +109,7 @@ classdef srsLDPCRateMatcherUnittest < srsTest.srsBlockUnittest
     methods (Test, TestTags = {'testvector'}, ParameterCombination = 'pairwise')
         function testvectorGenerationCases(obj, baseGraph, rmLength, rv, ...
                 modScheme, isLBRM)
-        %testvectorGenerationCases Generates a test vectors for the given base graph,
+        %testvectorGenerationCases Generates a test vector for the given base graph,
         %   rate-matched length, redundancy version, modulation scheme and LBRM flag.
 
             import srsTest.helpers.writeUint8File

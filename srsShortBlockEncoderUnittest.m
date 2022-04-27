@@ -1,4 +1,4 @@
-%srsShortBlockEncoderUnittest Unit tests for the LDPC encoder.
+%srsShortBlockEncoderUnittest Unit tests for the short-block encoder.
 %   This class implements unit tests for the short-block encoder using the matlab.unittest
 %   framework. The simplest use consists in creating an object with
 %       testCase = srsShortBlockEncoderUnittest
@@ -71,8 +71,8 @@ classdef srsShortBlockEncoderUnittest < srsTest.srsBlockUnittest
 
             fprintf(fileID, 'struct test_case_t {\n');
             fprintf(fileID, 'unsigned nof_messages            = 0;\n');
-            fprintf(fileID, 'unsigned input_length            = 0;\n');
-            fprintf(fileID, 'unsigned output_length           = 0;\n');
+            fprintf(fileID, 'unsigned message_length            = 0;\n');
+            fprintf(fileID, 'unsigned codeblock_length           = 0;\n');
             fprintf(fileID, 'modulation_scheme mod = {};\n');
             fprintf(fileID, 'file_vector<uint8_t> messages;\n');
             fprintf(fileID, 'file_vector<uint8_t> codeblocks;\n');

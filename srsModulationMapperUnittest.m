@@ -22,7 +22,7 @@
 %
 %   srsModulationMapperUnittest Methods (TestTags = {'testvector'}):
 %
-%   testvectorGenerationCases - Generates a test vectors for the given modulation
+%   testvectorGenerationCases - Generates a test vector for the given modulation
 %                               scheme and number of symbols.
 %
 %   srsModulationMapperUnittest Methods (Access = protected):
