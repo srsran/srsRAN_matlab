@@ -124,8 +124,7 @@ classdef srsSSBProcessorUnittest < srsTest.srsBlockUnittest
             NCellIDLoc = testCase.NCellID{randomizedTestCase};
             randomizedSFN = testCase.randomizeSFN(testID + 1);
             SFNLoc = testCase.SFN{randomizedSFN};
-            %portIdx = randi([0 63], 1, 1);
-            portIdx = 13;
+            portIdx = randi([0 63], 1, 1);
             randomMIB = randi([0 1], 24, 1);
 
             % current fixed parameter values as required by the C code
