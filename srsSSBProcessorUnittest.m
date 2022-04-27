@@ -63,7 +63,7 @@ classdef srsSSBProcessorUnittest < srsTest.srsBlockUnittest
         PSSscale = {0, -3}
 
         %SSB index (0...63).
-        SSBindex = num2cell(0)%:63)
+        SSBindex = num2cell(0:63)
 
         %Index of the subframe with a SSB in a given half-frame (0, 5).
         subframeIndex = {0, 5}
@@ -124,8 +124,9 @@ classdef srsSSBProcessorUnittest < srsTest.srsBlockUnittest
             NCellIDLoc = testCase.NCellID{randomizedTestCase};
             randomizedSFN = testCase.randomizeSFN(testID + 1);
             SFNLoc = testCase.SFN{randomizedSFN};
-            portIdx = randi([0 63], 1, 1);
-            payload = randi([0 1], 24, 1);
+            %portIdx = randi([0 63], 1, 1);
+            portIdx = 13;
+            randomMIB = randi([0 1], 24, 1);
 
             % current fixed parameter values as required by the C code
             pointAoffset = 0;
@@ -151,24 +152,45 @@ classdef srsSSBProcessorUnittest < srsTest.srsBlockUnittest
                 subframeInBurst = floor(slotInBurst / carrier.SlotsPerSubframe);
                 slotInSubframe = mod(slotInBurst, carrier.SlotsPerSubframe);
                 subframeIndexLoc = subframeIndex + subframeInBurst;
-                nHF = floor(subframeInBurst / 5);
+                nHF = floor(subframeIndexLoc / 5);
+                SSBfirstSubcarrierIndex = srsSSBgetFirstSubcarrierIndex(numerology, pointAoffset, SSBoffset);
+                SSBfirstSymbolIndexSlot = mod(SSBfirstSymbolIndex, carrier.SymbolsPerSlot);
+
+                % the BCH payload comprises 24 MIB bits, 4 SFN LSBs, 1 nHF bit and 3 SSBindex MSBs (TS 138.212, Section 7.1.1)
+                SFNbinStr = dec2bin(SFNLoc, 8);
+                SFNbin = SFNbinStr(end-3:end).' == '1';
+                SSBindexbinStr = dec2bin(SSBindex, 8);
+                SSBindexbin = SSBindexbinStr(1:3).' == '1';
+                payload = [randomMIB; SFNbin; nHF; SSBindexbin];
 
                 % call the PBCH encoder MATLAB functions
-                cw = srsPBCHencoder(payload, NCellIDLoc, SSBindex, Lmax, SFNLoc, nHF, SSBoffset);
+                cw = srsPBCHencoder(randomMIB, NCellIDLoc, SSBindex, Lmax, SFNLoc, nHF, SSBoffset);
 
-                % call the PSS generation MATLAB functions
+                % call the PSS generation MATLAB functions and adjust the SSB indexing offsets
                 [PSSsymbols, PSSindices] = srsPSS(NCellIDLoc);
+                PSSindices(:, 1) = PSSindices(:, 1) +  SSBfirstSubcarrierIndex;
+                PSSindices(:, 2) = PSSindices(:, 2) +  SSBfirstSymbolIndexSlot;
+                PSSindices(:, 3) = ones(length(PSSsymbols), 1) * portIdx;
                 betaPSS = 10^(PSSscale / 20);
                 PSSsymbols = betaPSS * PSSsymbols;
 
-                % call the SSS generation MATLAB functions
+                % call the SSS generation MATLAB functions and adjust the SSB indexing offsets
                 [SSSsymbols, SSSindices] = srsSSS(NCellIDLoc);
+                SSSindices(:, 1) = SSSindices(:, 1) +  SSBfirstSubcarrierIndex;
+                SSSindices(:, 2) = SSSindices(:, 2) +  SSBfirstSymbolIndexSlot;
+                SSSindices(:, 3) = ones(length(SSSsymbols), 1) * portIdx;
 
-                % call the PBCH symbol modulation MATLAB functions
+                % call the PBCH symbol modulation MATLAB functions and adjust the SSB indexing offsets
                 [PBCHsymbols, PBCHindices] = srsPBCHmodulator(cw, NCellIDLoc, SSBindex, Lmax);
+                PBCHindices(:, 1) = PBCHindices(:, 1) +  SSBfirstSubcarrierIndex;
+                PBCHindices(:, 2) = PBCHindices(:, 2) +  SSBfirstSymbolIndexSlot;
+                PBCHindices(:, 3) = ones(length(PBCHsymbols), 1) * portIdx;
 
-                % call the PBCH DMRS symbol processor MATLAB functions
+                % call the PBCH DMRS symbol processor MATLAB functions and adjust the SSB indexing offsets
                 [PBCHdmrsSymbols, PBCHdmrsIndices] = srsPBCHdmrs(NCellIDLoc, SSBindex, Lmax, nHF);
+                PBCHdmrsIndices(:, 1) = PBCHdmrsIndices(:, 1) +  SSBfirstSubcarrierIndex;
+                PBCHdmrsIndices(:, 2) = PBCHdmrsIndices(:, 2) +  SSBfirstSymbolIndexSlot;
+                PBCHdmrsIndices(:, 3) = ones(length(PBCHdmrsSymbols), 1) * portIdx;
 
                 % combine all generated symbols and indices and write them to a binary file
                 SSBsymbols = [PSSsymbols; SSSsymbols; PBCHsymbols; PBCHdmrsSymbols];
@@ -178,11 +200,11 @@ classdef srsSSBProcessorUnittest < srsTest.srsBlockUnittest
 
                 % generate the test case entry
                 SFNbinStr = dec2bin(SFNLoc, 8);
-                SFNbin = SFNbinStr.' == '1';
+                SFNbin = SFNbinStr(1:8).' == '1';
                 testCaseString = testCase.testCaseToString(testID, ...
                     {{numerology, SFNLoc, subframeIndexLoc, slotInSubframe}, NCellIDLoc, ...
                         PSSscale, SSBindex, Lmax, SSBoffset, pointAoffset, ...
-                        ['ssb_pattern_case::', upper(SSBpattern)], [payload; SFNbin], ...
+                        ['ssb_pattern_case::', upper(SSBpattern)], payload, ...
                         SSBportsStr}, true, '_test_output');
 
                 % add the test to the file header
