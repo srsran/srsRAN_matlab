@@ -20,7 +20,7 @@
 %   numerology   - Defines the subcarrier spacing (0, 1).
 %   DFTsize      - Size of the DFT (128, 256, 384, 512, 768, 1024, 1536, 2048, 3072, 4096).
 %   CyclicPrefix - Cyclic prefix type ('normal', 'extended').
-%   NSlot        - Slot index (0, ..., 15).
+%   NSlot        - Slot index (0...15).
 %
 %   srsOFDMmodulatorUnittest Methods (TestTags = {'testvector'}):
 %
@@ -50,7 +50,7 @@ classdef srsOFDMmodulatorUnittest < srsTest.srsBlockUnittest
 
     properties (TestParameter)
         %Defines the subcarrier spacing (0, 1, 2, 3, 4).
-        numerology = {0, 1, 2}%, 3, 4}
+        numerology = {0, 1, 2}
 
         %Size of the DFT (256, 512, 1024, 2048, 4096). Only standard values.
         DFTsize = {256, 512, 1024, 2048, 4096}
@@ -58,8 +58,8 @@ classdef srsOFDMmodulatorUnittest < srsTest.srsBlockUnittest
         %Cyclic prefix type ('normal', 'extended').
         CyclicPrefix = {'normal', 'extended'}
 
-        %Slot index (0, ..., 15).
-        NSlot = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
+        %Slot index (0...15).
+        NSlot = num2cell(0:15)
     end
 
     methods (Access = protected)
@@ -70,8 +70,6 @@ classdef srsOFDMmodulatorUnittest < srsTest.srsBlockUnittest
 
         function addTestDefinitionToHeaderFile(obj, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
-            %addTestDefinitionToHeaderFilePHYsigproc(obj, fileID);
-            % for very specific header types, we'll skip the generic 'srsBlockUnittest' function
             fprintf(fileID, 'struct ofdm_modulator_test_configuration {\n');
             fprintf(fileID, 'ofdm_modulator_configuration config;\n');
             fprintf(fileID, 'uint8_t port_idx;\n');
@@ -102,7 +100,7 @@ classdef srsOFDMmodulatorUnittest < srsTest.srsBlockUnittest
             % use a unique port index and scale for each test
             portIdx = randi([0, 15]);
             payload = randi([0 1], 24, 1);
-            scale = (-1-1).*rand(1, 1) + 1;
+            scale = 2 * rand - 1;
             if numerology == 3
               NSlotLoc = 5;
             else
@@ -118,7 +116,7 @@ classdef srsOFDMmodulatorUnittest < srsTest.srsBlockUnittest
             NSizeGrid = floor(192 * (DFTsize / 4096));
 
             % skip those invalid configuration cases
-            isCPTypeOK = numerology == 2 || strcmp(CyclicPrefix, 'normal');
+            isCPTypeOK = ((numerology == 2) || strcmp(CyclicPrefix, 'normal'));
             isNSizeGridOK = NSizeGrid > 0;
 
             if isCPTypeOK && isNSizeGridOK
@@ -134,6 +132,7 @@ classdef srsOFDMmodulatorUnittest < srsTest.srsBlockUnittest
                 testCase.saveDataFile('_test_input', testID, ...
                     @writeResourceGridEntryFile, inputData, inputIndices);
 
+                % call the OFDM modulator MATLAB functions
                 timeDomainData = nrOFDMModulate(carrier, reshape(inputData, [NSizeGrid * 12, carrier.SymbolsPerSlot]), ...
                     'Windowing', 0, 'CarrierFrequency', CarrierFrequency);
 

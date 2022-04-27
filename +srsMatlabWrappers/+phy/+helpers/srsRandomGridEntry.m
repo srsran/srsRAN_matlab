@@ -11,9 +11,9 @@ function [symbols, indices] = srsRandomGridEntry(carrier, portIdx)
     indices = nan(nofSymbols * nofSubcarriers, 3);
     symbolOffset = 0;
     for symbolIdx = 0:nofSymbols-1
-        indices(symbolOffset + 1:symbolOffset + nofSubcarriers, 1) = 0:nofSubcarriers-1;
-        indices(symbolOffset + 1:symbolOffset + nofSubcarriers, 2) = ones(1, nofSubcarriers) * symbolIdx;
-        indices(symbolOffset + 1:symbolOffset + nofSubcarriers, 3) = ones(1, nofSubcarriers) * portIdx;
+        indices(symbolOffset + (1:nofSubcarriers), 1) = 0:nofSubcarriers-1;
+        indices(symbolOffset + (1:nofSubcarriers), 2) = ones(1, nofSubcarriers) * symbolIdx;
+        indices(symbolOffset + (1:nofSubcarriers), 3) = ones(1, nofSubcarriers) * portIdx;
         symbolOffset = symbolOffset + nofSubcarriers;
     end
 
