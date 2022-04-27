@@ -63,6 +63,8 @@ function unittestClass = name2Class(name)
             unittestClass = ?srsLDPCSegmenterUnittest;
         case 'modulation_mapper'
             unittestClass = ?srsModulationMapperUnittest;
+        case 'ofdm_demodulator'
+            unittestClass = ?srsOFDMdemodulatorUnittest;
         case 'ofdm_modulator'
             unittestClass = ?srsOFDMmodulatorUnittest;
         case 'pbch_encoder'
