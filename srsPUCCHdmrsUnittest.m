@@ -81,7 +81,11 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
 
         function addTestDefinitionToHeaderFile(obj, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
-            addTestDefinitionToHeaderFilePHYsigproc(obj, fileID);
+            fprintf(fileID, 'struct test_case_t {\n');
+            fprintf(fileID, '%s::config_t config;\n', obj.srsBlock);
+            fprintf(fileID, ...
+                'file_vector<resource_grid_reader_spy::expected_entry_t> symbols;\n');
+            fprintf(fileID, '};\n');
         end
     end % of methods (Access = protected)
 
@@ -167,15 +171,6 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
                     startSymbolIndex = 0;
                 end
 
-                % check slot boundaries
-%                 if (startSymbolIndex + symbolLength) > testCase.numSlotSymbols
-%                     symbolLength = testCase.numSlotSymbols - startSymbolIndex;
-%                     % In formats 1, 3 and 4 symbol length can't be less
-%                     % than 4 symbols
-%                     if format ~= 2 && symbolLength < 4
-%                         symbolLength
-%                     end
-%                 end
                 SymbolAllocation = [startSymbolIndex symbolLength];
 
                 % Orhtogonal cover code index
@@ -210,7 +205,7 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
                 testCaseString = testCase.testCaseToString(testID, ...
                     {formatString, slotPointConfig, GroupHoppingStr, startSymbolIndex,...
                      symbolLength, startPRB, 'false', 0, nofPRBs, InitialCyclicShift, OCCI, ...
-                     'false', nid, nid0, PDCCHportsStr}, false, '_test_output');
+                     'false', nid, nid0, PDCCHportsStr}, true, '_test_output');
 
                 % add the test to the file header
                 testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);
