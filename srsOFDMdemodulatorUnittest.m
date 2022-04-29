@@ -101,11 +101,7 @@ classdef srsOFDMdemodulatorUnittest < srsTest.srsBlockUnittest
             portIdx = randi([0, 15]);
             payload = randi([0 1], 24, 1);
             scale = 2 * rand - 1;
-            if numerology == 3
-              NSlotLoc = 5;
-            else
-              NSlotLoc = randi([0 pow2(numerology)-1]);
-            end
+            NSlotLoc = randi([0 pow2(numerology)-1]);
 
             % current fixed parameter values
             NStartGrid = 0;
