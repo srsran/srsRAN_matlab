@@ -1,6 +1,6 @@
-%srsSSBgetNumerology Indicates the numerology of a given SSB pattern.
+%srsSSBgetNumerology Returns the numerology of a given SSB pattern.
 %   NUMEROLOGY = srsSSBgetNumerology(SSBPATTERN) returns a subcarrier space NUMEROLOGY
-%   given a SSB pattern SSBPATTERN.
+%   given an SSB pattern SSBPATTERN.
 
 function numerology = srsSSBgetNumerology(SSBpattern)
 

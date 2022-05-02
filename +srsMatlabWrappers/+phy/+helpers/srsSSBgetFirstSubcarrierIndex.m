@@ -2,7 +2,7 @@
 %   block relative to the bottom of the grid (pointA).
 %   SSBFIRSTSUBCARRIERINDEX = srsSSBgetFirstSubcarrierIndex(NUMEROLOGY, POINTAOFFSET, SSBOFFSET)
 %   returns a subcarrier index SSBFIRSTSUBCARRIERINDEX, given a subcarrier spacing NUMEROLOGY,
-%   a bottom grid value POINTAOFFSET and a SSB offset SSBOFFSET.
+%   a bottom grid value POINTAOFFSET and an SSB offset SSBOFFSET.
 
 function SSBfirstSubcarrierIndex = srsSSBgetFirstSubcarrierIndex(numerology, pointAoffset, SSBoffset)
 

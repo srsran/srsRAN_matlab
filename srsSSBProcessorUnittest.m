@@ -124,7 +124,7 @@ classdef srsSSBProcessorUnittest < srsTest.srsBlockUnittest
             NCellIDLoc = testCase.NCellID{randomizedTestCase};
             randomizedSFN = testCase.randomizeSFN(testID + 1);
             SFNLoc = testCase.SFN{randomizedSFN};
-            portIdx = randi([0 63], 1, 1);
+            portIdx = randi([0 63]);
             randomMIB = randi([0 1], 24, 1);
 
             % current fixed parameter values as required by the C code
@@ -157,9 +157,9 @@ classdef srsSSBProcessorUnittest < srsTest.srsBlockUnittest
 
                 % the BCH payload comprises 24 MIB bits, 4 SFN LSBs, 1 nHF bit and 3 SSBindex MSBs (TS 138.212, Section 7.1.1)
                 SFNbinStr = dec2bin(SFNLoc, 8);
-                SFNbin = SFNbinStr(end-3:end).' == '1';
+                SFNbin = (SFNbinStr(end-3:end).' == '1');
                 SSBindexbinStr = dec2bin(SSBindex, 8);
-                SSBindexbin = SSBindexbinStr(1:3).' == '1';
+                SSBindexbin = (SSBindexbinStr(1:3).' == '1');
                 payload = [randomMIB; SFNbin; nHF; SSBindexbin];
 
                 % call the PBCH encoder MATLAB functions
@@ -199,7 +199,7 @@ classdef srsSSBProcessorUnittest < srsTest.srsBlockUnittest
 
                 % generate the test case entry
                 SFNbinStr = dec2bin(SFNLoc, 8);
-                SFNbin = SFNbinStr(1:8).' == '1';
+                SFNbin = (SFNbinStr(1:8).' == '1');
                 testCaseString = testCase.testCaseToString(testID, ...
                     {{numerology, SFNLoc, subframeIndexLoc, slotInSubframe}, NCellIDLoc, ...
                         PSSscale, SSBindex, Lmax, SSBoffset, pointAoffset, ...

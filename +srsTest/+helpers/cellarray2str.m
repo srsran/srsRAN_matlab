@@ -11,18 +11,18 @@ function [outputString] = cellarray2str(inputCellArray, isStruct)
         outputString = '';
     end
 
-    addComa = false;
+    addComma = false;
     for arg = inputCellArray(1:end-1)
         % manage subcells within the input cell
         if iscell(arg{1})
             import srsTest.helpers.cellarray2str
             tmp = cellarray2str({arg{1}{:}}, true);
             outputString = [outputString, tmp];
-            addComa = true;
+            addComma = true;
         else
-            if addComa
+            if addComma
                 outputString = [outputString, ', '];
-                addComa = false;
+                addComma = false;
             end;
             outputString = [outputString, cell2str(arg), ', ']; %#ok<AGROW>
         end
