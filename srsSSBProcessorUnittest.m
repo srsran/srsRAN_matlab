@@ -134,7 +134,7 @@ classdef srsSSBProcessorUnittest < srsTest.srsBlockUnittest
             SSBportsStr = cellarray2str({portIdx}, true);
 
             % skip those invalid configuration cases
-            isPatternOK = (Lmax < 64 || (strcmp(SSBpattern, 'D') && strcmp(SSBpattern, 'E')));
+            isPatternOK = ((Lmax < 64) || (strcmp(SSBpattern, 'D') && strcmp(SSBpattern, 'E')));
             isSSBindexOK = SSBindex < Lmax;
 
             if isPatternOK && isSSBindexOK

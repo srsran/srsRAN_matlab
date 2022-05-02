@@ -1,51 +1,51 @@
-%srsOFDMmodulatorUnittest Unit tests for OFDM modulator functions.
-%   This class implements unit tests for the OFDM modulator functions using the
+%srsOFDMDemodulatorUnittest Unit tests for OFDM demodulator functions.
+%   This class implements unit tests for the OFDM demodulator functions using the
 %   matlab.unittest framework. The simplest use consists in creating an object with
-%       testCase = srsOFDMmodulatorUnittest
+%       testCase = srsOFDMDemodulatorUnittest
 %   and then running all the tests with
 %       testResults = testCase.run
 %
-%   srsOFDMmodulatorUnittest Properties (Constant):
+%   srsOFDMDemodulatorUnittest Properties (Constant):
 %
-%   srsBlock      - The tested block (i.e., 'ofdm_modulator').
+%   srsBlock      - The tested block (i.e., 'ofdm_demodulator').
 %   srsBlockType  - The type of the tested block, including layer
 %                   (i.e., 'phy/lower/modulation').
 %
-%   srsOFDMmodulatorUnittest Properties (ClassSetupParameter):
+%   srsOFDMDemodulatorUnittest Properties (ClassSetupParameter):
 %
 %   outputPath - Path to the folder where the test results are stored.
 %
-%   srsOFDMmodulatorUnittest Properties (TestParameter):
+%   srsOFDMDemodulatorUnittest Properties (TestParameter):
 %
 %   numerology   - Defines the subcarrier spacing (0, 1).
 %   DFTsize      - Size of the DFT (128, 256, 384, 512, 768, 1024, 1536, 2048, 3072, 4096).
 %   CyclicPrefix - Cyclic prefix type ('normal', 'extended').
 %   NSlot        - Slot index (0...15).
 %
-%   srsOFDMmodulatorUnittest Methods (TestTags = {'testvector'}):
+%   srsOFDMDemodulatorUnittest Methods (TestTags = {'testvector'}):
 %
 %   testvectorGenerationCases - Generates test vectors according to the provided
 %                               parameters.
 %
-%   srsOFDMmodulatorUnittest Methods (Access = protected):
+%   srsOFDMDemodulatorUnittest Methods (Access = protected):
 %
 %   addTestIncludesToHeaderFile     - Adds include directives to the test header file.
 %   addTestDefinitionToHeaderFile   - Adds details (e.g., type/variable declarations)
 %                                     to the test header file.
 %
-%  See also matlab.unittest.
-classdef srsOFDMmodulatorUnittest < srsTest.srsBlockUnittest
+%  See also matlab.unittest, nrOFDMModulate and nrOFDMDemodulate.
+classdef srsOFDMDemodulatorUnittest < srsTest.srsBlockUnittest
     properties (Constant)
         %Name of the tested block.
-        srsBlock = 'ofdm_modulator'
+        srsBlock = 'ofdm_demodulator'
 
         %Type of the tested block.
         srsBlockType = 'phy/lower/modulation'
     end
 
     properties (ClassSetupParameter)
-        %Path to results folder (old 'ofdm_modulator' tests will be erased).
-        outputPath = {['testOFDMmodulator', datestr(now, 30)]}
+        %Path to results folder (old 'ofdm_demodulator' tests will be erased).
+        outputPath = {['testOFDMdemodulator', datestr(now, 30)]}
     end
 
     properties (TestParameter)
@@ -70,16 +70,16 @@ classdef srsOFDMmodulatorUnittest < srsTest.srsBlockUnittest
 
         function addTestDefinitionToHeaderFile(obj, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
-            fprintf(fileID, 'struct ofdm_modulator_test_configuration {\n');
-            fprintf(fileID, 'ofdm_modulator_configuration config;\n');
+            fprintf(fileID, 'struct ofdm_demodulator_test_configuration {\n');
+            fprintf(fileID, 'ofdm_demodulator_configuration config;\n');
             fprintf(fileID, 'uint8_t port_idx;\n');
             fprintf(fileID, 'uint8_t slot_idx;\n');
             fprintf(fileID, '};\n\n');
             fprintf(fileID, 'struct test_case_t {\n');
-            fprintf(fileID, 'ofdm_modulator_test_configuration test_config;\n');
+            fprintf(fileID, 'ofdm_demodulator_test_configuration test_config;\n');
+            fprintf(fileID, 'file_vector<cf_t>                                       data;\n');
             fprintf(fileID, ...
-                'file_vector<resource_grid_writer_spy::expected_entry_t> data;\n');
-            fprintf(fileID, 'file_vector<cf_t> modulated;\n');
+                'file_vector<resource_grid_writer_spy::expected_entry_t> demodulated;\n');
             fprintf(fileID, '};\n');
         end
     end % of methods (Access = protected)
@@ -124,21 +124,25 @@ classdef srsOFDMmodulatorUnittest < srsTest.srsBlockUnittest
                 % generate the DFT input data and related indices
                 [inputData, inputIndices] = srsRandomGridEntry(carrier, portIdx);
 
-                % write the complex symbol and associated indices into a binary file
-                testCase.saveDataFile('_test_input', testID, ...
-                    @writeResourceGridEntryFile, inputData, inputIndices);
-
                 % call the OFDM modulator MATLAB functions
                 timeDomainData = nrOFDMModulate(carrier, reshape(inputData, [NSizeGrid * 12, carrier.SymbolsPerSlot]), ...
                     'Windowing', 0, 'CarrierFrequency', CarrierFrequency);
 
-                % apply the requested scale and homogenize the output values with those of srsgnb
-                srsGNBscaleFactor = DFTsize;
-                timeDomainData = timeDomainData * scale * srsGNBscaleFactor;
-
                 % write the time-domain data into a binary file
-                testCase.saveDataFile('_test_output', testID, ...
+                testCase.saveDataFile('_test_input', testID, ...
                     @writeComplexFloatFile, timeDomainData);
+
+                % call the OFDM demodulator MATLAB functions
+                demodulatedData = nrOFDMDemodulate(carrier, timeDomainData, ...
+                    'CyclicPrefixFraction', 0, 'CarrierFrequency', CarrierFrequency);
+
+                % apply the requested scale
+                demodulatedData = demodulatedData * scale;
+
+                % reshape the demodulated data and write it with its associated indices into a binary file
+                demodulatedGrid = reshape(demodulatedData, [], 1);
+                testCase.saveDataFile('_test_output', testID, ...
+                    @writeResourceGridEntryFile, demodulatedGrid, inputIndices);
 
                 % generate the test case entry
                 testCaseString = testCase.testCaseToString(testID, {{numerology, NSizeGrid, ...
@@ -150,4 +154,4 @@ classdef srsOFDMmodulatorUnittest < srsTest.srsBlockUnittest
             end
         end % of function testvectorGenerationCases
     end % of methods (Test, TestTags = {'testvector'})
-end % of classdef srsOFDMmodulatorUnittest
+end % of classdef srsOFDMDemodulatorUnittest
