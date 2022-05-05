@@ -54,6 +54,10 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
         %PUCCH format indexes
         format = {1, 2, 3, 4};
 
+        intraSlotFreqHopping = {false, true};
+
+        testCaseTrial = {1, 2}
+
     end % of properties (TestParameter)
 
     properties(Constant, Hidden)
@@ -61,15 +65,15 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
 
         %PHY-layer cell ID (0...1007).
         NCellID = num2cell(0:1007)
-        
+
         %Min and max symbol length allowed for each of five PUCCH formats
         formatLengthSymbols = [1 2; 4 14; 1 2; 4 14; 4 14]
-        
+
         %Possible length in number of PRBs for format 3
         prbLengthFormat3 = [1 2 3 4 5 6 8 9 10 12 15 16]
-        
+
         srsFormatName = 'pucch_format::FORMAT_';
-        
+
         numSlotSymbols = 14;
     end
 
@@ -90,7 +94,7 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
     end % of methods (Access = protected)
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(testCase, numerology, format)
+        function testvectorGenerationCases(testCase, numerology, format, intraSlotFreqHopping, testCaseTrial)
         %testvectorGenerationCases Generates a test vector for the given numerology and format,
         %  while using a random NCellID, random NSlot and random symbol and PRB length.
 
@@ -156,11 +160,11 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
             PRBSet = startPRB;
             % for formats 2 and 3 it is a range
             if setPRBsAsRange
-                endPRB = startPRB + nofPRBs;
+                endPRB = startPRB + nofPRBs - 1;
                 PRBSet = startPRB : endPRB;
             end
 
-            if format == 1  %For now only Format 1 is supported
+            if format == 1 || format == 2  %For now only Formats 1 and 2 are supported
                 % random start symbol and length in symbols
                 symbolLength = randi([testCase.formatLengthSymbols(format + 1, 1) ...
                                       testCase.formatLengthSymbols(format + 1, 2)]);
@@ -174,9 +178,40 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
                 SymbolAllocation = [startSymbolIndex symbolLength];
 
                 % Orhtogonal cover code index
-                % When intraslot frequency hopping is disabled, the OCCI value must be less 
-                % than the floor of half of the number of OFDM symbols allocated for the PUCCH)
-                OCCI = randi([0 floor(symbolLength / 2) - 1]);
+                OCCI = 0;
+                if format == 1 || format == 4
+                    % When intraslot frequency hopping is disabled, the OCCI value must be less 
+                    % than the floor of half of the number of OFDM symbols allocated for the PUCCH.
+                    if ~intraSlotFreqHopping
+                        OCCI = randi([0 (floor(symbolLength / 2) - 1)]);
+                    else
+                    % When intraslot frequency hopping is enabled, the OCCI value must be less
+                    % than the floor of one-fourth of the number of OFDM symbols allocated for the PUCCH.
+                        maxOCCindex = floor(symbolLength / 4) - 1;
+                        if maxOCCindex == 0
+                            OCCI = 0;
+                        else
+                            OCCI = randi([0 maxOCCindex]);
+                        end
+                    end
+                end
+
+                % Randomly select SecondHopStartPRB if intraSlot Frequency
+                % hopping is enabled
+                if intraSlotFreqHopping
+                    gridPRBs = 0:51;
+                    prbCount = nofPRBs;
+                    if nofPRBs == 1
+                        prbCount = prbCount - 1;
+                    end
+                    validStartIndexes  = and(~ismember((gridPRBs + prbCount), PRBSet), ...
+                                            (gridPRBs + prbCount) < NSizeGrid);
+                    % exclude PRBset used by the first hop
+                    validStartIndexes(PRBSet + 1) = 0;
+                    validSecondHopPRBs = gridPRBs(validStartIndexes);
+                    SecondHopStartPRB  = validSecondHopPRBs(randi([1 size(validSecondHopPRBs, 2)]));
+                    FrequencyHopping   = 'intraSlot';
+                end
 
                 % configure the carrier according to the test parameters
                 SubcarrierSpacing = 15 * (2 .^ numerology);
@@ -200,11 +235,17 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
                 slotPointConfig = cellarray2str({numerology, NSlotLoc}, true);
                 % group hopping string following srsgnb naming
                 GroupHoppingStr = ['pucch_group_hopping::', upper(GroupHopping)];
+                % write as true/false
+                if intraSlotFreqHopping
+                    intraSlotFreqHoppingStr = 'true';
+                else
+                    intraSlotFreqHoppingStr = 'false';
+                end
 
                 % generate the test case entry
                 testCaseString = testCase.testCaseToString(testID, ...
-                    {formatString, slotPointConfig, GroupHoppingStr, startSymbolIndex,...
-                     symbolLength, startPRB, 'false', 0, nofPRBs, InitialCyclicShift, OCCI, ...
+                    {formatString, slotPointConfig, 'cyclic_prefix::NORMAL', GroupHoppingStr, startSymbolIndex,...
+                     symbolLength, startPRB, intraSlotFreqHoppingStr, SecondHopStartPRB, nofPRBs, InitialCyclicShift, OCCI, ...
                      'false', nid, nid0, PDCCHportsStr}, true, '_test_output');
 
                 % add the test to the file header
