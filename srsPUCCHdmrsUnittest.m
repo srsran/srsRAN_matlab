@@ -54,8 +54,11 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
         %PUCCH format indexes
         format = {1, 2, 3, 4};
 
+        %Frequency-hopping ('disabled', 'intra-slot')
         intraSlotFreqHopping = {false, true};
 
+        %Two test vectors with randomized parameters (e.g. cell ID, slot number etc.) 
+        %are generated for each set of unittest parameters
         testCaseTrial = {1, 2}
 
     end % of properties (TestParameter)
@@ -72,8 +75,10 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
         %Possible length in number of PRBs for format 3
         prbLengthFormat3 = [1 2 3 4 5 6 8 9 10 12 15 16]
 
+        %PUCCH format string following srsgnb repo API
         srsFormatName = 'pucch_format::FORMAT_';
 
+        %Number of symbols per slot considering normal cyclic prefix
         numSlotSymbols = 14;
     end
 
@@ -100,13 +105,14 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
 
             import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
             import srsMatlabWrappers.phy.helpers.srsConfigurePUCCH
+            import srsMatlabWrappers.phy.upper.signal_processors.srsPUCCHdmrs
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.cellarray2str
 
             % generate a unique test ID by looking at the number of files generated so far
             testID = testCase.generateTestID;
 
-            % use a unique NCellID, NSlot and rnti for each test
+            % use a unique NCellIDLoc, NSlotLoc for each test
             randomizedCellID = testCase.randomizeTestvector(testID + 1);
             NCellIDLoc = testCase.NCellID{randomizedCellID};
 
@@ -153,6 +159,7 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
                     nofPRBs = testCase.prbLengthFormat3(randId);
                     setPRBsAsRange = true;
             end
+            % make sure the PRB allocation is not beyond the resource grid
             if startPRB + nofPRBs > NSizeGrid
                 nofPRBs = NSizeGrid - startPRB;
             end
@@ -202,6 +209,7 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
                     gridPRBs = 0:51;
                     prbCount = nofPRBs;
                     if nofPRBs == 1
+                        % a fixup used for a single allocated PRB
                         prbCount = prbCount - 1;
                     end
                     validStartIndexes  = and(~ismember((gridPRBs + prbCount), PRBSet), ...
@@ -210,6 +218,7 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
                     validStartIndexes(PRBSet + 1) = 0;
                     validSecondHopPRBs = gridPRBs(validStartIndexes);
                     SecondHopStartPRB  = validSecondHopPRBs(randi([1 size(validSecondHopPRBs, 2)]));
+                    % set respective MATLAB parameter
                     FrequencyHopping   = 'intraSlot';
                 end
 
@@ -223,9 +232,8 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
                     FrequencyHopping, GroupHopping, SecondHopStartPRB, ...
                     InitialCyclicShift, OCCI);
 
-                % call the PDCCH DMRS symbol processor MATLAB functions
-                DMRSsymbols = nrPUCCHDMRS(carrier, pucch);
-                DMRSindices = nrPUCCHDMRSIndices(carrier, pucch, 'IndexStyle', 'subscript', 'IndexBase', '0based');
+                % call the PUCCH DMRS symbol processor MATLAB functions
+                [DMRSsymbols, DMRSindices] = srsPUCCHdmrs(carrier, pucch);
 
                 % write each complex symbol into a binary file, and the associated indices to another
                 testCase.saveDataFile('_test_output', testID, ...
