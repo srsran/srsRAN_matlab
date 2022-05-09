@@ -151,7 +151,6 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
         %   the header file pointed by FILEID, which describes the test vectors. This
         %   method is meant for blocks of type "phy/upper/channel_modulation".
 
-            fprintf(fileID, '#include "srsgnb/adt/complex.h"\n');
             fprintf(fileID, '#include "srsgnb/%s/%s.h"\n', ...
                 obj.srsBlockType, obj.srsBlock);
             fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
