@@ -138,14 +138,10 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
         %   the header file pointed by FILEID, which describes the test vectors. This
         %   method is meant for blocks of type "phy/upper/channel_processors".
 
-            if ~endsWith(obj.srsBlock, '_encoder')
-                fprintf(fileID, '#include "srsgnb/adt/complex.h"\n');
-            end
             fprintf(fileID, '#include "srsgnb/%s/%s.h"\n', ...
                 obj.srsBlockType, obj.srsBlock);
             fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
             if ~endsWith(obj.srsBlock, '_encoder')
-                fprintf(fileID, '#include <array>\n');
                 fprintf(fileID, '#include "../../resource_grid_test_doubles.h"\n');
             end
         end
