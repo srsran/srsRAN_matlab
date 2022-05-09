@@ -109,6 +109,9 @@ classdef srsShortBlockEncoderUnittest < srsTest.srsBlockUnittest
                 blkLength = 32;
             end
 
+            % Block length after rate-matching: at least as long as the basic block length.
+            blkLength = round(blkLength * (1 + randi([0, 8]) / 4));
+
             modSchemeLabels = srsGetModulation(modOrder);
 
             % encode
