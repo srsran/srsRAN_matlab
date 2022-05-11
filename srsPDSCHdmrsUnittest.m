@@ -125,18 +125,16 @@ classdef srsPDSCHdmrsUnittest < srsTest.srsBlockUnittest
             RNTI = 0;
             NStartBWP = 0;
             NSizeBWP = NSizeGrid;
-            numPorts = 1;
             referencePointKrb = 0;
             NIDNSCID = NCellID;
-            NumCDMGroupsWithoutDataLoc = 2;
             NID = NCellID;
             ReservedRE = [];
             Modulation = '16QAM';
             MappingType = 'A';
             SymbolAllocation = [1 13];
             PRBSet = PRBstart:PRBend;
-            pmi = 0;
-            PDSCHports = zeros(numPorts, 1);
+            amplitude = 0.5;
+            PDSCHports = 0:(NumLayers-1);
             PDSCHportsStr = cellarray2str({PDSCHports}, true);
 
             % skip those invalid configuration cases
@@ -150,7 +148,7 @@ classdef srsPDSCHdmrsUnittest < srsTest.srsBlockUnittest
                 % configure the PDSCH DMRS symbols according to the test parameters
                 DMRS = srsConfigurePDSCHdmrs(DMRSConfigurationType, ...
                     DMRSTypeAPosition, DMRSAdditionalPosition, DMRSLength, ...
-                    NIDNSCID, NSCID, NumCDMGroupsWithoutDataLoc);
+                    NIDNSCID, NSCID);
 
                 % configure the PDSCH according to the test parameters
                 pdsch = srsConfigurePDSCH(DMRS, NStartBWP, NSizeBWP, NID, RNTI, ...
@@ -162,7 +160,7 @@ classdef srsPDSCHdmrsUnittest < srsTest.srsBlockUnittest
 
                 % write each complex symbol into a binary file, and the associated indices to another
                 testCase.saveDataFile('_test_output', testID, ...
-                    @writeResourceGridEntryFile, DMRSsymbols, symbolIndices);
+                    @writeResourceGridEntryFile, amplitude * DMRSsymbols, symbolIndices);
 
                 % generate a 'slot_point' configuration string
                 slotPointConfig = cellarray2str({numerology, NFrame, ...
@@ -179,7 +177,7 @@ classdef srsPDSCHdmrsUnittest < srsTest.srsBlockUnittest
                 testCaseString = testCase.testCaseToString(testID, ...
                     {slotPointConfig, referencePointKrb, ...
                         ['dmrs_type::TYPE', num2str(DMRSConfigurationType)], ...
-                        NIDNSCID, NSCID, NumCDMGroupsWithoutDataLoc, pmi, ...
+                        NIDNSCID, NSCID, amplitude, ...
                         symbolAllocationMask, rbAllocationMask, PDSCHportsStr}, ...
                         true, '_test_output');
 
