@@ -6,8 +6,8 @@
 function [outputString] = cellarray2str(inputCellArray, isStruct)
     import srsTest.helpers.cell2str
     import srsTest.helpers.cellarray2str
-    
-   if isStruct
+
+    if isStruct
         outputString = '{';
     else
         outputString = '';
@@ -35,7 +35,7 @@ function [outputString] = inputCell2str(inputCell)
 
     % manage subcells within the input cell
     if iscell(inputCell{1})
-        outputString = cellarray2str({inputCell{1}{:}}, true);
+        outputString = cellarray2str(inputCell{1}(:)', true);
     else
         outputString = cell2str(inputCell);
     end
