@@ -18,7 +18,7 @@
 %   srsPUCCHdmrsUnittest Properties (TestParameter):
 %
 %   numerology           - Defines the subcarrier spacing (0, 1).
-%   format               - PUCCH format (1, 2, 3, 4).
+%   format               - PUCCH format (1, 2).
 %   intraSlotFreqHopping - Intra-slot frequency hopping (false - enabled, true - enabled)
 %
 %   srsPUCCHdmrsUnittest Methods (TestTags = {'testvector'}):
@@ -52,8 +52,8 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
         %Defines the subcarrier spacing (0, 1).
         numerology = {0, 1}
 
-        %PUCCH format indexes
-        format = {1, 2, 3, 4}
+        %PUCCH format indexes (for now only formats 1 and 2 are supported)
+        format = {1, 2}
 
         %Intra-slot frequency hopping usage (inter-slot hopping is not tested)
         intraSlotFreqHopping = {false, true}
@@ -102,11 +102,11 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
     methods (Access = private)
         function PRBSet = generateRandomPRBallocation(testCase, gridSize, format)
         %generateRandomPRBallocation Generates a PRB set starting from a random PRB index
-        % in the grid with a random valid length in number of PRBs.
+        %   in the grid with a random valid length in number of PRBs.
         %
-        % Parameters:
-        % gridSize - size of the resource grid
-        % format   - PUCCH format
+        %   Parameters:
+        %   gridSize - size of the resource grid
+        %   format   - PUCCH format
             startPRB = randi([0, gridSize - 1]);
             switch format
                 case {1, 4}
@@ -132,29 +132,6 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
                 PRBSet = startPRB:endPRB;
             end
         end % of function generateRandomPRBallocation
-
-        function SecondHopStartPRB = generateRandomSecondHopPRB(~, gridSize, PRBSet)
-        %generateRandomSecondHopPRB Randomly select a valid starting PRB 
-        % of a second hop in the grid.
-        %
-        % Parameters:
-        % gridSize - size of the resource grid
-        % PRBSet   - set of PRBs allocated for the first frequency hop
-            nofPRBs  = size(PRBSet, 2);
-            gridPRBs = 0:(gridSize - 1);
-            PRBcount = nofPRBs;
-            if nofPRBs == 1
-                % a fixup used for a single allocated PRB
-                PRBcount = PRBcount - 1;
-            end
-            totalPRBs = gridPRBs + PRBcount;
-            validStartIndexes = and(~ismember(totalPRBs, PRBSet), totalPRBs < gridSize);
-
-            % exclude PRBset used by the first hop
-            validStartIndexes(PRBSet + 1) = 0;
-            validSecondHopPRBs = gridPRBs(validStartIndexes);
-            SecondHopStartPRB  = validSecondHopPRBs(randi([1, size(validSecondHopPRBs, 2)]));
-        end % of function generateRandomSecondHopPRB
     end % of methods (Access = private)
 
     methods (Test, TestTags = {'testvector'})
@@ -201,19 +178,13 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
             % currently fixed to 1 port of random number from [0, 7]
             ports = randi([0, 7]);
             portsStr = cellarray2str({ports}, true);
-            
+
             % random initial cyclic shift
             InitialCyclicShift = randi([0, 11]);
             
             % random start PRB index and length in number of PRBs
             PRBSet  = generateRandomPRBallocation(testCase, NSizeGrid, format);
             nofPRBs = size(PRBSet, 2);
-
-            %For now only Formats 1 and 2 are supported
-            if ~((format == 1) || (format == 2))
-                sprintf("Skipping Formats 3 and 4 as non supported yet in srsgnb");
-                return;
-            end
 
             % random start symbol and length in symbols
             symbolLength = randi([testCase.formatLengthSymbols(format + 1, 1), ...
@@ -248,7 +219,7 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
 
             % Randomly select SecondHopStartPRB if intra-slot frequency hopping is enabled
             if intraSlotFreqHopping
-                SecondHopStartPRB = generateRandomSecondHopPRB(testCase, NSizeGrid, PRBSet);
+                SecondHopStartPRB = generateRandomSecondHopPRB(NSizeGrid, PRBSet);
                 % set respective MATLAB parameter
                 FrequencyHopping   = 'intraSlot';
             end
@@ -289,3 +260,26 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
         end % of function testvectorGenerationCases
     end % of methods (Test, TestTags = {'testvector'})
 end % of classdef srsPUCCHdmrsUnittest
+
+function SecondHopStartPRB = generateRandomSecondHopPRB(gridSize, PRBSet)
+%generateRandomSecondHopPRB Randomly select a valid starting PRB 
+%   of a second hop in the grid.
+%
+%   Parameters:
+%   gridSize - size of the resource grid
+%   PRBSet   - set of PRBs allocated for the first frequency hop
+    nofPRBs  = size(PRBSet, 2);
+    gridPRBs = 0:(gridSize - 1);
+    PRBcount = nofPRBs;
+    if nofPRBs == 1
+        % a fixup used for a single allocated PRB
+        PRBcount = PRBcount - 1;
+    end
+    totalPRBs = gridPRBs + PRBcount;
+    validStartIndexes = (~ismember(totalPRBs, PRBSet)) & (totalPRBs < gridSize);
+
+    % exclude PRBset used by the first hop
+    validStartIndexes(PRBSet + 1) = 0;
+    validSecondHopPRBs = gridPRBs(validStartIndexes);
+    SecondHopStartPRB  = validSecondHopPRBs(randi([1, size(validSecondHopPRBs, 2)]));
+end % of function generateRandomSecondHopPRB
