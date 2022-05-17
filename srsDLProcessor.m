@@ -47,7 +47,8 @@ classdef srsDLProcessor < srsTest.srsBlockUnittest
     end
 
     properties (TestParameter)
-        %List of NR Test Models for FR1.
+        %List of NR supported reference channels.
+        % See also srsMatlabWrappers.phy.upper.waveformGenerators.srsDLReferenceChannel
         referenceChannel = {...
             'R.PDSCH.1-1.1',...
             'R.PDSCH.1-1.2',...
@@ -72,7 +73,7 @@ classdef srsDLProcessor < srsTest.srsBlockUnittest
             %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
 
             fprintf(fileID, [...
-                '/// DSimpl.\n'...
+                '/// Describes a Resource Grid entry (shorts the type).\n'...
                 'using rg_entry = resource_grid_writer_spy::expected_entry_t;\n'...
                 '\n'...
                 '/// Describes a downlink test model.\n'...
@@ -118,21 +119,18 @@ classdef srsDLProcessor < srsTest.srsBlockUnittest
             import srsMatlabWrappers.phy.helpers.srsCSIRS2ReservedCell
             import srsMatlabWrappers.phy.upper.waveformGenerators.srsDLReferenceChannel
             import srsTest.helpers.writeUint8File
-            import srsMatlabWrappers.phy.upper.channel_processors.srsPDSCHmodulator
             import srsTest.helpers.writeResourceGridEntryFile
-            import srsMatlabWrappers.phy.upper.signal_processors.srsPDSCHdmrs
-            import srsTest.helpers.symbolAllocationMask2string
             import srsTest.helpers.array2str
             import srsTest.helpers.cellarray2str
 
-            % Generate DL reference generator
+            % Generate DL Reference channel
             [description, configuration, info] = srsDLReferenceChannel(referenceChannel);
 
             % Extract configuration
             bandwidthPart = configuration.BandwidthParts{1};
             pdschConfig = configuration.PDSCH{1};
 
-            % Generate test model cell structure
+            % Generate reference channel description
             testModelCell = {...
                 ['"' referenceChannel '"'], ...
                 ['"' description.summary '"'], ...
@@ -179,13 +177,13 @@ classdef srsDLProcessor < srsTest.srsBlockUnittest
                 % Convert PDSCH DMRS indices to 0based subscript
                 pdschDMRSIndices = srsIndexes0BasedSubscrit(pdsch.DMRSIndices, nSubC, nSymb);
 
-                % write the DLSCH transport block to a binary file
+                % Write the DLSCH transport block to a binary file
                 testCase.saveDataFile(transportBlockFileName, pdsch.NSlot, @writeUint8File, pdsch.TransportBlock(:,1));
 
-                % write each PDSCH Data complex symbol into a binary file, and the associated indices to another
+                % Write each PDSCH Data complex symbol into a binary file, and the associated indices to another
                 testCase.saveDataFile(pdschDataFileName, pdsch.NSlot, @writeResourceGridEntryFile, pdsch.ChannelSymbols, pdschDataIndices);
 
-                % write each PDSCH DMRS complex symbol into a binary file, and the associated indices to another
+                % Write each PDSCH DMRS complex symbol into a binary file, and the associated indices to another
                 testCase.saveDataFile(pdschDMRSFileName, pdsch.NSlot, @writeResourceGridEntryFile, pdsch.DMRSSymbols, pdschDMRSIndices);
 
                 % Convert cyclic prefix to TagoRAN type
@@ -195,7 +193,7 @@ classdef srsDLProcessor < srsTest.srsBlockUnittest
                 dmrsSymbolMask = zeros(1,14);
                 dmrsSymbolMask(pdsch.DMRSSymbolSet + 1) = 1;
 
-                % generate the test case entry
+                % Generate the test case entry
                 slotConfig = {log2(bandwidthPart.SubcarrierSpacing/15), pdsch.NSlot};
                 portsString = '{0}';
                 dmrsTypeString = sprintf('dmrs_type::TYPE%d', pdschConfig.DMRS.DMRSConfigurationType);
@@ -210,23 +208,22 @@ classdef srsDLProcessor < srsTest.srsBlockUnittest
                 dataPower = 0;
                 dmrsPower = pdschConfig.DMRSPower;
 
-                if isempty(pdsch.RV)
-                    pdsch.RV = 0;
-                end
-
+                % Generate Resource Block allocation string
                 firstRB = pdschConfig.PRBSet(1);
                 lastRB = pdschConfig.PRBSet(end);
                 countRB = lastRB - firstRB + 1;
                 if length(pdschConfig.PRBSet) == countRB
+                    % Contiguous non-interleaved
                     RBAllocationString = sprintf(...
                         'rb_allocation(%d, %d, vrb_to_prb_mapping_type::NON_INTERLEAVED)', ...
                         firstRB, countRB);
                 else
+                    % Non-contiguous and non-interleaved
                     RBAllocationString = ['rb_allocation({', array2str(pdschConfig.PRBSet), '}, vrb_to_prb_mapping_type::NON_INTERLEAVED)'];
                 end
 
 
-                % Prepare PDSCH configuration.
+                % Prepare PDSCH configuration
                 pdschPDUCell = {...
                     slotConfig, ...               % Slot
                     pdschConfig.RNTI, ...         % RNTI
@@ -252,15 +249,17 @@ classdef srsDLProcessor < srsTest.srsBlockUnittest
                     dataPower,...                 % Data power
                     };
 
+                % Generate PDSCH transmission entry
                 pdschString = testCase.testCaseToString(pdsch.NSlot, pdschPDUCell, true, ...
                     transportBlockFileName, pdschDataFileName, pdschDMRSFileName);
 
-                % Remove comma and nnew line from the end of the string
+                % Remove comma and new line from the end of the string
                 pdschString = strrep(pdschString, sprintf(',\n'), '');
 
-                % Append PDSCH
+                % Append PDSCH transmission to the list of PDSCH
+                % transmissions.
                 allPdschConfigCell = [allPdschConfigCell{:}, {pdschString}];
-            end
+            end % of for pdsch = pdschTransmissions
 
             % Build complete test model cell
             completeTestModelCell = {testModelCell, allPdschConfigCell};
