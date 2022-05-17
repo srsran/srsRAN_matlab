@@ -5,31 +5,38 @@
 
 function [outputString] = cellarray2str(inputCellArray, isStruct)
     import srsTest.helpers.cell2str
-    if isStruct
+    import srsTest.helpers.cellarray2str
+    
+   if isStruct
         outputString = '{';
     else
         outputString = '';
     end
 
-    addComma = false;
+    % manage subcells within the input cell
     for arg = inputCellArray(1:end-1)
-        % manage subcells within the input cell
-        if iscell(arg{1})
-            import srsTest.helpers.cellarray2str
-            tmp = cellarray2str({arg{1}{:}}, true);
-            outputString = [outputString, tmp];
-            addComma = true;
-        else
-            if addComma
-                outputString = [outputString, ', '];
-                addComma = false;
-            end;
-            outputString = [outputString, cell2str(arg), ', ']; %#ok<AGROW>
-        end
+        outputString = [outputString, inputCell2str(arg), ', ']; %#ok<AGROW>
     end
 
-    outputString = [outputString, cell2str(inputCellArray(end))];
+    % Manage last element without appending colon.
+    if ~isempty(inputCellArray)
+      outputString = [outputString, inputCell2str(inputCellArray(end))];
+    end
+
     if isStruct
         outputString = [outputString, '}'];
+    end
+end
+
+function [outputString] = inputCell2str(inputCell)
+    import srsTest.helpers.cell2str
+    import srsTest.helpers.cellarray2str
+    
+
+    % manage subcells within the input cell
+    if iscell(inputCell{1})
+        outputString = cellarray2str({inputCell{1}{:}}, true);
+    else
+        outputString = cell2str(inputCell);
     end
 end

@@ -3,6 +3,11 @@
 %   into its character representation OUTPUTSTRING.
 
 function outputString = array2str(inputArray)
+    if isempty(inputArray)
+        outputString = '{}';
+        return;
+    end
+
     if any(mod(inputArray,1) > 0)
         fmt = '%.3f';
     else
