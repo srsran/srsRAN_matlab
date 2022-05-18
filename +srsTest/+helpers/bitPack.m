@@ -4,5 +4,5 @@
 %   packed uint8 values PACKEDDATA (i.e., all 8 bits carry useful data).
 
 function packedData = bitPack(data)
-    packedData = reshape(data, 8, [])' * 2.^(7:-1:0)';
+    packedData = reshape(double(data), 8, [])' * 2.^(7:-1:0)';
 end
