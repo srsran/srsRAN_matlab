@@ -1,16 +1,17 @@
-%SRSCSIRS2RESERVEDCELL Generates a cell array that describes a reserved RE 
-% pattern list from a carrier configuration and a list of CSI-RS resources.
+%srsCSIRS2ReservedCell Generates a cell array that describes a reserved RE
+%   pattern list from a carrier configuration and a list of CSI-RS
+%   resources.
 %
-%   [RESERVEDLIST] = srsCSIRS2ReservedCell(CFGOBJ,CSIRSRESOURCES) Generates
+%   RESERVEDLIST = srsCSIRS2ReservedCell(CFGOBJ,CSIRSRESOURCES) Generates
 %   a cell array that describes a reserved RE pattern list from a carrier
 %   configuration and a list of CSI-RS resources.
-% 
-%   Where the parameter CFGOBJ must be of type <a href="matlab:
-%   help('nrDLCarrierConfig')">nrDLCarrierConfig</a> and 
-%   CSIRSRESOURCES must be a list integers selecting the indexes of CSI-RS 
-%   resources in CFGOBJ.CSIRS. 
 %
-%   Example: 
+%   Parameter CFGOBJ must be of type <a href="matlab:
+%   help('nrDLCarrierConfig')">nrDLCarrierConfig</a> and
+%   CSIRSRESOURCES must be a list integers selecting the indexes of CSI-RS
+%   resources in CFGOBJ.CSIRS.
+%
+%   Example:
 %   %  Create first resource of CSI-RS
 %   csirs1 = nrcfgCSIRSConfig;
 %   csirs1.BandwidthPartID = 1;
@@ -23,29 +24,34 @@
 %   csirs1.NumRB = 52;
 %   csirs1.RBOffset = 0;
 %   csirs1.NID = 0;
-% 
+%
 %   % Create a second resource of CSI-RS with a different symbol location
 %   csirs2 = csirs1;
 %   csirs2.SymbolLocations = 10;
-% 
+%
 %   % Create a default carrier and set the CSI-RS resources
 %   cfgObj = nrDLCarrierConfig;
 %   cfgObj.CSIRS= {csirs1, csirs2};
-% 
+%
 %   % Select the CSI-RS resource of interest
 %   CSIRSResources = [2];
 %
 %   reservedPattern = srsCSIRS2ReservedCell(cfgObj, CSIRSResources);
 %
 %   display(reservedPattern{1})
-function [reservedList] = srsCSIRS2ReservedCell(cfgObj,CSIRSResources)
+function reservedList = srsCSIRS2ReservedCell(cfgObj,CSIRSResources)
 
-reservedList = {};
+if isempty(CSIRSResources)
+    reservedList = {};
+    return;
+end
+
+reservedList = cell(1,length(CSIRSResources));
 
 % For each CSIRS resource
-for CSIRSIndex = CSIRSResources
+for CSIRSIndex = 1:length(CSIRSResources)
     % Select CSI-RS resource configuration
-    cfgCSIRS = cfgObj.CSIRS{CSIRSIndex};
+    cfgCSIRS = cfgObj.CSIRS{CSIRSResources(CSIRSIndex)};
 
     % Extract BWP
     bwp = cfgObj.BandwidthParts{cfgCSIRS.BandwidthPartID};
@@ -92,8 +98,7 @@ for CSIRSIndex = CSIRSResources
         end
     end
 
-    reservedList = [reservedList, {{RBStart, RBEnd, RBStride, RBMask, SymbolMask}}];
-end
-
-end
+    reservedList{CSIRSIndex} = {RBStart, RBEnd, RBStride, RBMask, SymbolMask};
+end % of for CSIRSIndex = CSIRSResources
+end % of function reservedList = srsCSIRS2ReservedCell...
 

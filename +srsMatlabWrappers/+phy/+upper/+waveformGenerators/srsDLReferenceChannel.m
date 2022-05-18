@@ -1,29 +1,28 @@
-%SRSDLREFERENCECHANNEL Generates Downlink Reference channels.
-%
-%    [DESCRIPTION, CFGDL, INFO] = srsDLReferenceChannel(REFERENCECHANNEL) 
-%       Generates a downlink regference signal where the parameter 
-%       REFERENCECHANNEL is a string that identifies one of the following 
-%       test reference channels:
+%srsDLReferenceChannel Generates Downlink Reference channels.
+%   [DESCRIPTION, CFGDL, INFO] = srsDLReferenceChannel(REFERENCECHANNEL) 
+%   Generates a downlink regference signal where the parameter
+%   REFERENCECHANNEL is a string that identifies one of the following test
+%   reference channels.
 %        R.PDSCH.1-1.1: Reference channel described in TS38.101-4 Table
-%            5.2.3.1.1-3 test 1-1 for testing FDD PDSCH QPSK modulation with
-%            target rate of 0.3, mapping Type A and allocated in the full
-%            band.
+%            5.2.3.1.1-3 test 1-1 for testing FDD PDSCH QPSK modulation
+%            with target rate of 0.3, mapping Type A and allocated in the
+%            full band.
 %        R.PDSCH.1-1.2: Reference channel described in TS38.101-4 Table
-%            5.2.3.1.1-3 test 1-2 for testing FDD PDSCH QPSK modulation with 
-%            target rate of 0.3, mapping Type A and allocated in the center 6
-%            RB.
+%            5.2.3.1.1-3 test 1-2 for testing FDD PDSCH QPSK modulation
+%            with target rate of 0.3, mapping Type A and allocated in the
+%            center 6 RB.
 %        R.PDSCH.1-4.1: Reference channel described in TS38.101-4 Table
-%            5.2.3.1.1-3 test 1-3 for testing FDD PDSCH 256QAM modulation with
-%            target rate of 0.82, mapping Type A and allocated in the full
-%            band.
+%            5.2.3.1.1-3 test 1-3 for testing FDD PDSCH 256QAM modulation
+%            with target rate of 0.82, mapping Type A and allocated in the
+%            full band.  
 %        R.PDSCH.1-2.1: Reference channel described in TS38.101-4 Table
-%            5.2.3.1.1-3 test 1-4 for testing FDD PDSCH 16QAM modulation with
-%            target rate of 0.48, mapping Type A and allocated in the full
-%            band.
+%            5.2.3.1.1-3 test 1-4 for testing FDD PDSCH 16QAM modulation
+%            with target rate of 0.48, mapping Type A and allocated in the
+%            full band.
 %        R.PDSCH.1-8.1: Reference channel described in TS38.101-4 Table
-%            5.2.3.1.1-3 test 1-5 for testing FDD PDSCH 16QAM modulation with
-%            target rate of 0.48, mapping Type A and allocated in the full
-%            band. Optimized for HST scenario.
+%            5.2.3.1.1-3 test 1-5 for testing FDD PDSCH 16QAM modulation
+%            with target rate of 0.48, mapping Type A and allocated in the
+%            full band. Optimized for HST scenario.
 %   
 %   The function returns:
 %       DESCRIPTION - structure that provides details of the reference channel
