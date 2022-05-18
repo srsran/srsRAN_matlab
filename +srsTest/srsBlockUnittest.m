@@ -295,6 +295,16 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
         function addOpeningToHeaderFile(obj, fileID)
         %addOpeningToHeaderFile Adds opening guards to a test header file.
 
+            fprintf(fileID, '/*\n');
+            fprintf(fileID, ' *\n');
+            fprintf(fileID, ' * Copyright 2013-2022 Software Radio Systems Limited\n');
+            fprintf(fileID, ' *\n');
+            fprintf(fileID, ' * By using this file, you agree to the terms and conditions set\n');
+            fprintf(fileID, ' * forth in the LICENSE file which can be found at the top level of\n');
+            fprintf(fileID, ' * the distribution.\n');
+            fprintf(fileID, ' *\n');
+            fprintf(fileID, ' */\n');
+            fprintf(fileID, '\n');
             fprintf(fileID, '#ifndef SRSGNB_UNITTESTS_%s_TEST_DATA_H\n', obj.pathInRepo);
             fprintf(fileID, '#define SRSGNB_UNITTESTS_%s_TEST_DATA_H\n', obj.pathInRepo);
             fprintf(fileID, '\n');
