@@ -1,5 +1,5 @@
 %srsPDSCHEncoderUnittest Unit tests for PDSCH encoder functions.
-%   This class implements unit tests for the PDSCH symbol encoderr functions using the
+%   This class implements unit tests for the PDSCH encoder functions using the
 %   matlab.unittest framework. The simplest use consists in creating an object with
 %      testCase = srsPDSCHEncoderUnittest
 %   and then running all the tests with
@@ -7,7 +7,7 @@
 %
 %   srsPDSCHEncoderUnittest Properties (Constant):
 %
-%   srsBlock      - The tested block (i.e., 'pdsch_modulator').
+%   srsBlock      - The tested block (i.e., 'pdsch_encoder').
 %   srsBlockType  - The type of the tested block, including layer
 %                   (i.e., 'phy/upper/channel_processors').
 %
@@ -17,7 +17,6 @@
 %
 %   srsPDSCHEncoderUnittest Properties (TestParameter):
 %
-%   NumLayers               - Number of transmission layers (1, 2, 4, 8).
 %   SymbolAllocation        - Symbols allocated to the PDSCH transmission.
 %   PRBAllocation           - PRBs allocated to the PDSCH transmission.
 %   mcs                     - Modulation scheme index (0, 28).
@@ -44,14 +43,11 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
     end
 
     properties (ClassSetupParameter)
-        %Path to results folder (old 'pdsch_modulator' tests will be erased).
-        outputPath = {['testPDSCHModulator', datestr(now, 30)]}
+        %Path to results folder (old 'pdsch_encoder' tests will be erased).
+        outputPath = {['testPDSCHEncoder', datestr(now, 30)]}
     end
 
     properties (TestParameter)
-        %Number of transmission layers (1, 2, 4, 8).
-        NumLayers = {1, 2, 4, 8}
-
         %Symbols allocated to the PDSCH transmission. The symbol allocation is described
         %   by a two-element array with the starting symbol (0...13) and the length (1...14)
         %   of the PDSCH transmission. Example: [0, 14].
@@ -128,61 +124,64 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
             % skip those invalid configuration cases
             isMCSConfigOK = (~strcmp(mcsTable, 'qam256') || mcs < 28);
 
-            if isMCSConfigOK
-                % configure the carrier according to the test parameters
-                carrier = srsConfigureCarrier(NSizeGrid, NStartGrid);
-
-                % get the target code rate (R) and modulation order (Qm) corresponding to the current modulation and scheme configuration
-                [R, Qm] = srsExpandMCS(mcs, mcsTable);
-                TargetCodeRate = R/1024;
-                Modulation = srsGetModulation(Qm);
-                ModulationLoc = Modulation{1};
-
-                % configure the PDSCH according to the test parameters
-                pdsch = srsConfigurePDSCH(NStartBWP, NSizeBWP, ModulationLoc, NumLayersLoc, SymbolAllocation, PRBSet);
-
-                % get the encoded TB length
-                [PDSCHIndices, PDSCHInfo] = nrPDSCHIndices(carrier, pdsch);
-                nofREs = length(PDSCHIndices);
-                encodedTBLength = nofREs * Qm;
-
-                % generate the TB to be encoded
-                TBSize = nrTBS(ModulationLoc, NumLayersLoc, numel(PRBSet), PDSCHInfo.NREPerPRB, TargetCodeRate);
-                TB = randi([0 1], TBSize, 1);
-
-                % write the packed format of the TB to a binary file
-                TBPkd = bitPack(TB);
-                testCase.saveDataFile('_test_input', testID, @writeUint8File, TBPkd);
-
-                % configure the PDSCH encoder
-                DLSCHEncoder = srsConfigureDLSCHEncoder(MultipleHARQProcesses, TargetCodeRate);
-
-                % add the generated TB to the encoder
-                setTransportBlock(DLSCHEncoder, TB, cwIdx, HARQProcessID);
-
-                % call the PDSCH encoding Matlab functions
-                cw = DLSCHEncoder(ModulationLoc, NumLayersLoc, encodedTBLength, RV, HARQProcessID);
-
-                % write the encoded TB to a binary file
-                testCase.saveDataFile('_test_output', testID, @writeUint8File, cw);
-
-                % obtain the related LDPC encoding parameters
-                info = nrDLSCHInfo(TBSize, TargetCodeRate);
-
-                % generate the test case entry
-                Nref = DLSCHEncoder.LimitedBufferSize;
-                % 25344 is the maximum coded length of a code block and implies no limit on the buffer size
-                if Nref >= 25344
-                  Nref = 0;
-                end
-                testCaseString = testCase.testCaseToString(testID, ...
-                    {['ldpc::base_graph_t::BG', num2str(info.BGN)], RV, ...
-                        ['modulation_scheme::', Modulation{2}], Nref, ...
-                        NumLayersLoc, nofREs}, true, '_test_input', '_test_output');
-
-                % add the test to the file header
-                testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);
+            if ~isMCSConfigOK
+                return;
             end
+
+            % configure the carrier according to the test parameters
+            carrier = srsConfigureCarrier(NSizeGrid, NStartGrid);
+
+            % get the target code rate (R) and modulation order (Qm) corresponding to the current modulation and scheme configuration
+            [R, Qm] = srsExpandMCS(mcs, mcsTable);
+            TargetCodeRate = R/1024;
+            Modulation = srsGetModulation(Qm);
+            ModulationLoc = Modulation{1};
+
+            % configure the PDSCH according to the test parameters
+            pdsch = srsConfigurePDSCH(NStartBWP, NSizeBWP, ModulationLoc, NumLayersLoc, SymbolAllocation, PRBSet);
+
+            % get the encoded TB length
+            [PDSCHIndices, PDSCHInfo] = nrPDSCHIndices(carrier, pdsch);
+            nofREs = length(PDSCHIndices);
+            encodedTBLength = nofREs * Qm;
+
+            % generate the TB to be encoded
+            TBSize = nrTBS(ModulationLoc, NumLayersLoc, numel(PRBSet), PDSCHInfo.NREPerPRB, TargetCodeRate);
+            TB = randi([0 1], TBSize, 1);
+
+            % write the packed format of the TB to a binary file
+            TBPkd = bitPack(TB);
+            testCase.saveDataFile('_test_input', testID, @writeUint8File, TBPkd);
+
+            % configure the PDSCH encoder
+            DLSCHEncoder = srsConfigureDLSCHEncoder(MultipleHARQProcesses, TargetCodeRate);
+
+            % add the generated TB to the encoder
+            setTransportBlock(DLSCHEncoder, TB, cwIdx, HARQProcessID);
+
+            % call the PDSCH encoding Matlab functions
+            cw = DLSCHEncoder(ModulationLoc, NumLayersLoc, encodedTBLength, RV, HARQProcessID);
+
+            % write the encoded TB to a binary file
+            testCase.saveDataFile('_test_output', testID, @writeUint8File, cw);
+
+            % obtain the related LDPC encoding parameters
+            info = nrDLSCHInfo(TBSize, TargetCodeRate);
+
+            % generate the test case entry
+            Nref = DLSCHEncoder.LimitedBufferSize;
+            % 25344 is the maximum coded length of a code block and implies no limit on the buffer size
+            if Nref >= 25344
+              Nref = 0;
+            end
+            testCaseString = testCase.testCaseToString(testID, ...
+                {['ldpc::base_graph_t::BG', num2str(info.BGN)], RV, ...
+                    ['modulation_scheme::', Modulation{2}], Nref, ...
+                    NumLayersLoc, nofREs}, true, '_test_input', '_test_output');
+
+            % add the test to the file header
+            testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);
+
         end % of function testvectorGenerationCases
     end % of methods (Test, TestTags = {'testvector'})
 end % of classdef srsPDSCHEncoderUnittest
