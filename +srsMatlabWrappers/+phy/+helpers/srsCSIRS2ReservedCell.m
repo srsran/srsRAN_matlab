@@ -46,7 +46,7 @@ if isempty(CSIRSResources)
     return;
 end
 
-reservedList = cell(1,length(CSIRSResources));
+reservedList = cell(1, length(CSIRSResources));
 
 % For each CSIRS resource
 for CSIRSIndex = 1:length(CSIRSResources)
