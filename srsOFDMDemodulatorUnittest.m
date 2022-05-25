@@ -68,7 +68,7 @@ classdef srsOFDMDemodulatorUnittest < srsTest.srsBlockUnittest
             addTestIncludesToHeaderFilePHYchmod(obj, fileID);
         end
 
-        function addTestDefinitionToHeaderFile(obj, fileID)
+        function addTestDefinitionToHeaderFile(~, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
             fprintf(fileID, 'struct ofdm_demodulator_test_configuration {\n');
             fprintf(fileID, 'ofdm_demodulator_configuration config;\n');
@@ -99,7 +99,6 @@ classdef srsOFDMDemodulatorUnittest < srsTest.srsBlockUnittest
 
             % use a unique port index and scale for each test
             portIdx = randi([0, 15]);
-            payload = randi([0 1], 24, 1);
             scale = 2 * rand - 1;
             NSlotLoc = randi([0 pow2(numerology)-1]);
 

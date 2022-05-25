@@ -101,7 +101,6 @@ classdef srsOFDMModulatorUnittest < srsTest.srsBlockUnittest
 
             % use a unique port index and scale for each test
             portIdx = randi([0, 15]);
-            payload = randi([0 1], 24, 1);
             scale = 2 * rand - 1;
             NSlotLoc = randi([0 pow2(numerology)-1]);
 

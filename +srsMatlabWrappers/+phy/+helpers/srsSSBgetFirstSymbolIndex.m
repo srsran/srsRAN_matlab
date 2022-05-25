@@ -3,9 +3,7 @@
 %   returns an OFDM symbol index in a half-frame SSBFIRSTSYMBOLINDEX, given an SSB pattern
 %   case SSBPATTERN, an SSB index SSBINDEX and a carrier frequency CARRIERFREQ.
 
-function SSBfirstSymbolIndex = srsSSBgetFirstSymbolIndex(SSBpattern, SSBindex, carrierFreq)
-
-    carrierFreqThreshold = 3e9; % 3.0 GHz for all cases, except 2.4 GHz for case 'C' with unpaired spectrum
+function SSBfirstSymbolIndex = srsSSBgetFirstSymbolIndex(SSBpattern, SSBindex, ~)
 
     % SSB parameters according to TS 38.213 Section 4.1
     switch SSBpattern
@@ -25,10 +23,10 @@ function SSBfirstSymbolIndex = srsSSBgetFirstSymbolIndex(SSBpattern, SSBindex, c
             n = [0, 1, 2, 3];
             SSBfirstSymbolIndexArray = [2, 8];
             offset = 14;
-    end;
+    end
 
-    lengthSymbolIndicesArray = length(SSBfirstSymbolIndexArray) - 1;
-    SSBfirstSymbolIndex = SSBfirstSymbolIndexArray(mod(SSBindex, length(SSBfirstSymbolIndexArray)) + 1) + ...
-        offset * n(floor(SSBindex / length(SSBfirstSymbolIndexArray)) + 1);
+    lengthSymbolIndicesArray = length(SSBfirstSymbolIndexArray);
+    SSBfirstSymbolIndex = SSBfirstSymbolIndexArray(mod(SSBindex, lengthSymbolIndicesArray) + 1) + ...
+        offset * n(floor(SSBindex / lengthSymbolIndicesArray) + 1);
 
 end

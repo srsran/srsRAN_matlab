@@ -135,7 +135,7 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
     end % of methods (Access = private)
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(testCase, numerology, format, intraSlotFreqHopping, testCaseTrial)
+        function testvectorGenerationCases(testCase, numerology, format, intraSlotFreqHopping, testCaseTrial) %#ok<INUSD>
         %testvectorGenerationCases Generates a test vector for the given numerology, format and frequency hopping,
         %  while using a random NCellID, random NSlot and random symbol and PRB length.
 

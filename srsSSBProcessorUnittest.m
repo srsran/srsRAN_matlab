@@ -86,7 +86,7 @@ classdef srsSSBProcessorUnittest < srsTest.srsBlockUnittest
             addTestIncludesToHeaderFilePHYchproc(obj, fileID);
         end
 
-        function addTestDefinitionToHeaderFile(obj, fileID)
+        function addTestDefinitionToHeaderFile(~, fileID)
         %addTestDefinitionToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
             fprintf(fileID, 'struct test_case_t {\n');
             fprintf(fileID, 'ssb_processor::pdu_t config;\n');
@@ -198,8 +198,6 @@ classdef srsSSBProcessorUnittest < srsTest.srsBlockUnittest
                     SSBsymbols, SSBindices);
 
                 % generate the test case entry
-                SFNbinStr = dec2bin(SFNLoc, 8);
-                SFNbin = (SFNbinStr(1:8).' == '1');
                 testCaseString = testCase.testCaseToString(testID, ...
                     {{numerology, SFNLoc, subframeIndexLoc, slotInSubframe}, NCellIDLoc, ...
                         PSSscale, SSBindex, Lmax, SSBoffset, pointAoffset, ...
