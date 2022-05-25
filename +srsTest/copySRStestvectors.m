@@ -48,6 +48,15 @@ function copySRStestvectors(origin, destination, targetBlock, srsDir)
             tarFile = fullfile(origin, [block '_test_data.tar.gz']);
             finalDest = fullfile(destination, 'unittests', blockType);
 
+            % ensure the finalDest exists
+            if (~exist(finalDest, "dir"))
+                try
+                    mkdir(finalDest);
+                catch
+                    warning('Cannot create folder %s.', finalDest);
+                end
+            end
+
             % copy files to finalDest
             if exist(headerFile, 'file') == 2
                 try
