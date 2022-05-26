@@ -48,6 +48,12 @@ classdef CheckTests < matlab.unittest.TestCase
         fullBlocks = srsTest.listSRSblocks('full')
     end
 
+    properties (Hidden)
+        %Tempoary working directory.
+        tmpOutputPath (1, :) char {mustBeFolder(tmpOutputPath)} = '.'
+
+    end % of properties (Hidden)
+
     methods (TestParameterDefinition, Static)
         function testName = obtainTestNames()
         %obtainTestNames initializes the testName parameter by selecting the proper files
@@ -74,8 +80,12 @@ classdef CheckTests < matlab.unittest.TestCase
         function classSetup(obj)
         %classSetup adds the srsgnb_matlab root directory to the MATLAB path.
             import matlab.unittest.fixtures.PathFixture
+            import matlab.unittest.fixtures.TemporaryFolderFixture;
 
             obj.applyFixture(PathFixture('..'));
+
+            tmp = obj.applyFixture(TemporaryFolderFixture);
+            obj.tmpOutputPath = tmp.Folder;
         end
     end
 
@@ -84,7 +94,9 @@ classdef CheckTests < matlab.unittest.TestCase
         %runTest carries out the test as described in the class help.
 
             import matlab.unittest.constraints.IsSubsetOf
+            import matlab.unittest.constraints.IsFile
             import matlab.unittest.TestSuite
+            import matlab.unittest.parameters.Parameter
 
             className = testName(1:end-2);
             classMeta = meta.class.fromName(className);
@@ -127,10 +139,28 @@ classdef CheckTests < matlab.unittest.TestCase
                 obj.assertFail(msg);
             end
 
+            workDir = fullfile(obj.tmpOutputPath, className);
+            extParams = Parameter.fromData('outputPath', {workDir});
             % Check whether the class generates test vectors.
-            tagged = TestSuite.fromClass(classMeta, 'Tag', 'testvector');
+            tagged = TestSuite.fromClass(classMeta, 'Tag', 'testvector', ...
+                'ExternalParameters', extParams);
             msg = sprintf('Class %s has no tests with tag ''testvector''.',  className);
             obj.assertFalse(isempty(tagged), msg);
+
+            % Try to run one of the tests.
+            try
+                assertSuccess(tagged(1).run());
+            catch
+                msg = sprintf('Class %s cannot run the example test.',  className);
+                obj.assertFail(msg);
+            end
+
+            % Check whether the header and vector test files are generated.
+            fileName = fullfile(workDir, [blockVal '_test_data']);
+            msg = sprintf('Class %s cannot create the test vector header file.', className);
+            obj.assertThat([fileName, '.h'], IsFile, msg);
+            msg = sprintf('Class %s cannot create the test vector data file(s).', className);
+            obj.assertTrue(~isempty(dir([fileName, '*.tar.gz'])), msg);
 
             % Check whether runSRSGNBUnittest can run the current test.
             try
