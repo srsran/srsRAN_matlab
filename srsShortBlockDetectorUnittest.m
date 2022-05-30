@@ -62,6 +62,7 @@ classdef srsShortBlockDetectorUnittest < srsTest.srsBlockUnittest
 
             fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
             fprintf(fileID, '#include "srsgnb/phy/modulation_scheme.h"\n');
+            fprintf(fileID, '#include "srsgnb/phy/upper/log_likelihood_ratio.h"\n');
         end
 
         function addTestDefinitionToHeaderFile(~, fileID)
@@ -74,7 +75,7 @@ classdef srsShortBlockDetectorUnittest < srsTest.srsBlockUnittest
             fprintf(fileID, 'unsigned message_length   = 0;\n');
             fprintf(fileID, 'unsigned codeblock_length = 0;\n');
             fprintf(fileID, 'modulation_scheme mod     = {};\n');
-            fprintf(fileID, 'file_vector<int8_t> codeblocks;\n');
+            fprintf(fileID, 'file_vector<log_likelihood_ratio> codeblocks;\n');
             fprintf(fileID, 'file_vector<uint8_t> messages;\n');
             fprintf(fileID, '};\n');
         end

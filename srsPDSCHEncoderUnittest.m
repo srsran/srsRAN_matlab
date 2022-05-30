@@ -74,7 +74,7 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
 
             fprintf(fileID, 'struct test_case_t {\n');
-            fprintf(fileID, '  segment_config           config;\n');
+            fprintf(fileID, '  segmenter_config         config;\n');
             fprintf(fileID, '  file_vector<uint8_t>     transport_block;\n');
             fprintf(fileID, '  file_vector<uint8_t>     encoded;\n');
             fprintf(fileID, '};\n');
