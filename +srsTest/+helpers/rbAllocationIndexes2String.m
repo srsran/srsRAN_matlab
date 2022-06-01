@@ -1,12 +1,11 @@
-%rbAllocationIndexes2String Generates RB allocation string object
-%compatible with srsgnb.
+%rbAllocationIndexes2String Generates an RB allocation string object compatible with srsgnb.
 %   OUTPUTSTRING = rbAllocationIndexes2String(VRBINDEXES)
 %   generates an RB allocation string OUTPUTSTRING from a vector of VRB
 %   indexes VRBINDEXES.
 %
-%   In order to save space the function detects if the allocation is
+%   In order to save space, the function detects if the allocation is
 %   contiguous for a number of VRB. In that case, it constructs a type1
-%   allocation with a start and end.
+%   allocation with a start and an end VRB index.
 %
 %   If the allocation is not contiguous, it constructs a custom allocation.
 %
