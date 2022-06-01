@@ -112,6 +112,7 @@ classdef srsDLProcessor < srsTest.srsBlockUnittest
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.array2str
             import srsTest.helpers.cellarray2str
+            import srsTest.helpers.rbAllocationIndexes2String
 
             % Generate DL Reference channel
             [description, configuration, info] = srsDLReferenceChannel(referenceChannel);
@@ -199,19 +200,7 @@ classdef srsDLProcessor < srsTest.srsBlockUnittest
                 dmrsPower = pdschConfig.DMRSPower;
 
                 % Generate Resource Block allocation string
-                firstRB = pdschConfig.PRBSet(1);
-                lastRB = pdschConfig.PRBSet(end);
-                countRB = lastRB - firstRB + 1;
-                if length(pdschConfig.PRBSet) == countRB
-                    % Contiguous non-interleaved
-                    RBAllocationString = sprintf(...
-                        'rb_allocation(%d, %d, vrb_to_prb_mapping_type::NON_INTERLEAVED)', ...
-                        firstRB, countRB);
-                else
-                    % Non-contiguous and non-interleaved
-                    RBAllocationString = ['rb_allocation({', array2str(pdschConfig.PRBSet), '}, vrb_to_prb_mapping_type::NON_INTERLEAVED)'];
-                end
-
+                RBAllocationString = rbAllocationIndexes2String(pdschConfig.PRBSet);
 
                 % Prepare PDSCH configuration
                 pdschPDUCell = {...

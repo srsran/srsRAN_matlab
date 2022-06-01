@@ -76,12 +76,13 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
 
             import srsMatlabWrappers.phy.helpers.srsConfigurePDSCHdmrs
             import srsMatlabWrappers.phy.helpers.srsConfigurePDSCH
-            import srsTest.helpers.writeUint8File
             import srsMatlabWrappers.phy.upper.channel_processors.srsPDSCHmodulator
-            import srsTest.helpers.writeResourceGridEntryFile
             import srsMatlabWrappers.phy.upper.signal_processors.srsPDSCHdmrs
-            import srsTest.helpers.symbolAllocationMask2string
             import srsTest.helpers.array2str
+            import srsTest.helpers.rbAllocationIndexes2String
+            import srsTest.helpers.symbolAllocationMask2string
+            import srsTest.helpers.writeResourceGridEntryFile
+            import srsTest.helpers.writeUint8File
 
             % Generate a unique test ID
             testID = testCase.generateTestID;
@@ -141,7 +142,7 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
 
             portsString = '{0}';
 
-            RBAllocationString = ['rb_allocation({', array2str(pdsch.PRBSet), '}, vrb_to_prb_mapping_type::NON_INTERLEAVED)'];
+            RBAllocationString = rbAllocationIndexes2String(pdsch.PRBSet);
 
             DMRSTypeString = sprintf('dmrs_type::TYPE%d', pdsch.DMRS.DMRSConfigurationType);
 
