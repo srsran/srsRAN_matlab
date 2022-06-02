@@ -63,6 +63,7 @@ classdef srsDemodulationMapperUnittest < srsTest.srsBlockUnittest
         function addTestIncludesToHeaderFile(obj, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
             addTestIncludesToHeaderFilePHYchmod(obj, fileID);
+            fprintf(fileID, '#include "srsgnb/phy/upper/log_likelihood_ratio.h"\n');
         end
 
         function addTestDefinitionToHeaderFile(~, fileID)
@@ -72,7 +73,7 @@ classdef srsDemodulationMapperUnittest < srsTest.srsBlockUnittest
             fprintf(fileID, 'modulation_scheme    scheme;\n');
             fprintf(fileID, 'file_vector<cf_t>    symbols;\n');
             fprintf(fileID, 'file_vector<float>   noise_var;\n');
-            fprintf(fileID, 'file_vector<int8_t>  soft_bits;\n');
+            fprintf(fileID, 'file_vector<log_likelihood_ratio>  soft_bits;\n');
             fprintf(fileID, 'file_vector<uint8_t> hard_bits;\n');
             fprintf(fileID, '};\n');
         end
@@ -121,7 +122,7 @@ classdef srsDemodulationMapperUnittest < srsTest.srsBlockUnittest
             testCase.saveDataFile('_test_soft_bits', testID, @writeInt8File, softBits);
 
             % hard decision
-            hardBits = (1 - (softBits > 0)) / 2;
+            hardBits = (1 - (softBits >= 0));
 
             % write hard bits into a binary file
             testCase.saveDataFile('_test_hard_bits', testID, @writeUint8File, hardBits);

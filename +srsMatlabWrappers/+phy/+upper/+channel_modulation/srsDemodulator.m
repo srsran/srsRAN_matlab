@@ -75,14 +75,18 @@ function llrsq = srsDemodulator(symbols, scheme, noiseVar)
 end
 
 function softBitsQuant = quantize(softBits, mod)
-    rangeLimitInt = 64;
+    rangeLimitInt = 120;
     switch mod
         case {'BPSK', 'QPSK'}
-            rangeLimitFloat = 200;
+            rangeLimitFloat = 600;
         case '16QAM'
-            rangeLimitFloat = 100;
-        otherwise % TODO decide range for 64QAM and 256QAM
-            rangeLimitFloat = 50;
+            rangeLimitFloat = 300;
+        case '64QAM'
+            rangeLimitFloat = 150;
+        case '256QAM'
+            rangeLimitFloat = 90;
+        otherwise
+            error('srsDemodulator:Unknown constellation.');
     end
     softBitsQuant = softBits;
     clipIdx = (abs(softBits) > rangeLimitFloat);
