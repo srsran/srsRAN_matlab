@@ -317,7 +317,7 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
         %copyTestVectors(OBJ, OUTPUTPATH) Copies all the binary data files and the decription
         %   header file to the output folder.
 
-            tmp = dir([obj.tmpOutputPath, filesep, '*.dat']);
+            tmp = dir([obj.tmpOutputPath, filesep, '*.h']);
             if ~isempty(tmp)
                 obj.packResults;
                 obj.createOutputFolder(outputPath);

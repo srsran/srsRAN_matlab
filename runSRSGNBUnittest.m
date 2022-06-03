@@ -77,6 +77,8 @@ function unittestClass = name2Class(name)
             unittestClass = ?srsPBCHEncoderUnittest;
         case 'pbch_modulator'
             unittestClass = ?srsPBCHModulatorUnittest;
+        case 'pdcch_candidates_common'
+            unittestClass = ?srsPDCCHCandidatesCommonUnittest;
         case 'pdcch_encoder'
             unittestClass = ?srsPDCCHEncoderUnittest;
         case 'pdcch_modulator'
