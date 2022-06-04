@@ -6,7 +6,6 @@
 
 #include "mex.hpp"
 #include "mexAdapter.hpp"
-#include "srsgnb/adt/span.h"
 
 #include <map>
 

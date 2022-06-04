@@ -67,5 +67,6 @@ find_package(SRSGNB MODULE REQUIRED)
 include(${SRSGNB_BINARY_DIR}/srsgnb.cmake)
 include_directories(${CMAKE_SOURCE_DIR}/include ${SRSGNB_INCLUDE_DIR})
 
+add_subdirectory(lib)
 add_subdirectory(unittests)
 add_subdirectory(docs)
