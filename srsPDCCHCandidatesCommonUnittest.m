@@ -112,7 +112,9 @@ classdef srsPDCCHCandidatesCommonUnittest < srsTest.srsBlockUnittest
         % generate a unique test ID
         testID = testCase.generateTestID;
 
-        configStr = cellarray2str({aggregationLevel, numCandidates, numCCEs}, true);
+        aggregationLevelString = ['aggregation_level::n' num2str(aggregationLevel)];
+
+        configStr = cellarray2str({aggregationLevelString, numCandidates, numCCEs}, true);
 
         if length(candidates) == 0
             candidatesCell = {};
