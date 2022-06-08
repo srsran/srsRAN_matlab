@@ -10,11 +10,7 @@
 %
 %   srsBlock      - The tested block (i.e., 'pdcch_candidates_common').
 %   srsBlockType  - The type of the tested block, including layer
-%                   (i.e., 'phy/upper/channel_processors').
-%
-%   nofNCellID       - Number of possible PHY cell identifiers.
-%   REGBundleSizes   - Possible REGBundle sizes  for each CORESET Duration.
-%   InterleaverSizes - Possible interleaver sizes.
+%                   (i.e., 'ran/pdcch').
 %
 %   srsPDCCHCandidatesCommonUnittest Properties (ClassSetupParameter):
 %
@@ -22,9 +18,9 @@
 %
 %   srsPDCCHCandidatesCommonUnittest Properties (TestParameter):
 %
-%   Duration         - CORESET Duration.
-%   CCEREGMapping    - CCE-to-REG mapping.
-%   AggregationLevel - PDCCH aggregation level.
+%   numCCEs          - Number of CCE available in the CORESET.
+%   numCandidates    - Number of candidates given by the SS configuration.
+%   aggregationLevel - Number of CCE taken by a PDCCH transmission.
 %
 %   srsPDCCHCandidatesCommonUnittest Methods (TestTags = {'testvector'}):
 %
@@ -49,7 +45,7 @@ classdef srsPDCCHCandidatesCommonUnittest < srsTest.srsBlockUnittest
     end
 
     properties (ClassSetupParameter)
-        %Path to results folder (old 'dmrs_pddch_processor' tests will be erased).
+        %Path to results folder (old 'pdccg_candidates_common' tests will be erased).
         outputPath = {['testPDCCHCandidatesCommon', datestr(now, 30)]}
     end
 
@@ -61,7 +57,7 @@ classdef srsPDCCHCandidatesCommonUnittest < srsTest.srsBlockUnittest
         numCandidates = {0, 1, 2, 3, 4, 5, 6, 7, 8};
 
         %PDCCH aggregation level (1, 2, 4, 8, 16).
-        aggregationLevel= {1, 2, 4, 8, 16}
+        aggregationLevel= {1, 2, 4, 8, 16};
     end
 
     methods (Access = protected)
@@ -88,9 +84,8 @@ classdef srsPDCCHCandidatesCommonUnittest < srsTest.srsBlockUnittest
 
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, numCCEs, numCandidates, aggregationLevel)
-        %testvectorGenerationCases Generates a test vector for the given CORESET duration,
-        %   CCEREGMapping and AggregationLevel, while using randomly generated NCellID,
-        %   RNTI and codeword.
+        %testvectorGenerationCases Generates a test vector for the given number of CCE,
+        %   number of candidates and AggregationLevel.
 
         % Skip test case if the number of CCEs for the CORESET cannot
         % fit all the candidates.
@@ -99,11 +94,10 @@ classdef srsPDCCHCandidatesCommonUnittest < srsTest.srsBlockUnittest
         end
 
         % Allow zero candidates only if the aggregation level is one.
-        if numCandidates == 0 && aggregationLevel ~= 1
+        if (numCandidates == 0) && (aggregationLevel ~= 1)
             return;
         end
 
-        import srsTest.helpers.array2str
         import srsTest.helpers.cellarray2str
         import srsMatlabWrappers.ran.pdcch.srsPDCCHCandidatesCommon
 
