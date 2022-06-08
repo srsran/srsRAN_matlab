@@ -65,6 +65,7 @@ classdef srsDLProcessor < srsTest.srsBlockUnittest
             fprintf(fileID, [...
                 '#include "../resource_grid_test_doubles.h"\n'...
                 '#include "srsgnb/phy/upper/channel_processors/pdsch_processor.h"\n'...
+                '#include "srsgnb/phy/upper/channel_processors/pdcch_processor.h"\n'...
                 '#include "srsgnb/support/file_vector.h"\n'...
                 ]);
         end
@@ -92,8 +93,15 @@ classdef srsDLProcessor < srsTest.srsBlockUnittest
                 '  file_vector<rg_entry> dmrs_symbols;\n'...
                 '};\n'...
                 '\n'...
+                'struct pdcch_transmission {\n'...
+                '  pdcch_processor::pdu_t pdu;\n'...
+                '  file_vector<rg_entry> data_symbols;\n'...
+                '  file_vector<rg_entry> dmrs_symbols;\n'...
+                '};\n'...
+                '\n'...
                 'struct test_case_t {\n'...
                 '  test_model_description test_model;\n'...
+                '  std::vector<pdcch_transmission> pdcch;\n'...
                 '  std::vector<pdsch_transmission> pdsch;\n'...
                 '};\n'...
                 ]);
@@ -108,6 +116,7 @@ classdef srsDLProcessor < srsTest.srsBlockUnittest
             import srsMatlabWrappers.phy.helpers.srsIndexes0BasedSubscrit
             import srsMatlabWrappers.phy.helpers.srsCSIRS2ReservedCell
             import srsMatlabWrappers.phy.upper.waveformGenerators.srsDLReferenceChannel
+            import srsMatlabWrappers.ran.pdcch.srsPDCCHCandidatesUE
             import srsTest.helpers.writeUint8File
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.array2str
@@ -118,8 +127,14 @@ classdef srsDLProcessor < srsTest.srsBlockUnittest
             [description, configuration, info] = srsDLReferenceChannel(referenceChannel);
 
             % Extract configuration
-            bandwidthPart = configuration.BandwidthParts{1};
+            bwpConfig = configuration.BandwidthParts{1};
             pdschConfig = configuration.PDSCH{1};
+            pdcchConfig = configuration.PDCCH{1};
+            ssConfig = configuration.SearchSpaces{pdcchConfig.SearchSpaceID};
+            coresetConfig = configuration.CORESET{ssConfig.CORESETID};
+
+            % Convert cyclic prefix to string
+            cyclicPrefixStr = ['cyclic_prefix::', upper(bwpConfig.CyclicPrefix)];
 
             % Generate reference channel description
             testModelCell = {...
@@ -132,7 +147,96 @@ classdef srsDLProcessor < srsTest.srsBlockUnittest
 
             % Extract common information
             nSymb = 14;
-            nSubC = bandwidthPart.NSizeBWP * 12;
+            nSubC = bwpConfig.NSizeBWP * 12;
+
+            allPdcchConfigCell = {};
+            pdcchTransmissions = info.WaveformResources.PDCCH.Resources;
+            for pdcch = pdcchTransmissions
+                % Skip slots that collide with SSB
+                if pdcch.NSlot == 0
+                    continue;
+                end
+
+                pdcchDataFileName = ['_', referenceChannel, '_pdcch_data_symbols'];
+                pdcchDMRSFileName = ['_', referenceChannel, '_pdcch_dmrs_symbols'];
+
+                % Convert PDCCH data indices to 0based subscript
+                pdcchDataIndices = srsIndexes0BasedSubscrit(pdcch.ChannelIndices, nSubC, nSymb);
+
+                % Convert PDCCH DMRS indices to 0based subscript
+                pdcchDMRSIndices = srsIndexes0BasedSubscrit(pdcch.DMRSIndices, nSubC, nSymb);
+
+                % Write each PDCCH Data complex symbol into a binary file, and the associated indices to another
+                testCase.saveDataFile(pdcchDataFileName, pdcch.NSlot, @writeResourceGridEntryFile, pdcch.ChannelSymbols, pdcchDataIndices);
+
+                % Write each PDCCH DMRS complex symbol into a binary file, and the associated indices to another
+                testCase.saveDataFile(pdcchDMRSFileName, pdcch.NSlot, @writeResourceGridEntryFile, pdcch.DMRSSymbols, pdcchDMRSIndices);
+
+                % Generate the test case entry
+                slotConfig = {log2(bwpConfig.SubcarrierSpacing/15), pdcch.NSlot};
+
+                nSlotFrame = mod(pdcch.NSlot, bwpConfig.SubcarrierSpacing/15 * 10);
+
+                candidates = srsPDCCHCandidatesUE(sum(coresetConfig.FrequencyResources) * coresetConfig.Duration, ...
+                    ssConfig.NumCandidates(log2(pdcchConfig.AggregationLevel) + 1), ...
+                    pdcchConfig.AggregationLevel, ...
+                    ssConfig.CORESETID, ...
+                    pdcchConfig.RNTI, ...
+                    nSlotFrame);
+
+                cceIndex = candidates(pdcchConfig.AllocatedCandidate);
+                if coresetConfig.CCEREGMapping == 'noninterleaved'
+                    coresetRegToCceMappingStr = 'pdcch_processor::coreset_description::NON_INTERLEAVED';
+                else
+                    coresetRegToCceMappingStr = 'pdcch_processor::coreset_description::INTERLEAVED';
+                end
+
+                % Prepare DCI description
+                dciDescription = {...
+                    pdcchConfig.RNTI,...             % rnti
+                    pdcchConfig.DMRSScramblingID,... % n_id_pdcch_dmrs
+                    pdcchConfig.DMRSScramblingID,... % n_id_pdcch_data
+                    pdcchConfig.RNTI,...             % n_rnti
+                    cceIndex,...                     % cce_index
+                    pdcchConfig.AggregationLevel,... % aggregation_level
+                    0.0,...                          % dmrs_power_offset_dB
+                    0.0,...                          % data_power_offset_dB
+                    pdcch.DCIBits,...                % payload
+                    '{0}',...                        % ports
+                    };
+
+                % Prepare CORESET description
+                coresetDescription = {...
+                    bwpConfig.NSizeBWP,...                % bwp_size_rb
+                    bwpConfig.NStartBWP,...               % bwp_start_rb
+                    ssConfig.StartSymbolWithinSlot,...    % start_symbol_index
+                    coresetConfig.Duration,...            % duration
+                    coresetConfig.FrequencyResources, ... % frequency_resources
+                    coresetRegToCceMappingStr,...         % cce_to_reg_mapping_type
+                    coresetConfig.REGBundleSize, ...      % reg_bundle_size
+                    coresetConfig.InterleaverSize, ...    % interleaver_size
+                    coresetConfig.ShiftIndex, ...         % shoft_index
+                    };
+
+                % Prepare PDCCH PDU
+                pduDescription = {...
+                    slotConfig,...         % slot
+                    cyclicPrefixStr,...    % cp
+                    coresetDescription,... % coreset
+                    {dciDescription},...   % dci_list
+                    };
+
+                % Generate PDSCH transmission entry
+                pdcchString = testCase.testCaseToString(pdcch.NSlot, pduDescription, true, ...
+                    pdcchDataFileName, pdcchDMRSFileName);
+
+                % Remove comma and new line from the end of the string
+                pdcchString = strrep(pdcchString, sprintf(',\n'), '');
+
+                % Append PDSCH transmission to the list of PDSCH
+                % transmissions.
+                allPdcchConfigCell = [allPdcchConfigCell{:}, {pdcchString}];
+            end % of for pdcch = pdcchTransmissions
 
             allPdschConfigCell = {};
             pdschTransmissions = info.WaveformResources.PDSCH.Resources;
@@ -177,15 +281,12 @@ classdef srsDLProcessor < srsTest.srsBlockUnittest
                 % Write each PDSCH DMRS complex symbol into a binary file, and the associated indices to another
                 testCase.saveDataFile(pdschDMRSFileName, pdsch.NSlot, @writeResourceGridEntryFile, pdsch.DMRSSymbols, pdschDMRSIndices);
 
-                % Convert cyclic prefix to TagoRAN type
-                cyclicPrefixStr = ['cyclic_prefix::', upper(bandwidthPart.CyclicPrefix)];
-
                 % Generate DMRS symbol mask
                 dmrsSymbolMask = zeros(1,14);
                 dmrsSymbolMask(pdsch.DMRSSymbolSet + 1) = 1;
 
                 % Generate the test case entry
-                slotConfig = {log2(bandwidthPart.SubcarrierSpacing/15), pdsch.NSlot};
+                slotConfig = {log2(bwpConfig.SubcarrierSpacing/15), pdsch.NSlot};
                 portsString = '{0}';
                 dmrsTypeString = sprintf('dmrs_type::TYPE%d', pdschConfig.DMRS.DMRSConfigurationType);
                 refPointStr = ['pdsch_processor::pdu_t::', pdschConfig.DMRS.DMRSReferencePoint  ];
@@ -206,8 +307,8 @@ classdef srsDLProcessor < srsTest.srsBlockUnittest
                 pdschPDUCell = {...
                     slotConfig, ...               % Slot
                     pdschConfig.RNTI, ...         % RNTI
-                    bandwidthPart.NSizeBWP, ...   % BWP size
-                    bandwidthPart.NStartBWP, ...  % BWP Start
+                    bwpConfig.NSizeBWP, ...       % BWP size
+                    bwpConfig.NStartBWP, ...      % BWP Start
                     cyclicPrefixStr, ...          % CP
                     {{modString1, pdsch.RV}}, ... % Codeword 0
                     pdschConfig.NID, ...          % N_id
@@ -241,7 +342,7 @@ classdef srsDLProcessor < srsTest.srsBlockUnittest
             end % of for pdsch = pdschTransmissions
 
             % Build complete test model cell
-            completeTestModelCell = {testModelCell, allPdschConfigCell};
+            completeTestModelCell = {testModelCell, allPdcchConfigCell, allPdschConfigCell};
 
             % add the test to the file header
             testCase.addTestToHeaderFile(testCase.headerFileID, ...
