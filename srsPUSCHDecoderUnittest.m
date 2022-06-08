@@ -74,10 +74,10 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
 
             fprintf(fileID, 'struct test_case_t {\n');
-            fprintf(fileID, '  segmenter_config         config;\n');
-            fprintf(fileID, '  std::vector<unsigned>    rv_sequence;\n');
-            fprintf(fileID, '  file_vector<int8_t>      llrs;\n');
-            fprintf(fileID, '  file_vector<uint8_t>     transport_block;\n');
+            fprintf(fileID, '  segmenter_config                       config;\n');
+            fprintf(fileID, '  std::vector<unsigned>                  rv_sequence;\n');
+            fprintf(fileID, '  file_vector<log_likelihood_ratio>      llrs;\n');
+            fprintf(fileID, '  file_vector<uint8_t>                   transport_block;\n');
             fprintf(fileID, '};\n');
 
         end
