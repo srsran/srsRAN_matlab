@@ -19,10 +19,10 @@ L = aggregationLevel;
 candidates = zeros(1, numCandidates, 'uint32');
 
 % Generate lowest CCE index for each candidate.
-for ms = 0:numCandidates-1
-    candidates(ms+1) = L*( mod(Yp + ...
-        floor(double(ms*numCCEs)/double(L*numCandidates)) + nCI, ...
-        floor(numCCEs/L)));
+for ms = 0:numCandidates - 1
+    candidates(ms + 1) = L * (mod(Yp + ...
+        floor(double(ms * numCCEs) / double(L * numCandidates)) + nCI, ...
+        floor(numCCEs / L)));
 end
 
 end
