@@ -317,10 +317,27 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
         %copyTestVectors(OBJ, OUTPUTPATH) Copies all the binary data files and the decription
         %   header file to the output folder.
 
-            tmp = dir([obj.tmpOutputPath, filesep, '*.h']);
-            if ~isempty(tmp)
-                obj.packResults;
+            % Get header file list.
+            tmp_h = dir([obj.tmpOutputPath, filesep, '*.h']);
+
+            % Get data list.
+            tmp_dat = dir([obj.tmpOutputPath, filesep, '*.dat']);
+
+            % If a header is found...
+            if ~isempty(tmp_h)
+                % Create destination folder
                 obj.createOutputFolder(outputPath);
+
+                % If any data file is found...
+                if ~isempty(tmp_dat)
+                    % Compress test vectors
+                    obj.packResults;
+                else
+                    % Compress an empty test vector file
+                    obj.packEmpty;
+                end
+
+                % Copy compressed file
                 cmd = sprintf('cp %s/%s_test_data.{h,tar.gz} %s', obj.tmpOutputPath, ...
                     obj.srsBlock, outputPath);
                 system(cmd);
@@ -329,8 +346,8 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
                 formatCmd = sprintf(['LD_LIBRARY_PATH=/usr/lib clang-format -i', ...
                     ' -style=file %s/%s_test_data.h'], outputPath, obj.srsBlock);
                 system(formatCmd);
-            end
-        end
+            end % of ~isempty(tmp_h)
+        end % of copyTestVectors(obj, outputPath)
 
         function packResults(obj)
         %packResults(OBJ) packs all generated test vectors in a single '.tar.gz' file.
@@ -340,6 +357,14 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
             system(sprintf('cd %s && find . -regex ".*.dat" | grep "%s" | xargs tar -czf %s_test_data.tar.gz && cd %s', ...
                 obj.tmpOutputPath, obj.srsBlock, obj.srsBlock, current_pwd));
             system(sprintf('rm -rf %s/%s*.dat', obj.tmpOutputPath, obj.srsBlock));
+        end
+
+        function packEmpty(obj)
+        %packEmpty(OBJ) packs an empty '.tar.gz' file.
+
+            % gzip generated testvectors
+            system(sprintf('cd %s && tar -czf %s_test_data.tar.gz --files-from /dev/null', ...
+                obj.tmpOutputPath, obj.srsBlock));
         end
 
         function createOutputFolder(obj, outputPath)
