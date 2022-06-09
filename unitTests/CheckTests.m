@@ -127,7 +127,8 @@ classdef CheckTests < matlab.unittest.TestCase
             % Check whether the block and block type are correct
             blockVal = classMeta.PropertyList(blockIdx).DefaultValue;
             typeVal = classMeta.PropertyList(typeIdx).DefaultValue;
-            msg = sprintf('Class %s refers to invalid block ''%s/%s''.',  className, typeVal, blockVal);
+            msg = sprintf('Class %s refers to invalid block ''%s/%s''.',  ...
+                className, typeVal, blockVal);
             obj.assertThat({[typeVal '/' blockVal]}, IsSubsetOf(obj.fullBlocks), msg);
 
             % Check whether an object of class testName can be instantiated.
@@ -159,8 +160,11 @@ classdef CheckTests < matlab.unittest.TestCase
             fileName = fullfile(workDir, [blockVal '_test_data']);
             msg = sprintf('Class %s cannot create the test vector header file.', className);
             obj.assertThat([fileName, '.h'], IsFile, msg);
-            msg = sprintf('Class %s cannot create the test vector data file(s).', className);
-            obj.assertTrue(~isempty(dir([fileName, '*.tar.gz'])), msg);
+            if (hasDataFile(workDir, blockVal))
+                msg = sprintf('Class %s cannot create the test vector data file(s).', ...
+                    className);
+                obj.assertTrue(~isempty(dir([fileName, '*.tar.gz'])), msg);
+            end
 
             % Check whether runSRSGNBUnittest can run the current test.
             try
@@ -194,3 +198,24 @@ classdef CheckTests < matlab.unittest.TestCase
     end % of methods (Test)
 end % of classdef CheckTests
 
+%hasDataFile Checks whether a test has an associated data file
+function flag = hasDataFile(workDir, blockVal)
+    flag = false;
+
+    hFile = fullfile(workDir, [blockVal '_test_data.h']);
+    fff = fopen(hFile);
+    if (fff == -1)
+    % Just in case, we should never get here.
+        return;
+    end
+
+    pattern = string(blockVal) + wildcardPattern + ".dat";
+    line = fgetl(fff);
+    while (~flag && ischar(line))
+        if contains(line, pattern)
+            flag = true;
+            continue;
+        end
+        line = fgetl(fff);
+    end
+end
