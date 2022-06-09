@@ -1,6 +1,4 @@
-%srsIndexes0BasedSubscrit Converts absolute 1-based resource grid indexes
-%   to 0-based subscript index representation.
-%
+%srsIndexes0BasedSubscrit Converts index representation.
 %   The absolute 1-based resource grid index representation comprises a
 %   single index per resource element. It starts at 1 for the first
 %   subcarrier of the first symbol and the first port. It increases with

@@ -1,4 +1,4 @@
-%listSRSblocks Provide a list of all tested SRS blocks
+%listSRSblocks Provide a list of all tested SRS blocks.
 %   BLOCKS = listSRSblocks returns a cell array with the names of all SRS blocks
 %   with a unit test in the main folder.
 %

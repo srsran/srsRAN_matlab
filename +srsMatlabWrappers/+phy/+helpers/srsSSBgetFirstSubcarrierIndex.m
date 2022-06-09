@@ -1,8 +1,8 @@
-%srsSSBgetFirstSymbolIndex Calculates the position of the first subcarrier of the SS/PBCH
-%   block relative to the bottom of the grid (pointA).
+%srsSSBgetFirstSymbolIndex Calculates the position of the first SS/PBCH subcarrier.
 %   SSBFIRSTSUBCARRIERINDEX = srsSSBgetFirstSubcarrierIndex(NUMEROLOGY, POINTAOFFSET, SSBOFFSET)
 %   returns a subcarrier index SSBFIRSTSUBCARRIERINDEX, given a subcarrier spacing NUMEROLOGY,
-%   a bottom grid value POINTAOFFSET and an SSB offset SSBOFFSET.
+%   a bottom grid value POINTAOFFSET and an SSB offset SSBOFFSET. Note that
+%   SSBFIRSTSUBCARRIERINDEX is relative to POINTAOFFSET.
 
 function SSBfirstSubcarrierIndex = srsSSBgetFirstSubcarrierIndex(numerology, pointAoffset, SSBoffset)
 

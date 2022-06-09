@@ -1,4 +1,4 @@
-%srsDLProcessor vector tests for downlink processor functions.
+%srsDLProcessor Vector tests for downlink processor functions.
 %   This class implements vector tests for the downlink processor functions
 %   using the matlab.unittest framework. The simplest use consists in
 %   creating an object with

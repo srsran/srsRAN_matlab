@@ -1,5 +1,5 @@
 function copySRStestvectors(origin, destination, targetBlock, srsDir)
-%copySRStestvectors Copy test vector files
+%copySRStestvectors Copy test vector files.
 %   copySRStestvectors(ORIGIN, DESTINATION) copies all test vector files (both
 %   header files and tar.gz files) found in folder ORIGIN to the proper
 %   subfolder of DESTINATION. Here, DESTINATION stands for a root directory of

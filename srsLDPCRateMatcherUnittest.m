@@ -1,5 +1,5 @@
-%srsLDPCRateMatcherUnittest Unit tests for the LDPC encoder.
-%   This class implements unit tests for the LDPC encoder using the matlab.unittest
+%srsLDPCRateMatcherUnittest Unit tests for the LDPC rate matcher.
+%   This class implements unit tests for the LDPC rate matcher using the matlab.unittest
 %   framework. The simplest use consists in creating an object with
 %       testCase = srsLDPCRateMatcherUnittest
 %   and then running all the tests with

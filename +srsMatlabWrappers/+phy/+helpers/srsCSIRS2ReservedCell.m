@@ -1,7 +1,4 @@
-%srsCSIRS2ReservedCell Generates a cell array that describes a reserved RE
-%   pattern list from a carrier configuration and a list of CSI-RS
-%   resources.
-%
+%srsCSIRS2ReservedCell Generates a cell array that describes a reserved RE pattern.
 %   RESERVEDLIST = srsCSIRS2ReservedCell(CFGOBJ,CSIRSRESOURCES) Generates
 %   a cell array that describes a reserved RE pattern list from a carrier
 %   configuration and a list of CSI-RS resources.
