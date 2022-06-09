@@ -332,14 +332,17 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
                 if ~isempty(tmp_dat)
                     % Compress test vectors
                     obj.packResults;
+
+                    % Command for copying header file and compressed test vector files
+                    cmd = sprintf('cp %s/%s_test_data.{h,tar.gz} %s', obj.tmpOutputPath, ...
+                        obj.srsBlock, outputPath);
                 else
-                    % Compress an empty test vector file
-                    obj.packEmpty;
+                    % Command for copying header file only
+                    cmd = sprintf('cp %s/%s_test_data.h %s', obj.tmpOutputPath, ...
+                        obj.srsBlock, outputPath);
                 end
 
-                % Copy compressed file
-                cmd = sprintf('cp %s/%s_test_data.{h,tar.gz} %s', obj.tmpOutputPath, ...
-                    obj.srsBlock, outputPath);
+                % Copy files
                 system(cmd);
 
                 % apply clang-format to header file
@@ -357,14 +360,6 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
             system(sprintf('cd %s && find . -regex ".*.dat" | grep "%s" | xargs tar -czf %s_test_data.tar.gz && cd %s', ...
                 obj.tmpOutputPath, obj.srsBlock, obj.srsBlock, current_pwd));
             system(sprintf('rm -rf %s/%s*.dat', obj.tmpOutputPath, obj.srsBlock));
-        end
-
-        function packEmpty(obj)
-        %packEmpty(OBJ) packs an empty '.tar.gz' file.
-
-            % gzip generated testvectors
-            system(sprintf('cd %s && tar -czf %s_test_data.tar.gz --files-from /dev/null', ...
-                obj.tmpOutputPath, obj.srsBlock));
         end
 
         function createOutputFolder(obj, outputPath)
