@@ -64,9 +64,7 @@ classdef srsPDCCHCandidatesCommonUnittest < srsTest.srsBlockUnittest
         function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
 
-            fprintf(fileID, [...
-                '#include "srsgnb/ran/pdcch/pdcch_candidates.h"\n'...
-                ]);
+            fprintf(fileID, '#include "srsgnb/ran/pdcch/pdcch_candidates.h"\n');
         end
 
         function addTestDefinitionToHeaderFile(~, fileID)
@@ -110,7 +108,7 @@ classdef srsPDCCHCandidatesCommonUnittest < srsTest.srsBlockUnittest
 
         configStr = cellarray2str({aggregationLevelString, numCandidates, numCCEs}, true);
 
-        if length(candidates) == 0
+        if isempty(candidates)
             candidatesCell = {};
         else
             candidatesCell = {candidates};
