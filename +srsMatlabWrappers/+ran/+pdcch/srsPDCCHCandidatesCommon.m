@@ -1,5 +1,4 @@
 %srsPDCCHCandidatesCommon Generates a list of the lowest CCE index for each PDCCH candidate.
-%
 %   CANDIDATES = srsPDCCHCandidatesCommon(NUMCCES,NUMCANDIDATES,AGGREGATIONLEVEL)
 %   generates a list of the PDCCH candidates for common SS from:
 %   NUMCCES          - number of CCE available in the CORESET.
