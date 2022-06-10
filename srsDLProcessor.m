@@ -119,7 +119,6 @@ classdef srsDLProcessor < srsTest.srsBlockUnittest
             import srsMatlabWrappers.ran.pdcch.srsPDCCHCandidatesUE
             import srsTest.helpers.writeUint8File
             import srsTest.helpers.writeResourceGridEntryFile
-            import srsTest.helpers.array2str
             import srsTest.helpers.cellarray2str
             import srsTest.helpers.rbAllocationIndexes2String
 
@@ -166,10 +165,10 @@ classdef srsDLProcessor < srsTest.srsBlockUnittest
                 % Convert PDCCH DMRS indices to 0based subscript
                 pdcchDMRSIndices = srsIndexes0BasedSubscrit(pdcch.DMRSIndices, nSubC, nSymb);
 
-                % Write each PDCCH Data complex symbol into a binary file, and the associated indices to another
+                % Write PDCCH Data complex symbols and indices into a binary file as resource grid entries.
                 testCase.saveDataFile(pdcchDataFileName, pdcch.NSlot, @writeResourceGridEntryFile, pdcch.ChannelSymbols, pdcchDataIndices);
 
-                % Write each PDCCH DMRS complex symbol into a binary file, and the associated indices to another
+                % Write PDCCH DMRS complex symbols and indices into a binary file as resource grid entries.
                 testCase.saveDataFile(pdcchDMRSFileName, pdcch.NSlot, @writeResourceGridEntryFile, pdcch.DMRSSymbols, pdcchDMRSIndices);
 
                 % Generate the test case entry
@@ -275,10 +274,10 @@ classdef srsDLProcessor < srsTest.srsBlockUnittest
                 % Write the DLSCH transport block to a binary file
                 testCase.saveDataFile(transportBlockFileName, pdsch.NSlot, @writeUint8File, pdsch.TransportBlock(:,1));
 
-                % Write each PDSCH Data complex symbol into a binary file, and the associated indices to another
+                % Write PDSCH Data complex symbols and indices into a binary file as resource grid entries.
                 testCase.saveDataFile(pdschDataFileName, pdsch.NSlot, @writeResourceGridEntryFile, pdsch.ChannelSymbols, pdschDataIndices);
 
-                % Write each PDSCH DMRS complex symbol into a binary file, and the associated indices to another
+                % Write PDSCH DMRS complex symbols and indices into a binary file as resource grid entries.
                 testCase.saveDataFile(pdschDMRSFileName, pdsch.NSlot, @writeResourceGridEntryFile, pdsch.DMRSSymbols, pdschDMRSIndices);
 
                 % Generate DMRS symbol mask

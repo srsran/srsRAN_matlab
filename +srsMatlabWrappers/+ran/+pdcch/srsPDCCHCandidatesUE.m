@@ -1,7 +1,7 @@
-%srsPDCCHCandidatesCommon Generates a list of the lowest CCE index for each
-%PDCCH candidate.
+%srsPDCCHCandidatesCommon Generates a list of the lowest CCE index for each PDCCH candidate.
+%
 %   CANDIDATES = srsPDCCHCandidatesCommon(NUMCCES,NUMCANDIDATES,AGGREGATIONLEVEL,CORESETID,RNTI,SLOTNUM)
-%   Generates a list of the PDCCH candidates for UE specific SS from:
+%   generates a list of the PDCCH candidates for UE specific SS from:
 %   NUMCCES          - number of CCE available in the CORESET.
 %   NUMCANDIDATES    - number of candidates given by the SS configuration.
 %   AGGREGATIONLEVEL - Number of CCE taken by a PDCCH transmission.
