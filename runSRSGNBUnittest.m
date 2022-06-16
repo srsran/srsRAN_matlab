@@ -95,6 +95,8 @@ function unittestClass = name2Class(name)
             unittestClass = ?srsShortBlockEncoderUnittest;
         case 'ssb_processor'
             unittestClass = ?srsSSBProcessorUnittest;
+        case 'tbs_calculator'
+            unittestClass = ?srsTBSCalculatorUnittest;
         otherwise
             error('SRSGNB:runSRSGNBUnittest:unknownBlock', ...
                 'No unit test for block %s.\n', name);
