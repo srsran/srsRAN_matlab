@@ -17,39 +17,21 @@
 %
 %   srsTBSCalculatorUnittest Properties (TestParameter):
 %
-%   modulation - Modulation scheme for each codeword. It must be specified
-%                as one of {'pi/2-BPSK', 'QPSK', '16QAM', '64QAM', '256QAM'}.
-%                Modulation scheme can be specified as a character array or
-%                string scalar for one codeword or two codewords. In case
-%                of two codewords, the same modulation scheme is applied to
-%                both codewords. Alternatively, a cell array of character
-%                vectors or string array can be used to specify different
-%                modulation schemes for each codeword.
+%   modulation - Modulation order.
 %   nlayers    - Number of transmission layers (1...4 for one codeword,
 %                5...8 for two codewords).
 %   nprb       - Number of physical resource blocks (PRBs) allocated for
-%                the physical shared channel. The value must be a scalar
-%                nonnegative integer. The nominal value of NPRB is in the
-%                range of 0...275.
+%                the physical shared channel.
 %   nsymb      - Number of symbols allocated for the data transmission in
 %                the physical shared channel.
 %   ndmrsprb   - Number of resource elements for DMRS allocated for the
 %                data transmission in the physical shared channel.
-%   tcr        - Target code rate for each codeword. It is a scalar for one
-%                codeword or a two-element vector for two codewords, with
-%                each value between 0 and 1. Alternatively, two codewords
-%                can also be configured with single target code rate.
+%   tcr        - Target code rate.
 %   xoh        - It specifies the additional overhead, which controls the
 %                number of REs available for the data transmission in the
-%                shared channel, within one PRB for one slot. It must be a
-%                scalar nonnegative integer. The nominal value of XOH is
-%                one of {0, 6, 12, 18}, provided by the higher-layer
-%                parameter xOverhead in PDSCH-ServingCellConfig IE or
-%                PUSCH-ServingCellConfig IE.
+%                shared channel, within one PRB for one slot.
 %   tbscaling  - It specifies the scaling factor(s) used in the calculation
-%                of intermediate number of information bits. The nominal
-%                value of TBSCALING is one of {0.25, 0.5, 1}, as defined in
-%                TS 38.214 Table 5.1.3.2-2.
+%                of intermediate number of information bits.
 %
 %   srsTBSCalculatorUnittest Methods (TestTags = {'testvector'}):
 %
@@ -78,20 +60,42 @@ classdef srsTBSCalculatorUnittest < srsTest.srsBlockUnittest
     end
 
     properties (TestParameter)
+        % It must be specified as one of (2, 4, 6, 8). They refer to QPSK,
+        % 16-QAM, 64-QAM and 256-QAM respectively. 
         modulation = {2, 4, 6, 8};
 
+        % The value must be a scalar nonnegative integer. The nominal value
+        % of NLAYERS is in the range of (1...8).
         nlayers = {1, 4};
 
+        % The value must be a scalar nonnegative integer. The nominal value
+        % of NPRB is in the range of (1...275).
         nprb = {52};
 
+        % The value must be a scalar nonnegative integer. The nominal value
+        % of NSYMB is in the range of (1...14).
         nsymb = {12};
 
+        % The value must be a scalar nonnegative integer. The nominal value
+        % depends on the number of CDM groups, the DMRS type density and
+        % the number of symbols udes for DMRS transmission.
+        %
+        % For example, for a Type1 DMRS has a density of six RE per PRB and
+        % symbol. With two additional positions and two CDM groups without
+        % data, it results in 36 RE per PRB.
         ndmrsprb = {6, 36};
 
+        % Represented in floating point between 0 and 1.
         tcr = {0.1, 0.4};
 
+        % It must be a scalar nonnegative integer. The nominal value of XOH
+        % is one of (0, 6, 12, 18), provided by the higher-layer parameter
+        % xOverhead in PDSCH-ServingCellConfig IE or
+        % PUSCH-ServingCellConfig IE.   
         xoh = {0, 18};
 
+        % The nominal value of TBSCALING is one of (0.25, 0.5, 1), as
+        % defined in TS 38.214 Table 5.1.3.2-2.
         tbscaling = {1, 0.25};
     end
 
@@ -118,8 +122,8 @@ classdef srsTBSCalculatorUnittest < srsTest.srsBlockUnittest
 
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, modulation, nlayers, nprb, nsymb, ndmrsprb, tcr, xoh, tbscaling)
-        %testvectorGenerationCases Generates a test vector for the given
-        %   parameters.
+        %testvectorGenerationCases Generates a test vector for the
+        %   modulation, nlayers, nprb, ndmrsprb, tcr, xoh and tbscaling.
 
         import srsMatlabWrappers.phy.helpers.srsGetModulation
         import srsTest.helpers.cellarray2str
