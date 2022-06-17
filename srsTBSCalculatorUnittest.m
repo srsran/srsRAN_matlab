@@ -68,7 +68,7 @@ classdef srsTBSCalculatorUnittest < srsTest.srsBlockUnittest
 
         %The value must be a scalar nonnegative integer. The nominal value
         %of NPRB is in the range of (1...275).
-        nprb = {52};
+        nprb = {6, 11};
 
         %The value must be a scalar nonnegative integer. The nominal value
         %of NSYMB is in the range of (1...14).
@@ -84,14 +84,14 @@ classdef srsTBSCalculatorUnittest < srsTest.srsBlockUnittest
         ndmrsprb = {6, 36};
 
         %Represented in floating point between 0 and 1.
-        tcr = {0.1, 0.4};
+        tcr = {0.1, 0.9};
 
         %Controls the number of REs available for the data transmission in
         %the shared channel, within one PRB for one slot. It must be a
         %scalar nonnegative integer. The nominal value of XOH is one of (0,
         %6, 12, 18), provided by the higher-layer parameter xOverhead in
         %PDSCH-ServingCellConfig IE or PUSCH-ServingCellConfig IE.
-        xoh = {0, 18};
+        xoh = {0, 12};
 
         %The nominal value of TBSCALING is one of (0.25, 0.5, 1), as
         %defined in TS 38.214 Table 5.1.3.2-2.
