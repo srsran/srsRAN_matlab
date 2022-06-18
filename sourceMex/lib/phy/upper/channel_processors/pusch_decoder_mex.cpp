@@ -13,10 +13,15 @@ using namespace srsgnb;
 using namespace srsgnb_matlab;
 
 namespace srsgnb {
+/// Describes a softbuffer pool.
 struct rx_softbuffer_pool_description {
+  /// Maximum size of the codeblocks stored in the pool.
   unsigned max_codeblock_size;
+  /// Maximum number of softbuffers managed by the pool.
   unsigned max_softbuffers;
+  /// Maximum number of codeblocks in each softbuffer.
   unsigned max_nof_codeblocks;
+  /// Softbuffer expiration time in number of slots.
   unsigned expire_timeout_slots;
 };
 
