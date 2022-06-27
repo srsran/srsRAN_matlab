@@ -5,10 +5,9 @@
 
 function writeComplexFloatFile(filename, data)
     fileID = fopen(filename, 'w');
-    dataLength = length(data);
-    for idx = 1:dataLength
-        fwrite(fileID, real(data(idx)), 'float32');
-        fwrite(fileID, imag(data(idx)), 'float32');
+    for value = data
+        fwrite(fileID, real(value), 'float32');
+        fwrite(fileID, imag(value), 'float32');
     end
     fclose(fileID);
 end
