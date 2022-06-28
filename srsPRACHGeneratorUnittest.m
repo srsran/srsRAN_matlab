@@ -18,17 +18,12 @@
 %
 %   srsPRACHGeneratorUnittest Properties (TestParameter):
 %
-%   Numerology          - Carrier numerology.
-%   CyclicPrefix        - Cyclic prefix 'normal' or 'extended'.
-%   CarrierBandwidth    - Carrier bandwidth in PRB.
 %   DuplexMode          - Duplexing mode FDD or TDD.
-%   ConfigurationIndex  - Configuration index, as defined in TS 38.211
-%                         Tables 6.3.3.2-2 to 6.3.3.2-4.
+%   CarrierBandwidth    - Carrier bandwidth in PRB.
+%   PreambleFormat      - Indicates the preamble format to generate.
 %   RestrictedSet       - Selects the restricted set.
 %   ZeroCorrelationZone - Cyclic shift configuration index {0, 15}.
-%   RBOffset            - Starting resource block (RB) index of the initial
-%                         uplink bandwidth part (BWP) relative to carrier
-%                         resource grid.
+%   RBOffset            - Indicates the frequency domain sequence mapping.
 %  
 %   srsPRACHGeneratorUnittest Methods (TestTags = {'testvector'}):
 %
@@ -92,7 +87,6 @@ classdef srsPRACHGeneratorUnittest < srsTest.srsBlockUnittest
 
         function addTestDefinitionToHeaderFile(~, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
-
 
             fprintf(fileID, [...
                 'struct prach_context {\n'...
