@@ -63,25 +63,25 @@ classdef srsPRACHGeneratorUnittest < srsTest.srsBlockUnittest
         DuplexMode = {'FDD', 'TDD'}
 
         %Carrier bandwidth in PRB.
-        CarrierBandwidth = {52}
+        CarrierBandwidth = {52, 106}
 
         %Preamble formats.
         PreambleFormat = {'0', '1', '2', '3'}
 
         %Selects the restricted set, possible values are
         %{'UnrestrictedSet', 'RestrictedSetTypeA', 'RestrictedSetTypeB'}
-        RestrictedSet = {'UnrestrictedSet', 'RestrictedSetTypeA', 'RestrictedSetTypeB'}
+        RestrictedSet = {'UnrestrictedSet'}
 
         % Zero correlation zone, cyclic shift configuration index.
-        ZeroCorrelationZone = {0, 7, 12}
+        ZeroCorrelationZone = {0, 5, 12}
 
         % Starting resource block (RB) index of the initial uplink
         % bandwidth part (BWP) relative to carrier resource grid. 
-        RBOffset = {0, 2, 23};
+        RBOffset = {0, 1, 2, 13};
     end
 
     methods (Access = protected)
-        function addTestIncludesToHeaderFile(obj, fileID)
+        function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
 
             fprintf(fileID, [...
@@ -90,12 +90,13 @@ classdef srsPRACHGeneratorUnittest < srsTest.srsBlockUnittest
                 ]);
         end
 
-        function addTestDefinitionToHeaderFile(obj, fileID)
+        function addTestDefinitionToHeaderFile(~, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
 
 
             fprintf(fileID, [...
                 'struct prach_context {\n'...
+                '  unsigned nof_prb_ul_grid;\n'...
                 '  unsigned dft_size_15kHz;\n'...
                 '  prach_generator::configuration config;\n'...
                 '};\n'...
@@ -110,6 +111,11 @@ classdef srsPRACHGeneratorUnittest < srsTest.srsBlockUnittest
     end % of methods (Access = protected)
 
     methods (Test, TestTags = {'testvector'})
+        function obj = srsPRACHGeneratorUnittest(args)
+            rng('default');
+            obj = obj@srsTest.srsBlockUnittest();
+        end
+
         function testvectorGenerationCases(testCase, DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet, ZeroCorrelationZone, RBOffset)
         %testvectorGenerationCases Generates a test vector for the given DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet, ZeroCorrelationZone and RBOffset.  
         %   NCellID, NSlot and PRB occupation are randomly generated.
@@ -191,12 +197,17 @@ classdef srsPRACHGeneratorUnittest < srsTest.srsBlockUnittest
             end
 
             % Generate waveform
-            [waveform, gridset, info] = srsPRACHgenerator(carrier, prach);
-            
-            % Calculate the DFT size for 15kHz SCS.
+            [waveform, gridset, ~] = srsPRACHgenerator(carrier, prach);
+
+            % Remove time offset
+            if gridset.Info.OffsetLength
+                waveform = waveform(gridset.Info.OffsetLength+1:end);
+            end
+
+            % Calculate the DFT size for 15kHz SCS
             dftSize15kHz = gridset.Info.SampleRate / 15e3;
 
-            % Write the generated PRACH sequence into a binary file.
+            % Write the generated PRACH sequence into a binary file
             testCase.saveDataFile('_test_output', TestID, ...
                 @writeComplexFloatFile, waveform);
 
@@ -211,6 +222,8 @@ classdef srsPRACHGeneratorUnittest < srsTest.srsBlockUnittest
                     srsRestrictedSet = 'restricted_set_config::TYPE_B';
             end
 
+            Numerology = ['subcarrier_spacing::kHz' num2str(carrier.SubcarrierSpacing)];
+
             % srsgnb PRACH configuration
             srsPRACHConfig = {...
                 srsPRACHFormat, ...            % format
@@ -219,12 +232,14 @@ classdef srsPRACHGeneratorUnittest < srsTest.srsBlockUnittest
                 srsRestrictedSet, ...          % restricted_set
                 prach.ZeroCorrelationZone, ... % zero_correlation_zone
                 prach.RBOffset, ...            % rb_offset
+                Numerology, ...                % pusch_scs
                 };
 
             % test context
             srsTestContext = {
-                dftSize15kHz, ...   % dft_size_15kHz
-                srsPRACHConfig, ... % config
+                carrier.NSizeGrid, ... % nof_prb_ul_grid
+                dftSize15kHz, ...      % dft_size_15kHz
+                srsPRACHConfig, ...    % config
                 };
 
             % Generate the test case entry

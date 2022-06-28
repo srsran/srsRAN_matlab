@@ -110,10 +110,9 @@ resource.PRACHIndices = prachIndices;
 resource.PRACHIndicesInfo = prachInfoInd;
 datastore.Resource = resource;
 
-
 % Generate the PRACH waveform for this slot and append it to the
 % existing waveform
-[waveform, prachOFDMInfo] = nrPRACHOFDMModulate(carrier, prach, prachGrid, 'Windowing', []);
+[waveform, prachOFDMInfo] = nrPRACHOFDMModulate(carrier, prach, prachGrid, 'Windowing', 0);
 
 % Capture the OFDM modulation info
 gridset.Info = prachOFDMInfo;
