@@ -187,7 +187,8 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
             assert(all(rxTB == TB), 'Decoding errors.');
 
             % clip and quantize
-            cwLLRs(abs(cwLLRs) > 20) = 20;
+            cwLLRs(cwLLRs > 20) = 20;
+            cwLLRs(cwLLRs < -20) = -20;
             cwLLRs = round(cwLLRs * 6); % this is codeblocks * 120 / 20
             % write the LLRs to a binary file
             testCase.saveDataFile('_test_input', testID, @writeInt8File, cwLLRs(:));
