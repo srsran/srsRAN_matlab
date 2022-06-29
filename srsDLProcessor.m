@@ -184,7 +184,7 @@ classdef srsDLProcessor < srsTest.srsBlockUnittest
                     nSlotFrame);
 
                 cceIndex = candidates(pdcchConfig.AllocatedCandidate);
-                if coresetConfig.CCEREGMapping == 'noninterleaved'
+                if isequal(coresetConfig.CCEREGMapping, 'noninterleaved')
                     coresetRegToCceMappingStr = 'pdcch_processor::coreset_description::NON_INTERLEAVED';
                 else
                     coresetRegToCceMappingStr = 'pdcch_processor::coreset_description::INTERLEAVED';
