@@ -102,7 +102,7 @@ classdef srsTBSCalculatorUnittest < srsTest.srsBlockUnittest
         function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
 
-            fprintf(fileID, '#include "srsgnb/scheduler/support/tbs_calculator.h"\n');
+            fprintf(fileID, '#include "lib/scheduler/support/tbs_calculator.h"\n');
             fprintf(fileID, '#include <vector>\n');
         end
 
