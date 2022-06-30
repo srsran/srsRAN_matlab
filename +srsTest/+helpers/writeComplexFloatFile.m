@@ -4,15 +4,14 @@
 %    object used by the SRS gNB.
 
 function writeComplexFloatFile(filename, data)
+    % Convert data to single precission floating point with interleaved
+    % real and imaginary parts.
+    singleRealData = zeros(1, 2 * numel(data), 'single');
+    singleRealData(1:2:end) = real(data);
+    singleRealData(2:2:end) = imag(data);
+
+    % Open file, write data and close file.
     fileID = fopen(filename, 'w');
-    dataLength = length(data);
-
-    re_data = real(data);
-    im_data = imag(data);
-
-    for idx = 1:dataLength
-        fwrite(fileID, re_data(idx), 'float32');
-        fwrite(fileID, im_data(idx), 'float32');
-    end
+    fwrite(fileID, singleRealData, 'float32');
     fclose(fileID);
 end

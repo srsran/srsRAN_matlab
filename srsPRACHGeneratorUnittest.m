@@ -8,9 +8,9 @@
 %
 %   srsPRACHGeneratorUnittest Properties (Constant):
 %
-%   srsBlock      - The tested block (i.e., 'csi_rs_processor').
+%   srsBlock      - The tested block (i.e., 'prach_generator').
 %   srsBlockType  - The type of the tested block, including layer
-%                   (i.e., 'phy/upper/signal_processors').
+%                   (i.e., 'phy/upper/channel_processors').
 %
 %   srsPRACHGeneratorUnittest Properties (ClassSetupParameter):
 %
@@ -104,23 +104,22 @@ classdef srsPRACHGeneratorUnittest < srsTest.srsBlockUnittest
 
     end % of methods (Access = protected)
 
-    methods (Test, TestTags = {'testvector'})
-        function obj = srsPRACHGeneratorUnittest(args)
+    methods (TestClassSetup)
+        function classSetup(testCase)
+            orig = rng;
+            testCase.addTeardown(@rng,orig)
             rng('default');
-            obj = obj@srsTest.srsBlockUnittest();
         end
+    end
 
+    methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet, ZeroCorrelationZone, RBOffset)
-        %testvectorGenerationCases Generates a test vector for the given DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet, ZeroCorrelationZone and RBOffset.  
-        %   NCellID, NSlot and PRB occupation are randomly generated.
-        %   Scrambling ID and symbol amplitude are also random.
+        %testvectorGenerationCases Generates a test vector for the given 
+        % DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet,
+        % ZeroCorrelationZone and RBOffset. The parameters SequenceIndex
+        % and PreambleIndex are generated randomly.
 
-            import srsTest.helpers.cellarray2str
             import srsTest.helpers.writeComplexFloatFile
-            import srsTest.helpers.matlab2srsCyclicPrefix
-
-            import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
-            import srsMatlabWrappers.phy.helpers.srsConfigureCSIRS
             import srsMatlabWrappers.phy.upper.channel_processors.srsPRACHgenerator
 
             % Generate a unique test ID
@@ -144,33 +143,12 @@ classdef srsPRACHGeneratorUnittest < srsTest.srsBlockUnittest
             switch DuplexMode
                 case 'FDD'
                     carrier.SubcarrierSpacing = 15;
-                    switch PreambleFormat
-                        case '0'
-                            prach.ConfigurationIndex = 0;
-                        case '1'
-                            prach.ConfigurationIndex = 28;
-                        case '2'
-                            prach.ConfigurationIndex = 53;
-                        case '3'
-                            prach.ConfigurationIndex = 60;
-                        otherwise
-                            error('Preamble format %s not implemented.', PreambleFormat);
-                    end
+                    ConfigurationsTable = prach.Tables.ConfigurationsFR1PairedSUL;
                 case 'TDD'
                     carrier.SubcarrierSpacing = 30;
-                    switch PreambleFormat
-                        case '0'
-                            prach.ConfigurationIndex = 0;
-                        case '1'
-                            prach.ConfigurationIndex = 28;
-                        case '2'
-                            prach.ConfigurationIndex = 34;
-                        case '3'
-                            prach.ConfigurationIndex = 40;
-                        otherwise
-                            error('Preamble format %s not implemented.', PreambleFormat);
-                    end
+                    ConfigurationsTable = prach.Tables.ConfigurationsFR1Unpaired;
             end
+            prach.ConfigurationIndex = selectConfigurationIndex(ConfigurationsTable, PreambleFormat);
 
             % Select PRACH subcarrier spacing from the selected format.
             switch PreambleFormat
@@ -191,7 +169,7 @@ classdef srsPRACHGeneratorUnittest < srsTest.srsBlockUnittest
             end
 
             % Generate waveform
-            [waveform, gridset, ~] = srsPRACHgenerator(carrier, prach);
+            [waveform, gridset] = srsPRACHgenerator(carrier, prach);
 
             % Remove time offset
             if gridset.Info.OffsetLength
@@ -245,3 +223,16 @@ classdef srsPRACHGeneratorUnittest < srsTest.srsBlockUnittest
         end % of function testvectorGenerationCases
     end % of methods (Test, TestTags = {'testvector'})
 end % of classdef srsPRACHGeneratorUnittest
+
+function ConfigurationIndex = selectConfigurationIndex(ConfigurationsTable, PreambleFormat)
+%selectConfigurationIndex selects a valid configuration index.
+%   CONFIGURATIONINDEX = selectConfigurationIndex(CONFIGURATIONSTABLE, PREAMBLEFORMAT)
+%   Gets the first configuration index CONFIGURATIONINDEX in a configurations table  CONFIGURATIONSTABLE with the
+%   given preamble format PREAMBLEFORMAT.
+  for rowIndex=1:height(ConfigurationsTable)
+      if ConfigurationsTable.PreambleFormat{rowIndex} == PreambleFormat
+          ConfigurationIndex = ConfigurationsTable.ConfigurationIndex(rowIndex);
+          return;
+      end
+  end
+end
