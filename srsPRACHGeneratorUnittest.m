@@ -67,11 +67,11 @@ classdef srsPRACHGeneratorUnittest < srsTest.srsBlockUnittest
         %{'UnrestrictedSet', 'RestrictedSetTypeA', 'RestrictedSetTypeB'}
         RestrictedSet = {'UnrestrictedSet'}
 
-        % Zero correlation zone, cyclic shift configuration index.
+        %Zero correlation zone, cyclic shift configuration index.
         ZeroCorrelationZone = {0, 5, 12}
 
-        % Starting resource block (RB) index of the initial uplink
-        % bandwidth part (BWP) relative to carrier resource grid. 
+        %Starting resource block (RB) index of the initial uplink bandwidth
+        %part (BWP) relative to carrier resource grid.
         RBOffset = {0, 1, 2, 13};
     end
 
@@ -115,9 +115,9 @@ classdef srsPRACHGeneratorUnittest < srsTest.srsBlockUnittest
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet, ZeroCorrelationZone, RBOffset)
         %testvectorGenerationCases Generates a test vector for the given 
-        % DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet,
-        % ZeroCorrelationZone and RBOffset. The parameters SequenceIndex
-        % and PreambleIndex are generated randomly.
+        %DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet,
+        %ZeroCorrelationZone and RBOffset. The parameters SequenceIndex
+        %and PreambleIndex are generated randomly.
 
             import srsTest.helpers.writeComplexFloatFile
             import srsMatlabWrappers.phy.upper.channel_processors.srsPRACHgenerator
@@ -147,6 +147,8 @@ classdef srsPRACHGeneratorUnittest < srsTest.srsBlockUnittest
                 case 'TDD'
                     carrier.SubcarrierSpacing = 30;
                     ConfigurationsTable = prach.Tables.ConfigurationsFR1Unpaired;
+                otherwise
+                    error('Invalid duplex mode %s', DuplexMode);
             end
             prach.ConfigurationIndex = selectConfigurationIndex(ConfigurationsTable, PreambleFormat);
 
@@ -192,6 +194,8 @@ classdef srsPRACHGeneratorUnittest < srsTest.srsBlockUnittest
                     srsRestrictedSet = 'restricted_set_config::TYPE_A';
                 case 'RestrictedSetTypeB'
                     srsRestrictedSet = 'restricted_set_config::TYPE_B';
+                otherwise
+                    error('Invalid restricted set %s', prach.RestrictedSet);
             end
 
             Numerology = ['subcarrier_spacing::kHz' num2str(carrier.SubcarrierSpacing)];
@@ -229,7 +233,7 @@ function ConfigurationIndex = selectConfigurationIndex(ConfigurationsTable, Prea
 %   CONFIGURATIONINDEX = selectConfigurationIndex(CONFIGURATIONSTABLE, PREAMBLEFORMAT)
 %   Gets the first configuration index CONFIGURATIONINDEX in a configurations table  CONFIGURATIONSTABLE with the
 %   given preamble format PREAMBLEFORMAT.
-  for rowIndex=1:height(ConfigurationsTable)
+  for rowIndex = 1:height(ConfigurationsTable)
       if ConfigurationsTable.PreambleFormat{rowIndex} == PreambleFormat
           ConfigurationIndex = ConfigurationsTable.ConfigurationIndex(rowIndex);
           return;

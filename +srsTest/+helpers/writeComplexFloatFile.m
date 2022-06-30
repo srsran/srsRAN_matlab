@@ -6,7 +6,7 @@
 function writeComplexFloatFile(filename, data)
     % Convert data to single precission floating point with interleaved
     % real and imaginary parts.
-    singleRealData = zeros(1, 2 * numel(data), 'single');
+    singleRealData = nan(1, 2 * numel(data), 'single');
     singleRealData(1:2:end) = real(data);
     singleRealData(2:2:end) = imag(data);
 
