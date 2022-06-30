@@ -5,15 +5,22 @@
 %   used by the SRSGNB.
 
 function writeResourceGridEntryFile(filename, data, indices)
-    fileID = fopen(filename, 'w');
+    % Make sure data has a good format.
     data = data(:);
-    dataLength = length(data);
-    for idx = 1:dataLength
-        fwrite(fileID, indices(idx, 3), 'uint8');
-        fwrite(fileID, indices(idx, 2), 'uint8');
-        fwrite(fileID, indices(idx, 1), 'uint16');
-        fwrite(fileID, real(data(idx)), 'float');
-        fwrite(fileID, imag(data(idx)), 'float');
-    end
+
+    % Flatten coordinates in a 32bit register.
+    gridCoordinate = cast(indices(:, 3), 'uint32') ...
+        + cast(indices(:, 2), 'uint32') * 2^8 + ...
+        + cast(indices(:, 1), 'uint32') * 2^16;
+
+    % Flatten data in a binary format·
+    singleRealData = zeros(1, 3 * numel(data), 'uint32');
+    singleRealData(1:3:end) = gridCoordinate;
+    singleRealData(2:3:end) = typecast(single(real(data)), 'uint32');
+    singleRealData(3:3:end) = typecast(single(imag(data)), 'uint32');
+
+    % Write all data once.
+    fileID = fopen(filename, 'w');
+    fwrite(fileID, singleRealData, 'uint32');
     fclose(fileID);
 end
