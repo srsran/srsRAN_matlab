@@ -1,44 +1,44 @@
-%srsDLProcessor Vector tests for downlink processor functions.
+%srsDLProcessorUnittest Vector tests for downlink processor functions.
 %   This class implements vector tests for the downlink processor functions
 %   using the matlab.unittest framework. The simplest use consists in
 %   creating an object with
-%      testCase = srsDLProcessor
+%      testCase = srsDLProcessorUnittest
 %   and then running all the tests with
 %      testResults = testCase.run
 %
-%   srsDLProcessor Properties (Constant):
+%   srsDLProcessorUnittest Properties (Constant):
 %
 %   srsBlock      - The tested block (i.e., 'dl_processor').
 %   srsBlockType  - The type of the tested block, including layer
 %                   (i.e., 'phy/upper').
 %
-%   srsDLProcessor Properties (ClassSetupParameter):
+%   srsDLProcessorUnittest Properties (ClassSetupParameter):
 %
 %   outputPath - Path to the folder where the test results are stored.
 %
-%   srsDLProcessor Properties (TestParameter):
+%   srsDLProcessorUnittest Properties (TestParameter):
 %
 %   referenceChannel - Determines the reference channel to generate.
 %
-%   srsDLProcessor Methods (TestTags = {'testvector'}):
+%   srsDLProcessorUnittest Methods (TestTags = {'testvector'}):
 %
 %   testvectorGenerationCases - Generates a test vectors according to the provided
 %                               parameters.
 %
-%   srsDLProcessor Methods (Access = protected):
+%   srsDLProcessorUittest Methods (Access = protected):
 %
 %   addTestIncludesToHeaderFile     - Adds include directives to the test header file.
 %   addTestDefinitionToHeaderFile   - Adds details (e.g., type/variable declarations)
 %                                     to the test header file.
 %
 %  See also matlab.unittest.
-classdef srsDLProcessor < srsTest.srsBlockUnittest
+classdef srsDLProcessorUnittest < srsTest.srsBlockUnittest
     properties (Constant)
         %Name of the tested block.
         srsBlock = 'dl_processor'
 
         %Type of the tested block.
-        srsBlockType = 'phy/upper/'
+        srsBlockType = 'phy/upper'
     end
 
     properties (ClassSetupParameter)
@@ -349,4 +349,4 @@ classdef srsDLProcessor < srsTest.srsBlockUnittest
 
         end % of function testvectorGenerationCases
     end % of methods (Test, TestTags = {'testvector'})
-end % of classdef srsDLProcessor
+end % of classdef srsDLProcessorUnittest

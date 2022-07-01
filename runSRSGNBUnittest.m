@@ -52,7 +52,7 @@ function unittestClass = name2Class(name)
         case 'demodulation_mapper'
             unittestClass = ?srsDemodulationMapperUnittest;
         case 'dl_processor'
-            unittestClass = ?srsDLProcessor;
+            unittestClass = ?srsDLProcessorUnittest;
         case 'dmrs_pbch_processor'
             unittestClass = ?srsPBCHdmrsUnittest;
         case 'dmrs_pdcch_processor'
