@@ -8,13 +8,16 @@ function writeResourceGridEntryFile(filename, data, indices)
 % Make sure data has a good format.
 data = data(:);
 
+dataLength = numel(data);
+usefulIndices = indices(1:dataLength, :);
+
 % Flatten coordinates in a 32bit register.
-gridCoordinate = uint32(indices(:, 3)) ...
-    + uint32(indices(:, 2)) * 2^8 + ...
-    + uint32(indices(:, 1)) * 2^16;
+gridCoordinate = uint32(usefulIndices(:, 3)) ...
+    + uint32(usefulIndices(:, 2)) * 2^8 + ...
+    + uint32(usefulIndices(:, 1)) * 2^16;
 
 % Flatten data in a binary format·
-singleRealData = zeros(1, 3 * numel(data), 'uint32');
+singleRealData = zeros(1, 3 * dataLength, 'uint32');
 singleRealData(1:3:end) = gridCoordinate;
 singleRealData(2:3:end) = typecast(single(real(data)), 'uint32');
 singleRealData(3:3:end) = typecast(single(imag(data)), 'uint32');
