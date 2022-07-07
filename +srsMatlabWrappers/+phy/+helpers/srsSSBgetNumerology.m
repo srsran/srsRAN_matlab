@@ -10,7 +10,7 @@ function numerology = srsSSBgetNumerology(SSBpattern)
           numerology = 1; %30 kHz SCS
       case 'D'
           numerology = 3; %120 kHz SCS
-      case '3'
+      case 'E'
           numerology = 4; %240 kHz SCS
   end
 
