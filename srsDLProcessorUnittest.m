@@ -293,7 +293,7 @@ classdef srsDLProcessorUnittest < srsTest.srsBlockUnittest
                 startSymbol = pdschConfig.SymbolAllocation(1);
                 numberOfSymbols = pdschConfig.SymbolAllocation(2);
                 DLSCHInfo = nrDLSCHInfo(length(pdsch.TransportBlock(:,1)), pdschConfig.TargetCodeRate );
-                baseGraphString = ['ldpc::base_graph_t::BG', num2str(DLSCHInfo.BGN)];
+                baseGraphString = ['ldpc_base_graph_type::BG', num2str(DLSCHInfo.BGN)];
                 TBSLBRMBytes = 25344 / 8;
                 reservedList = srsCSIRS2ReservedCell(configuration, pdsch.CSIRSResources);
                 dataPower = 0;
