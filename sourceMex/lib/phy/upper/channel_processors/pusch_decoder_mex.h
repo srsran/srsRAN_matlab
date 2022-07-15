@@ -63,6 +63,7 @@ public:
     create_callback("step", [this](ArgumentList& out, ArgumentList& in) { return this->method_step(out, in); });
     create_callback("reset_crcs",
                     [this](ArgumentList& out, ArgumentList& in) { return this->method_reset_crcs(out, in); });
+    create_callback("release", [this](ArgumentList& out, ArgumentList& in) { return this->method_release(out, in); });
   }
 
 private:
@@ -90,7 +91,7 @@ private:
   ///   - A one-dimensional structure with fields (see also srsgnb::rx_softbuffer_pool_description):
   ///      - \c max_codeblock_size, maximum size of the codeblocks stored in the pool;
   ///      - \c max_softbuffers, maximum number of softbuffers managed by the pool;
-  ///      - \c max_nof_codeblocks, maximum number of codeblocks in each softbuffer; and
+  ///      - \c max_nof_codeblocks, maximum number of codeblocks managed by the pool (shared by all softbuffers); and
   ///      - \c expire_timeout_slots, softbuffer expiration time as a number of slots.
   ///
   /// The only output of the method is the identifier of the created pool (a \c uint64_t number).
@@ -136,6 +137,12 @@ private:
   ///
   /// The method has no outputs.
   void method_reset_crcs(ArgumentList& outputs, ArgumentList& inputs);
+
+  /// \brief Releases a softbuffer pool.
+  ///
+  /// The method takes, as input, a softbuffer pool identifier (a \c uint64_t number). It returns 1 if the
+  /// associated softbuffer pool was released, 0 otherwise.
+  void method_release(ArgumentList& outputs, ArgumentList& inputs);
 
   /// A pointer to the actual PUSCH decoder.
   std::unique_ptr<srsgnb::pusch_decoder> decoder = create_pusch_decoder();

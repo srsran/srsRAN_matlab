@@ -49,8 +49,8 @@ MexFunction::retrieve_softbuffer(uint64_t key, const rx_softbuffer_identifier& i
     std::string msg =
         fmt::format("Cannot retrieve softbuffer with key {}, buffer ID ({}, {}) and nr. of codeblocks {}.",
                     key,
-                    id.harq_ack_id,
                     id.rnti,
+                    id.harq_ack_id,
                     nof_codeblocks);
     mex_abort(msg);
   }
@@ -64,7 +64,7 @@ void MexFunction::check_step_outputs_inputs(ArgumentList outputs, ArgumentList i
   }
 
   if ((inputs[1].getType() != ArrayType::UINT64) || (inputs[1].getNumberOfElements() > 1)) {
-    mex_abort("Input 'softbufferPointer' should be a scalar uint64_t");
+    mex_abort("Input 'softbufferPoolID' should be a scalar uint64_t");
   }
 
   if (inputs[2].getType() != ArrayType::INT8) {
@@ -145,7 +145,17 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
   buf_id.harq_ack_id                 = in_buf_id["harq_ack_id"][0];
   buf_id.rnti                        = in_buf_id["rnti"][0];
 
-  unsigned nof_codeblocks = in_buf_id["nof_codeblocks"][0];
+  unsigned nof_codeblocks       = in_buf_id["nof_codeblocks"][0];
+  unsigned nof_codeblocks_check = ldpc::compute_nof_codeblocks(tbs, seg_cfg.base_graph);
+  if (nof_codeblocks != nof_codeblocks_check) {
+    std::string msg =
+        fmt::format("Softbuffer ({}, {}) requested with {} codeblocks, but the codeword has {} codeblocks.",
+                    buf_id.rnti,
+                    buf_id.harq_ack_id,
+                    nof_codeblocks,
+                    nof_codeblocks_check);
+    mex_abort(msg);
+  }
 
   uint64_t key = static_cast<TypedArray<uint64_t> >(inputs[1])[0];
 
@@ -175,7 +185,7 @@ void MexFunction::method_reset_crcs(ArgumentList& outputs, ArgumentList& inputs)
   }
 
   if ((inputs[1].getType() != ArrayType::UINT64) || (inputs[1].getNumberOfElements() > 1)) {
-    mex_abort("Input softbufferPointer should be a scalar uint64_t");
+    mex_abort("Input softbufferPoolID should be a scalar uint64_t");
   }
 
   if ((inputs[2].getType() != ArrayType::STRUCT) || (inputs[2].getNumberOfElements() > 1)) {
@@ -196,3 +206,24 @@ void MexFunction::method_reset_crcs(ArgumentList& outputs, ArgumentList& inputs)
   softbuffer->reset_codeblocks_crc();
 }
 
+void MexFunction::method_release(ArgumentList& outputs, ArgumentList& inputs)
+{
+  if (outputs.size() != 0) {
+    mex_abort("No outputs expected.");
+  }
+
+  if (inputs.size() != 2) {
+    mex_abort("Wrong number of inputs.");
+  }
+
+  if ((inputs[1].getType() != ArrayType::UINT64) || (inputs[1].getNumberOfElements() > 1)) {
+    mex_abort("Input softbufferPoolID should be a scalar uint64_t");
+  }
+
+  uint64_t key = static_cast<TypedArray<uint64_t> >(inputs[1])[0];
+
+  if (storage.release_memento(key) == 0) {
+    std::string msg = fmt::format("Something wrong, there was no softbuffer pool with softbufferPoolID {}.", key);
+    mex_abort(msg);
+  }
+}
