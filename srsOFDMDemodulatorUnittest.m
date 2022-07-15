@@ -84,10 +84,19 @@ classdef srsOFDMDemodulatorUnittest < srsTest.srsBlockUnittest
         end
     end % of methods (Access = protected)
 
+    methods (TestClassSetup)
+        function classSetup(testCase)
+            orig = rng;
+            testCase.addTeardown(@rng,orig)
+            rng('default');
+        end
+    end
+
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, numerology, DFTsize, CyclicPrefix)
         %testvectorGenerationCases Generates a test vector for the given numerology,
-        %   DFTsize and CyclicPrefix. NSlot, port index and scale are randomly generated.
+        %   DFTsize and CyclicPrefix. NSlot, port index, scale and center carrier 
+        %   frequency are randomly generated.
 
             import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
             import srsMatlabWrappers.phy.helpers.srsRandomGridEntry
@@ -102,10 +111,13 @@ classdef srsOFDMDemodulatorUnittest < srsTest.srsBlockUnittest
             scale = 2 * rand - 1;
             NSlotLoc = randi([0 pow2(numerology)-1]);
 
+            % Select a random carrier frequency from 0 to 3 GHz to avoid
+            % any multiple of the sampling rate. Granularity 100 kHz.
+            CarrierFrequency = round(rand() * 3e4) * 1e5;
+
             % current fixed parameter values
             NStartGrid = 0;
             NFrame = 0;
-            CarrierFrequency = 2400000000;
 
             % calculate the number of RBs to be used
             NSizeGrid = floor(192 * (DFTsize / 4096));
