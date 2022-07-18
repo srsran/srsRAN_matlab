@@ -59,10 +59,6 @@ classdef srsPUSCHDecoder < matlab.System
         softbufferPoolID (1, 1) uint64 = 0
     end % properties (Access = private)
 
-    properties(Constant)
-        mh = mexhost
-    end % properties(Constant)
-
     methods
         function obj = srsPUSCHDecoder(varargin)
         %Constructor: sets nontunable properties.
@@ -96,9 +92,7 @@ classdef srsPUSCHDecoder < matlab.System
             validateattributes(harqBufID.nof_codeblocks, {'double'}, {'scalar', 'integer', 'positive'}, ...
                 fcnName, 'NOF_CODEBLOCKS');
 
-%             obj.pusch_decoder_mex('reset_crcs', obj.softbufferPoolID, harqBufID);
-            feval(obj.mh, 'srsTest.phy.srsPUSCHDecoder.pusch_decoder_mex', ...
-                'reset_crcs', obj.softbufferPoolID, harqBufID);
+            obj.pusch_decoder_mex('reset_crcs', obj.softbufferPoolID, harqBufID);
         end % of function transportBlock = step
     end % of methods
 
@@ -111,9 +105,7 @@ classdef srsPUSCHDecoder < matlab.System
             % Not used (for now), but we need to set it to a value larger than 0.
             sbpdesc.expire_timeout_slots = 10;
 
-            id = feval(obj.mh, 'srsTest.phy.srsPUSCHDecoder.pusch_decoder_mex', ...
-                'new', sbpdesc);
-%             id = obj.pusch_decoder_mex('new', sbpdesc);
+            id = obj.pusch_decoder_mex('new', sbpdesc);
 
             obj.softbufferPoolID = id;
         end % of setupImpl
@@ -156,18 +148,14 @@ classdef srsPUSCHDecoder < matlab.System
 
             validateattributes(llrs, {'int8'}, {'numel', nLLRS}, fcnName, 'LLRS');
 
-%             [transportBlock, stats] = obj.pusch_decoder_mex('step', obj.softbufferPoolID, ...
-%                llrs, newData, segConfig, harqBufID);
-            [transportBlock, stats] = feval(obj.mh, 'srsTest.phy.srsPUSCHDecoder.pusch_decoder_mex', ...
-                'step', obj.softbufferPoolID, llrs, newData, segConfig, harqBufID);
+            [transportBlock, stats] = obj.pusch_decoder_mex('step', obj.softbufferPoolID, ...
+               llrs, newData, segConfig, harqBufID);
         end % function step(...)
 
         function releaseImpl(obj)
         % Releases the softbuffer pool and sets softbufferPoolID to zero.
 
-            % obj.pusch_decoder_mex('release', obj.softbufferPoolID);
-            feval(obj.mh, 'srsTest.phy.srsPUSCHDecoder.pusch_decoder_mex', ...
-                'release', obj.softbufferPoolID);
+            obj.pusch_decoder_mex('release', obj.softbufferPoolID);
             obj.softbufferPoolID = 0;
         end % function releaseImpl(obj)
     end % of methods (Access = protected)
