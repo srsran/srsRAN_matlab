@@ -54,24 +54,28 @@ MexFunction::retrieve_softbuffer(uint64_t key, const rx_softbuffer_identifier& i
 
 void MexFunction::check_step_outputs_inputs(ArgumentList outputs, ArgumentList inputs)
 {
-  if (inputs.size() != 5) {
+  if (inputs.size() != 6) {
     mex_abort("Wrong number of inputs.");
   }
 
   if ((inputs[1].getType() != ArrayType::UINT64) || (inputs[1].getNumberOfElements() > 1)) {
-    mex_abort("Input softbufferPointer should be a scalar uint64_t");
+    mex_abort("Input 'softbufferPointer' should be a scalar uint64_t");
   }
 
   if (inputs[2].getType() != ArrayType::INT8) {
-    mex_abort("First input must be an array of int8_t.");
+    mex_abort("Input 'llrs' must be an array of int8_t.");
   }
 
   if ((inputs[3].getType() != ArrayType::LOGICAL) || (inputs[3].getNumberOfElements() > 1)) {
-    mex_abort("Second input must be a scalar logical.");
+    mex_abort("Input 'new_data' must be a scalar logical.");
   }
 
   if ((inputs[4].getType() != ArrayType::STRUCT) || (inputs[4].getNumberOfElements() > 1)) {
-    mex_abort("Third input must be a scalar structure.");
+    mex_abort("Input 'seg_cfg' must be a scalar structure.");
+  }
+
+  if ((inputs[5].getType() != ArrayType::STRUCT) || (inputs[4].getNumberOfElements() > 1)) {
+    mex_abort("Input 'buf_id' must be a scalar structure.");
   }
 
   if (outputs.size() != 2) {
@@ -130,11 +134,17 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
   unsigned tbs       = in_seg_cfg["tbs"][0];
   unsigned tbs_bytes = tbs / 8;
 
-  // unsigned nof_codeblocks = srsgnb::ldpc::compute_nof_codeblocks(tbs, seg_cfg.base_graph);
+  in_struct_array                    = inputs[5];
+  Struct                   in_buf_id = in_struct_array[0];
+  rx_softbuffer_identifier buf_id    = {};
+  buf_id.harq_ack_id                 = in_buf_id["harq_ack_id"][0];
+  buf_id.rnti                        = in_buf_id["rnti"][0];
+
+  unsigned nof_codeblocks = in_buf_id["nof_codeblocks"][0];
 
   uint64_t key = static_cast<TypedArray<uint64_t> >(inputs[1])[0];
 
-  rx_softbuffer*               softbuffer = retrieve_softbuffer(key, {0, 0}, 1);
+  rx_softbuffer*               softbuffer = retrieve_softbuffer(key, buf_id, nof_codeblocks);
   pusch_decoder::statistics    dec_stats  = {};
   pusch_decoder::configuration cfg        = {seg_cfg, 6, true, new_data};
   std::vector<uint8_t>         rx_tb(tbs_bytes);
@@ -155,17 +165,29 @@ void MexFunction::method_reset_crcs(ArgumentList& outputs, ArgumentList& inputs)
     mex_abort("No outputs expected.");
   }
 
-  if (inputs.size() != 2) {
-    mex_abort("No inputs expected.");
+  if (inputs.size() != 3) {
+    mex_abort("Wrong number of inputs.");
   }
 
   if ((inputs[1].getType() != ArrayType::UINT64) || (inputs[1].getNumberOfElements() > 1)) {
     mex_abort("Input softbufferPointer should be a scalar uint64_t");
   }
 
+  if ((inputs[2].getType() != ArrayType::STRUCT) || (inputs[2].getNumberOfElements() > 1)) {
+    mex_abort("Input 'buf_id' must be a scalar structure.");
+  }
+
+  StructArray              in_struct_array = inputs[2];
+  Struct                   in_buf_id       = in_struct_array[0];
+  rx_softbuffer_identifier buf_id          = {};
+  buf_id.harq_ack_id                       = in_buf_id["harq_ack_id"][0];
+  buf_id.rnti                              = in_buf_id["rnti"][0];
+
+  unsigned nof_codeblocks = in_buf_id["nof_codeblocks"][0];
+
   uint64_t key = static_cast<TypedArray<uint64_t> >(inputs[1])[0];
 
-  rx_softbuffer* softbuffer = retrieve_softbuffer(key, {0, 0}, 1);
+  rx_softbuffer* softbuffer = retrieve_softbuffer(key, buf_id, nof_codeblocks);
   softbuffer->reset_codeblocks_crc();
 }
 
