@@ -84,7 +84,7 @@ classdef srsLDPCRateMatcherUnittest < srsTest.srsBlockUnittest
         %addTestIncludesToHeaderFile(OBJ, FILEID) adds include directives to
         %   the header file pointed by FILEID, which describes the test vectors.
 
-            fprintf(fileID, '#include "srsgnb/phy/modulation_scheme.h"\n');
+            fprintf(fileID, '#include "srsgnb/ran/modulation_scheme.h"\n');
             fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
         end
 
