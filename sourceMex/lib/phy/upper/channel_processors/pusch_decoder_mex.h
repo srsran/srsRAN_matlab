@@ -1,8 +1,7 @@
 /// \file
 /// \brief PUSCH decoder MEX declaration.
 
-#ifndef SRSGNB_MATLAB_LIB_PHY_UPPER_CHANNEL_PROCESSORS_PUSCH_DECODER_MEX_H
-#define SRSGNB_MATLAB_LIB_PHY_UPPER_CHANNEL_PROCESSORS_PUSCH_DECODER_MEX_H
+#pragma once
 
 #include "srsgnb/phy/upper/channel_processors/channel_processor_factories.h"
 #include "srsgnb/phy/upper/channel_processors/pusch_decoder.h"
@@ -174,4 +173,3 @@ std::unique_ptr<srsgnb::pusch_decoder> create_pusch_decoder()
   return pusch_decoder_factory->create();
 }
 
-#endif // SRSGNB_MATLAB_LIB_PHY_UPPER_CHANNEL_PROCESSORS_PUSCH_DECODER_MEX_H

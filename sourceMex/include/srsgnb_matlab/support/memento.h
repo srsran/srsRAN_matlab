@@ -7,8 +7,7 @@
 /// provide a way to create, store and reinstate a snapshot of the mex object state when multiple instances of the
 /// object (possibly with different configurations) are needed.
 
-#ifndef SRSGNB_MATLAB_SUPPORT_MEMENTO_H
-#define SRSGNB_MATLAB_SUPPORT_MEMENTO_H
+#pragma once
 
 #include "srsgnb/support/srsran_assert.h"
 
@@ -64,4 +63,3 @@ private:
   std::map<size_t, std::shared_ptr<memento> > storage = {};
 };
 
-#endif // SRSGNB_MATLAB_SUPPORT_MEMENTO_H

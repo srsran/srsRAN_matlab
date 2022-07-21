@@ -1,8 +1,7 @@
 /// \file
 /// \brief Helper functions to convert variables from MATLAB convention to SRSGNB convention.
 
-#ifndef SRSGNB_MATLAB_SUPPORT_MATLAB_TO_SRS_H
-#define SRSGNB_MATLAB_SUPPORT_MATLAB_TO_SRS_H
+#pragma once
 
 #include "srsgnb/phy/modulation_scheme.h"
 #include "srsgnb/ran/ldpc_base_graph.h"
@@ -50,4 +49,3 @@ inline srsgnb::ldpc_base_graph_type matlab_to_srs_base_graph(unsigned bg)
 
 } // namespace srsgnb_matlab
 
-#endif // SRSGNB_MATLAB_SUPPORT_MATLAB_TO_SRS_H

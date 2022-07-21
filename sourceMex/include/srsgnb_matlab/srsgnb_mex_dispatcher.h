@@ -1,8 +1,7 @@
 /// \file
 /// \brief MexFunction template.
 
-#ifndef SRSGNB_MATLAB_SRSGNB_MEX_DISPATCHER_H
-#define SRSGNB_MATLAB_SRSGNB_MEX_DISPATCHER_H
+#pragma once
 
 #include "mex.hpp"
 #include "mexAdapter.hpp"
@@ -80,4 +79,3 @@ private:
   std::shared_ptr<matlab::engine::MATLABEngine> matlabPtr = getEngine();
 };
 
-#endif // SRSGNB_MATLAB_SRSGNB_MEX_DISPATCHER_H
