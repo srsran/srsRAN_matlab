@@ -26,7 +26,7 @@ mkdir build
 cd build
 cmake ..
 ```
-If the path to your `srsgnb.cmake` file matches the patterns `~/srsgnb*/{build,build*,cmake-build-*}/srsgnb.cmake` or `~/*/srsgnb*/{build,build*,cmake-build-*}/srsgnb.cmake`, running CMake should find the exported libraries authomatically. If this doesn't happen or if you have multiple copies of SRSGNB on your machine, you should specify the path when running CMake, e.g.
+If the path to your `srsgnb.cmake` file matches the patterns `~/srsgnb*/{build,build*,cmake-build-*}/srsgnb.cmake` or `~/*/srsgnb*/{build,build*,cmake-build-*}/srsgnb.cmake`, running CMake should find the exported libraries automatically. If this doesn't happen or if you have multiple copies of SRSGNB on your machine, you should specify the path when running CMake, e.g.
 ```bash
 cmake -DSRSGNB_BINARY_DIR="~/new_srsgnb/new_build" ..
 ```

@@ -41,7 +41,7 @@ public:
 
     auto action_iter = callbacks.find(action_name);
     if (action_iter == callbacks.end()) {
-      mex_abort("Unknown action.");
+      mex_abort("Unknown action: " + action_name + ".");
     }
 
     action_iter->second(outputs, inputs);

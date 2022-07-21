@@ -38,7 +38,8 @@
 %      nof_ch_symbols  - the number of channel symbols corresponding to one codeword;
 %      nof_layers      - the number of transmission layers;
 %      rv              - the redundancy version;
-%      Nref            - limited buffer rate matching length (set to zero for unlimited buffer);
+%      Nref            - limited buffer rate matching length (set to zero for
+%                        unlimited buffer);
 %      tbs             - the transport block size.
 %   Structure HARQBUFID identifies the HARQ buffer. The fields are
 %      harq_ack_id    - the ID of the HARQ process;
@@ -164,4 +165,4 @@ classdef srsPUSCHDecoder < matlab.System
         %MEX function doing the actual work. See the Doxygen documentation.
         varargout = pusch_decoder_mex(varargin)
     end % of methods (Access = private)
-end % of classdef srsPUSCHDecoder < handle
+end % of classdef srsPUSCHDecoder < matlab.System
