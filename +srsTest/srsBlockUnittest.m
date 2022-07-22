@@ -277,7 +277,7 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
             fprintf(fileID, '// clang-format off\n');
         end
 
-        function closeHeaderFile(obj, fileID)
+        function closeHeaderFile(~, fileID)
         %closeHeaderFile(OBJ, FILEID) Adds the closing content to the
         %   test header file with MATLAB identifier FILEID before closing it.
 
@@ -287,7 +287,6 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
             fprintf(fileID, '\n');
             fprintf(fileID, '} // srsgnb\n');
             fprintf(fileID, '\n');
-            fprintf(fileID,'#endif // SRSGNB_UNITTESTS_%s_TEST_DATA_H\n', obj.pathInRepo);
 
             fclose(fileID);
         end
@@ -305,10 +304,10 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
             fprintf(fileID, ' *\n');
             fprintf(fileID, ' */\n');
             fprintf(fileID, '\n');
-            fprintf(fileID, '#ifndef SRSGNB_UNITTESTS_%s_TEST_DATA_H\n', obj.pathInRepo);
-            fprintf(fileID, '#define SRSGNB_UNITTESTS_%s_TEST_DATA_H\n', obj.pathInRepo);
+            fprintf(fileID, '#pragma once\n');
             fprintf(fileID, '\n');
-            fprintf(fileID, '// This file was generated using the following MATLAB class:\n');
+            fprintf(fileID, '// This file was generated using the following MATLAB class on %s:\n', ...
+                datestr(now, 'dd-mmm-yyyy'));
             fprintf(fileID, '//   + "%s.m"\n', class(obj));
             fprintf(fileID, '\n');
         end
