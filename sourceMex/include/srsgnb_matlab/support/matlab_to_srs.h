@@ -3,9 +3,10 @@
 
 #pragma once
 
-#include "srsgnb/phy/modulation_scheme.h"
 #include "srsgnb/ran/ldpc_base_graph.h"
-#include "srsgnb/support/srsran_assert.h"
+#include "srsgnb/ran/modulation_scheme.h"
+#include "srsgnb/support/error_handling.h"
+#include "srsgnb/support/srsgnb_assert.h"
 #include <string>
 
 namespace srsgnb_matlab {
@@ -30,7 +31,7 @@ inline srsgnb::modulation_scheme matlab_to_srs_modulation(const std::string& mod
   if ((modulation_name == "QAM256") || (modulation_name == "256QAM")) {
     return srsgnb::modulation_scheme::QAM256;
   }
-  srsgnb::srsran_terminate("Unknown modulation {}.", modulation_name);
+  srsgnb::srsgnb_terminate("Unknown modulation {}.", modulation_name);
 }
 
 /// \brief Converts a MATLAB base graph index to an SRSGNB base graph identifier.
@@ -44,7 +45,7 @@ inline srsgnb::ldpc_base_graph_type matlab_to_srs_base_graph(unsigned bg)
   if (bg == 2) {
     return srsgnb::ldpc_base_graph_type::BG2;
   }
-  srsgnb::srsran_terminate("Unknown base graph {}.", bg);
+  srsgnb::srsgnb_terminate("Unknown base graph {}.", bg);
 }
 
 } // namespace srsgnb_matlab

@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "srsgnb/support/srsran_assert.h"
+#include "srsgnb/support/srsgnb_assert.h"
 
 #include <map>
 #include <memory>
@@ -33,7 +33,7 @@ public:
   /// \return A unique identifier of the stored memento object.
   size_t store(const std::shared_ptr<memento>& mem)
   {
-    srsran_assert(mem, "Null memento");
+    srsgnb_assert(mem, "Null memento");
     size_t key = std::hash<std::shared_ptr<memento> >()(mem);
     storage.emplace(key, mem);
     return key;

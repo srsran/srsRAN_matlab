@@ -1,7 +1,7 @@
 #include "pusch_decoder_mex.h"
-#include "srsgnb/phy/modulation_scheme.h"
 #include "srsgnb/phy/upper/channel_coding/ldpc/ldpc.h"
 #include "srsgnb/phy/upper/rx_softbuffer_pool.h"
+#include "srsgnb/ran/modulation_scheme.h"
 #include "srsgnb/srslog/bundled/fmt/format.h"
 #include "srsgnb_matlab/support/matlab_to_srs.h"
 
