@@ -130,7 +130,7 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
             fprintf(fileID, '#include "srsgnb/%s/%s.h"\n', ...
                 obj.srsBlockType, obj.srsBlock);
             fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
-            fprintf(fileID, '#include "../../resource_grid_test_doubles.h"\n');
+            fprintf(fileID, '#include "../../support/resource_grid_test_doubles.h"\n');
         end
 
         function addTestIncludesToHeaderFilePHYchproc(obj, fileID)
@@ -142,7 +142,7 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
                 obj.srsBlockType, obj.srsBlock);
             fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
             if ~endsWith(obj.srsBlock, '_encoder')
-                fprintf(fileID, '#include "../../resource_grid_test_doubles.h"\n');
+                fprintf(fileID, '#include "../../support/resource_grid_test_doubles.h"\n');
             end
         end
 
