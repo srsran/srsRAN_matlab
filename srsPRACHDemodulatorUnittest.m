@@ -10,7 +10,7 @@
 %
 %   srsBlock      - The tested block (i.e., 'ofdm_prach_demodulator').
 %   srsBlockType  - The type of the tested block, including layer
-%                   (i.e., 'phy/upper/channel_processors').
+%                   (i.e., 'phy/lower/modulation').
 %
 %   srsPRACHDemodulatorUnittest Properties (ClassSetupParameter):
 %
@@ -20,10 +20,10 @@
 %
 %   DuplexMode          - Duplexing mode FDD or TDD.
 %   CarrierBandwidth    - Carrier bandwidth in PRB.
-%   PreambleFormat      - Indicates the preamble format to generate.
-%   RestrictedSet       - Selects the restricted set.
+%   PreambleFormat      - Generated preamble format.
+%   RestrictedSet       - Restricted set type.
 %   ZeroCorrelationZone - Cyclic shift configuration index {0, 15}.
-%   RBOffset            - Indicates the frequency domain sequence mapping.
+%   RBOffset            - Frequency-domain sequence mapping. 
 %  
 %   srsPRACHDemodulatorUnittest Methods (TestTags = {'testvector'}):
 %
@@ -43,7 +43,7 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
         srsBlock = 'ofdm_prach_demodulator'
 
         %Type of the tested block.
-        srsBlockType = 'phy/upper/channel_processors'
+        srsBlockType = 'phy/lower/modulation'
     end
 
     properties (ClassSetupParameter)
@@ -52,7 +52,7 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
     end
 
     properties (TestParameter)
-        %Carrier duplex, set to
+        %Carrier duplexing mode, set to
         %   - FDD for paired spectrum with 15kHz subcarrier spacing, or
         %   - TDD for unpaired spectrum with 30kHz subcarrier spacing.
         DuplexMode = {'FDD', 'TDD'}
@@ -63,16 +63,17 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
         %Preamble formats.
         PreambleFormat = {'0', '1', '2', '3'}
 
-        %Selects the restricted set, possible values are
-        %{'UnrestrictedSet', 'RestrictedSetTypeA', 'RestrictedSetTypeB'}
+        %Restricted set type.
+        %   Possible values are {'UnrestrictedSet', 'RestrictedSetTypeA', 'RestrictedSetTypeB'}.
         RestrictedSet = {'UnrestrictedSet'}
 
         %Zero correlation zone, cyclic shift configuration index.
         ZeroCorrelationZone = {0}
 
-        %Starting resource block (RB) index of the initial uplink bandwidth
-        %part (BWP) relative to carrier resource grid.
-        RBOffset = {0, 13};
+        %Frequency-domain sequence mapping.
+        %   Starting resource block (RB) index of the initial uplink bandwidth
+        %   part (BWP) relative to carrier resource grid.
+	RBOffset = {0, 13};
     end
 
     methods (Access = protected)
@@ -116,9 +117,9 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet, ZeroCorrelationZone, RBOffset)
         %testvectorGenerationCases Generates a test vector for the given 
-        %DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet,
-        %ZeroCorrelationZone and RBOffset. The parameters SequenceIndex
-        %and PreambleIndex are generated randomly.
+        %   DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet,
+        %   ZeroCorrelationZone and RBOffset. The parameters SequenceIndex
+        %   and PreambleIndex are generated randomly.
 
             import srsTest.helpers.writeComplexFloatFile
             import srsMatlabWrappers.phy.upper.channel_processors.srsPRACHgenerator
