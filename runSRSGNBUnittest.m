@@ -73,6 +73,8 @@ function unittestClass = name2Class(name)
             unittestClass = ?srsOFDMDemodulatorUnittest;
         case 'ofdm_modulator'
             unittestClass = ?srsOFDMModulatorUnittest;
+        case 'ofdm_prach_demodulator'
+	        unittestClass = ? srsPRACHDemodulatorUnittest;
         case 'pbch_encoder'
             unittestClass = ?srsPBCHEncoderUnittest;
         case 'pbch_modulator'
@@ -87,8 +89,6 @@ function unittestClass = name2Class(name)
             unittestClass = ?srsPDSCHEncoderUnittest;
         case 'pdsch_modulator'
             unittestClass = ?srsPDSCHModulatorUnittest;
-        case 'ofdm_prach_demodulator'
-	    unittestClass = ? srsPRACHDemodulatorUnittest;
         case 'prach_generator'
             unittestClass = ?srsPRACHGeneratorUnittest;
         case 'pusch_decoder'
