@@ -58,7 +58,7 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
         DuplexMode = {'FDD', 'TDD'}
 
         %Carrier bandwidth in PRB.
-        CarrierBandwidth = {52, 106}
+        CarrierBandwidth = {52, 79, 106}
 
         %Preamble formats.
         PreambleFormat = {'0', '1', '2', '3'}
@@ -73,7 +73,7 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
         %Frequency-domain sequence mapping.
         %   Starting resource block (RB) index of the initial uplink bandwidth
         %   part (BWP) relative to carrier resource grid.
-	RBOffset = {0, 13};
+	RBOffset = {0, 13, 28};
     end
 
     methods (Access = protected)
@@ -91,7 +91,6 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
 
             fprintf(fileID, [...
                 'struct prach_context {\n'...
-                '  unsigned nof_prb_ul_grid;\n'...
                 '  unsigned dft_size_15kHz;\n'...
                 '  ofdm_prach_demodulator::configuration config;\n'...
                 '};\n'...
@@ -197,14 +196,14 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
 
             % srsgnb PRACH configuration
             srsPRACHConfig = {...
-                srsPRACHFormat, ...            % format
-                prach.RBOffset, ...            % rb_offset
-                Numerology, ...                % pusch_scs
+                srsPRACHFormat, ...    % format
+                prach.RBOffset, ...    % rb_offset
+		carrier.NSizeGrid, ... % nof_prb_ul_grid
+                Numerology, ...        % pusch_scs
                 };
 
             % test context
             srsTestContext = {
-                carrier.NSizeGrid, ... % nof_prb_ul_grid
                 dftSize15kHz, ...      % dft_size_15kHz
                 srsPRACHConfig, ...    % config
                 };
