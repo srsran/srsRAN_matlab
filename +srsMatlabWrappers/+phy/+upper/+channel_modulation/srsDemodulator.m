@@ -2,8 +2,8 @@
 %   LLRSQ = srsDemodulator(SYMBOLS, SCHEME) computes the log-likelihood ratios LLRSQ
 %   corresponding to the (noisy) modulated symbols SYMBOLS, and the modulation
 %   scheme SCHEME. SYMBOLS is an array of complex values. SCHEME is a character
-%   array denoting one of the possible NR constellations, namely 'BPSK', 'QPSK',
-%   '16QAM', '64QAM', or '256QAM'. The LLRSQ are quantized and take integer
+%   array denoting one of the possible NR constellations, namely 'BPSK', 'pi/2-BPSK',
+%   'QPSK', '16QAM', '64QAM', or '256QAM'. The LLRSQ are quantized and take integer
 %   values in the range -128 to 127 (mimicking a int8_t variable).
 %
 %   LLRSQ = srsDemodulator(..., NOISEVAR) specifies the noise variance for the input
@@ -16,7 +16,7 @@
 function llrsq = srsDemodulator(symbols, scheme, noiseVar)
     arguments
         symbols (:, 1) double
-        scheme  (1, :) char {mustBeMember(scheme, {'BPSK', 'QPSK', '16QAM', '64QAM', '256QAM'})}
+        scheme  (1, :) char {mustBeMember(scheme, {'BPSK', 'pi/2-BPSK', 'QPSK', '16QAM', '64QAM', '256QAM'})}
         noiseVar (:, 1) double {mustBeReal, mustBePositive, mustBeFinite} = 1e-10
     end
 
@@ -26,7 +26,7 @@ function llrsq = srsDemodulator(symbols, scheme, noiseVar)
 
     % generate NR constellation
     switch scheme
-        case 'BPSK'
+        case {'BPSK', 'pi/2-BPSK'}
             nBits = 1;
         case 'QPSK'
             nBits = 2;
@@ -38,7 +38,7 @@ function llrsq = srsDemodulator(symbols, scheme, noiseVar)
             nBits = 8;
     end
 
-    if strcmp(scheme, 'BPSK')
+    if (strcmp(scheme, 'BPSK') || strcmp(scheme, 'pi/2-BPSK'))
         % Because of MATLAB limitations, we need to treat BPSK as QPSK and then combine
         % the LLRs.
         constLabels = [2 3 0 1];
@@ -50,6 +50,10 @@ function llrsq = srsDemodulator(symbols, scheme, noiseVar)
         llrsTmp = qamdemod(symbols.', nConstPoints, constLabels, ...
             'UnitAveragePower', true, 'NoiseVariance', noiseVar, 'OutputType', 'approxllr');
         llrs = (llrsTmp(1,:) + llrsTmp(2,:)).';
+
+        if strcmp(scheme, 'pi/2-BPSK')
+            llrs(2:2:end) = (-llrsTmp(1,2:2:end) + llrsTmp(2,2:2:end)).';
+        end
     else
         nConstPoints = 2^nBits;
 
@@ -77,7 +81,7 @@ end
 function softBitsQuant = quantize(softBits, mod)
     rangeLimitInt = 120;
     switch mod
-        case {'BPSK', 'QPSK'}
+        case {'BPSK', 'pi/2-BPSK', 'QPSK'}
             rangeLimitFloat = 600;
         case '16QAM'
             rangeLimitFloat = 300;
