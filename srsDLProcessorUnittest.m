@@ -185,9 +185,9 @@ classdef srsDLProcessorUnittest < srsTest.srsBlockUnittest
 
                 cceIndex = candidates(pdcchConfig.AllocatedCandidate);
                 if isequal(coresetConfig.CCEREGMapping, 'noninterleaved')
-                    coresetRegToCceMappingStr = 'pdcch_processor::coreset_description::NON_INTERLEAVED';
+                    coresetRegToCceMappingStr = 'pdcch_processor::cce_to_reg_mapping_type::NON_INTERLEAVED';
                 else
-                    coresetRegToCceMappingStr = 'pdcch_processor::coreset_description::INTERLEAVED';
+                    coresetRegToCceMappingStr = 'pdcch_processor::cce_to_reg_mapping_type::INTERLEAVED';
                 end
 
                 % Prepare DCI description
