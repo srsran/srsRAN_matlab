@@ -126,6 +126,6 @@ classdef srsLDPCEncoderUnittest < srsTest.srsBlockUnittest
             obj.addTestToHeaderFile(obj.headerFileID, testCaseString);
 
         end % of function addTestIncludesToHeaderFile
-    end % of methods (Access = protected)
+    end % of methods (Test, TestTags = {'testvector'})
 
 end % of classdef srsLDPCEncoderUnittest
