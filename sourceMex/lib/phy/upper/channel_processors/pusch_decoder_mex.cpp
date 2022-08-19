@@ -1,5 +1,6 @@
 #include "pusch_decoder_mex.h"
 #include "srsgnb/phy/upper/channel_coding/ldpc/ldpc.h"
+#include "srsgnb/phy/upper/channel_processors/pusch_decoder_result.h"
 #include "srsgnb/phy/upper/rx_softbuffer_pool.h"
 #include "srsgnb/ran/modulation_scheme.h"
 #include "srsgnb/srslog/bundled/fmt/format.h"
@@ -160,17 +161,17 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
   uint64_t key = static_cast<TypedArray<uint64_t> >(inputs[1])[0];
 
   rx_softbuffer*               softbuffer = retrieve_softbuffer(key, buf_id, nof_codeblocks);
-  pusch_decoder::statistics    dec_stats  = {};
+  pusch_decoder_result         dec_result = {};
   pusch_decoder::configuration cfg        = {seg_cfg, 6, true, new_data};
   std::vector<uint8_t>         rx_tb(tbs_bytes);
-  decoder->decode(rx_tb, dec_stats, softbuffer, llrs, cfg);
+  decoder->decode(rx_tb, dec_result, softbuffer, llrs, cfg);
 
   TypedArray<uint8_t> out = factory.createArray({rx_tb.size(), 1}, rx_tb.cbegin(), rx_tb.cend());
   outputs[0]              = out;
 
   StructArray S      = factory.createStructArray({1, 1}, {"crc_ok", "ldpc_iters"});
-  S[0]["crc_ok"]     = factory.createScalar(dec_stats.tb_crc_ok);
-  S[0]["ldpc_iters"] = factory.createScalar(dec_stats.ldpc_decoder_stats.get_max());
+  S[0]["crc_ok"]     = factory.createScalar(dec_result.tb_crc_ok);
+  S[0]["ldpc_iters"] = factory.createScalar(dec_result.ldpc_decoder_stats.get_max());
   outputs[1]         = S;
 }
 
