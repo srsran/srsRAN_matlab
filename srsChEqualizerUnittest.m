@@ -70,6 +70,7 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
             '  re_measurement_exploded received_symbols;\n' ...
             '  ch_estimates_exploded   ch_estimates;\n' ...
             '  float                   scaling;\n' ...
+            '  std::string             equalizer_type;\n' ...
             '};\n'...
             ]);
         end
@@ -105,7 +106,7 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
             chEstString(end) = [];
 
             % Concatenate all strings.
-            testCaseString = ['{', eqString, txString, rxString, chEstString, ' ', num2str(obj.beta), ' },' newline];
+            testCaseString = ['{', eqString, txString, rxString, chEstString, ' ', num2str(obj.beta), ' , "', eqType, '" },' newline];
 
             % add the test to the file header
             obj.addTestToHeaderFile(obj.headerFileID, testCaseString);
