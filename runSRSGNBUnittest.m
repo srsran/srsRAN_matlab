@@ -97,6 +97,8 @@ function unittestClass = name2Class(name)
             unittestClass = ?srsPRACHGeneratorUnittest;
         case 'pusch_decoder'
             unittestClass = ?srsPUSCHDecoderUnittest;
+	case 'pusch_demodulator'
+	    unittestClass = ?srsPUSCHDemodulatorUnittest;
         case 'short_block_detector'
             unittestClass = ?srsShortBlockDetectorUnittest;
         case 'short_block_encoder'
