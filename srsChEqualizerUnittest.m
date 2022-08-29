@@ -138,7 +138,9 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
                 end
             end
 
+        if nargout > 1
             snrEmp = sigPower ./ noisePower;
+        end
         end % of function MSEsimulation(obj, channelSize, eqType)
     end % methods
 
@@ -163,7 +165,7 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
             % all the time.
             obj.channelTensor = obj.beta * nrPerfectChannelEstimate(pathGains, pathFilters, ...
                 obj.nRB, obj.scs, 0);
-        end % of function createChMatrix(obj, channelSize)
+        end % of function createChTensor(obj, channelSize)
 
         function [eqSymbols, txSymbols, rxSymbols] = runCase(obj, eqType)
             [nSC, nSym, nRx, nTx] = size(obj.channelTensor);
