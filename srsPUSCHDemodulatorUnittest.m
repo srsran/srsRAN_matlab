@@ -68,10 +68,14 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
         function addTestDefinitionToHeaderFile(obj, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
             
-            fprintf(fileID, 'struct test_case_t {\n');
+            fprintf(fileID, 'struct context_t {\n');
+            fprintf(fileID, '  float noise_var;\n');
             fprintf(fileID, '  pusch_demodulator::configuration                        config;\n');
+            fprintf(fileID, '};\n\n');
+            fprintf(fileID, 'struct test_case_t {\n');
+            fprintf(fileID, '  context_t context;\n');
             fprintf(fileID, '  file_vector<resource_grid_reader_spy::expected_entry_t> symbols;\n');   
-            fprintf(fileID, '  file_vector<log_likelihood_ratio>                       noise_var;\n');
+            fprintf(fileID, '  file_vector<cf_t>                                       estimates;\n');
 	    fprintf(fileID, '  file_vector<log_likelihood_ratio>                       sch_data;\n');
             fprintf(fileID, '  file_vector<log_likelihood_ratio>                       harq_ack;\n');
             fprintf(fileID, '  file_vector<log_likelihood_ratio>                       csi_part1;\n');
@@ -97,7 +101,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             import srsTest.helpers.writeResourceGridEntryFile
 	    import srsTest.helpers.writeInt8File
             import srsTest.helpers.writeUint8File
-	    import srsTest.helpers.writeFloatFile
+	    import srsTest.helpers.writeComplexFloatFile
 
             % Generate a unique test ID
             testID = testCase.generateTestID;
@@ -142,24 +146,31 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             [modulatedSymbols, symbolIndices] = srsPUSCHmodulator(carrier, pusch, cws);
 	    nSymbols = length(modulatedSymbols);
 
-            % create some noise samples with different variances (SNR in the range 0 -- 20 dB).
+            % create some noise samples with different variances (SNR in the range 0 -- 20 dB). Round standard 
+	    %   deviation to reduce double to float error in the soft-demodulator.
             normNoise = randn(nSymbols, 2) * [1; 1i] / sqrt(2);
-            noiseStd = 0.1 + 0.9 * rand(nSymbols, 1);
+            noiseStd = round(0.1 + 0.9 * rand(), 1);
             noiseVar = noiseStd.^2;
 
             % create noisy modulated symbols
-            noisySymbols = modulatedSymbols + noiseStd .* normNoise;
+            noisySymbols = modulatedSymbols + noiseStd * normNoise;
             
 	    % write each complex symbol into a binary file, and the associated indices to another
             testCase.saveDataFile('_test_input_symbols', testID, ...
                 @writeResourceGridEntryFile, noisySymbols, symbolIndices);
 
-            % write noise variances to a binary file
-            testCase.saveDataFile('_test_input_noisevar', testID, @writeFloatFile, noiseVar);
+            % create channel estimates
+	    estimates = ones(1, pusch.SymbolAllocation(2) * length(pusch.PRBSet) * 12);
 
+            % write noise variances to a binary file
+            testCase.saveDataFile('_test_input_estimates', testID, @writeComplexFloatFile, estimates);
 
             % Convert modulated symbols into softbits
-	    schSoftBits = srsDemodulator(modulatedSymbols, Modulation, noiseVar);
+	    schSoftBits = srsDemodulator(noisySymbols(:), Modulation, noiseVar);
+
+	    % Descramble softbits.
+	    %schSoftBits = nrPUSCHDescramble(ones(size(schSoftBits)), pusch.NID, pusch.RNTI) .* schSoftBits;
+	    schSoftBits = nrPUSCHDescramble(schSoftBits, pusch.NID, pusch.RNTI);
 
             % write soft bits to a binary file
             testCase.saveDataFile('_test_output_sch_soft_bits', testID, @writeInt8File, schSoftBits);
@@ -188,12 +199,17 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
 		    dmrsTypeString, ...                     % dmrs_config_type
 		    pusch.DMRS.NumCDMGroupsWithoutData, ... % nof_cdm_groups_without_data
 		    pusch.NID, ...                          % n_id
-		    pusch.NumAntennaPorts, ...               % nof_tx_layers
+		    pusch.NumAntennaPorts, ...              % nof_tx_layers
 		    portsString, ...                        % rx_ports
 		    };
 
-            testCaseString = testCase.testCaseToString(testID, puschCellConfig, true, ...
-                '_test_input_symbols', '_test_input_noisevar', '_test_output_sch_soft_bits', ...
+            testCaseContext = { ...
+		    noiseVar, ...        % noise_var
+		    puschCellConfig, ... % config
+		    };
+
+            testCaseString = testCase.testCaseToString(testID, testCaseContext, true, ...
+                '_test_input_symbols', '_test_input_estimates', '_test_output_sch_soft_bits', ...
 		'_test_output_harq_ack_soft_bits', '_test_output_csi_part1_soft_bits', ...
 		'_test_output_csi_part2_soft_bits');
 
