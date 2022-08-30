@@ -162,7 +162,7 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
                 % call the PUSCH DMRS symbol processor MATLAB functions
                 [DMRSsymbols, symbolIndices] = srsPUSCHdmrs(carrier, pusch);
 
-                % write each complex symbol into a binary file, and the associated indices to another
+                % write each complex symbol and their associated indices into a binary file.
                 testCase.saveDataFile('_test_output', testID, ...
                     @writeResourceGridEntryFile, amplitude * DMRSsymbols, symbolIndices);
 
