@@ -76,7 +76,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             fprintf(fileID, '  context_t context;\n');
             fprintf(fileID, '  file_vector<resource_grid_reader_spy::expected_entry_t> symbols;\n');   
             fprintf(fileID, '  file_vector<cf_t>                                       estimates;\n');
-	    fprintf(fileID, '  file_vector<log_likelihood_ratio>                       sch_data;\n');
+            fprintf(fileID, '  file_vector<log_likelihood_ratio>                       sch_data;\n');
             fprintf(fileID, '  file_vector<log_likelihood_ratio>                       harq_ack;\n');
             fprintf(fileID, '  file_vector<log_likelihood_ratio>                       csi_part1;\n');
             fprintf(fileID, '  file_vector<log_likelihood_ratio>                       csi_part2;\n');
@@ -90,18 +90,15 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
         %   Modulation scheme. Other parameters (e.g., the RNTI)
         %   are generated randomly.
 
-            import srsMatlabWrappers.phy.helpers.srsConfigurePUSCHdmrs
             import srsMatlabWrappers.phy.helpers.srsConfigurePUSCH
             import srsMatlabWrappers.phy.upper.channel_processors.srsPUSCHmodulator
             import srsMatlabWrappers.phy.upper.signal_processors.srsPUSCHdmrs
-	    import srsMatlabWrappers.phy.upper.channel_modulation.srsDemodulator
-            import srsTest.helpers.array2str
-            import srsTest.helpers.rbAllocationIndexes2String
+            import srsMatlabWrappers.phy.upper.channel_modulation.srsDemodulator
             import srsTest.helpers.symbolAllocationMask2string
             import srsTest.helpers.writeResourceGridEntryFile
-	    import srsTest.helpers.writeInt8File
+            import srsTest.helpers.writeInt8File
             import srsTest.helpers.writeUint8File
-	    import srsTest.helpers.writeComplexFloatFile
+            import srsTest.helpers.writeComplexFloatFile
 
             % Generate a unique test ID
             testID = testCase.generateTestID;
@@ -140,14 +137,14 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             nBits = length(nrPUSCHIndices(carrier, pusch)) * modOrder;
 
             % Generate codewords
-            cws = randi([0,1], nBits, 1);
+            cw = randi([0,1], nBits, 1);
 
             % call the PUSCH symbol modulation Matlab functions
-            [modulatedSymbols, symbolIndices] = srsPUSCHmodulator(carrier, pusch, cws);
-	    nSymbols = length(modulatedSymbols);
+            [modulatedSymbols, symbolIndices] = srsPUSCHmodulator(carrier, pusch, cw);
+            nSymbols = length(modulatedSymbols);
 
             % create some noise samples with different variances (SNR in the range 0 -- 20 dB). Round standard 
-	    %   deviation to reduce double to float error in the soft-demodulator.
+            %   deviation to reduce double to float error in the soft-demodulator.
             normNoise = randn(nSymbols, 2) * [1; 1i] / sqrt(2);
             noiseStd = round(0.1 + 0.9 * rand(), 1);
             noiseVar = noiseStd.^2;
@@ -155,26 +152,26 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             % create noisy modulated symbols
             noisySymbols = modulatedSymbols + noiseStd * normNoise;
             
-	    % write each complex symbol into a binary file, and the associated indices to another
+            % write each complex symbol and their associated indices into a binary file.
             testCase.saveDataFile('_test_input_symbols', testID, ...
                 @writeResourceGridEntryFile, noisySymbols, symbolIndices);
 
             % create channel estimates
-	    estimates = ones(1, pusch.SymbolAllocation(2) * length(pusch.PRBSet) * 12);
+            nof_allocated_symbols = pusch.SymbolAllocation(2);
+            nof_subcs = length(pusch.PRBSet) * 12;
+            estimates = ones(1, nof_allocated_symbols * nof_subcs);
 
-            % write noise variances to a binary file
+            % write channel estimates to a binary file
             testCase.saveDataFile('_test_input_estimates', testID, @writeComplexFloatFile, estimates);
 
             % Convert modulated symbols into softbits
-	    schSoftBits = srsDemodulator(noisySymbols(:), Modulation, noiseVar);
+            schSoftBits = srsDemodulator(noisySymbols(:), Modulation, noiseVar);
 
-	    % Descramble softbits.
-	    %schSoftBits = nrPUSCHDescramble(ones(size(schSoftBits)), pusch.NID, pusch.RNTI) .* schSoftBits;
-	    schSoftBits = nrPUSCHDescramble(schSoftBits, pusch.NID, pusch.RNTI);
+            % Descramble softbits.
+            schSoftBits = nrPUSCHDescramble(schSoftBits, pusch.NID, pusch.RNTI);
 
             % write soft bits to a binary file
             testCase.saveDataFile('_test_output_sch_soft_bits', testID, @writeInt8File, schSoftBits);
-
 
             % Generate DMRS symbol mask
             [~, symbolIndices] = srsPUSCHdmrs(carrier, pusch);
@@ -183,35 +180,35 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             % reception port list
             portsString = '{0}';
 
-	    % generate a RB allocation mask string
-	    rbAllocationMask = zeros(max(pusch.PRBSet),1);
+            % generate a RB allocation mask string
+            rbAllocationMask = zeros(max(pusch.PRBSet),1);
             rbAllocationMask(pusch.PRBSet + 1) = 1;
 
             dmrsTypeString = sprintf('dmrs_type::TYPE%d', pusch.DMRS.DMRSConfigurationType);
 
             puschCellConfig = {...
-		    pusch.RNTI, ...                         % rnti
-		    rbAllocationMask, ...                   % rb_mask
-		    modString, ...                          % modulation
-		    pusch.SymbolAllocation(1), ...          % start_symbol_index
-		    pusch.SymbolAllocation(2), ...          % nof_symbols
-		    dmrsSymbolMask, ...                     % dmrs_symb_pos
-		    dmrsTypeString, ...                     % dmrs_config_type
-		    pusch.DMRS.NumCDMGroupsWithoutData, ... % nof_cdm_groups_without_data
-		    pusch.NID, ...                          % n_id
-		    pusch.NumAntennaPorts, ...              % nof_tx_layers
-		    portsString, ...                        % rx_ports
+                pusch.RNTI, ...                         % rnti
+                rbAllocationMask, ...                   % rb_mask
+                modString, ...                          % modulation
+                pusch.SymbolAllocation(1), ...          % start_symbol_index
+                pusch.SymbolAllocation(2), ...          % nof_symbols
+                dmrsSymbolMask, ...                     % dmrs_symb_pos
+                dmrsTypeString, ...                     % dmrs_config_type
+                pusch.DMRS.NumCDMGroupsWithoutData, ... % nof_cdm_groups_without_data
+                pusch.NID, ...                          % n_id
+                pusch.NumAntennaPorts, ...              % nof_tx_layers
+                portsString, ...                        % rx_ports
 		    };
 
             testCaseContext = { ...
-		    noiseVar, ...        % noise_var
-		    puschCellConfig, ... % config
+                noiseVar, ...        % noise_var
+                puschCellConfig, ... % config
 		    };
 
             testCaseString = testCase.testCaseToString(testID, testCaseContext, true, ...
                 '_test_input_symbols', '_test_input_estimates', '_test_output_sch_soft_bits', ...
-		'_test_output_harq_ack_soft_bits', '_test_output_csi_part1_soft_bits', ...
-		'_test_output_csi_part2_soft_bits');
+                '_test_output_harq_ack_soft_bits', '_test_output_csi_part1_soft_bits', ...
+                '_test_output_csi_part2_soft_bits');
 
             % add the test to the file header
             testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);
