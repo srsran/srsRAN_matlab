@@ -8,7 +8,7 @@
 %
 %   srsPUSCHProcessorUnittest Properties (Constant):
 %
-%   srsBlock      - The tested block (i.e., 'pusch_deProcessor').
+%   srsBlock      - The tested block (i.e., 'pusch_processor').
 %   srsBlockType  - The type of the tested block, including layer
 %                   (i.e., 'phy/upper/channel_processors').
 %
@@ -98,7 +98,6 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.bitPack
             import srsTest.helpers.writeUint8File
-            import srsTest.helpers.writeComplexFloatFile
 
             % Generate a unique test ID
             testID = testCase.generateTestID;
@@ -157,11 +156,11 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
                 % Convert PUSCH DM-RS indices to 0based subscript
                 puschDMRSIndices = srsIndexes0BasedSubscrit(pusch.DMRSIndices, nSubC, nSymb);
 
-                % write each complex data symbol into a binary file, and the associated indices to another
+                % write each complex data symbol and their associated indices into a binary file
                 testCase.saveDataFile(puschDataFileName, pusch.NSlot, ...
                     @writeResourceGridEntryFile, pusch.ChannelSymbols, puschDataIndices);
 
-                % Write each complex DM-RS symbol into a binary file, and the associated indices to another
+                % write each complex DM-RS symbol and their associated indices into a binary file
                 testCase.saveDataFile(puschDMRSFileName, pusch.NSlot, ...
                     @writeResourceGridEntryFile, pusch.DMRSSymbols, puschDMRSIndices);
 
@@ -221,8 +220,7 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
                 % Remove comma and new line from the end of the string
                 frcSlotString = strrep(frcSlotString, sprintf(',\n'), '');
 
-                % Append PDSCH transmission to the list of PDSCH
-                % transmissions.
+                % Append PUSCH transmission to the list of PUSCH transmissions.
                 allFrcSlots = [allFrcSlots{:}, {frcSlotString}];
             end % for pusch = puschTransmissions
 

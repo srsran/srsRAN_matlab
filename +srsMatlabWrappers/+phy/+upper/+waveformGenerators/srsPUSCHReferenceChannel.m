@@ -1,6 +1,6 @@
 %srsPUSCHReferenceChannel Generates Physical uplink shared reference channels.
 %   [DESCRIPTION, CFGULFRC, INFO] = srsPUSCHReferenceChannel(FIXEDREFERENCECHANNEL, CHANNELBANDWIDTH) 
-%   Generates a downlink regference signal where the parameter
+%   Generates an uplink reference signal where the parameter
 %   FIXEDREFERENCECHANNEL is a string that identifies fixed reference
 %   channels described in TS38.104 Annex A, and CHANNELBANDWIDTH is the
 %   total channel bandwidth in MHz.
@@ -12,7 +12,7 @@
 function [description, cfgULFRC, info] = srsPUSCHReferenceChannel(fixedReferenceChannel, channelBandwidth)
 
 description = struct();
-description.bandwidth = channelBandwidth;
+description.bandWidthMHz = channelBandwidth;
 switch fixedReferenceChannel
     case 'G-FR1-A3-8'
         description.subcarrierSpacing = 15;
@@ -20,11 +20,11 @@ switch fixedReferenceChannel
         description.targetCodeRate = 0.1884765625;
         description.frequencyRange = 'FR1';
     otherwise
-        error(['Reference channel ' referenceChannel ' is not valid.']);
+        error(['Reference channel ' fixedReferenceChannel ' is not valid.']);
 end
 
 NStartGrid = 0;
-switch description.bandwidth
+switch description.bandWidthMHz
     case 5
         NSizeGrid = 25;
     case 10
