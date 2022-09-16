@@ -63,8 +63,8 @@ function unittestClass = name2Class(name)
             unittestClass = ?srsPDSCHdmrsUnittest;
         case 'dmrs_pucch_processor'
             unittestClass = ?srsPUCCHdmrsUnittest;
-	case 'dmrs_pusch_estimator'
-	    unittestClass = ?srsPUSCHdmrsUnittest;
+      	case 'dmrs_pusch_estimator'
+      	    unittestClass = ?srsPUSCHdmrsUnittest;
         case 'ldpc_encoder'
             unittestClass = ?srsLDPCEncoderUnittest;
         case 'ldpc_rate_matcher'
@@ -78,7 +78,7 @@ function unittestClass = name2Class(name)
         case 'ofdm_modulator'
             unittestClass = ?srsOFDMModulatorUnittest;
         case 'ofdm_prach_demodulator'
-	        unittestClass = ? srsPRACHDemodulatorUnittest;
+            unittestClass = ? srsPRACHDemodulatorUnittest;
         case 'pbch_encoder'
             unittestClass = ?srsPBCHEncoderUnittest;
         case 'pbch_modulator'
@@ -109,6 +109,8 @@ function unittestClass = name2Class(name)
             unittestClass = ?srsSSBProcessorUnittest;
         case 'tbs_calculator'
             unittestClass = ?srsTBSCalculatorUnittest;
+        case 'uci_decoder'
+            unittestClass = ?srsUCIDecoderUnittest;
         otherwise
             error('SRSGNB:runSRSGNBUnittest:unknownBlock', ...
                 'No unit test for block %s.\n', name);
