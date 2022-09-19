@@ -53,9 +53,10 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
         %   and variable declarations) to the header file pointed by FILEID, which
         %   describes the test vectors.
         fprintf(fileID, [...
+            'template <typename T>\n' ...
             'struct re_measurement_exploded {\n' ...
-            '  unsigned          nof_prb, nof_symbols, nof_slices;\n' ...
-            '  file_vector<cf_t> measurements;\n' ...
+            '  unsigned       nof_prb, nof_symbols, nof_slices;\n' ...
+            '  file_vector<T> measurements;\n' ...
             '};\n'...
             '\n' ...
             'struct ch_estimates_exploded {\n' ...
@@ -65,12 +66,13 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
             '};\n' ...
             '\n' ...
             'struct test_case_t {\n' ...
-            '  re_measurement_exploded equalized_symbols;\n' ...
-            '  re_measurement_exploded transmitted_symbols;\n' ...
-            '  re_measurement_exploded received_symbols;\n' ...
-            '  ch_estimates_exploded   ch_estimates;\n' ...
-            '  float                   scaling;\n' ...
-            '  std::string             equalizer_type;\n' ...
+            '  re_measurement_exploded<cf_t>  equalized_symbols;\n' ...
+            '  re_measurement_exploded<float> equalized_noise_vars;\n' ...
+            '  re_measurement_exploded<cf_t>  transmitted_symbols;\n' ...
+            '  re_measurement_exploded<cf_t>  received_symbols;\n' ...
+            '  ch_estimates_exploded          ch_estimates;\n' ...
+            '  float                          scaling;\n' ...
+            '  std::string                    equalizer_type;\n' ...
             '};\n'...
             ]);
         end
@@ -79,18 +81,23 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(obj, channelSize, eqType)
             import srsTest.helpers.writeComplexFloatFile
+            import srsTest.helpers.writeFloatFile
 
             % generate a unique test ID by looking at the number of files generated so far
             testID = obj.generateTestID;
 
             obj.createChTensor(channelSize);
-            [eqSymbols, txSymbols, rxSymbols] = obj.runCase(eqType);
+            [eqSymbols, txSymbols, rxSymbols, eqNoiseVars] = obj.runCase(eqType);
 
             [~, nSymbols, nRx, nTx] = size(obj.channelTensor);
 
             obj.saveDataFile('_test_output_eq_symbols', testID, @writeComplexFloatFile, eqSymbols(:));
             eqString = obj.testCaseToString(testID, {obj.nRB, nSymbols, nTx}, false, '_test_output_eq_symbols');
             eqString(end) = [];
+
+            obj.saveDataFile('_test_output_eq_noise_vars', testID, @writeFloatFile, eqNoiseVars(:));
+            eqNoiseString = obj.testCaseToString(testID, {obj.nRB, nSymbols, nTx}, false, '_test_output_eq_noise_vars');
+            eqNoiseString(end) = [];
 
             obj.saveDataFile('_test_check_tx_symbols', testID, @writeComplexFloatFile, txSymbols(:));
             txString = obj.testCaseToString(testID, {obj.nRB, nSymbols, nTx}, false, '_test_check_tx_symbols');
@@ -106,7 +113,7 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
             chEstString(end) = [];
 
             % Concatenate all strings.
-            testCaseString = ['{', eqString, txString, rxString, chEstString, ' ', num2str(obj.beta), ' , "', eqType, '" },' newline];
+            testCaseString = ['{', eqString, eqNoiseString, txString, rxString, chEstString, ' ', num2str(obj.beta), ' , "', eqType, '" },' newline];
 
             % add the test to the file header
             obj.addTestToHeaderFile(obj.headerFileID, testCaseString);
@@ -167,7 +174,9 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
                 obj.nRB, obj.scs, 0);
         end % of function createChTensor(obj, channelSize)
 
-        function [eqSymbols, txSymbols, rxSymbols] = runCase(obj, eqType)
+        function [eqSymbols, txSymbols, rxSymbols, eqNoiseVars] = runCase(obj, eqType)
+            import srsMatlabWrappers.phy.upper.equalization.srsChannelEqualizer
+            
             [nSC, nSym, nRx, nTx] = size(obj.channelTensor);
 
             % Tx symbols: unitary power.
@@ -184,17 +193,11 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
                         + obj.channelTensor(:, :, iRx, iTx)  .* txSymbols(:, :, iTx);
                 end
             end
+            
+            % Equalize the Rx symbols and compute the equivalent noise
+            % variances.
+            [eqSymbols, eqNoiseVars] = srsChannelEqualizer(rxSymbols, obj.channelTensor, eqType, noiseVar);
 
-            % Equalize Rx symbols.
-            eqSymbols = nan(size(txSymbols));
-            for iSC = 1:nSC
-                for iSym = 1:nSym
-                    chMatrix = squeeze(obj.channelTensor(iSC, iSym, :, :));
-                    rxSyms = squeeze(rxSymbols(iSC, iSym, :));
-                    eqSymbols(iSC, iSym, :) = equalize(rxSyms, ...
-                        chMatrix, noiseVar, eqType);
-                end
-            end
         end % of function runCase()
 
         function [mseN, snrN] = computeREnominals(obj, eqType)
@@ -245,18 +248,6 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
     end % of methods (Access = private)
 
 end % of classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
-
-function eqSymbols = equalize(rxSymbols, chMatrix, noiseVar, eqType)
-    chHch = chMatrix' * chMatrix;
-    if strcmp(eqType, 'MMSE')
-        M = (noiseVar * eye(size(chHch)) + chHch);
-        eqSymbols = M \ (chMatrix' * rxSymbols);
-    elseif strcmp(eqType, 'ZF')
-        eqSymbols = chMatrix \ rxSymbols;
-    else
-        error('Unknown equalizer %s.', eqType);
-    end
-end
 
 function [sigPower, noisePower] = computeREpower(txSymbols, eqSymbols, chMatrix, ...
         noiseVar, eqType)
