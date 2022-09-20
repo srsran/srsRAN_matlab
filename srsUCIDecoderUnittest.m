@@ -87,60 +87,65 @@ classdef srsUCIDecoderUnittest < srsTest.srsBlockUnittest
             import srsTest.helpers.writeUint8File
             import srsTest.helpers.writeInt8File
 
-            % Generate a unique test ID
-            testID = testCase.generateTestID;
+            % the current srsGNB implementation only supports UCI messages
+            % up to 11 bits
+            isASupported = A < 12;
 
-            % set randomized values
-            UCIbits = randi([0 1], A, 1);
-            % the length of the rate-matched UCI codeword, E, depends on A and on
-            %     the modulation scheme (maximum length = 8192)
-            minE = A + 1;
-            % for sequences larger than 12 bits there will be 11 CRC bits
-            if A >= 12
-                minE = A + 11;
-            end;
-            maxE = floor(8192 / modScheme{1});
-            if maxE < minE
-                maxE = minE;
-            end;
-            E = modScheme{1} * randi([minE maxE], 1, 1);
-
-            % current fixed parameter values (e.g., SNR)
-            snrdB = 20;
-
-            % encode the UCI bits
-            UCICodeWord = nrUCIEncode(UCIbits, E, modScheme{2});
-
-            % replace placeholders -1 (x) and -2 (y) as part of the descrambling.
-            UCICodeWord(UCICodeWord == -1) = 1;
-            UCICodeWord(UCICodeWord == -2) = UCICodeWord(find(UCICodeWord == -2) - 1);
-
-            % estimate the LLR soft bits
-            modulatedUCI = nrSymbolModulate(UCICodeWord, modScheme{2});
-            rxSignal = awgn(modulatedUCI, snrdB);
-            LLRSoftBits = nrSymbolDemodulate(rxSignal, modScheme{2});
-
-            % decode the received UCI LLR soft bits
-            decodedUCIBits = nrUCIDecode(LLRSoftBits, A, modScheme{2});
-
-            % clip and quantize the LLRs
-            LLRSoftBits(LLRSoftBits > 20) = 20;
-            LLRSoftBits(LLRSoftBits < -20) = -20;
-            LLRSoftBits = round(LLRSoftBits * 6); % this is codeblocks * 120 / 20
-            % write the LLRs to a binary file
-            testCase.saveDataFile('_test_input', testID, @writeInt8File, LLRSoftBits(:));
-
-            % write the decoded UCI message to a binary file
-            testCase.saveDataFile('_test_output', testID, @writeUint8File, decodedUCIBits);
-
-            % generate the test case entry
-            testCaseString = testCase.testCaseToString(testID, ...
-                {['modulation_scheme::', modScheme{3}], A, E}, ...
-                false, '_test_input', '_test_output');
-
-            % add the test to the file header
-            testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);
-
+            if (isASupported)
+                % Generate a unique test ID
+                testID = testCase.generateTestID;
+    
+                % set randomized values
+                UCIbits = randi([0 1], A, 1);
+                % the length of the rate-matched UCI codeword, E, depends on A and on
+                %     the modulation scheme (maximum length = 8192)
+                minE = A + 1;
+                % for sequences larger than 12 bits there will be 11 CRC bits
+                if A >= 12
+                    minE = A + 11;
+                end;
+                maxE = floor(8192 / modScheme{1});
+                if maxE < minE
+                    maxE = minE;
+                end;
+                E = modScheme{1} * randi([minE maxE], 1, 1);
+    
+                % current fixed parameter values (e.g., SNR)
+                snrdB = 20;
+    
+                % encode the UCI bits
+                UCICodeWord = nrUCIEncode(UCIbits, E, modScheme{2});
+    
+                % replace placeholders -1 (x) and -2 (y) as part of the descrambling.
+                UCICodeWord(UCICodeWord == -1) = 1;
+                UCICodeWord(UCICodeWord == -2) = UCICodeWord(find(UCICodeWord == -2) - 1);
+    
+                % estimate the LLR soft bits
+                modulatedUCI = nrSymbolModulate(UCICodeWord, modScheme{2});
+                rxSignal = awgn(modulatedUCI, snrdB);
+                LLRSoftBits = nrSymbolDemodulate(rxSignal, modScheme{2});
+    
+                % decode the received UCI LLR soft bits
+                decodedUCIBits = nrUCIDecode(LLRSoftBits, A, modScheme{2});
+    
+                % clip and quantize the LLRs
+                LLRSoftBits(LLRSoftBits > 20) = 20;
+                LLRSoftBits(LLRSoftBits < -20) = -20;
+                LLRSoftBits = round(LLRSoftBits * 6); % this is codeblocks * 120 / 20
+                % write the LLRs to a binary file
+                testCase.saveDataFile('_test_input', testID, @writeInt8File, LLRSoftBits(:));
+    
+                % write the decoded UCI message to a binary file
+                testCase.saveDataFile('_test_output', testID, @writeUint8File, decodedUCIBits);
+    
+                % generate the test case entry
+                testCaseString = testCase.testCaseToString(testID, ...
+                    {['modulation_scheme::', modScheme{3}], A, E}, ...
+                    false, '_test_output', '_test_input');
+    
+                % add the test to the file header
+                testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);
+            end
         end % of function testvectorGenerationCases
     end % of methods (Test, TestTags = {'testvector'})
 end % of classdef srsUCIDecoderUnittest
