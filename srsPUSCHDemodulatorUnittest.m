@@ -149,14 +149,20 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             noiseStd = round(0.1 + 0.9 * rand(), 1);
             noiseVar = noiseStd.^2;
 
+            % Symbol amplitude is scaled following the amplitude ratio
+            % between PUSCH-EPRE and DM-RS EPRE. For now, it is set to -3
+            % dB as specified in TS 38.214 Table 6.2.2-1, in the case with
+            % 2 DM-RS CDM groups without data .
+            pusch_dmrs_scaling = 10 ^ (-3/20);
+
             % create noisy modulated symbols
-            noisySymbols = modulatedSymbols + noiseStd * normNoise;
+            noisySymbols = (pusch_dmrs_scaling * modulatedSymbols) + (noiseStd * normNoise);
             
             % write each complex symbol and their associated indices into a binary file.
             testCase.saveDataFile('_test_input_symbols', testID, ...
                 @writeResourceGridEntryFile, noisySymbols, symbolIndices);
 
-            % create channel estimates
+            % create channel estimates. 
             nof_allocated_symbols = pusch.SymbolAllocation(2);
             nof_subcs = length(pusch.PRBSet) * 12;
             estimates = ones(1, nof_allocated_symbols * nof_subcs);

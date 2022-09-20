@@ -30,12 +30,12 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
         scs = 15
         %FFT size.
         fftSize = 512
-        %SNR in dB
+        %SNR in dB of the reference signals used for channel estimation.
         snr = 10
+        %Amplitude scaling of the data symbols relative to the reference signals.
+        beta = 1.2
         %Channel tensor (subcarrier, OFDM symbols, Rx antennas, Tx layers).
         channelTensor double
-        %Amplitude scaling.
-        beta = 1.2
     end % of properties (Hidden)
 
     methods (Access = protected)
@@ -90,9 +90,7 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
 
             % Create the channel estimates.
             obj.createChTensor(channelSize);
-
-            % Generate and process the symbols.
-            [eqSymbols, txSymbols, rxSymbols, eqNoiseVars] = obj.runCase(eqType);
+            [eqSymbols, txSymbols, rxSymbols, eqNoiseVars] = obj.runCase(eqType, obj.beta);
 
             [~, nSymbols, nRx, nTx] = size(obj.channelTensor);
             noiseVar = 10^(-obj.snr/10);
@@ -174,7 +172,7 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
             end
 
             for iRun = 1:nRuns
-                [eqSymbols, txSymbols] = obj.runCase(eqType);
+                [eqSymbols, txSymbols] = obj.runCase(eqType, 1);
                 mse = mse + abs(eqSymbols - txSymbols).^2 / nRuns;
 
                 if nargout > 1
@@ -207,13 +205,12 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
             [~, pathGains] = tdl(s);
             pathFilters = getPathFilters(tdl);
 
-            % Channel tensor. Multiply by beta to avoid carrying it around
-            % all the time.
-            obj.channelTensor = obj.beta * nrPerfectChannelEstimate(pathGains, pathFilters, ...
+            % Channel tensor.
+            obj.channelTensor = nrPerfectChannelEstimate(pathGains, pathFilters, ...
                 obj.nRB, obj.scs, 0);
         end % of function createChTensor(obj, channelSize)
 
-        function [eqSymbols, txSymbols, rxSymbols, eqNoiseVars] = runCase(obj, eqType)
+        function [eqSymbols, txSymbols, rxSymbols, eqNoiseVars] = runCase(obj, eqType, txScaling)
             import srsMatlabWrappers.phy.upper.equalization.srsChannelEqualizer
             
             [nSC, nSym, nRx, nTx] = size(obj.channelTensor);
@@ -225,17 +222,17 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
             % Rx symbols: start with the noise.
             rxSymbols = (randn(nSC, nSym, nRx) + 1i * randn(nSC, nSym, nRx)) ...
                 * sqrt(noiseVar / 2);
-            % Rx symbols: add transmitted symbols.
+            % Rx symbols: add transmitted symbols scaled by beta.
             for iRx = 1:nRx
                 for iTx = 1:nTx
                     rxSymbols(:, :, iRx) = rxSymbols(:, :, iRx) ...
-                        + obj.channelTensor(:, :, iRx, iTx)  .* txSymbols(:, :, iTx);
+                        + txScaling * obj.channelTensor(:, :, iRx, iTx)  .* txSymbols(:, :, iTx);
                 end
             end
             
             % Equalize the Rx symbols and compute the equivalent noise
             % variances.
-            [eqSymbols, eqNoiseVars] = srsChannelEqualizer(rxSymbols, obj.channelTensor, eqType, noiseVar);
+            [eqSymbols, eqNoiseVars] = srsChannelEqualizer(rxSymbols, obj.channelTensor, eqType, noiseVar, txScaling);
 
         end % of function runCase()
 

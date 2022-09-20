@@ -23,13 +23,16 @@
 %   
 %   See also nrEqualizeMMSE.
 
-function [eqSymbols, eqNoiseVars] = srsChannelEqualizer(rxSymbols, chEsts, eqType, noiseVar)
+function [eqSymbols, eqNoiseVars] = srsChannelEqualizer(rxSymbols, chEsts, eqType, noiseVar, txScaling)
 
 % Extract the number of subcarriers, OFDM symbols, Rx ports and Tx layers
 % from the channel estimates.
 [nSC, nSym, nRx, nTx] = size(chEsts);
 
-% Check that the sizes match.
+% Scale the channel estimates to prevent carrying the scaling factor
+% around.
+chEsts = txScaling * chEsts;
+
 if (size(rxSymbols, 1) ~= nSC)
     error('number of channel estimate (%d) and Rx signal subcarriers (%d) do not match.', ...
         nSC, size(rxSymbols, 1));
