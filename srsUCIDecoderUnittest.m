@@ -141,7 +141,7 @@ classdef srsUCIDecoderUnittest < srsTest.srsBlockUnittest
                 % generate the test case entry
                 testCaseString = testCase.testCaseToString(testID, ...
                     {['modulation_scheme::', modScheme{3}], A, E}, ...
-                    false, '_test_output', '_test_input');
+                    true, '_test_output', '_test_input');
     
                 % add the test to the file header
                 testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);
