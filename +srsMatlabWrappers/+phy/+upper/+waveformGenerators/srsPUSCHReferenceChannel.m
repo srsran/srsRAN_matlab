@@ -1,15 +1,21 @@
 %srsPUSCHReferenceChannel Generates Physical uplink shared reference channels.
-%   [DESCRIPTION, CFGULFRC, INFO] = srsPUSCHReferenceChannel(FIXEDREFERENCECHANNEL, CHANNELBANDWIDTH) 
+%   [DESCRIPTION, CFGULFRC, INFO] = srsPUSCHReferenceChannel(FIXEDREFERENCECHANNEL, CHANNELBANDWIDTH, CUSTOMPUSCHCONFIG) 
 %   Generates an uplink reference signal where the parameter
-%   FIXEDREFERENCECHANNEL is a string that identifies fixed reference
-%   channels described in TS38.104 Annex A, and CHANNELBANDWIDTH is the
-%   total channel bandwidth in MHz.
-%   
+%   FIXEDREFERENCECHANNEL is a string that identifies Fixed Reference
+%   Channels (FRC) described in TS38.104 Annex A, and CHANNELBANDWIDTH is the
+%   total channel bandwidth in MHz. The CUSTOMPUSCHCONFIG PUSCH configuration
+%   structure can be used to override any desired FRC PUSCH settings.
+%
+%   CUSTOMPUSCHCONFIG is a structure of type <a href="matlab:
+%   help('nrWavegenPUSCHConfig')">nrWavegenPUSCHConfig</a>.
+%
 %   The function returns:
 %       DESCRIPTION - structure that provides details of the reference channel
 %       CFGULFRC    - object of type <a href="matlab: help('nrULCarrierConfig')">nrULCarrierConfig</a>
 %       INFO        - structure with the generated waveform information
-function [description, cfgULFRC, info] = srsPUSCHReferenceChannel(fixedReferenceChannel, channelBandwidth)
+%   
+%   See also nrWaveformGenerator, nrWavegenPUSCHConfig
+function [description, cfgULFRC, info] = srsPUSCHReferenceChannel(fixedReferenceChannel, channelBandwidth, customPuschConfig)
 
 description = struct();
 description.bandWidthMHz = channelBandwidth;
@@ -39,8 +45,8 @@ switch fixedReferenceChannel
 
     case 'G-FR1-A3-9'
         description.subcarrierSpacing = 15;
-        description.modulation = '64QAM';
-        description.targetCodeRate = 0.5537109375;
+        description.modulation = 'QPSK';
+        description.targetCodeRate = 0.1884765625;
         description.frequencyRange = 'FR1';
         nofPRB = 52;
 
@@ -53,8 +59,8 @@ switch fixedReferenceChannel
 
     case 'G-FR1-A5-9'
         description.subcarrierSpacing = 15;
-        description.modulation = '16QAM';
-        description.targetCodeRate = 0.642578125;
+        description.modulation = '64QAM';
+        description.targetCodeRate = 0.5537109375;
         description.frequencyRange = 'FR1';
         nofPRB = 52;
 
@@ -68,6 +74,10 @@ switch description.bandWidthMHz
         NSizeGrid = 25;
     case 10
         NSizeGrid = 52;
+end
+
+if (NSizeGrid > nofPRB)
+    error("Channel bandwidth is too small to fit the signal");
 end
 
 % Determine the set of occupied PRB.
@@ -235,8 +245,21 @@ srs.SRSPositioning = false;
 
 cfgULFRC.SRS = {srs};
 
-% Generation
-[waveform,info] = nrWaveformGenerator(cfgULFRC);
+%% Apply custom PUSCH configuration, if present.
+    if (nargin == 3)
+        try
+            paramNames = fieldnames(customPuschConfig);
+            nofPuschParams = length(paramNames);
+            for index = 1:nofPuschParams
+                cfgULFRC.PUSCH{1}.(paramNames{index}) = customPuschConfig.(paramNames{index});
+            end
+        catch
+            error('Unrecognized PUSCH configuration parameter');
+        end
+    end
+
+%% Generation
+[~,info] = nrWaveformGenerator(cfgULFRC);
 
 end
 

@@ -90,6 +90,8 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
 
             % Create the channel estimates.
             obj.createChTensor(channelSize);
+
+            % Generate and process the symbols.
             [eqSymbols, txSymbols, rxSymbols, eqNoiseVars] = obj.runCase(eqType, obj.beta);
 
             [~, nSymbols, nRx, nTx] = size(obj.channelTensor);
@@ -142,7 +144,7 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
             rxString = strrep(rxString, newline, '');
 
             % Write the channel estimates to a binary file.
-            obj.saveDataFile('_test_input_ch_estimates', testID, @writeComplexFloatFile, obj.channelTensor(:) / obj.beta);
+            obj.saveDataFile('_test_input_ch_estimates', testID, @writeComplexFloatFile, obj.channelTensor(:));
             chEstString = obj.testCaseToString(testID, chEstimateParams, false, '_test_input_ch_estimates');
             chEstString = strrep(chEstString, sprintf(',\n'), '');
 
@@ -222,7 +224,7 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
             % Rx symbols: start with the noise.
             rxSymbols = (randn(nSC, nSym, nRx) + 1i * randn(nSC, nSym, nRx)) ...
                 * sqrt(noiseVar / 2);
-            % Rx symbols: add transmitted symbols scaled by beta.
+            % Rx symbols: scale and add transmitted symbols.
             for iRx = 1:nRx
                 for iTx = 1:nTx
                     rxSymbols(:, :, iRx) = rxSymbols(:, :, iRx) ...

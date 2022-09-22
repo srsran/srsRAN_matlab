@@ -33,6 +33,7 @@ function [eqSymbols, eqNoiseVars] = srsChannelEqualizer(rxSymbols, chEsts, eqTyp
 % around.
 chEsts = txScaling * chEsts;
 
+% Check that the sizes match.
 if (size(rxSymbols, 1) ~= nSC)
     error('number of channel estimate (%d) and Rx signal subcarriers (%d) do not match.', ...
         nSC, size(rxSymbols, 1));
