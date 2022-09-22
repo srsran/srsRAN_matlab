@@ -82,40 +82,79 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
         function testvectorGenerationCases(obj, channelSize, eqType)
             import srsTest.helpers.writeComplexFloatFile
             import srsTest.helpers.writeFloatFile
+            import srsTest.helpers.cellarray2str
 
-            % generate a unique test ID by looking at the number of files generated so far
+            % Generate a unique test ID by looking at the number of files
+            % generated so far.
             testID = obj.generateTestID;
 
+            % Create the channel estimates.
             obj.createChTensor(channelSize);
+
+            % Generate and process the symbols.
             [eqSymbols, txSymbols, rxSymbols, eqNoiseVars] = obj.runCase(eqType);
 
             [~, nSymbols, nRx, nTx] = size(obj.channelTensor);
-
-            obj.saveDataFile('_test_output_eq_symbols', testID, @writeComplexFloatFile, eqSymbols(:));
-            eqString = obj.testCaseToString(testID, {obj.nRB, nSymbols, nTx}, false, '_test_output_eq_symbols');
-            eqString(end) = [];
-
-            obj.saveDataFile('_test_output_eq_noise_vars', testID, @writeFloatFile, eqNoiseVars(:));
-            eqNoiseString = obj.testCaseToString(testID, {obj.nRB, nSymbols, nTx}, false, '_test_output_eq_noise_vars');
-            eqNoiseString(end) = [];
-
-            obj.saveDataFile('_test_check_tx_symbols', testID, @writeComplexFloatFile, txSymbols(:));
-            txString = obj.testCaseToString(testID, {obj.nRB, nSymbols, nTx}, false, '_test_check_tx_symbols');
-            txString(end) = [];
-
-            obj.saveDataFile('_test_input_rx_symbols', testID, @writeComplexFloatFile, rxSymbols(:));
-            rxString = obj.testCaseToString(testID, {obj.nRB, nSymbols, nRx}, false, '_test_input_rx_symbols');
-            rxString(end) = [];
-
             noiseVar = 10^(-obj.snr/10);
+
+            txSymbolDimensions = {...
+                obj.nRB, ...           % nof_prb
+                nSymbols, ...          % nof_symbols
+                nTx, ...               % nof_slices
+                };
+
+            rxSymbolDimensions = {...
+                obj.nRB, ...           % nof_prb
+                nSymbols, ...          % nof_symbols
+                nRx, ...               % nof_slices
+                };
+
+            chEstimateParams = {...
+                obj.nRB, ...           % nof_prb
+                nSymbols, ...          % nof_symbols
+                nRx, ...               % nof_rx_ports  
+                nTx, ...               % nof_tx_layers
+                noiseVar, ...          % noise_var
+            };
+
+            eqTestParams = {...
+                obj.beta, ...         % scaling
+                ['"' eqType '"'], ... % equalizer_type
+                };
+
+
+            % Write the equalized symbols to a binary file.
+            obj.saveDataFile('_test_output_eq_symbols', testID, @writeComplexFloatFile, eqSymbols(:));
+            eqString = obj.testCaseToString(testID, txSymbolDimensions, false, '_test_output_eq_symbols');
+            eqString = strrep(eqString, newline, '');
+
+            % Write the post-equalization noise variances to a binary file.
+            obj.saveDataFile('_test_output_eq_noise_vars', testID, @writeFloatFile, eqNoiseVars(:));
+            eqNoiseString = obj.testCaseToString(testID, txSymbolDimensions, false, '_test_output_eq_noise_vars');
+            eqNoiseString = strrep(eqNoiseString, newline, '');
+            
+            % Write the transmitted symbols to a binary file.
+            obj.saveDataFile('_test_check_tx_symbols', testID, @writeComplexFloatFile, txSymbols(:));
+            txString = obj.testCaseToString(testID, txSymbolDimensions, false, '_test_check_tx_symbols');
+            txString = strrep(txString, newline, '');
+
+            % Write the received symbols to a binary file.
+            obj.saveDataFile('_test_input_rx_symbols', testID, @writeComplexFloatFile, rxSymbols(:));
+            rxString = obj.testCaseToString(testID, rxSymbolDimensions, false, '_test_input_rx_symbols');
+            rxString = strrep(rxString, newline, '');
+
+            % Write the channel estimates to a binary file.
             obj.saveDataFile('_test_input_ch_estimates', testID, @writeComplexFloatFile, obj.channelTensor(:) / obj.beta);
-            chEstString = obj.testCaseToString(testID, {obj.nRB, nSymbols, nRx, nTx, noiseVar}, false, '_test_input_ch_estimates');
-            chEstString(end) = [];
+            chEstString = obj.testCaseToString(testID, chEstimateParams, false, '_test_input_ch_estimates');
+            chEstString = strrep(chEstString, sprintf(',\n'), '');
 
-            % Concatenate all strings.
-            testCaseString = ['{', eqString, eqNoiseString, txString, rxString, chEstString, ' ', num2str(obj.beta), ' , "', eqType, '" },' newline];
+            % Generate the test case string.
+            dataString = {[eqString eqNoiseString txString rxString chEstString]};
+            eqTestParams = [dataString eqTestParams];
 
-            % add the test to the file header
+            testCaseString = sprintf("%s,\n", cellarray2str(eqTestParams, true));
+
+            % Add the test to the file header.
             obj.addTestToHeaderFile(obj.headerFileID, testCaseString);
         end % of function testvectorGenerationCases
     end % methods (Test, TestTags = {'testvector'})
