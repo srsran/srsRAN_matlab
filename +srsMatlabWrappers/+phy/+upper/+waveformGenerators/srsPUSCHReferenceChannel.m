@@ -13,12 +13,51 @@ function [description, cfgULFRC, info] = srsPUSCHReferenceChannel(fixedReference
 
 description = struct();
 description.bandWidthMHz = channelBandwidth;
+nofRE = 12;
+
 switch fixedReferenceChannel
     case 'G-FR1-A3-8'
         description.subcarrierSpacing = 15;
         description.modulation = 'QPSK';
         description.targetCodeRate = 0.1884765625;
         description.frequencyRange = 'FR1';
+        nofPRB = 25;
+
+    case 'G-FR1-A4-8'
+        description.subcarrierSpacing = 15;
+        description.modulation = '16QAM';
+        description.targetCodeRate = 0.642578125;
+        description.frequencyRange = 'FR1';
+        nofPRB = 25;
+
+    case 'G-FR1-A5-8'
+        description.subcarrierSpacing = 15;
+        description.modulation = '64QAM';
+        description.targetCodeRate = 0.5537109375;
+        description.frequencyRange = 'FR1';
+        nofPRB = 25;
+
+    case 'G-FR1-A3-9'
+        description.subcarrierSpacing = 15;
+        description.modulation = '64QAM';
+        description.targetCodeRate = 0.5537109375;
+        description.frequencyRange = 'FR1';
+        nofPRB = 52;
+
+    case 'G-FR1-A4-9'
+        description.subcarrierSpacing = 15;
+        description.modulation = '16QAM';
+        description.targetCodeRate = 0.642578125;
+        description.frequencyRange = 'FR1';
+        nofPRB = 52;
+
+    case 'G-FR1-A5-9'
+        description.subcarrierSpacing = 15;
+        description.modulation = '16QAM';
+        description.targetCodeRate = 0.642578125;
+        description.frequencyRange = 'FR1';
+        nofPRB = 52;
+
     otherwise
         error(['Reference channel ' fixedReferenceChannel ' is not valid.']);
 end
@@ -30,6 +69,11 @@ switch description.bandWidthMHz
     case 10
         NSizeGrid = 52;
 end
+
+% Determine the set of occupied PRB.
+PRBOffset = floor((NSizeGrid - nofPRB) / 2);
+description.PRBSet = PRBOffset:PRBOffset + nofPRB - 1;
+
 
 %% Generating Uplink FRC waveform
 % Uplink FRC configuration
@@ -74,7 +118,7 @@ pusch.MappingType = 'A';
 pusch.SymbolAllocation = [0 14];
 pusch.SlotAllocation = 0:9;
 pusch.Period = 10;
-pusch.PRBSet = 0:24;
+pusch.PRBSet = description.PRBSet;
 pusch.TransformPrecoding = false;
 pusch.TransmissionScheme = 'codebook';
 pusch.NumAntennaPorts = 1;
