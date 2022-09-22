@@ -14,24 +14,24 @@
 %   the resource grid subcarriers and NSYMB is the nymber of symbols in the
 %   slot. 
 function output = srsIndexes0BasedSubscrit(input, nSubC, nSymb)
-    % Initialise output memory
-    output = repmat(input, 3);
+    % Initialise output memory.
+    output = repmat(input, [1 3]);
 
-    % Convert to 0based
+    % Convert to 0based.
     indexes = output(:, 1) - 1;
 
-    % Calculate subcarrier indexes
+    % Calculate subcarrier indexes.
     output(:, 1) = rem(indexes, nSubC);
 
-    % Subtract the remainder from previous operation to avoid rounding up
+    % Subtract the remainder from previous operation to avoid rounding up.
     indexes = (indexes - output(:, 1)) / nSubC;
 
-    % Calculate the symbol indexes
+    % Calculate the symbol indexes.
     output(:, 2) = rem(indexes, nSymb);
 
-    % Subtract the remainder from previous operation to avoid rounding up
+    % Subtract the remainder from previous operation to avoid rounding up.
     indexes = (indexes - output(:, 2)) / nSymb;
 
-    % Calculate the port indexes
+    % Calculate the port indexes.
     output(:, 3) = indexes;
 end
