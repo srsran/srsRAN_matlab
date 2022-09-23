@@ -17,10 +17,16 @@ gridCoordinate = uint32(usefulIndices(:, 3)) ...
     + uint32(usefulIndices(:, 1)) * 2^16;
 
 % Flatten data in a binary format·
-singleRealData = zeros(1, 3 * dataLength, 'uint32');
-singleRealData(1:3:end) = gridCoordinate;
-singleRealData(2:3:end) = typecast(single(real(data)), 'uint32');
-singleRealData(3:3:end) = typecast(single(imag(data)), 'uint32');
+if isreal(data)
+    singleRealData = zeros(1, 2 * dataLength, 'uint32');
+    singleRealData(1:2:end) = gridCoordinate;
+    singleRealData(2:2:end) = typecast(single(data), 'uint32');
+else
+    singleRealData = zeros(1, 3 * dataLength, 'uint32');
+    singleRealData(1:3:end) = gridCoordinate;
+    singleRealData(2:3:end) = typecast(single(real(data)), 'uint32');
+    singleRealData(3:3:end) = typecast(single(imag(data)), 'uint32');
+end
 
 % Write all data once.
 fileID = fopen(filename, 'w');
