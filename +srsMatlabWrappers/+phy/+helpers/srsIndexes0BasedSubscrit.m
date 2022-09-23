@@ -15,7 +15,7 @@
 %   slot. 
 function output = srsIndexes0BasedSubscrit(input, nSubC, nSymb)
     % Initialise output memory.
-    output = repmat(input, [1 3]);
+    output = repmat(input, 1, 3);
 
     % Convert to 0based.
     indexes = output(:, 1) - 1;
