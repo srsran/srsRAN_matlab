@@ -127,8 +127,8 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             % Extract PUSCH configuration.
             puschConfig = cfgULFRC.PUSCH{1};
 
-            % Extract PUSCH resources.
-            puschTransmission = info.WaveformResources.PUSCH.Resources;
+            % Extract PUSCH resources of the first slot.
+            puschTransmission = info.WaveformResources.PUSCH.Resources(1);
 
             modulatedSymbols = puschTransmission.ChannelSymbols;
             dataSymbolIndices = puschTransmission.ChannelIndices;
@@ -200,7 +200,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             for iPuschSymbol = 1 : nofPUSCHSymbols
                 
                 % Skip the DM-RS symbols. 
-                if (dmrsSymbolMask(iPuschSymbol + puschStartSymbol) == 0)
+                if (~dmrsSymbolMask(iPuschSymbol + puschStartSymbol))
 
                     % Apply Equalization.
                     [eqSymbols(:, iDataSymbol), eqNoiseVars(:, iDataSymbol)] = ...

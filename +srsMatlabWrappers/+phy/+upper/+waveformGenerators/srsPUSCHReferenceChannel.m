@@ -15,11 +15,10 @@
 %       INFO        - structure with the generated waveform information
 %   
 %   See also nrWaveformGenerator, nrWavegenPUSCHConfig
-function [description, cfgULFRC, info] = srsPUSCHReferenceChannel(fixedReferenceChannel, channelBandwidth, customPuschConfig)
+function [description, cfgULFRC, info] = srsPUSCHReferenceChannel(fixedReferenceChannel, channelBandwidth, customPUSCHConfig)
 
 description = struct();
-description.bandWidthMHz = channelBandwidth;
-nofRE = 12;
+description.bandwidthMHz = channelBandwidth;
 
 switch fixedReferenceChannel
     case 'G-FR1-A3-8'
@@ -69,7 +68,7 @@ switch fixedReferenceChannel
 end
 
 NStartGrid = 0;
-switch description.bandWidthMHz
+switch description.bandwidthMHz
     case 5
         NSizeGrid = 25;
     case 10
@@ -246,17 +245,17 @@ srs.SRSPositioning = false;
 cfgULFRC.SRS = {srs};
 
 %% Apply custom PUSCH configuration, if present.
-    if (nargin == 3)
-        try
-            paramNames = fieldnames(customPuschConfig);
-            nofPuschParams = length(paramNames);
-            for index = 1:nofPuschParams
-                cfgULFRC.PUSCH{1}.(paramNames{index}) = customPuschConfig.(paramNames{index});
-            end
-        catch
-            error('Unrecognized PUSCH configuration parameter');
+if (nargin == 3)
+    try
+        paramNames = fieldnames(customPUSCHConfig);
+        nofPuschParams = length(paramNames);
+        for index = 1:nofPuschParams
+            cfgULFRC.PUSCH{1}.(paramNames{index}) = customPUSCHConfig.(paramNames{index});
         end
+    catch
+        error('Unrecognized PUSCH configuration parameter');
     end
+end
 
 %% Generation
 [~,info] = nrWaveformGenerator(cfgULFRC);

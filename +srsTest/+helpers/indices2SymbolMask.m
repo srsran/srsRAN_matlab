@@ -7,14 +7,14 @@
 % index, the second column is the OFDM symbol index, and the third one is 
 % the antenna port index.
 %
-% MASK is a 14 element column vector where each element represents an OFDM
+% MASK is a 14-element column vector where each element represents an OFDM
 % symbol within a 5G NR slot.
 %
-% see also srsIndexes0BasedSubscrit.
+% See also srsIndexes0BasedSubscrit.
 
 function mask = indices2SymbolMask(indices)
 
-mask = zeros(14, 1); % Maximum possible number of symbols.
+mask = false(14, 1); % Maximum possible number of symbols.
 for symbolIndex = indices(:, 2)
-    mask(symbolIndex + 1) = 1;
+    mask(symbolIndex + 1) = true;
 end
