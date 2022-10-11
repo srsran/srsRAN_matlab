@@ -1,3 +1,43 @@
+%srsPUCCHDetectorFormat1Unittest Unit test for PUCCH Format1 detector.
+%   This class implements unit tests for the PUCCH Format1 detector using the
+%   matlab.unittest framework. The simplest use consists in creating an object
+%   with
+%       testCase = srsPUCCHDetectorFormat1Unittest
+%   and then running all the tests with
+%       testResults = testCase.run
+%
+%   srsPUCCHDetectorFormat1Unittest Properties (Constant):
+%
+%   srsBlock      - The tested block (i.e., 'pucch_detector').
+%   srsBlockType  - The type of the tested block, including layer
+%                   (i.e., '/phy/upper/channel_processors').
+%
+%   srsPUCCHDetectorFormat1Unittest Properties (ClassSetupParameter):
+%
+%   outputPath - Path to the folder where the test results are stored.
+%
+%   srsPUCCHDetectorFormat1Unittest Properties (TestParameter):
+%
+%   numerology       - Numerology index (0, 1).
+%   SymbolAllocation - PUCCH symbol allocation.
+%   FrequencyHopping - Frequency hopping type ('neither', 'intraSlot').
+%   ackSize          - Number of HARQ-ACK bits (0, 1, 2).
+%   srSize           - Number of SR bits (0, 1).
+%
+%   srsPUCCHDetectorFormat1Unittest Methods (TestTags = {'testvector'}):
+%
+%   testvectorGenerationCases - Generates a test vector for the given numerology,
+%                               symbol allocation, frequency hopping, number of ACK
+%                               and SR bits.
+%
+%   srsPUCCHDetectorFormat1Unittest Methods (Access = protected):
+%
+%   addTestIncludesToHeaderFile     - Adds include directives to the test header file.
+%   addTestDefinitionToHeaderFile   - Adds details (e.g., type/variable declarations)
+%                                     to the test header file.
+%
+%   See also matlab.unittest, nrPUCCH1, nrPUCCH.
+
 classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
     properties (Constant)
         %Name of the tested block.
@@ -14,10 +54,11 @@ classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
 
     properties (TestParameter)
         %Numerology index (0, 1).
+        %   Allows to compute the subcarrier spacing in kilohertz as 15 * 2^numerology.
         %   Note: Higher numerologies are currently not considered.
         numerology = {0, 1}
 
-        %Symbol allocation.
+        %PUCCH symbol allocation.
         %   The symbol allocation is described by a two-element row array with,
         %   in order, the first allocated symbol and the number of allocated
         %   symbols.
@@ -31,6 +72,8 @@ classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
         ackSize = {0, 1, 2}
 
         %Number of SR bits (0, 1).
+        %   Note: No SR bit is sent if ackSize > 0. Also, no PUCCH is sent if ackSize == 0
+        %   and the SR is negative (i.e., the SR bit is set to 0).
         srSize = {0, 1}
     end
 
@@ -64,6 +107,8 @@ classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(obj, numerology, SymbolAllocation, ...
                 FrequencyHopping, ackSize, srSize)
+        %testvectorGenerationCases generates a test vector for the given numerology,
+        %   symbol allocation, frequency hopping, number of ACK and SR bits.
 
             import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
             import srsMatlabWrappers.phy.helpers.srsConfigurePUCCH
