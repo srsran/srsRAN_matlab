@@ -9,7 +9,7 @@ classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'pucch_detector' tests will be erased).
-        outputPath = {['testPUCCHdetector', datestr(now, 30)]}
+        outputPath = {['testPUCCHdetector', char(datetime('now', 'Format', 'yyyyMMddHH''T''mmss'))]}
     end
 
     properties (TestParameter)
@@ -39,7 +39,8 @@ classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
         %addTestIncludesToHeaderFile(OBJ, FILEID) adds include directives to
         %   the header file pointed by FILEID, which describes the test vectors.
 
-            fprintf(fileID, '#include "srsgnb/phy/upper/channel_processors/pucch_processor.h"\n');
+            fprintf(fileID, '#include "../../support/resource_grid_test_doubles.h"\n');
+            fprintf(fileID, '#include "srsgnb/phy/upper/channel_processors/pucch_detector.h"\n');
             fprintf(fileID, '#include "srsgnb/ran/cyclic_prefix.h"\n');
             fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
         end
@@ -50,10 +51,12 @@ classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
         %   describes the test vectors.
 
             fprintf(fileID, 'struct test_case_t {\n');
-            fprintf(fileID, 'pucch_processor::format1_configuration cfg       = {};\n');
-            fprintf(fileID, 'float                                  noise_var = 0;\n');
-            fprintf(fileID, 'file_vector<uint32_t>                  received_symbols;\n');
-            fprintf(fileID, 'file_vector<uint32_t>                  ch_estimates;\n');
+            fprintf(fileID, 'pucch_detector::format1_configuration                    cfg       = {};\n');
+            fprintf(fileID, 'float                                                    noise_var = 0;\n');
+            fprintf(fileID, 'std::vector<uint8_t>                                     sr_bit;\n');
+            fprintf(fileID, 'std::vector<uint8_t>                                     ack_bits;\n');
+            fprintf(fileID, 'file_vector<resource_grid_reader_spy::expected_entry_t>  received_symbols;\n');
+            fprintf(fileID, 'file_vector<resource_grid_reader_spy::expected_entry_t>  ch_estimates;\n');
             fprintf(fileID, '};\n');
         end
     end % of methods (Access = protected)
@@ -69,8 +72,12 @@ classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
             import srsTest.helpers.matlab2srsCyclicPrefix
             import srsTest.helpers.writeResourceGridEntryFile
 
+            if (ackSize + srSize == 0)
+                return;
+            end
+
             % Generate a unique test ID.
-            testID = obj.generateTestID;
+            testID = obj.generateTestID('_test_received_symbols');
 
             % Generate random cell ID and slot number.
             NCellID = randi([0, 1007]);
@@ -83,8 +90,10 @@ classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
 
             % Fix BWP size and start as well as the frame number, since they
             % are irrelevant for the test.
-            NSizeGrid = 52;
-            NStartGrid = 1;
+            NSizeBWP = 51;
+            NStartBWP = 1;
+            NSizeGrid = NSizeBWP + NStartBWP;
+            NStartGrid = 0;
             NFrame = 0;
 
             % Cyclic prefix can only be normal in the supported numerologies.
@@ -96,13 +105,13 @@ classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
                 NStartGrid, NSlot, NFrame, CyclicPrefix);
 
             % PRB assigned to PUCCH Format 1 within the BWP.
-            PRBSet  = randi([0, NSizeGrid - 1]);
+            PRBSet  = randi([0, NSizeBWP - 1]);
 
             if strcmp(FrequencyHopping, 'intraSlot')
                 % When intraslot frequency hopping is enabled, the OCCI value must be less
                 % than one fourth of the number of OFDM symbols allocated for the PUCCH.
                 maxOCCindex = max([floor(SymbolAllocation(2) / 4) - 1, 0]);
-                SecondHopStartPRB = randi([1, NSizeGrid - 1]);
+                SecondHopStartPRB = randi([1, NSizeBWP - 1]);
                 secondHopConfig = {SecondHopStartPRB};
             else
                 % When intraslot frequency hopping is enabled, the OCCI value must be less
@@ -118,7 +127,8 @@ classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
             GroupHopping = 'neither';
 
             % The initial cyclic shift can be set randomly.
-            InitialCyclicShift = randi([0, 11]);
+            possibleShifts = 0:3:9;
+            InitialCyclicShift = possibleShifts(randi([1, 4]));
 
             % Configure the PUCCH.
             pucch = srsConfigurePUCCH(1, SymbolAllocation, PRBSet,...
@@ -131,7 +141,17 @@ classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
             % Generate PUCCH Format 1 symbols.
             [symbols, indices] = srsPUCCH1(carrier, pucch, ack, sr);
 
+            if isempty(symbols)
+                symbols = complex(zeros(size(indices,1), 1));
+            end
+
             channelCoefs = randn(length(symbols), 2) * [1; 1j] / sqrt(2);
+            % Ensure no channel is very small.
+            channelCoefsAbs = abs(channelCoefs);
+            mask = (channelCoefsAbs < 0.1);
+            channelCoefs(mask) = channelCoefs(mask) ./ channelCoefsAbs(mask) * 0.1;
+
+            % AWGN.
             snrdB = 20;
             noiseVar = 10^(-snrdB/10);
             noiseSymbols = randn(length(symbols), 2) * [1; 1j] * sqrt(noiseVar / 2);
@@ -144,40 +164,30 @@ classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
             obj.saveDataFile('_test_ch_estimates', testID, ...
                 @writeResourceGridEntryFile, channelCoefs, indices);
 
-            % Currently, we assume a single port with random index in (0, 7).
-            ports = randi([0, 7]);
-            portsStr = cellarray2str({ports}, true);
-
             cyclicPrefixConfig = matlab2srsCyclicPrefix(CyclicPrefix);
 
-            % Generate PUCCH common configuration.
-            commonPucchConfig = {...
-                {numerology, NSlot}, ... % slot
-                NSizeGrid, ...           % bwp_size_rb
-                NStartGrid, ...          % bwp_start_rb
-                cyclicPrefixConfig, ...  % cp
-                PRBSet, ...              % starting_prb
-                secondHopConfig, ...     % second_hop_prb
-                ... carrier.NCellID, ...     % n_id
-                ... carrier.NCellID, ...     % n_id_0
-                length(sr), ...          % nof_sr
-                length(ack), ...         % nof_harq_ack
-                0, ...                   % nof_csi_part1
-                0, ...                   % nof_csi_part2
-                ... portsStr, ...            % ports
-                };
+            port = 0;
+            betaPUCCH = 1;
 
-            % Generate PUCCH Format 1 dedicated configuration.
-            dedicatedPucchConfig = {...
-                commonPucchConfig, ...         % common
-                pucch.InitialCyclicShift, ...  % initial_cyclic_shift
-                pucch.SymbolAllocation(2), ... % nof_symbols
+            % Generate PUCCH Format 1 configuration.
+            pucchF1Config = {...
+                {numerology, NSlot},       ... % slot
+                cyclicPrefixConfig,        ... % cp
+                PRBSet,                    ... % starting_prb
+                secondHopConfig,           ... % second_hop_prb
                 pucch.SymbolAllocation(1), ... % start_symbol_index
+                pucch.SymbolAllocation(2), ... % nof_symbols
+                port,                      ... % antenna port
+                betaPUCCH,                 ... % amplitude scaling factor
                 pucch.OCCI, ...                % time_domain_occ
+                pucch.InitialCyclicShift,  ... % initial_cyclic_shift
+                NCellID,                   ... % pseudorandom initializer
+                srSize,                    ... % number of SR bits
+                ackSize,                   ... % number of ACK bits
                 };
 
             % Generate the test case entry.
-            testCaseString = obj.testCaseToString(testID, {dedicatedPucchConfig, noiseVar}, ...
+            testCaseString = obj.testCaseToString(testID, {pucchF1Config, noiseVar, num2cell(sr), num2cell(ack)}, ...
                 false, '_test_received_symbols', '_test_ch_estimates');
 
             % Add the test to the file header.
