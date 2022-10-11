@@ -4,9 +4,9 @@
 %   formatted to match the 'file_vector<resource_grid_spy::entry_t>' structures
 %   used by the SRSGNB.
 
-function writeResourceGridEntryFile(filename, data, indices)
+function writeResourceGridEntryFile(filename, dataIn, indices)
 % Make sure data has a good format.
-data = data(:);
+data = dataIn(:);
 
 dataLength = numel(data);
 usefulIndices = indices(1:dataLength, :);
@@ -17,11 +17,12 @@ gridCoordinate = uint32(usefulIndices(:, 3)) ...
     + uint32(usefulIndices(:, 1)) * 2^16;
 
 % Flatten data in a binary format·
-if isreal(data)
+if isreal(dataIn)
     singleRealData = zeros(1, 2 * dataLength, 'uint32');
     singleRealData(1:2:end) = gridCoordinate;
     singleRealData(2:2:end) = typecast(single(data), 'uint32');
 else
+    data = complex(data);
     singleRealData = zeros(1, 3 * dataLength, 'uint32');
     singleRealData(1:3:end) = gridCoordinate;
     singleRealData(2:3:end) = typecast(single(real(data)), 'uint32');
