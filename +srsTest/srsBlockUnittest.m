@@ -207,11 +207,15 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
             fprintf(fileID, '};\n');
         end
 
-        function testID = generateTestID(obj)
+        function testID = generateTestID(obj, specialFilename)
         %generateTestID Generates an identifier for the current test.
             filenameTemplateIn = sprintf('%s/%s_test_input*', obj.tmpOutputPath, obj.srsBlock);
             filenameTemplateOut = sprintf('%s/%s_test_output*', obj.tmpOutputPath, obj.srsBlock);
-            testID = max(numel(dir(filenameTemplateIn)), numel(dir(filenameTemplateOut)));
+            if nargin == 1
+                specialFilename = 'void';
+            end
+            filenameTemplateSpec = sprintf('%s/%s%s*', obj.tmpOutputPath, obj.srsBlock, specialFilename);
+            testID = max([numel(dir(filenameTemplateIn)), numel(dir(filenameTemplateOut)), numel(dir(filenameTemplateSpec))]);
         end
 
         % varargin is supposed to store list of arguments for saveFunction
