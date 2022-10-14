@@ -49,7 +49,7 @@ classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'pucch_detector' tests will be erased).
-        outputPath = {['testPUCCHdetector', char(datetime('now', 'Format', 'yyyyMMddHH''T''mmss'))]}
+        outputPath = {['testPUCCHdetector', char(datetime('now', 'Format', 'yyyyMMddHH''T''hhmmss'))]}
     end
 
     properties (TestParameter)
@@ -85,6 +85,7 @@ classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
             fprintf(fileID, '#include "../../support/resource_grid_test_doubles.h"\n');
             fprintf(fileID, '#include "srsgnb/phy/upper/channel_processors/pucch_detector.h"\n');
             fprintf(fileID, '#include "srsgnb/ran/cyclic_prefix.h"\n');
+            fprintf(fileID, '#include "srsgnb/ran/pucch/pucch_mapping.h"\n');
             fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
         end
 
@@ -113,13 +114,9 @@ classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
             import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
             import srsMatlabWrappers.phy.helpers.srsConfigurePUCCH
             import srsMatlabWrappers.phy.upper.channel_processors.srsPUCCH1
-            import srsTest.helpers.cellarray2str
             import srsTest.helpers.matlab2srsCyclicPrefix
+            import srsTest.helpers.matlab2srsPUCCHGroupHopping
             import srsTest.helpers.writeResourceGridEntryFile
-
-            if (ackSize + srSize == 0)
-                return;
-            end
 
             % Generate a unique test ID.
             testID = obj.generateTestID('_test_received_symbols');
@@ -159,7 +156,7 @@ classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
                 SecondHopStartPRB = randi([1, NSizeBWP - 1]);
                 secondHopConfig = {SecondHopStartPRB};
             else
-                % When intraslot frequency hopping is enabled, the OCCI value must be less
+                % When intraslot frequency hopping is disabled, the OCCI value must be less
                 % than one half of the number of OFDM symbols allocated for the PUCCH.
                 maxOCCindex = max([floor(SymbolAllocation(2) / 2) - 1, 0]);
                 SecondHopStartPRB = 0;
@@ -210,6 +207,7 @@ classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
                 @writeResourceGridEntryFile, channelCoefs, indices);
 
             cyclicPrefixConfig = matlab2srsCyclicPrefix(CyclicPrefix);
+            groupHoppingConfig = matlab2srsPUCCHGroupHopping(GroupHopping);
 
             port = 0;
             betaPUCCH = 1;
@@ -222,12 +220,12 @@ classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
                 secondHopConfig,           ... % second_hop_prb
                 pucch.SymbolAllocation(1), ... % start_symbol_index
                 pucch.SymbolAllocation(2), ... % nof_symbols
+                groupHoppingConfig,        ... % PUCCH group hopping type
                 port,                      ... % antenna port
                 betaPUCCH,                 ... % amplitude scaling factor
                 pucch.OCCI, ...                % time_domain_occ
                 pucch.InitialCyclicShift,  ... % initial_cyclic_shift
                 NCellID,                   ... % pseudorandom initializer
-                srSize,                    ... % number of SR bits
                 ackSize,                   ... % number of ACK bits
                 };
 
