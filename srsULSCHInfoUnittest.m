@@ -18,8 +18,14 @@
 %
 %   srsULSCHInfoUnittest Properties (TestParameter):
 %
-%   SymbolAllocation  - TBD.
-%   Modulation        - TBD.
+%   NumLayers             - Transmission number of layers.
+%   NumPRB                - Transmission bandwidth in PRB.
+%   DMRSConfigurationType - DM-RS Configuration type.
+%   Modulation            - Modulation.
+%   targetCodeRate        - Transmission target code rate.
+%   nofHarqAckBits        - Number of HARQ-ACK bits to multiplex.
+%   nofCsiPart1Bits       - Number of CSI-Part1 bits to multiplex.
+%   nofCsiPart2Bits       - Number of CSI-Part2 bits to multiplex.
 %
 %   srsULSCHInfoUnittest Methods (TestTags = {'testvector'}):
 %
@@ -91,10 +97,13 @@ classdef srsULSCHInfoUnittest < srsTest.srsBlockUnittest
     end % of methods (Access = protected)
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(testCase, NumLayers, NumPRB, DMRSConfigurationType, Modulation,targetCodeRate, nofHarqAckBits, nofCsiPart1Bits, nofCsiPart2Bits)
-        %testvectorGenerationCases Generates a test vector for the given SymbolAllocation,
-        %   Modulation scheme. Other parameters (e.g., the RNTI)
-        %   are generated randomly.
+        function testvectorGenerationCases(testCase, NumLayers, NumPRB, ...
+                DMRSConfigurationType, Modulation, targetCodeRate, ...
+                nofHarqAckBits, nofCsiPart1Bits, nofCsiPart2Bits)
+        %testvectorGenerationCases Generates a test vectors given the
+        %   combinations of NumLayers, NumPRB, DMRSConfigurationType,
+        %   Modulation, targetCodeRate, nofHarqAckBits, nofCsiPart1Bits and
+        %   nofCsiPart2Bits.
 
             import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
             import srsMatlabWrappers.phy.helpers.srsConfigurePUSCH
