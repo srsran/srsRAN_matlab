@@ -8,9 +8,9 @@
 %
 %   srsULSCHInfoUnittest Properties (Constant):
 %
-%   srsBlock      - The tested block (i.e., 'pusch_processor').
+%   srsBlock      - The tested block (i.e., 'ulsch_info').
 %   srsBlockType  - The type of the tested block, including layer
-%                   (i.e., 'phy/upper/channel_processors').
+%                   (i.e., 'ran/pusch').
 %
 %   srsULSCHInfoUnittest Properties (ClassSetupParameter):
 %
