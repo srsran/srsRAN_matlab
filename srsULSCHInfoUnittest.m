@@ -18,9 +18,9 @@
 %
 %   srsULSCHInfoUnittest Properties (TestParameter):
 %
-%   NumLayers             - Transmission number of layers.
+%   NumLayers             - Number of transmission layers.
 %   NumPRB                - Transmission bandwidth in PRB.
-%   DMRSConfigurationType - DM-RS Configuration type.
+%   DMRSConfigurationType - DM-RS configuration type.
 %   Modulation            - Modulation.
 %   targetCodeRate        - Transmission target code rate.
 %   nofHarqAckBits        - Number of HARQ-ACK bits to multiplex.
@@ -38,7 +38,7 @@
 %   addTestDefinitionToHeaderFile   - Adds details (e.g., type/variable declarations)
 %                                     to the test header file.
 %
-%  See also matlab.unittest.
+%  See also matlab.unittest, nrULSCHInfo.
 classdef srsULSCHInfoUnittest < srsTest.srsBlockUnittest
     properties (Constant)
         %Name of the tested block.
@@ -49,21 +49,21 @@ classdef srsULSCHInfoUnittest < srsTest.srsBlockUnittest
     end
 
     properties (ClassSetupParameter)
-        %Path to results folder (old 'pusch_deProcessor' tests will be erased).
-        outputPath = {['testULSCHInfo']} %, datestr(now, 30)]}
+        %Path to results folder (old 'ulsch_info' tests will be erased).
+        outputPath = {['testULSCHInfo', datestr(now, 30)]}
     end
 
     properties (TestParameter)
-        %Transmission number of layers.
+        %Number of transmission layers.
         NumLayers = {1, 2, 4}
 
-        %Number of PRB.
+        %Number of PRBs.
         NumPRB = {1, 2, 52}
 
         % DM-RS Configuration type {1, 2}.
         DMRSConfigurationType = {1, 2};
 
-        %Modulation {QPSK, 16-QAM, 64-QAM, 256-QAM}.
+        %Modulation {QPSK, 16QAM, 64QAM, 256QAM}.
         Modulation = {'QPSK', '16QAM', '64QAM', '256QAM'};
 
         %Target code rate.
