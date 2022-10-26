@@ -63,7 +63,6 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
         %Relevant combinations of start symbol index {0, ..., 10} and number of symbols {4, ..., 14}. 
         SymbolAllocation = {[0, 14], [1, 13], [5, 5], [10, 4]}
 
-
         %Number of HARQ-ACK bits (0, 1, 2).
         ackSize = {0, 1, 2}
     end % of properties (TestParameter)
@@ -115,11 +114,7 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
             NCellIDLoc = randi([0, 1007]);
 
             % Use a random slot number from the allowed range.
-            if numerology == 0
-                NSlotLoc = randi([0, 9]);
-            else
-                NSlotLoc = randi([0, 19]);
-            end
+            NSlotLoc = randi([0, 10 * pow2(numerology) - 1]);
 
             % Fixed parameter values.
             NStartBWP = 1;
@@ -127,10 +122,12 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
             NSizeGrid = NStartBWP + NSizeBWP;
             NStartGrid = 0;
             CyclicPrefix = 'normal';
-            NFrame     = 0;
             GroupHopping = 'neither';
             FrequencyHopping = 'neither';
             SecondHopStartPRB = 0;
+
+            % Random frame number.
+            NFrame = randi([0, 1023]);
 
             % Random initial cyclic shift.
             InitialCyclicShift = randi([0, 11]);
@@ -165,8 +162,9 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
 
             % Configure the carrier according to the test parameters.
             SubcarrierSpacing = 15 * (2 .^ numerology);
-            carrier = srsConfigureCarrier(NCellIDLoc, SubcarrierSpacing, NSizeGrid, ...
-                NStartGrid, NSlotLoc, NFrame, CyclicPrefix);
+            carrier = srsConfigureCarrier(NCellIDLoc, ...
+                SubcarrierSpacing, NSizeGrid, NStartGrid, ...
+                NSlotLoc, NFrame, CyclicPrefix);
 
             % Configure the PUCCH according to the test parameters.
             pucch = srsConfigurePUCCH(1, SymbolAllocation, PRBSet,...
@@ -197,7 +195,10 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
                 @writeResourceGridEntryFile, DMRSsymbols, DMRSindices);
 
             % Generate a 'slot_point' configuration.
-            slotPointConfig = {numerology, NSlotLoc};
+            slotPointConfig = {...
+                numerology, ...                                             % numerology
+                carrier.NFrame * carrier.SlotsPerFrame + carrier.NSlot, ... % system slot number
+                };
 
             % Generate a 'cyclic_prefix' configuration.
             cyclicPrefixConfig = matlab2srsCyclicPrefix(CyclicPrefix);
@@ -208,25 +209,16 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
             end
 
             % Generate PUCCH common configuration.
-            commonPucchConfig = {...
-                slotPointConfig, ...     % slot
-                NSizeBWP, ...            % bwp_size_rb
-                NStartBWP, ...           % bwp_start_rb
-                cyclicPrefixConfig, ...  % cp
-                pucch.PRBSet, ...        % starting_prb
-                secondHopConfig, ...     % second_hop_prb
-                carrier.NCellID, ...     % n_id
-                carrier.NCellID, ...     % n_id_0
-                0, ...                   % nof_sr
-                length(ack), ...         % nof_harq_ack
-                0, ...                   % nof_csi_part1
-                0, ...                   % nof_csi_part2
-                num2cell(0), ...         % ports
-                };
-
-            % Generate PUCCH Format 1 dedicated configuration.
-            dedicatedPucchConfig = {...
-                commonPucchConfig, ...         % common
+            pucchConfig = {...
+                slotPointConfig, ...           % slot
+                NSizeBWP, ...                  % bwp_size_rb
+                NStartBWP, ...                 % bwp_start_rb
+                cyclicPrefixConfig, ...        % cp
+                pucch.PRBSet, ...              % starting_prb
+                secondHopConfig, ...           % second_hop_prb
+                carrier.NCellID, ...           % n_id
+                length(ack), ...               % nof_harq_ack
+                num2cell(0), ...               % ports
                 pucch.InitialCyclicShift, ...  % initial_cyclic_shift
                 pucch.SymbolAllocation(2), ... % nof_symbols
                 pucch.SymbolAllocation(1), ... % start_symbol_index
@@ -235,7 +227,7 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
 
             % Generate test case cell.
             testCaseCell = {...
-                dedicatedPucchConfig, ... % cfg
+                pucchConfig, ...          % cfg
                 num2cell(ack), ...        % ack_bits
                 ...                       % data_symbols
                 ...                       % dmrs_symbols
