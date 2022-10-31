@@ -19,9 +19,9 @@
 %   srsULSCHDemultiplexUnittest Properties (TestParameter):
 %
 %   Modulation            - Modulation.
-%   nofHarqAckBits        - Number of HARQ-ACK bits to multiplex.
-%   nofCsiPart1Bits       - Number of CSI-Part1 bits to multiplex.
-%   nofCsiPart2Bits       - Number of CSI-Part2 bits to multiplex.
+%   nofHarqAckBits        - Number of multiplexed HARQ-ACK bits.
+%   nofCsiPart1Bits       - Number of multiplexed CSI-Part1 bits.
+%   nofCsiPart2Bits       - Number of multiplexed CSI-Part2 bits.
 %
 %   srsULSCHDemultiplexUnittest Methods (TestTags = {'testvector'}):
 %
@@ -34,7 +34,7 @@
 %   addTestDefinitionToHeaderFile   - Adds details (e.g., type/variable declarations)
 %                                     to the test header file.
 %
-%  See also matlab.unittest.
+%  See also matlab.unittest, nrULSCHDemultiplex, nrULSCHInfo.
 classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
     properties (Constant)
         %Name of the tested block.
@@ -45,8 +45,8 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
     end
 
     properties (ClassSetupParameter)
-        %Path to results folder (old 'pusch_deProcessor' tests will be erased).
-        outputPath = {['testULSCHDemultiplex']} %, datestr(now, 30)]}
+        %Path to results folder (old 'ulsch_demultiplex' tests will be erased).
+        outputPath = {['testULSCHDemultiplex', datestr(now, 30)]}
     end
 
     properties (TestParameter)
@@ -70,7 +70,6 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
             fprintf(fileID, '#include "srsgnb/phy/upper/channel_processors/ulsch_demultiplex.h"\n');
             fprintf(fileID, '#include "srsgnb/phy/upper/log_likelihood_ratio.h"\n');
             fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
-            fprintf(fileID, '#include <vector>\n');
         end
 
         function addTestDefinitionToHeaderFile(~, fileID)
@@ -98,11 +97,11 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
             import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
             import srsMatlabWrappers.phy.helpers.srsConfigurePUSCH
             import srsMatlabWrappers.phy.upper.signal_processors.srsPUSCHdmrs
-            import srsTest.helpers.cellarray2str
             import srsTest.helpers.symbolAllocationMask2string
             import srsTest.helpers.writeInt8File
 
-            % generate a unique test ID by looking at the number of files generated so far
+            % Generate a unique test ID by looking at the number of files
+            % generated so far.
             testID = testCase.generateTestID;
 
             % Configure carrier.
@@ -112,8 +111,8 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
             NumPRB = randi([1, 15]);
             PRBSet = 0:(NumPRB-1);
 
-            % Select a target code rate between 0.2 and 0.8.
-            targetCodeRate = randi([1, 9]) / 10;
+            % Select a target code rate between 0.1 and 0.9.
+            targetCodeRate = round(0.8 * rand + 0.1, 1);
 
             % Configure PUSCH.
             NumLayers = randi([1, 4]);
@@ -139,7 +138,7 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
                 nofHarqAckBits, nofCsiPart1Bits, nofCsiPart2Bits);
 
             % Generate random codeword with LLR.
-            cw = randi([-127, 127], puschInfo.G, 1);
+            cw = randi([-120, 120], puschInfo.G, 1);
 
             % Demultiplex signal.
             [schData, harqAck, csiPart1, csiPart2] = ...
@@ -178,7 +177,7 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
             % Generate DM-RS indices.
             [~, puschDMRSIndices] = srsPUSCHdmrs(carrier, pusch);
 
-            % Generate DM-RS symbol mask
+            % Generate DM-RS symbol mask.
             dmrsSymbolMask = symbolAllocationMask2string(puschDMRSIndices);
 
             % Generate DM-RS type string.
@@ -201,7 +200,7 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
                 configuration, true, '_test_input', '_test_data', ...
                 '_test_harq', '_test_csi1', '_test_csi2');
 
-            % add the test to the file header
+            % Add the test to the file header.
             testCase.addTestToHeaderFile(testCase.headerFileID, ...
                 testCaseString);
 

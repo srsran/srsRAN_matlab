@@ -115,10 +115,10 @@ function unittestClass = name2Class(name)
             unittestClass = ?srsTBSCalculatorUnittest;
         case 'uci_decoder'
             unittestClass = ?srsUCIDecoderUnittest;
-        case 'ulsch_info'
-            unittestClass = ?srsULSCHInfoUnittest;
         case 'ulsch_demultiplex'
             unittestClass = ?srsULSCHDemultiplexUnittest;
+        case 'ulsch_info'
+            unittestClass = ?srsULSCHInfoUnittest;
         otherwise
             error('SRSGNB:runSRSGNBUnittest:unknownBlock', ...
                 'No unit test for block %s.\n', name);
