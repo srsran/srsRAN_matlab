@@ -57,10 +57,10 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
         nofHarqAckBits = {0, 1, 4}
 
         %Number of CSI-Part1 bits.
-        nofCsiPart1Bits = {0, 4}
+        nofCsiPart1Bits = {0, 1, 4}
 
         %Number of CSI-Part2 bits.
-        nofCsiPart2Bits = {0, 6}
+        nofCsiPart2Bits = {0, 1}
     end
 
     methods (Access = protected)
@@ -75,13 +75,19 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
         function addTestDefinitionToHeaderFile(~, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
 
+            fprintf(fileID, 'struct test_case_context{\n');
+            fprintf(fileID, '  ulsch_demultiplex::configuration       config;\n');
+            fprintf(fileID, '  ulsch_demultiplex::message_information msg_info;\n');
+            fprintf(fileID, '};\n');
+            fprintf(fileID, '\n');
             fprintf(fileID, 'struct test_case_t {\n');
-            fprintf(fileID, '  ulsch_demultiplex::configuration  config;\n');
+            fprintf(fileID, '  test_case_context                 context;\n');
             fprintf(fileID, '  file_vector<log_likelihood_ratio> input;\n');
             fprintf(fileID, '  file_vector<log_likelihood_ratio> output_ulsch;\n');
             fprintf(fileID, '  file_vector<log_likelihood_ratio> output_harq_ack;\n');
             fprintf(fileID, '  file_vector<log_likelihood_ratio> output_csi_part1;\n');
             fprintf(fileID, '  file_vector<log_likelihood_ratio> output_csi_part2;\n');
+            fprintf(fileID, '  file_vector<uint16_t>             placeholders;\n');
             fprintf(fileID, '};\n');
         end
     end % of methods (Access = protected)
@@ -97,8 +103,10 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
             import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
             import srsMatlabWrappers.phy.helpers.srsConfigurePUSCH
             import srsMatlabWrappers.phy.upper.signal_processors.srsPUSCHdmrs
+            import srsMatlabWrappers.phy.upper.channel_processors.srsULSCHScramblingPlaceholders
             import srsTest.helpers.symbolAllocationMask2string
             import srsTest.helpers.writeInt8File
+            import srsTest.helpers.writeUint16File
 
             % Generate a unique test ID by looking at the number of files
             % generated so far.
@@ -145,6 +153,11 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
                 nrULSCHDemultiplex(pusch, targetCodeRate, tbs, ...
                 nofHarqAckBits, nofCsiPart1Bits, nofCsiPart2Bits, cw);
 
+            % Generate placeholders.
+            placeholders = srsULSCHScramblingPlaceholders(pusch, ...
+                targetCodeRate, tbs, nofHarqAckBits, nofCsiPart1Bits, ...
+                nofCsiPart2Bits);
+
             % Save codeword.
             testCase.saveDataFile('_test_input', testID, @writeInt8File, cw);
 
@@ -159,6 +172,9 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
 
             % Save CSI-Part2.
             testCase.saveDataFile('_test_csi2', testID, @writeInt8File, csiPart2);
+
+            % Save position of placeholders.
+            testCase.saveDataFile('_test_placeholders', testID, @writeUint16File, placeholders);
 
             % Generate modulation cheme type string.
             switch pusch.Modulation
@@ -196,9 +212,20 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
                 pusch.DMRS.NumCDMGroupsWithoutData, ... % nof_cdm_groups_without_data
                 };
 
+            % Prepare message information.
+            msg_info = { ...
+                nofHarqAckBits, ...       % nof_harq_ack_bits
+                ulschInfo.GACK, ...       % nof_enc_harq_ack_bits
+                nofCsiPart1Bits, ...      % nof_csi_part1_bits
+                ulschInfo.GCSI1, ...      % nof_enc_csi_part1_bits
+                nofCsiPart2Bits, ...      % nof_csi_part2_bits
+                ulschInfo.GCSI2, ...      % nof_enc_csi_part2_bits
+                };
+
             testCaseString = testCase.testCaseToString(testID, ...
-                configuration, true, '_test_input', '_test_data', ...
-                '_test_harq', '_test_csi1', '_test_csi2');
+                {configuration, msg_info}, true, '_test_input', '_test_data', ...
+                '_test_harq', '_test_csi1', '_test_csi2', ...
+                '_test_placeholders');
 
             % Add the test to the file header.
             testCase.addTestToHeaderFile(testCase.headerFileID, ...
