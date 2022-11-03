@@ -29,7 +29,7 @@ function [placeholders] = srsULSCHScramblingPlaceholders(pusch, tcr, tbs, ...
     encBits = nrULSCHMultiplex(pusch, tcr, tbs, schBits, ackEncBits, csi1EncBits, csi2EncBits);
 
     % Create bit indexes list.
-    indexes = 0:(length(encBits));
+    indexes = 0:length(encBits) - 1;
 
     % Select the bit indexes that are repetition placeholders.
     placeholders = indexes(encBits == -2);
