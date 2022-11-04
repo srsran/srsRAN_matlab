@@ -5,9 +5,9 @@
 %
 %   See also nrCarrierConfig, nrPUSCHConfig, nrPUSCHDMRSConfig, nrPUSCHDMRS and nrPUSCHDMRSIndices.
 
-function [DMRSsymbols, symbolIndices] = srsPUSCHdmrs(carrier, pdsch)
+function [DMRSsymbols, symbolIndices] = srsPUSCHdmrs(carrier, pusch)
 
-    DMRSsymbols = nrPUSCHDMRS(carrier, pdsch);
-    symbolIndices = nrPUSCHDMRSIndices(carrier, pdsch, 'IndexStyle', 'subscript', 'IndexBase', '0based');
+    DMRSsymbols = nrPUSCHDMRS(carrier, pusch);
+    symbolIndices = nrPUSCHDMRSIndices(carrier, pusch, 'IndexStyle', 'subscript', 'IndexBase', '0based');
 
 end
