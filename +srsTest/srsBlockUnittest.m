@@ -311,7 +311,7 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
             fprintf(fileID, '#pragma once\n');
             fprintf(fileID, '\n');
             fprintf(fileID, '// This file was generated using the following MATLAB class on %s:\n', ...
-                datestr(now, 'dd-mmm-yyyy'));
+                char(datetime('now', 'Format', 'dd-MM-yyyy')));
             fprintf(fileID, '//   + "%s.m"\n', class(obj));
             fprintf(fileID, '\n');
         end
