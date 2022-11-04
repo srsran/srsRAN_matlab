@@ -1,10 +1,10 @@
-%srsULSCHScramblingPlaceholders Generate UL-SCH Scrampling placeholders
+%srsULSCHScramblingPlaceholders Generate UL-SCH Scrambling placeholders
 %position.
-%   [placeholders] = srsULSCHScramblingPlaceholders(PUSCH, TCR, TBS, OACK, OCSI1, OCSI2)
+%   placeholders = srsULSCHScramblingPlaceholders(PUSCH, TCR, TBS, OACK, OCSI1, OCSI2)
 %   generates a list of UL-SCH scrambling repetition placeholders.
 %
 %   See also nrULSCHInfo, nrULSCHDemultiplex, nrPUSCHDecode
-function [placeholders] = srsULSCHScramblingPlaceholders(pusch, tcr, tbs, ...
+function placeholders = srsULSCHScramblingPlaceholders(pusch, tcr, tbs, ...
                 OAck, OCsi1, OCsi2)
 
     % Get UL-SCH information.
