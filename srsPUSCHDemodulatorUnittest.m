@@ -48,21 +48,24 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'pusch_dedemodulator' tests will be erased).
-        outputPath = {['testPUSCHDemodulator']} %, datestr(now, 30)]}
+        outputPath = {['testPUSCHDemodulator', datestr(now, 30)]}
     end
 
     properties (TestParameter)
-        % Fixed Reference Channels.
-        ReferenceChannel = {...
-                {'G-FR1-A3-8', 5}, ... % TS38.104 Table 8.2.1.2-1 Row 1
-                {'G-FR1-A4-8', 5}, ... % TS38.104 Table 8.2.1.2-1 Row 2
-                {'G-FR1-A5-8', 5}, ... % TS38.104 Table 8.2.1.2-1 Row 3
-            }
+        %DM-RS Configuration types {1, 2}.
+        DMRSConfigurationType = {1, 2};
+
+        %Modulation {pi/2-BPSK, QPSK, 16-QAM, 64-QAM, 256-QAM}.
+        Modulation = {'pi/2-BPSK', 'QPSK', '16QAM', '64QAM', '256QAM'};
 
         %Symbols allocated to the PUSCH transmission. The symbol allocation is described
-        %   by a two-element array with the starting symbol (0...13) and the length (1...14)
+        %   by a two-element array with the starting symbol {0, ..., 13}
+        %   and the length {1, ..., 14}
         %   of the PUSCH transmission. Example: [0, 14].
         SymbolAllocation = {[0, 14], [1, 13], [2, 10]}
+
+        %Probability of a Resource element to contain a placeholder.
+        probPlaceholder = {0, 0.01}
     end
 
     methods (Access = protected)
@@ -86,162 +89,200 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             fprintf(fileID, '  file_vector<resource_grid_reader_spy::expected_entry_t> symbols;\n');   
             fprintf(fileID, '  file_vector<cf_t>                                       estimates;\n');
             fprintf(fileID, '  file_vector<log_likelihood_ratio>                       sch_data;\n');
-            fprintf(fileID, '  file_vector<log_likelihood_ratio>                       harq_ack;\n');
-            fprintf(fileID, '  file_vector<log_likelihood_ratio>                       csi_part1;\n');
-            fprintf(fileID, '  file_vector<log_likelihood_ratio>                       csi_part2;\n');
             fprintf(fileID, '};\n');
         end
     end % of methods (Access = protected)
 
+    methods (Access = private)
+        function [reIndexes, bitIndexes] = getPlaceholders(~, Modulation, NumLayers, NumRe, ProbPlaceholder)
+        %getPlaceholders Generates a list of the RE containing repetition
+        %   placeholders and their respective soft bits indexes.
+
+            % Deduce modulation order.
+            Qm = 1;
+            switch Modulation
+                case 'QPSK'
+                    Qm = 2;
+                case '16QAM'
+                    Qm = 4;
+                case '64QAM'
+                    Qm = 6;
+                case '256QAM'
+                    Qm = 8;
+            end
+
+            % Early return if the modulation order is not suffcient or the 
+            % probability of placeholder is zero.
+            if Qm < 2 || ProbPlaceholder == 0
+                reIndexes = {};
+                bitIndexes = [];
+                return;
+            end
+
+            % Select REs that contain placeholders.
+            reIndexes = 1:floor(1/ProbPlaceholder):(NumRe-1);
+            
+            % Generate placeholder bit indexes.
+            bitIndexes = [];
+            for reIndex = reIndexes
+                for layer = 0:NumLayers-1
+                    bitIndexes = [bitIndexes; ((reIndex * NumLayers + layer)* Qm + 1)];
+                end
+            end
+
+            % If the number of indexes is scalar, then convert to cell.
+            if length(reIndexes) < 2
+                reIndexes = {reIndexes};
+            end
+        end
+    end % of methods (Access = protected)
+
+    methods (TestClassSetup)
+        function classSetup(testCase)
+            orig = rng;
+            testCase.addTeardown(@rng,orig)
+            rng('default');
+        end
+    end
+
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(testCase, ReferenceChannel, SymbolAllocation)
+        function testvectorGenerationCases(testCase, DMRSConfigurationType, Modulation, SymbolAllocation, probPlaceholder)
         %testvectorGenerationCases Generates a test vector for the given 
         % Fixed Reference Channel.
 
+            import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
+            import srsMatlabWrappers.phy.helpers.srsConfigurePUSCH
+            import srsMatlabWrappers.phy.helpers.srsIndexes0BasedSubscrit
             import srsMatlabWrappers.phy.upper.channel_modulation.srsDemodulator
             import srsMatlabWrappers.phy.upper.equalization.srsChannelEqualizer
             import srsMatlabWrappers.phy.upper.waveformGenerators.srsPUSCHReferenceChannel
-            import srsMatlabWrappers.phy.helpers.srsIndexes0BasedSubscrit
-            import srsTest.helpers.indices2SymbolMask
+            import srsMatlabWrappers.phy.upper.equalization.srsChannelEqualizer
             import srsTest.helpers.symbolAllocationMask2string
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.writeInt8File
             import srsTest.helpers.writeComplexFloatFile
 
-            % Generate a unique test ID.
+            % Generate a unique test ID by looking at the number of files
+            % generated so far.
             testID = testCase.generateTestID;
 
-            % Generate a PUSCH configuration object with the custom symbol
-            % allocation.
-            puschCustomConfig.SymbolAllocation = SymbolAllocation;
-            
-            % PUSCH mapping type A only supports OFDM symbol allocations
-            % that start with symbol 0.
-            if (SymbolAllocation(1) ~= 0)
-                puschCustomConfig.MappingType = 'B';
+            % Configure carrier.
+            NCellID = randi([0, 1007]);
+            carrier = srsConfigureCarrier(NCellID);
+
+            % Prepare PRB set.
+            NumPRB = randi([1, 15]);
+            PRBSet = 0:(NumPRB-1);
+            NID = carrier.NCellID;
+
+            % Configure PUSCH.
+            NumLayers = 1;
+            RNTI = randi([1, 65536]);
+            pusch = srsConfigurePUSCH(NumLayers, Modulation, PRBSet, SymbolAllocation, NID, RNTI);
+            pusch.DMRS.DMRSConfigurationType = DMRSConfigurationType;
+            pusch.DMRS.DMRSAdditionalPosition = randi([0, 3]);
+            pusch.DMRS.NumCDMGroupsWithoutData = randi([1, pusch.DMRS.DMRSConfigurationType + 1]);
+
+            % Generate PUSCH data grid indices.
+            [puschGridIndices, puschInfo] = nrPUSCHIndices(carrier, pusch);
+            [puschIndices] = nrPUSCHIndices(carrier, pusch, 'IndexStyle', 'subscript', 'IndexBase', '0based');
+
+            % Generate DM-RS for PUSCH grid indices.
+            puschDmrsIndices = nrPUSCHDMRSIndices(carrier, pusch, 'IndexStyle', 'subscript', 'IndexBase', '0based');
+
+            % Generate random encoded and rate-matched codeword.
+            cw = randi([0, 1], puschInfo.G, 1);
+
+            % Modulate PUSCH.
+            txSymbols = nrPUSCH(carrier, pusch, cw);
+
+            % Generate grid.
+            grid = nrResourceGrid(carrier);
+
+            % Put PUSCH symbols in grid.
+            grid(puschGridIndices) = txSymbols;
+
+            % OFDM information.
+            ofdmInfo = nrOFDMInfo(carrier.NSizeGrid, carrier.SubcarrierSpacing);
+
+            % Prepare channel 
+            tdl = nrTDLChannel;
+            tdl.DelayProfile = 'TDL-C';
+            tdl.DelaySpread = 100e-9;
+            tdl.MaximumDopplerShift = 300;
+            tdl.SampleRate = ofdmInfo.SampleRate;
+            tdl.NumReceiveAntennas = 1;
+
+            T = tdl.SampleRate * 1e-3;
+            tdlInfo = info(tdl);
+            Nt = tdlInfo.NumTransmitAntennas;
+            in = complex(randn(T,Nt),randn(T,Nt));
+
+            [~,pathGains] = tdl(in);
+            pathFilters = getPathFilters(tdl);
+
+            % Generate channel estimates.
+            ce = nrPerfectChannelEstimate(carrier,pathGains,pathFilters);
+
+            noiseVar = 0.0001;
+
+            % Generate receive grid.
+            rxGrid = grid .* ce + randn(size(grid)) * sqrt(noiseVar);
+
+            % Extract PUSCH symbols.
+            rxSymbols = rxGrid(puschGridIndices);
+
+            % Extract CE for PUSCH.
+            cePusch = ce(puschGridIndices);
+
+            % Equalize.
+            [eqSymbols, eqNoise] = srsChannelEqualizer(rxSymbols, cePusch, 'ZF', noiseVar, 1.0);
+
+            if testID == 36
+                display(eqSymbols)
             end
 
-            % Generate the PUSCH Reference signal.
-            [~, cfgULFRC, info] = srsPUSCHReferenceChannel(ReferenceChannel{1}, ReferenceChannel{2}, puschCustomConfig);
+            % Soft demapping.
+            softBits = srsDemodulator(eqSymbols, pusch.Modulation, eqNoise);
 
-            % Extract PUSCH configuration.
-            puschConfig = cfgULFRC.PUSCH{1};
+            % Generate repetition placeholders.
+            [placeholderReIndexes, placeholderBitIndexes] = testCase.getPlaceholders(pusch.Modulation, pusch.NumLayers, length(eqSymbols), probPlaceholder);
 
-            % Extract PUSCH resources of the first slot.
-            puschTransmission = info.WaveformResources.PUSCH.Resources(1);
+            % Reverse Scrambling. Attention: placeholderBitIndexes are
+            % 0based. 
+            schSoftBits = nrPUSCHDescramble(softBits, pusch.NID, pusch.RNTI, [], placeholderBitIndexes + 1);
 
-            modulatedSymbols = puschTransmission.ChannelSymbols;
-            dataSymbolIndices = puschTransmission.ChannelIndices;
-            dmrsIndices = puschTransmission.DMRSIndices;
-
-            % Number of subcarriers in an OFDM symbol.
-            nofSubcs = length(puschConfig.PRBSet) * 12;
-
-            % Number of OFDM symbols in a slot.
-            nofOFDMSymbols = 14;
-
-            % OFDM symbol where the PUSCH allocation starts.
-            puschStartSymbol = puschConfig.SymbolAllocation(1);
-
-            % Total number of PUSCH symbols, including the DM-RS.
-            nofPUSCHSymbols = puschConfig.SymbolAllocation(2);
-
-            % Total number of PUSCH data Resource Elements.
-            nofDataResources = length(modulatedSymbols);
-
-            % Convert PUSCH data indices to 0-based subscript.
-            dataSymbolIndices = srsIndexes0BasedSubscrit(dataSymbolIndices, nofSubcs, nofOFDMSymbols);
-
-            % Convert PUSCH DM-RS indices to 0-based subscript.
-            dmrsIndices = srsIndexes0BasedSubscrit(dmrsIndices, nofSubcs, nofOFDMSymbols);
-            
             % Generate a DM-RS symbol mask.
-            dmrsSymbolMask = indices2SymbolMask(dmrsIndices);
-
-            % Number of PUSCH data symbols, excluding the DM-RS.
-            nofDataSymbols = nofPUSCHSymbols - sum(dmrsSymbolMask);
-
-            if (nofDataResources ~= nofSubcs * nofDataSymbols)
-                error('Inconsistent PUSCH data dimensions');
-            end
-            
-            % Rearrange the PUSCH data symbols into a two-dimensional
-            % array indexed by OFDM subcarrier and OFDM symbol.
-            modulatedSymbols = reshape(modulatedSymbols, [nofSubcs, nofDataSymbols]);
-
-            % Create some noise samples with different variances (SNR in the range 0 -- 20 dB). Round standard 
-            % deviation to reduce double to float error in the soft-demodulator.
-            normNoise = (randn(size(modulatedSymbols)) + 1i * randn(size(modulatedSymbols))) / sqrt(2);
-            noiseStd = round(0.1 + 0.9 * rand(), 1);
-            noiseVar = noiseStd.^2;
-
-            % Create noisy modulated symbols.
-            noisySymbols = modulatedSymbols + (noiseStd * normNoise);
-
-            puschScaling = 10 ^ (puschConfig.Power / 20);
-            dmrsScaling = 10 ^ (puschConfig.DMRSPower / 20);
-
-            % Amplitude ratio between PUSCH-EPRE and DM-RS EPRE, 
-            % specified in TS 38.214 Table 6.2.2-1.
-            pusch_dmrs_scaling = puschScaling / dmrsScaling;
-
-            % Create random channel estimates with a single Rx port and Tx layer.
-            % Create as many estimates as resource elements, including the DM-RS.
-            estimates = (0.1 + 0.9 * rand(nofSubcs, nofPUSCHSymbols)) + 1i * (0.1 + 0.9 * rand(nofSubcs, nofPUSCHSymbols));
-            estimates = pusch_dmrs_scaling * estimates / sqrt(2);
-
-            
-            eqSymbols = nan(size(noisySymbols));
-            eqNoiseVars = nan(size(noisySymbols));
-
-            % Equalize the PUSCH data symbols with their corresponding estimates
-            % using the DM-RS symbol mask.
-            iDataSymbol = 1;
-            for iPuschSymbol = 1 : nofPUSCHSymbols
-                
-                % Skip the DM-RS symbols. 
-                if (~dmrsSymbolMask(iPuschSymbol + puschStartSymbol))
-
-                    % Apply Equalization.
-                    [eqSymbols(:, iDataSymbol), eqNoiseVars(:, iDataSymbol)] = ...
-                        srsChannelEqualizer(noisySymbols(:, iDataSymbol), ...
-                        estimates(:, iPuschSymbol), 'ZF', noiseVar, pusch_dmrs_scaling);
-
-                    iDataSymbol = iDataSymbol + 1;
-                end
-            end            
+            dmrsSymbolMask = symbolAllocationMask2string(puschDmrsIndices);
 
             % Write each complex symbol and their associated indices into a binary file.
             testCase.saveDataFile('_test_input_symbols', testID, ...
-                @writeResourceGridEntryFile, noisySymbols, dataSymbolIndices);
-
+                @writeResourceGridEntryFile, rxSymbols, puschIndices);
 
             % Write channel estimates to a binary file.
-            testCase.saveDataFile('_test_input_estimates', testID, @writeComplexFloatFile, estimates(:));
-
-            % Convert equalized symbols into softbits.
-            schSoftBits = srsDemodulator(eqSymbols(:), puschConfig.Modulation, eqNoiseVars(:));
-
-            % Descramble softbits.
-            schSoftBits = nrPUSCHDescramble(schSoftBits, puschConfig.NID, puschConfig.RNTI);
+            testCase.saveDataFile('_test_input_estimates', testID, @writeComplexFloatFile, ce(:));
 
             % Write soft bits to a binary file.
-            testCase.saveDataFile('_test_output_sch_soft_bits', testID, @writeInt8File, schSoftBits);
+            testCase.saveDataFile('_test_output', testID, @writeInt8File, schSoftBits);
 
             % Reception port list.
             portsString = '{0}';
 
             % Generate a PUSCH RB allocation mask string.
-            rbAllocationMask = zeros(max(puschConfig.PRBSet),1);
-            rbAllocationMask(puschConfig.PRBSet + 1) = 1;
+            rbAllocationMask = zeros(carrier.NSizeGrid, 1);
+            rbAllocationMask(pusch.PRBSet + 1) = 1;
 
-            dmrsTypeString = sprintf('dmrs_type::TYPE%d', puschConfig.DMRS.DMRSConfigurationType);
+            dmrsTypeString = sprintf('dmrs_type::TYPE%d', pusch.DMRS.DMRSConfigurationType);
 
             % Generate a QAM modulation string.
-            if iscell(puschConfig.Modulation)
+            if iscell(pusch.Modulation)
                 error('Unsupported');
             else
-                switch puschConfig.Modulation
+                switch pusch.Modulation
+                    case 'pi/2-BPSK'
+                        modString = 'modulation_scheme::PI_2_BPSK';
+                    case 'BPSK'
+                        modString = 'modulation_scheme::BPSK';
                     case 'QPSK'
                         modString = 'modulation_scheme::QPSK';
                     case '16QAM'
@@ -253,21 +294,19 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
                 end
             end
 
-            % Generate DMRS symbol mask.
-            dmrsSymbolMaskStr = symbolAllocationMask2string(dmrsIndices);
-
             puschCellConfig = {...
-                puschConfig.RNTI, ...                         % rnti
-                rbAllocationMask, ...                         % rb_mask
-                modString, ...                                % modulation
-                puschConfig.SymbolAllocation(1), ...          % start_symbol_index
-                puschConfig.SymbolAllocation(2), ...          % nof_symbols
-                dmrsSymbolMaskStr, ...                        % dmrs_symb_pos
-                dmrsTypeString, ...                           % dmrs_config_type
-                puschConfig.DMRS.NumCDMGroupsWithoutData, ... % nof_cdm_groups_without_data
-                puschConfig.NID, ...                          % n_id
-                puschConfig.NumAntennaPorts, ...              % nof_tx_layers
-                portsString, ...                              % rx_ports
+                pusch.RNTI, ...                         % rnti
+                rbAllocationMask, ...                   % rb_mask
+                modString, ...                          % modulation
+                pusch.SymbolAllocation(1), ...          % start_symbol_index
+                pusch.SymbolAllocation(2), ...          % nof_symbols
+                dmrsSymbolMask, ...                     % dmrs_symb_pos
+                dmrsTypeString, ...                     % dmrs_config_type
+                pusch.DMRS.NumCDMGroupsWithoutData, ... % nof_cdm_groups_without_data
+                pusch.NID, ...                          % n_id
+                pusch.NumAntennaPorts, ...              % nof_tx_layers
+                placeholderReIndexes, ...               % placeholders
+                portsString, ...                        % rx_ports
 		    };
 
             testCaseContext = { ...
@@ -275,10 +314,9 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
                 puschCellConfig, ... % config
 		    };
 
-            testCaseString = testCase.testCaseToString(testID, testCaseContext, true, ...
-                '_test_input_symbols', '_test_input_estimates', '_test_output_sch_soft_bits', ...
-                '_test_output_harq_ack_soft_bits', '_test_output_csi_part1_soft_bits', ...
-                '_test_output_csi_part2_soft_bits');
+            testCaseString = testCase.testCaseToString(testID, ...
+                testCaseContext, true, '_test_input_symbols', ...
+                '_test_input_estimates', '_test_output');
 
             % Add the test to the file header.
             testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);
