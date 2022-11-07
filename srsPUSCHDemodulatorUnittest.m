@@ -230,7 +230,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             noiseVar = rand() * 0.0099 + 0.0001;
 
             % Generate noise.
-            noise = [randn(size(grid)) + 1i * randn(size(grid))] * sqrt(noiseVar / 2));
+            noise = (randn(size(grid)) + 1i * randn(size(grid))) * sqrt(noiseVar / 2);
 
             % Generate receive grid.
             rxGrid = grid .* ce + noise;
