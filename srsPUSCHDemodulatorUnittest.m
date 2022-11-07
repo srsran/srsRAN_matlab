@@ -69,7 +69,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
     end
 
     methods (Access = protected)
-        function addTestIncludesToHeaderFile(obj, fileID)
+        function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
             
             fprintf(fileID, '#include "../../support/resource_grid_test_doubles.h"\n');
@@ -77,7 +77,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
         end
 
-        function addTestDefinitionToHeaderFile(obj, fileID)
+        function addTestDefinitionToHeaderFile(~, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
             
             fprintf(fileID, 'struct context_t {\n');
@@ -94,9 +94,12 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
     end % of methods (Access = protected)
 
     methods (Access = private)
-        function [reIndexes, bitIndexes] = getPlaceholders(~, Modulation, NumLayers, NumRe, ProbPlaceholder)
+        function [reIndexes, xIndexes, yIndexes] = getPlaceholders(~, Modulation, NumLayers, NumRe, ProbPlaceholder)
         %getPlaceholders Generates a list of the RE containing repetition
-        %   placeholders and their respective soft bits indexes.
+        %   placeholders and their respective soft bits indexes for x and y 
+        %   placeholders. All indexes are 0based.
+            xIndexes = [];
+            yIndexes = [];
 
             % Deduce modulation order.
             Qm = 1;
@@ -115,18 +118,17 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             % probability of placeholder is zero.
             if Qm < 2 || ProbPlaceholder == 0
                 reIndexes = {};
-                bitIndexes = [];
                 return;
             end
 
             % Select REs that contain placeholders.
-            reIndexes = 1:floor(1/ProbPlaceholder):(NumRe-1);
+            reIndexes = 1:floor(1 / ProbPlaceholder):(NumRe - 1);
             
             % Generate placeholder bit indexes.
-            bitIndexes = [];
             for reIndex = reIndexes
                 for layer = 0:NumLayers-1
-                    bitIndexes = [bitIndexes; ((reIndex * NumLayers + layer)* Qm + 1)];
+                    xIndexes = [xIndexes; ((reIndex * NumLayers + layer) * Qm + transpose(2:Qm - 1))];
+                    yIndexes = [yIndexes; ((reIndex * NumLayers + layer) * Qm + 1)];
                 end
             end
 
@@ -205,7 +207,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             % OFDM information.
             ofdmInfo = nrOFDMInfo(carrier.NSizeGrid, carrier.SubcarrierSpacing);
 
-            % Prepare channel 
+            % Prepare channel.
             tdl = nrTDLChannel;
             tdl.DelayProfile = 'TDL-C';
             tdl.DelaySpread = 100e-9;
@@ -224,10 +226,14 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             % Generate channel estimates.
             ce = nrPerfectChannelEstimate(carrier,pathGains,pathFilters);
 
-            noiseVar = 0.0001;
+            % Select noise variance between 0.0001 and 0.01.
+            noiseVar = rand() * 0.0099 + 0.0001;
+
+            % Generate noise.
+            noise = [randn(size(grid)) + 1i * randn(size(grid))] * sqrt(noiseVar / 2));
 
             % Generate receive grid.
-            rxGrid = grid .* ce + randn(size(grid)) * sqrt(noiseVar);
+            rxGrid = grid .* ce + noise;
 
             % Extract PUSCH symbols.
             rxSymbols = rxGrid(puschGridIndices);
@@ -238,19 +244,15 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             % Equalize.
             [eqSymbols, eqNoise] = srsChannelEqualizer(rxSymbols, cePusch, 'ZF', noiseVar, 1.0);
 
-            if testID == 36
-                display(eqSymbols)
-            end
-
             % Soft demapping.
             softBits = srsDemodulator(eqSymbols, pusch.Modulation, eqNoise);
 
             % Generate repetition placeholders.
-            [placeholderReIndexes, placeholderBitIndexes] = testCase.getPlaceholders(pusch.Modulation, pusch.NumLayers, length(eqSymbols), probPlaceholder);
+            [placeholderReIndexes, xBitIndexes, yBitIndexes] = testCase.getPlaceholders(pusch.Modulation, pusch.NumLayers, length(eqSymbols), probPlaceholder);
 
             % Reverse Scrambling. Attention: placeholderBitIndexes are
             % 0based. 
-            schSoftBits = nrPUSCHDescramble(softBits, pusch.NID, pusch.RNTI, [], placeholderBitIndexes + 1);
+            schSoftBits = nrPUSCHDescramble(softBits, pusch.NID, pusch.RNTI, xBitIndexes + 1, yBitIndexes + 1);
 
             % Generate a DM-RS symbol mask.
             dmrsSymbolMask = symbolAllocationMask2string(puschDmrsIndices);
