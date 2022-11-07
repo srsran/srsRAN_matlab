@@ -59,9 +59,8 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
         Modulation = {'pi/2-BPSK', 'QPSK', '16QAM', '64QAM', '256QAM'};
 
         %Symbols allocated to the PUSCH transmission. The symbol allocation is described
-        %   by a two-element array with the starting symbol {0, ..., 13}
-        %   and the length {1, ..., 14}
-        %   of the PUSCH transmission. Example: [0, 14].
+        %   by a two-element array with the starting symbol {0, ..., 13} and the length 
+        %   {1, ..., 14} of the PUSCH transmission. Example: [0, 14].
         SymbolAllocation = {[0, 14], [1, 13], [2, 10]}
 
         %Probability of a Resource element to contain a placeholder.
@@ -116,7 +115,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
 
             % Early return if the modulation order is not suffcient or the 
             % probability of placeholder is zero.
-            if Qm < 2 || ProbPlaceholder == 0
+            if (Qm < 2) || (ProbPlaceholder == 0)
                 reIndexes = {};
                 return;
             end
@@ -150,7 +149,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, DMRSConfigurationType, Modulation, SymbolAllocation, probPlaceholder)
         %testvectorGenerationCases Generates a test vector for the given 
-        % Fixed Reference Channel.
+        %   DMRSConfigurationType, Modulation, SymbolAllocation and probPlaceholder.
 
             import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
             import srsMatlabWrappers.phy.helpers.srsConfigurePUSCH
@@ -164,7 +163,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             import srsTest.helpers.writeInt8File
             import srsTest.helpers.writeComplexFloatFile
 
-            % Generate a unique test ID by looking at the number of files
+            % Generate a unique test ID by looking at the number of files 
             % generated so far.
             testID = testCase.generateTestID;
 
