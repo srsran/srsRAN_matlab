@@ -178,7 +178,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
 
             % Configure PUSCH.
             NumLayers = 1;
-            RNTI = randi([1, 65536]);
+            RNTI = randi([0, 65535]);
             pusch = srsConfigurePUSCH(NumLayers, Modulation, PRBSet, SymbolAllocation, NID, RNTI);
             pusch.DMRS.DMRSConfigurationType = DMRSConfigurationType;
             pusch.DMRS.DMRSAdditionalPosition = randi([0, 3]);

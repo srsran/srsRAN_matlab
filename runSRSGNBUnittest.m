@@ -95,6 +95,8 @@ function unittestClass = name2Class(name)
             unittestClass = ?srsPDSCHModulatorUnittest;
         case 'prach_generator'
             unittestClass = ?srsPRACHGeneratorUnittest;
+        case 'pucch_demodulator_format2'
+            unittestClass = ?srsPUCCHDemodulatorFormat2Unittest;
         case 'pucch_detector'
             unittestClass = ?srsPUCCHDetectorFormat1Unittest;
         case 'pucch_processor_format1'

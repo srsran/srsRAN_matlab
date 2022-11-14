@@ -4,7 +4,7 @@
 %   provided by ACK and the scheduling request provided by SR. It returns the
 %   complex symbols SYMBOLS as well as a column vector of RE indices INDICES.
 %
-%   See also nrPUCCH1 and nrPUCCH1.
+%   See also nrPUCCH1 and nrPUCCHIndices.
 function [symbols, indices] = srsPUCCH1(carrier, pucch, ack, sr)
 
     FrequencyHopping = 'disabled';
