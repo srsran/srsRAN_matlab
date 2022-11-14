@@ -156,8 +156,6 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             import srsMatlabWrappers.phy.helpers.srsIndexes0BasedSubscrit
             import srsMatlabWrappers.phy.upper.channel_modulation.srsDemodulator
             import srsMatlabWrappers.phy.upper.equalization.srsChannelEqualizer
-            import srsMatlabWrappers.phy.upper.waveformGenerators.srsPUSCHReferenceChannel
-            import srsMatlabWrappers.phy.upper.equalization.srsChannelEqualizer
             import srsTest.helpers.symbolAllocationMask2string
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.writeInt8File
