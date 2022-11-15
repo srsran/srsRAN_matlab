@@ -44,7 +44,7 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'pusch_decoder' tests will be erased).
-        outputPath = {['testPUSCHDecoder', datestr(now, 30)]}
+        outputPath = {['testPUSCHDecoder', char(datetime('now', 'Format', 'yyyyMMddHH''T''hhmmss'))]}
     end
 
     properties (TestParameter)
@@ -82,6 +82,14 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
 
         end
     end % of methods (Access = protected)
+
+    methods (TestClassSetup)
+        function classSetup(testCase)
+            orig = rng;
+            testCase.addTeardown(@rng,orig)
+            rng('default');
+        end
+    end % of methods (TestClassSetup)
 
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, SymbolAllocation, PRBAllocation, mcs)
