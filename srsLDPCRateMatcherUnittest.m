@@ -55,7 +55,7 @@ classdef srsLDPCRateMatcherUnittest < srsTest.srsBlockUnittest
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'ldpc_rate_matcher' tests will be erased).
-        outputPath = {['testLDPCratematcher', datestr(now, 30)]}
+        outputPath = {['testLDPCratematcher', char(datetime('now', 'Format', 'yyyyMMddHH''T''hhmmss'))]}
     end
 
     properties (TestParameter)
@@ -66,7 +66,7 @@ classdef srsLDPCRateMatcherUnittest < srsTest.srsBlockUnittest
         rv = {0, 1, 2, 3}
 
         %Rate-matched length (relative to codeblock length).
-        rmLength = {0.5, 0.8, 1, 1.2}
+        rmLength = {0.3, 0.6, 1, 5, 10}
 
         %Modulation scheme, described as a three-entry cell array. The first
         %entry is the modulation order, the second and the third are the
