@@ -44,7 +44,7 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'pusch_deProcessor' tests will be erased).
-        outputPath = {['testPUSCHProcessor']} %, datestr(now, 30)]}
+        outputPath = {['testPUSCHProcessor', datestr(now, 30)]}
     end
 
     properties (TestParameter)
@@ -54,13 +54,14 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
         %Symbols allocated to the PUSCH transmission. The symbol allocation is described
         %   by a two-element array with the starting symbol {0, ..., 13} and the length 
         %   {1, ..., 14} of the PUSCH transmission. Example: [0, 14].
-        SymbolAllocation = {[0, 14], [1, 13], [2, 10]}
+        SymbolAllocation = {[0, 14]}
 
         %Probability of a Resource element to contain a placeholder.
-        targetCodeRate = {0.1, 0.5}
+        targetCodeRate = {0.1, 0.5, 0.8}
 
         %Number of HARQ-ACK bits multiplexed with the message.
-        nofHarqAck = {0, 1, 2, 10}
+%         nofHarqAck = {0, 1, 2, 10}
+        nofHarqAck = {0}
 
         %Number of CSI-Part1 bits multiplexed with the message.
         nofCsiPart1 = {0};
@@ -101,6 +102,14 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
         end
     end % of methods (Access = protected)
 
+    methods (TestClassSetup)
+        function classSetup(testCase)
+            orig = rng;
+            testCase.addTeardown(@rng,orig)
+            rng('default');
+        end
+    end
+
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, Modulation, SymbolAllocation, targetCodeRate, nofHarqAck, nofCsiPart1, nofCsiPart2)
         %testvectorGenerationCases Generates a test vector for the given SymbolAllocation,
@@ -128,9 +137,13 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             NumPrb = randi([1, carrier.NSizeGrid - PrbStart]);
 
             % Generate PUSCH configuration.
-            pusch = srsConfigurePUSCH(Modulation, SymbolAllocation);
+            RNTI = randi([1, 65535]);
+            NID = randi([0, 1023]);
+            pusch = srsConfigurePUSCH(Modulation, SymbolAllocation, RNTI, NID);
             pusch.PRBSet = PrbStart + (0:NumPrb - 1);
             pusch.DMRS.DMRSAdditionalPosition = randi([0, 3]);
+            pusch.DMRS.NIDNSCID = randi([0, 65535]);
+            pusch.DMRS.NSCID = randi([0, 1]);
 
             % Generate PUSCH resource grid indices.
             [puschResourceIndices, puschInfo] = nrPUSCHIndices(carrier, ...
@@ -175,12 +188,13 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             grid(puschResourceIndices) = nrPUSCH(carrier, pusch, codeword);
 
             % Insert DM-RS.
-            grid(puschDmrsIndices) = nrPUSCHDMRS(carrier, pusch);
+            betaDmrs = 10 ^ (3 / 20);
+            grid(puschDmrsIndices) = nrPUSCHDMRS(carrier, pusch) * betaDmrs;
 
             % Generate channel estimates. As a phase rotation in frequency
             % domain.
             gridDims = size(grid);
-            ce = ones(gridDims(1) , 1) * exp(1i * linspace(0, 2 * pi, gridDims(2)));
+            ce = transpose(ones(gridDims(2), 1) * exp(1i * linspace(0, 2 * pi, gridDims(1))));
 
             % Noise variance.
             snrdB = 30;
@@ -259,6 +273,7 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
                 carrier.NStartGrid, ...                       % bwp_start_rb
                 cyclicPrefixStr, ...                          % cp
                 modString, ...                                % modulation
+                targetCodeRate, ...                           % target_code_rate
                 {codewordDescription}, ...                    % codeword
                 {}, ...                                       % uci
                 pusch.NID, ...                                % n_id
