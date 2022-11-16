@@ -43,7 +43,7 @@ classdef srsUCIDecoderUnittest < srsTest.srsBlockUnittest
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'uci_decoder' tests will be erased).
-        outputPath = {['testUCIDecoder', datestr(now, 30)]}
+        outputPath = {['testUCIDecoder', char(datetime('now', 'Format', 'yyyyMMddHH''T''hhmmss'))]}
     end
 
     properties (TestParameter)
@@ -64,6 +64,7 @@ classdef srsUCIDecoderUnittest < srsTest.srsBlockUnittest
         function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
 
+            fprintf(fileID, '#include "srsgnb/phy/upper/channel_processors/uci_decoder.h"\n');
             fprintf(fileID, '#include "srsgnb/phy/upper/log_likelihood_ratio.h"\n');
             fprintf(fileID, '#include "srsgnb/ran/modulation_scheme.h"\n');
             fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
