@@ -17,7 +17,9 @@
 %
 %   srsPUCCHDemodulatorFormat2Unittest Properties (TestParameter):
 %
-%   SymbolAllocation  - Symbols allocated to the PUCCH transmission.                    
+%   SymbolAllocation  - Symbols allocated to the PUCCH transmission.
+%
+%   PRBNum - Number of contiguous PRB allocated to PUCCH Format 2.
 %
 %   srsPUCCHDemodulatorFormat2Unittest Methods (TestTags = {'testvector'}):
 %
@@ -50,7 +52,10 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
         %Symbols allocated to the PUCCH transmission. The symbol allocation is described
         %   by a two-element array with the starting symbol (0...13) and the length (1...14)
         %   of the PUCCH transmission. Example: [13, 1].
-        SymbolAllocation = {[13, 1], [6, 1], [0, 2]}
+        SymbolAllocation = {[0, 1], [6, 2], [12, 2]};
+
+        %Number of contiguous PRB allocated to PUCCH Format 2 (1...16).
+        PRBNum = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};   
     end
 
     methods (Access = protected)
@@ -83,7 +88,7 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
     end % of methods (Access = protected)
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(testCase, SymbolAllocation)
+        function testvectorGenerationCases(testCase, SymbolAllocation, PRBNum)
         %testvectorGenerationCases Generates a test vector for the given 
         % Fixed Reference Channel.
 
@@ -112,10 +117,7 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
             MaxGridSize = 275;
 
             % Resource grid starts at CRB0.
-            NStartGrid = 0;
-
-            % Number of PRB allocated to PUCCH Format 2 {1, ..., 16}.
-            PRBNum = randi([1, 16]);                     
+            NStartGrid = 0;                    
 
             % BWP start relative to CRB0.
             NStartBWP = randi([0, MaxGridSize - PRBNum - 1]);
@@ -170,7 +172,8 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
 
             % Number of bits that can be mapped to the available radio
             % resources.
-            uciCWLength = modulationOrder * nofPUCCHDataRE;
+            [~, info] = nrPUCCHIndices(carrier, pucch);
+            uciCWLength = info.G;
             
             % Generate a random UCI codeword that fills the available PUCCH resources.
             uciCW = randi([0, 1], uciCWLength, 1);
