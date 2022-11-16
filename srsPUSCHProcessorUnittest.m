@@ -48,8 +48,11 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
     end
 
     properties (TestParameter)
+        %BWP configuration. Combination of the PRB start and size.
+        BWPConfig = {[0, 25], [0, 52], [0, 106]}
+
         %Modulation {pi/2-BPSK, QPSK, 16-QAM, 64-QAM, 256-QAM}.
-        Modulation = {'pi/2-BPSK', 'QPSK', '16QAM', '64QAM', '256QAM'};
+        Modulation = {'pi/2-BPSK', 'QPSK', '16QAM', '64QAM', '256QAM'}
 
         %Symbols allocated to the PUSCH transmission. The symbol allocation is described
         %   by a two-element array with the starting symbol {0, ..., 13} and the length 
@@ -61,7 +64,7 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
 
         %Number of HARQ-ACK bits multiplexed with the message.
 %         nofHarqAck = {0, 1, 2, 10}
-        nofHarqAck = {0}
+        nofHarqAck = {0, 1, 10}
 
         %Number of CSI-Part1 bits multiplexed with the message.
         nofCsiPart1 = {0};
@@ -88,9 +91,6 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             fprintf(fileID, '  unsigned               rg_nof_symb;\n');
             fprintf(fileID, '  pusch_processor::pdu_t config;\n');
             fprintf(fileID, '};\n\n');
-            fprintf(fileID, 'struct fix_reference_channel_slot {\n');
-            
-            fprintf(fileID, '};\n\n');
             fprintf(fileID, 'struct test_case_t {\n');
             fprintf(fileID, '  test_case_context    context;\n');
             fprintf(fileID, '  file_vector<cf_t>    grid;\n');
@@ -111,10 +111,37 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
     end
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(testCase, Modulation, SymbolAllocation, targetCodeRate, nofHarqAck, nofCsiPart1, nofCsiPart2)
+        function testvectorGenerationCases(testCase, BWPConfig, Modulation, SymbolAllocation, targetCodeRate, nofHarqAck, nofCsiPart1, nofCsiPart2)
         %testvectorGenerationCases Generates a test vector for the given SymbolAllocation,
         %   Modulation scheme. Other parameters (e.g., the RNTI)
         %   are generated randomly.
+            % Minimum number of PRB is one if two or less UCI bits are 
+            % multiplexed. Otherwise, 10 PRB.
+            MinNumPrb = 1;
+            if nofHarqAck + nofCsiPart1 + nofCsiPart2 > 2
+                MinNumPrb = 10;
+            end
+
+            % Select carrier configuration.
+            NCellID = randi([0, 1007]);
+            NSizeGrid = BWPConfig(2);
+            NStartGrid = BWPConfig(1);
+
+            % Generate carrier configuration.
+            carrier = srsConfigureCarrier(NCellID, NSizeGrid, NStartGrid);
+
+            % Random parameters.
+            NSlot = randi([0, carrier.SlotsPerFrame]);
+            RNTI = randi([1, 65535]);
+            NID = randi([0, 1023]);
+            PrbStart = randi([0, NSizeGrid - MinNumPrb]);
+            NumPrb = randi([MinNumPrb, NSizeGrid - PrbStart]);
+            DMRSAdditionalPosition = randi([0, 3]);
+            NIDNSCID = randi([0, 65535]);
+            NSCID = randi([0, 1]);
+
+            % Fix parameters.
+            rv = 0;
 
             import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
             import srsMatlabWrappers.phy.helpers.srsConfigurePUSCH
@@ -128,22 +155,16 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             % Generate a unique test ID
             testID = testCase.generateTestID;
 
-            % Generate carrier configuration.
-            NCellID = randi([0, 1007]);
-            carrier = srsConfigureCarrier(NCellID);
-            carrier.NSlot = randi([0, carrier.SlotsPerFrame]);
-
-            PrbStart = randi([0, carrier.NSizeGrid - 1]);
-            NumPrb = randi([1, carrier.NSizeGrid - PrbStart]);
-
             % Generate PUSCH configuration.
-            RNTI = randi([1, 65535]);
-            NID = randi([0, 1023]);
-            pusch = srsConfigurePUSCH(Modulation, SymbolAllocation, RNTI, NID);
+            pusch = srsConfigurePUSCH(Modulation, SymbolAllocation, ...
+                RNTI, NID);
+
+            % Set parameters.
+            carrier.NSlot = NSlot;
             pusch.PRBSet = PrbStart + (0:NumPrb - 1);
-            pusch.DMRS.DMRSAdditionalPosition = randi([0, 3]);
-            pusch.DMRS.NIDNSCID = randi([0, 65535]);
-            pusch.DMRS.NSCID = randi([0, 1]);
+            pusch.DMRS.DMRSAdditionalPosition = DMRSAdditionalPosition;
+            pusch.DMRS.NIDNSCID = NIDNSCID;
+            pusch.DMRS.NSCID = NSCID;
 
             % Generate PUSCH resource grid indices.
             [puschResourceIndices, puschInfo] = nrPUSCHIndices(carrier, ...
@@ -169,13 +190,12 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             % Encode data.
             encUL = nrULSCH;
             encUL.TargetCodeRate = targetCodeRate;
-            rv = 0;
             setTransportBlock(encUL, schData);
             EncSchData = encUL(Modulation, pusch.NumLayers, ...
                 ulschInfo.GULSCH, rv);
-            EncHarqAck = nrUCIEncode(harqAck, ulschInfo.GACK, pusch.Modulation);
-            EncCsiPart1 = nrUCIEncode(csiPart1, ulschInfo.GCSI1, pusch.Modulation);
-            EncCsiPart2 = nrUCIEncode(csiPart2, ulschInfo.GCSI2, pusch.Modulation);
+            EncHarqAck = nrUCIEncode(harqAck, ulschInfo.GACK, Modulation);
+            EncCsiPart1 = nrUCIEncode(csiPart1, ulschInfo.GCSI1, Modulation);
+            EncCsiPart2 = nrUCIEncode(csiPart2, ulschInfo.GCSI2, Modulation);
 
             % Multiplex data and UCI.
             codeword = nrULSCHMultiplex(pusch, targetCodeRate, tbs, ...
@@ -266,6 +286,16 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
                 'true', ...          % new_data
                 };
 
+            uciDescription = {...
+                nofHarqAck, ...           % nof_harq_ack
+                nofCsiPart1, ...          % nof_csi_part1
+                nofCsiPart2, ...          % nof_csi_part2
+                pusch.UCIScaling, ...     % alpha_scaling
+                pusch.BetaOffsetACK, ...  % beta_offset_harq_ack
+                pusch.BetaOffsetCSI1, ... % beta_offset_csi_part1
+                pusch.BetaOffsetCSI2, ... % beta_offset_csi_part2
+                };
+
             pduDescription = {...
                 slotConfig, ...                               % slot
                 pusch.RNTI, ...                               % rnti
@@ -275,12 +305,12 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
                 modString, ...                                % modulation
                 targetCodeRate, ...                           % target_code_rate
                 {codewordDescription}, ...                    % codeword
-                {}, ...                                       % uci
+                uciDescription, ...                           % uci
                 pusch.NID, ...                                % n_id
                 pusch.NumAntennaPorts, ...                    % nof_tx_layers
                 portsString, ...                              % rx_ports
-                dmrsSymbolMask, ...                           % dmrs_symb_pos
-                dmrsTypeString, ...                           % dmrs_config_type
+                dmrsSymbolMask, ...                           % dmrs_symbol_mask
+                dmrsTypeString, ...                           % dmrs
                 pusch.DMRS.NIDNSCID, ...                      % scrambling_id
                 pusch.DMRS.NSCID, ...                         % n_scid
                 pusch.DMRS.NumCDMGroupsWithoutData, ...       % nof_cdm_groups_without_data
