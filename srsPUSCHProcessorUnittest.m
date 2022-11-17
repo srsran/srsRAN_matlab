@@ -18,8 +18,13 @@
 %
 %   srsPUSCHProcessorUnittest Properties (TestParameter):
 %
-%   SymbolAllocation  - Symbols allocated to the PUSCH transmission.
-%   Modulation        - Modulation scheme.
+%   BWPConfig        - BWP configuration to use.
+%   Modulation       - Modulation scheme.
+%   SymbolAllocation - PUSCH start symbol index and number of symbols.
+%   targetCodeRate   - UL-SCH rate matching Target code rate.
+%   nofHarqAck       - Number of HARQ-ACK feedback bits multiplexed.
+%   nofCsiPart1      - Number of CSI-Part1 report bits multiplexed.
+%   nofCsiPart2      - Number of CSI-Part2 report bits multiplexed.
 %
 %   srsPUSCHProcessorUnittest Methods (TestTags = {'testvector'}):
 %
@@ -63,7 +68,6 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
         targetCodeRate = {0.1, 0.5, 0.8}
 
         %Number of HARQ-ACK bits multiplexed with the message.
-%         nofHarqAck = {0, 1, 2, 10}
         nofHarqAck = {0, 1, 10}
 
         %Number of CSI-Part1 bits multiplexed with the message.
