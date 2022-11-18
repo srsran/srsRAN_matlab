@@ -102,7 +102,8 @@ classdef srsDFTprocessorUnittest < srsTest.srsBlockUnittest
             if strcmp(direction, 'direct')
                 outputData = fft(inputData, DFTsize);
             else
-                outputData = ifft(inputData, DFTsize);
+                % apply the required scaling in the inverse case
+                outputData = ifft(inputData, DFTsize) * DFTsize;
             end
 
             % write the DFT results into a binary file
