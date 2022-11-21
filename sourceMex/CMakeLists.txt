@@ -65,7 +65,7 @@ find_package(Matlab REQUIRED)
 find_package(SRSGNB MODULE REQUIRED)
 
 include(${SRSGNB_BINARY_DIR}/srsgnb.cmake)
-include_directories(${CMAKE_SOURCE_DIR}/include ${SRSGNB_INCLUDE_DIR})
+include_directories(${CMAKE_SOURCE_DIR}/include ${SRSGNB_INCLUDE_DIR} ${SRSGNB_SOURCE_DIR}/external/fmt/include)
 
 add_subdirectory(lib)
 add_subdirectory(unittests)

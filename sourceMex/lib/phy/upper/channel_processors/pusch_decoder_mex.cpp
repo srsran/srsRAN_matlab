@@ -1,9 +1,9 @@
 #include "pusch_decoder_mex.h"
+#include "fmt/format.h"
 #include "srsgnb/phy/upper/channel_coding/ldpc/ldpc.h"
 #include "srsgnb/phy/upper/channel_processors/pusch_decoder_result.h"
 #include "srsgnb/phy/upper/rx_softbuffer_pool.h"
 #include "srsgnb/ran/modulation_scheme.h"
-#include "srsgnb/srslog/bundled/fmt/format.h"
 #include "srsgnb_matlab/support/matlab_to_srs.h"
 
 #include <memory>
@@ -12,23 +12,6 @@ using matlab::mex::ArgumentList;
 using namespace matlab::data;
 using namespace srsgnb;
 using namespace srsgnb_matlab;
-
-namespace srsgnb {
-/// Describes a softbuffer pool.
-struct rx_softbuffer_pool_description {
-  /// Maximum size of the codeblocks stored in the pool.
-  unsigned max_codeblock_size;
-  /// Maximum number of softbuffers managed by the pool.
-  unsigned max_softbuffers;
-  /// Maximum number of codeblocks in each softbuffer.
-  unsigned max_nof_codeblocks;
-  /// Softbuffer expiration time in number of slots.
-  unsigned expire_timeout_slots;
-};
-
-std::unique_ptr<rx_softbuffer_pool> create_rx_softbuffer_pool(const rx_softbuffer_pool_description& config);
-
-} // namespace srsgnb
 
 rx_softbuffer* MexFunction::pusch_memento::retrieve_softbuffer(const rx_softbuffer_identifier& id,
                                                                const unsigned                  nof_codeblocks)
@@ -99,7 +82,7 @@ void MexFunction::method_new(ArgumentList& outputs, ArgumentList& inputs)
   if ((inputs[1].getType() != ArrayType::STRUCT) || (inputs[1].getNumberOfElements() != 1)) {
     mex_abort("Second input must be a scalar structure.");
   }
-  rx_softbuffer_pool_description pool_config = {};
+  rx_softbuffer_pool_config pool_config = {};
 
   StructArray in_struct            = inputs[1];
   Struct      softbuffer_conf      = in_struct[0];
