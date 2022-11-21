@@ -49,22 +49,27 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'pusch_deProcessor' tests will be erased).
-        outputPath = {['testPUSCHProcessor', datestr(now, 30)]}
+        outputPath = {['testPUSCHProcessor', ...
+            char(datetime('now', 'Format', 'yyyyMMddHH''T''hhmmss'))]}
     end
 
     properties (TestParameter)
-        %BWP configuration. Combination of the PRB start and size.
+        %BWP configuration.
+        %   The bandwidth part is described by a two-element array with the starting
+        %   PRB and the total number of PRBs (1...14).
+        %   Example: [0, 25].
         BWPConfig = {[0, 25], [0, 52], [0, 106]}
 
         %Modulation {pi/2-BPSK, QPSK, 16-QAM, 64-QAM, 256-QAM}.
         Modulation = {'pi/2-BPSK', 'QPSK', '16QAM', '64QAM', '256QAM'}
 
-        %Symbols allocated to the PUSCH transmission. The symbol allocation is described
-        %   by a two-element array with the starting symbol {0, ..., 13} and the length 
-        %   {1, ..., 14} of the PUSCH transmission. Example: [0, 14].
+        %Symbols allocated to the PUSCH transmission.
+        %   The symbol allocation is described by a two-element array with the starting
+        %   symbol (0...13) and the length (1...14) of the PUSCH transmission.
+        %   Example: [0, 14].
         SymbolAllocation = {[0, 14]}
 
-        %Probability of a Resource element to contain a placeholder.
+        %Target code rate.
         targetCodeRate = {0.1, 0.5, 0.8}
 
         %Number of HARQ-ACK bits multiplexed with the message.
@@ -116,9 +121,21 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
 
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, BWPConfig, Modulation, SymbolAllocation, targetCodeRate, nofHarqAck, nofCsiPart1, nofCsiPart2)
-        %testvectorGenerationCases Generates a test vector for the given SymbolAllocation,
-        %   Modulation scheme. Other parameters (e.g., the RNTI)
-        %   are generated randomly.
+        %testvectorGenerationCases Generates test vectors with permutations
+        %   of the BWP configuration, modulation, symbol allocation, target
+        %   code rate, number of HARQ-ACK, CSI-Part1 and CSI-Part2
+        %   information bits. Other parameters such as physical cell
+        %   identifier, slot number, RNTI, scrambling identifiers,
+        %   frequency allocation and DM-RS additional positions are
+        %   selected randomly.
+            import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
+            import srsMatlabWrappers.phy.helpers.srsConfigurePUSCH
+            import srsTest.helpers.rbAllocationIndexes2String
+            import srsTest.helpers.symbolAllocationMask2string
+            import srsTest.helpers.bitPack
+            import srsTest.helpers.writeUint8File
+            import srsTest.helpers.writeComplexFloatFile
+
             % Minimum number of PRB is one if two or less UCI bits are 
             % multiplexed. Otherwise, 10 PRB.
             MinNumPrb = 1;
@@ -147,21 +164,11 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             % Fix parameters.
             rv = 0;
 
-            import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
-            import srsMatlabWrappers.phy.helpers.srsConfigurePUSCH
-            import srsTest.helpers.cellarray2str
-            import srsTest.helpers.rbAllocationIndexes2String
-            import srsTest.helpers.symbolAllocationMask2string
-            import srsTest.helpers.bitPack
-            import srsTest.helpers.writeUint8File
-            import srsTest.helpers.writeComplexFloatFile
-
-            % Generate a unique test ID
+            % Generate a unique test ID.
             testID = testCase.generateTestID;
 
             % Generate PUSCH configuration.
-            pusch = srsConfigurePUSCH(Modulation, SymbolAllocation, ...
-                RNTI, NID);
+            pusch = srsConfigurePUSCH(Modulation, SymbolAllocation, RNTI, NID);
 
             % Set parameters.
             carrier.NSlot = NSlot;
@@ -171,19 +178,16 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             pusch.DMRS.NSCID = NSCID;
 
             % Generate PUSCH resource grid indices.
-            [puschResourceIndices, puschInfo] = nrPUSCHIndices(carrier, ...
-                pusch);
+            [puschResourceIndices, puschInfo] = nrPUSCHIndices(carrier, pusch);
 
             % Generate PUSCH DM-RS resource grid indices.
             puschDmrsIndices = nrPUSCHDMRSIndices(carrier, pusch);
 
             % Select a valid TBS.
-            tbs = nrTBS(pusch.Modulation, pusch.NumLayers, ...
-                length(pusch.PRBSet), puschInfo.NREPerPRB, targetCodeRate);
+            tbs = nrTBS(pusch.Modulation, pusch.NumLayers, length(pusch.PRBSet), puschInfo.NREPerPRB, targetCodeRate);
 
             % Generate UL-SCH information.
-            ulschInfo = nrULSCHInfo(pusch, targetCodeRate, tbs, ...
-                nofHarqAck, nofCsiPart1, nofCsiPart2);
+            ulschInfo = nrULSCHInfo(pusch, targetCodeRate, tbs, nofHarqAck, nofCsiPart1, nofCsiPart2);
 
             % Generate random data.
             schData = randi([0, 1], tbs, 1);
@@ -212,8 +216,8 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             grid(puschResourceIndices) = nrPUSCH(carrier, pusch, codeword);
 
             % Insert DM-RS.
-            betaDmrs = 10 ^ (3 / 20);
-            grid(puschDmrsIndices) = nrPUSCHDMRS(carrier, pusch) * betaDmrs;
+            betaDMRS = 10 ^ (3 / 20);
+            grid(puschDmrsIndices) = nrPUSCHDMRS(carrier, pusch) * betaDMRS;
 
             % Generate channel estimates. As a phase rotation in frequency
             % domain.
@@ -222,10 +226,10 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
 
             % Noise variance.
             snrdB = 30;
-            noiseStdDev = 10 ^ (-(snrdB + 3) / 20);
+            noiseStdDev = 10 ^ (-snrdB / 20);
 
             % Emulate channel.
-            rxGrid = ce .* grid + noiseStdDev * (randn(gridDims) + 1i * randn(gridDims));
+            rxGrid = ce .* grid + noiseStdDev * (randn(gridDims) + 1i * randn(gridDims)) / sqrt(2);
 
             % Write the entire resource grid in a file.
             testCase.saveDataFile('_test_input_grid', testID, ...
@@ -247,7 +251,7 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             testCase.saveDataFile('_test_output_csi2', testID, ...
                 @writeUint8File, csiPart2);
 
-            % Convert cyclic prefix to string
+            % Convert cyclic prefix to string.
             cyclicPrefixStr = ['cyclic_prefix::', upper(carrier.CyclicPrefix)];
 
 
