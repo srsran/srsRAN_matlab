@@ -48,9 +48,9 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
     end
 
     properties (ClassSetupParameter)
-        %Path to results folder (old 'pusch_deProcessor' tests will be erased).
+        %Path to results folder (old 'pusch_processor' tests will be erased).
         outputPath = {['testPUSCHProcessor', ...
-            char(datetime('now', 'Format', 'yyyyMMddHH''T''hhmmss'))]}
+            char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
     end
 
     properties (TestParameter)
@@ -236,19 +236,19 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
                 @writeComplexFloatFile, rxGrid);
 
             % Write the SCH data.
-            testCase.saveDataFile('_test_output_tb', testID, ...
+            testCase.saveDataFile('_test_tb', testID, ...
                 @writeUint8File, bitPack(schData));
 
             % Write the HARQ-ACK data.
-            testCase.saveDataFile('_test_output_harq', testID, ...
+            testCase.saveDataFile('_test_harq', testID, ...
                 @writeUint8File, harqAck);
 
             % Write the CSI-Part1 data.
-            testCase.saveDataFile('_test_output_csi1', testID, ...
+            testCase.saveDataFile('_test_csi1', testID, ...
                 @writeUint8File, csiPart1);
 
             % Write the CSI-Part2 data.
-            testCase.saveDataFile('_test_output_csi2', testID, ...
+            testCase.saveDataFile('_test_csi2', testID, ...
                 @writeUint8File, csiPart2);
 
             % Convert cyclic prefix to string.
@@ -337,8 +337,8 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             % Generate PUSCH transmission entry
             testCaseString = testCase.testCaseToString(testID, ...
                 contextDescription, true, '_test_input_grid', ...
-                '_test_output_tb', '_test_output_harq', ...
-                '_test_output_csi1', '_test_output_csi2');
+                '_test_tb', '_test_harq', ...
+                '_test_csi1', '_test_csi2');
 
             % add the test to the file header
             testCase.addTestToHeaderFile(testCase.headerFileID, ...
