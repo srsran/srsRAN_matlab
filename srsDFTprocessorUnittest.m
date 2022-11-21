@@ -1,6 +1,7 @@
-%srsDFTprocessorUnittest Unit tests for OFDM modulator functions.
-%   This class implements unit tests for the DFT function using the matlab.unittest
-%   framework. The simplest use consists in creating an object with
+%srsDFTprocessorUnittest Unit tests for DFT processor functions.
+%   This class implements unit tests for the DFT processor functions using 
+%   the matlab.unittest framework. The simplest use consists in creating an
+%   object with
 %       testCase = srsDFTprocessorUnittest
 %   and then running all the tests with
 %       testResults = testCase.run
@@ -17,8 +18,8 @@
 %
 %   srsDFTprocessorUnittest Properties (TestParameter):
 %
-%   size      - Defines the DFT size.
-%   direction - Defines if the DFT is direct or inverse.
+%   size      - DFT size.
+%   direction - DFT direction flag ('direct', 'inverse').
 %
 %   srsDFTprocessorUnittest Methods (TestTags = {'testvector'}):
 %
@@ -42,16 +43,17 @@ classdef srsDFTprocessorUnittest < srsTest.srsBlockUnittest
     end
 
     properties (ClassSetupParameter)
-        %Path to results folder (old 'ofdm_modulator' tests will be erased).
-        outputPath = {['testDFTprocessor', datestr(now, 30)]}
+        %Path to results folder (old 'dft_processor' tests will be erased).
+        outputPath = {['testDFTprocessor',  char(datetime('now', 'Format', ...
+            'yyyyMMdd''T''HHmmss'))]}
     end
 
     properties (TestParameter)
-        %Defines the DFT size.
+        %DFT size.
         DFTsize = {128, 139, 256, 384, 512, 768, 839, 1024, 1536, 2048, ...
             3072, 4096, 4608, 6144, 9216, 12288, 18432, 24576, 36864, 49152}
 
-        %Defines if the DFT is direct or inverse.
+        %DFT direction flag ('direct', 'inverse').
         direction = {'direct', 'inverse'}
     end
 
