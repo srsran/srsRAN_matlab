@@ -88,17 +88,17 @@ classdef srsDFTprocessorUnittest < srsTest.srsBlockUnittest
         
             import srsTest.helpers.writeComplexFloatFile
 
-            % generate a unique test ID
+            % Generate a unique test ID.
             testID = testCase.generateTestID;
 
-            % generate the DFT input data
+            % Generate the DFT input data.
             inputData = [1 1j] * (2 * rand(2, DFTsize) - 1);
 
-            % write the DFT input data into a binary file
+            % Write the DFT input data into a binary file.
             testCase.saveDataFile('_test_input', testID, ...
                  @writeComplexFloatFile, inputData);
 
-            % call the DFT MATLAB functions
+            % Call the DFT MATLAB functions.
             if strcmp(direction, 'direct')
                 outputData = fft(inputData, DFTsize);
             else
@@ -106,16 +106,16 @@ classdef srsDFTprocessorUnittest < srsTest.srsBlockUnittest
                 outputData = ifft(inputData, DFTsize) * DFTsize;
             end
 
-            % write the DFT results into a binary file
+            % Write the DFT results into a binary file.
             testCase.saveDataFile('_test_output', testID, ...
                 @writeComplexFloatFile, outputData);
 
-            % generate the test case entry
+            % Generate the test case entry.
             testCaseString = testCase.testCaseToString(testID, {DFTsize, ...
                 ['dft_processor::direction::', upper(direction)]}, true, ...
                 '_test_input', '_test_output');
 
-            % add the test to the file header
+            % Add the test to the file header.
             testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);
         end % of function testvectorGenerationCases
     end % of methods (Test, TestTags = {'testvector'})
