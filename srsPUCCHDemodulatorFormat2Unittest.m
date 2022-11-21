@@ -111,7 +111,7 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
             NID = randi([0, 1023]);
 
             % Generate a random RNTI.
-            RNTI = randi([0, 65535]);
+            RNTI = randi([1, 65535]);
 
             % Maximum resource grid size.
             MaxGridSize = 275;
