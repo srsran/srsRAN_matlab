@@ -110,6 +110,7 @@ classdef srsULSCHInfoUnittest < srsTest.srsBlockUnittest
             import srsMatlabWrappers.phy.upper.signal_processors.srsPUSCHdmrs
             import srsTest.helpers.cellarray2str
             import srsTest.helpers.symbolAllocationMask2string
+            import srsTest.helpers.mcsDescription2Cell
 
             % Configure carrier.
             carrier = srsConfigureCarrier;
@@ -135,18 +136,6 @@ classdef srsULSCHInfoUnittest < srsTest.srsBlockUnittest
             ulschInfo = nrULSCHInfo(pusch, targetCodeRate, tbs, ...
                 nofHarqAckBits, nofCsiPart1Bits, nofCsiPart2Bits);
 
-            % Generate modulation cheme type string.
-            switch pusch.Modulation
-                case 'QPSK'
-                    modString = 'modulation_scheme::QPSK';
-                case '16QAM'
-                    modString = 'modulation_scheme::QAM16';
-                case '64QAM'
-                    modString = 'modulation_scheme::QAM64';
-                case '256QAM'
-                    modString = 'modulation_scheme::QAM256';
-            end
-
             % Generate DM-RS indices.
             [~, puschDMRSIndices] = srsPUSCHdmrs(carrier, pusch);
 
@@ -159,10 +148,11 @@ classdef srsULSCHInfoUnittest < srsTest.srsBlockUnittest
             % Generate base graph type string.
             baseGraphString = ['ldpc_base_graph_type::BG', num2str(ulschInfo.BGN)];
 
+            mcsDescr = mcsDescription2Cell(pusch.Modulation, targetCodeRate);
+
             ulschConfiguration = {...
                 tbs, ...                                % tbs
-                modString, ...                          % modulation
-                targetCodeRate, ...                     % target_Code_rate
+                mcsDescr, ...                           % mcs_descr
                 nofHarqAckBits, ...                     % nof_harq_ack_bits
                 nofCsiPart1Bits, ...                    % nof_csi_part1_bits
                 nofCsiPart2Bits, ...                    % nof_csi_part2_bits

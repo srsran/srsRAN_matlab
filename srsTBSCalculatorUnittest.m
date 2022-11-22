@@ -126,23 +126,41 @@ classdef srsTBSCalculatorUnittest < srsTest.srsBlockUnittest
 
         import srsMatlabWrappers.phy.helpers.srsGetModulation
         import srsTest.helpers.cellarray2str
+        import srsTest.helpers.mcsDescription2Cell
 
         NREPerPRB = nsymb * 12 - ndmrsprb;
 
         modulations = srsGetModulation(modulation);
 
-        tbs = nrTBS(modulations{1}, nlayers, nprb, NREPerPRB,tcr, xoh, tbscaling);
+        tbs = nrTBS(modulations{1}, nlayers, nprb, NREPerPRB, tcr, xoh, tbscaling);
         tbs = tbs(1);
 
         % generate a unique test ID
         testID = testCase.generateTestID;
 
-        % prepare configuration cell
-        configCell = {{nsymb, ndmrsprb, xoh, tcr, ['modulation_scheme::' modulations{2}], nlayers, ...
-            round(-log2(tbscaling)), nprb}, tbs};
+        mcsDescrCell = mcsDescription2Cell(modulations{1}, tcr);
+
+
+
+        % Prepare configuration cell.
+        configCell = {...
+            nsymb, ...                   % nof_symb_sh
+            ndmrsprb, ...                % nof_dmrs_prb
+            xoh, ...                     % nof_oh_prb
+            mcsDescrCell, ...            % mcs_descr
+            nlayers, ...                 % nof_layers
+            round(-log2(tbscaling)), ... % tb_scaling_field
+            nprb, ...
+            };
+
+        % Prepare test case cell.
+        testCaseCell = {
+            configCell, ... % config
+            tbs, ...        % tbs
+            };
 
         % generate the test case entry
-        testCaseString = testCase.testCaseToString(testID, configCell,...
+        testCaseString = testCase.testCaseToString(testID, testCaseCell,...
             false);
 
         % add the test to the file header

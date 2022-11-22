@@ -101,12 +101,12 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             fprintf(fileID, '  pusch_processor::pdu_t config;\n');
             fprintf(fileID, '};\n\n');
             fprintf(fileID, 'struct test_case_t {\n');
-            fprintf(fileID, '  test_case_context    context;\n');
-            fprintf(fileID, '  file_vector<cf_t>    grid;\n');
-            fprintf(fileID, '  file_vector<uint8_t> sch_data;\n');
-            fprintf(fileID, '  file_vector<uint8_t> harq_ack;\n');
-            fprintf(fileID, '  file_vector<uint8_t> csi_part1;\n');
-            fprintf(fileID, '  file_vector<uint8_t> csi_part2;\n');
+            fprintf(fileID, '  test_case_context                                       context;\n');
+            fprintf(fileID, '  file_vector<resource_grid_reader_spy::expected_entry_t> grid;\n');
+            fprintf(fileID, '  file_vector<uint8_t>                                    sch_data;\n');
+            fprintf(fileID, '  file_vector<uint8_t>                                    harq_ack;\n');
+            fprintf(fileID, '  file_vector<uint8_t>                                    csi_part1;\n');
+            fprintf(fileID, '  file_vector<uint8_t>                                    csi_part2;\n');
             fprintf(fileID, '};\n');
         end
     end % of methods (Access = protected)
@@ -133,8 +133,9 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             import srsTest.helpers.rbAllocationIndexes2String
             import srsTest.helpers.symbolAllocationMask2string
             import srsTest.helpers.bitPack
+            import srsTest.helpers.mcsDescription2Cell
             import srsTest.helpers.writeUint8File
-            import srsTest.helpers.writeComplexFloatFile
+            import srsTest.helpers.writeResourceGridEntryFile
 
             % Minimum number of PRB is one if two or less UCI bits are 
             % multiplexed. Otherwise, 10 PRB.
@@ -231,9 +232,14 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             % Emulate channel.
             rxGrid = ce .* grid + noiseStdDev * (randn(gridDims) + 1i * randn(gridDims)) / sqrt(2);
 
+            % Extract the elements of interest from the grid.
+            rxGridSymbols = [rxGrid(puschResourceIndices); rxGrid(puschDmrsIndices)];
+            rxGridIndexes = [nrPUSCHIndices(carrier, pusch, 'IndexStyle','subscript', 'IndexBase','0based'); ...
+                nrPUSCHDMRSIndices(carrier, pusch, 'IndexStyle','subscript', 'IndexBase','0based')];
+
             % Write the entire resource grid in a file.
             testCase.saveDataFile('_test_input_grid', testID, ...
-                @writeComplexFloatFile, rxGrid);
+                @writeResourceGridEntryFile, rxGridSymbols, rxGridIndexes);
 
             % Write the SCH data.
             testCase.saveDataFile('_test_tb', testID, ...
@@ -253,24 +259,6 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
 
             % Convert cyclic prefix to string.
             cyclicPrefixStr = ['cyclic_prefix::', upper(carrier.CyclicPrefix)];
-
-
-            if iscell(pusch.Modulation)
-                error('Unsupported');
-            else
-                switch pusch.Modulation
-                    case 'pi/2-BPSK'
-                        modString = 'modulation_scheme::PI_2_BPSK';
-                    case 'QPSK'
-                        modString = 'modulation_scheme::QPSK';
-                    case '16QAM'
-                        modString = 'modulation_scheme::QAM16';
-                    case '64QAM'
-                        modString = 'modulation_scheme::QAM64';
-                    case '256QAM'
-                        modString = 'modulation_scheme::QAM256';
-                end
-            end
 
             % Slot configuration.
             slotConfig = {log2(carrier.SubcarrierSpacing/15), carrier.NSlot};
@@ -304,14 +292,15 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
                 pusch.BetaOffsetCSI2, ... % beta_offset_csi_part2
                 };
 
+            mcsDescr = mcsDescription2Cell(pusch.Modulation, targetCodeRate);
+
             pduDescription = {...
                 slotConfig, ...                               % slot
                 pusch.RNTI, ...                               % rnti
                 carrier.NSizeGrid, ...                        % bwp_size_rb
                 carrier.NStartGrid, ...                       % bwp_start_rb
                 cyclicPrefixStr, ...                          % cp
-                modString, ...                                % modulation
-                targetCodeRate, ...                           % target_code_rate
+                mcsDescr, ...                                 % mcs_descr
                 {codewordDescription}, ...                    % codeword
                 uciDescription, ...                           % uci
                 pusch.NID, ...                                % n_id
