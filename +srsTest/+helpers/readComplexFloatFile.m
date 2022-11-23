@@ -4,18 +4,11 @@
 %   match the 'file_vector<cf_t>' object used by the SRS gNB.
 
 function data = readComplexFloatFile(filename)
-    % Open file;
+    % Open the file.
     fileID = fopen(filename, 'r');
 
-    % Go to the end to estimate the number of single precission real
-    % samples.
-    fseek(fileID, 0, 'eof');
-    NumSingleRealSamples = ftell(fileID) / 4;
-
-
-    % Go back to the begining of the file and read the samples.
-    fseek(fileID, 0, 'bof');
-    singleRealData = fread(fileID, NumSingleRealSamples, 'float32');
+    % Read the samples.
+    singleRealData = fread(fileID, 'float32');
 
     % Close the file.
     fclose(fileID);
