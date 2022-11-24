@@ -1,39 +1,39 @@
-%srsDFTprocessorUnittest Unit tests for DFT processor functions.
+%srsDFTProcessorUnittest Unit tests for DFT processor functions.
 %   This class implements unit tests for the DFT processor functions using 
 %   the matlab.unittest framework. The simplest use consists in creating an
 %   object with
-%       testCase = srsDFTprocessorUnittest
+%       testCase = srsDFTProcessorUnittest
 %   and then running all the tests with
 %       testResults = testCase.run
 %
-%   srsDFTprocessorUnittest Properties (Constant):
+%   srsDFTProcessorUnittest Properties (Constant):
 %
 %   srsBlock      - The tested block (i.e., 'dft_processor').
 %   srsBlockType  - The type of the tested block, including layer
 %                   (i.e., 'phy/generic_functions').
 %
-%   srsDFTprocessorUnittest Properties (ClassSetupParameter):
+%   srsDFTProcessorUnittest Properties (ClassSetupParameter):
 %
 %   outputPath - Path to the folder where the test results are stored.
 %
-%   srsDFTprocessorUnittest Properties (TestParameter):
+%   srsDFTProcessorUnittest Properties (TestParameter):
 %
 %   size      - DFT size.
 %   direction - DFT direction flag ('direct', 'inverse').
 %
-%   srsDFTprocessorUnittest Methods (TestTags = {'testvector'}):
+%   srsDFTProcessorUnittest Methods (TestTags = {'testvector'}):
 %
 %   testvectorGenerationCases - Generates test vectors according to the provided
 %                               parameters.
 %
-%   srsDFTprocessorUnittest Methods (Access = protected):
+%   srsDFTProcessorUnittest Methods (Access = protected):
 %
 %   addTestIncludesToHeaderFile     - Adds include directives to the test header file.
 %   addTestDefinitionToHeaderFile   - Adds details (e.g., type/variable declarations)
 %                                     to the test header file.
 %
-%  See also matlab.unittest and nrOFDMModulate.
-classdef srsDFTprocessorUnittest < srsTest.srsBlockUnittest
+%  See also matlab.unittest, fft and ifft.
+classdef srsDFTProcessorUnittest < srsTest.srsBlockUnittest
     properties (Constant)
         %Name of the tested block.
         srsBlock = 'dft_processor'
@@ -104,7 +104,7 @@ classdef srsDFTprocessorUnittest < srsTest.srsBlockUnittest
             if strcmp(direction, 'direct')
                 outputData = fft(inputData, DFTsize);
             else
-                % apply the required scaling in the inverse case
+                % Apply the required scaling in the inverse case.
                 outputData = ifft(inputData, DFTsize) * DFTsize;
             end
 
@@ -121,4 +121,4 @@ classdef srsDFTprocessorUnittest < srsTest.srsBlockUnittest
             testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);
         end % of function testvectorGenerationCases
     end % of methods (Test, TestTags = {'testvector'})
-end % of classdef srsDFTprocessorUnittest
+end % of classdef srsDFTProcessorUnittest
