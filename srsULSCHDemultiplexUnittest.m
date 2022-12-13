@@ -51,10 +51,10 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
 
     properties (TestParameter)
         %Modulation {pi/2-BPSK, QPSK, 16-QAM, 64-QAM, 256-QAM}.
-        Modulation = {'pi/2-BPSK', '16QAM'};
+        Modulation = {'pi/2-BPSK', 'QPSK', '16QAM', '64QAM', '256QAM'};
 
         %Number of HARQ-ACK bits.
-        nofHarqAckBits = {0, 1, 4}
+        nofHarqAckBits = {0, 1, 2, 4, 10}
 
         %Number of CSI-Part1 bits.
         nofCsiPart1Bits = {0, 1, 4}
@@ -116,11 +116,11 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
             carrier = srsConfigureCarrier;
 
             % Prepare PRB set.
-            NumPRB = randi([1, 15]);
+            NumPRB = randi([1, carrier.NSizeGrid]);
             PRBSet = 0:(NumPRB-1);
 
-            % Select a target code rate between 0.1 and 0.9.
-            targetCodeRate = round(0.8 * rand + 0.1, 1);
+            % Select a target code rate between 0.5 and 0.9.
+            targetCodeRate = round(0.4 * rand + 0.5, 1);
 
             % Configure PUSCH.
             NumLayers = randi([1, 4]);
