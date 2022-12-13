@@ -39,7 +39,22 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
 
         %Type of the tested block, including layers.
         srsBlockType = 'phy/upper/signal_processors'
-    end
+    end % of properties (Constant)
+
+    properties (Hidden, Constant)
+        % Number of resource elements in a RB and OFDM symbols in a slot.
+        NRE = 12
+        nSymbolsSlot = 14
+
+        % Fix BWP size and start as well as the frame number, since they
+        % are irrelevant for the test.
+        NSizeBWP = 51
+        NStartBWP = 1
+        NSizeGrid = srsChEstimatorUnittest.NSizeBWP + srsChEstimatorUnittest.NStartBWP
+
+        % Number of pilots averaged for noise estimation.
+        nPilotsNoiseAvg = 2
+    end % of properties (Hidden, Constant)
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'port_channel_estimator' tests will be erased).
@@ -128,7 +143,16 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
         %Frequency hopping type ('neither', 'intraSlot').
         %   Note: Interslot frequency hopping is currently not considered.
         FrequencyHopping = {'neither', 'intraSlot'}
-    end
+    end % of properties (TestParameter)
+
+    properties (Hidden)
+        %OFDM symbol in which the second hop starts (if any).
+        secondHop
+        %Mask of OFDM symbols carrying DM-RS.
+        DMRSsymbols
+        %Mask of REs carrying DM-RS (relative to one PRB and one OFDM symbol).
+        DMRSREmask
+    end % of properties (Hidden)
 
     methods (Access = protected)
         function addTestIncludesToHeaderFile(~, fileID)
@@ -167,140 +191,62 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.writeComplexFloatFile
 
-            % Number of resource elements in a RB and OFDM symbols in a slot.
-            NRE = 12;
-            nSymbolsSlot = 14;
-
-            % Fix BWP size and start as well as the frame number, since they
-            % are irrelevant for the test.
-            NSizeBWP = 51;
-            NStartBWP = 1;
-            NSizeGrid = NSizeBWP + NStartBWP;
-
             % Cannot do frequency hopping if the entire BWP is allocated or if using a single OFDM symbol.
-            if ((configuration.nPRBs == NSizeBWP) || (configuration.symbolAllocation(2) == 1)) ...
+            if ((configuration.nPRBs == obj.NSizeBWP) || (configuration.symbolAllocation(2) == 1)) ...
                     && strcmp(FrequencyHopping, 'intraSlot')
                 return;
             end
 
-            assert((sum(configuration.symbolAllocation) <= nSymbolsSlot), ...
+            assert((sum(configuration.symbolAllocation) <= obj.nSymbolsSlot), ...
                 'srsgnb_matlab:srsChEstimatorUnittest', 'Time allocation exceeds slot length.');
 
             % Generate a unique test ID.
             testID = obj.generateTestID;
 
-            SNR = 20; % dB
-            noiseVar = 10^(-SNR/10);
-
-            startSymbol = configuration.symbolAllocation(1);
-            nAllocatedSymbols = configuration.symbolAllocation(2);
-            dmrsStrideTime = configuration.dmrsStrideTime;
-
-            % Create a mask of the OFDM symbols carrying DM-RS.
-            DMRSsymbols = false(14, 1);
-            DMRSsymbols(startSymbol + (1:dmrsStrideTime:nAllocatedSymbols)) = true;
-            nDMRSsymbols = sum(DMRSsymbols);
-
-            nPRBs = configuration.nPRBs;
-            dmrsOffset = configuration.dmrsOffset;
-            dmrsStrideSCS = configuration.dmrsStrideSCS;
-            % Create a DM-RS pattern from the offset and stride.
-            DMRSREmask = false(NRE, 1);
-            DMRSREmask((dmrsOffset + 1):dmrsStrideSCS:end) = true;
-
             % Configure each hop.
-            if strcmp(FrequencyHopping, 'intraSlot')
-                PRBstart = randperm(NSizeBWP - nPRBs + 1, 2) - 1 + NStartBWP;
+            [hop1, hop2] = obj.configureHops(configuration, FrequencyHopping);
 
-                secondHop = startSymbol + floor(nAllocatedSymbols / 2);
-                hopMask = [true(secondHop, 1); false(nSymbolsSlot - secondHop, 1)];
+            % Build DM-RS-like pilots.
+            nDMRSsymbols = sum(obj.DMRSsymbols);
+            nPilots = configuration.nPRBs * sum(obj.DMRSREmask) * nDMRSsymbols;
+            pilots = (2 * randi([0 1], nPilots, 2) - 1) * [1; 1j] / sqrt(2);
+            pilots = reshape(pilots, [], nDMRSsymbols);
 
-                hop1.DMRSsymbols = (DMRSsymbols & hopMask);
-                hop1.DMRSREmask = DMRSREmask;
-                hop1.PRBstart = PRBstart(1);
-                hop1.nPRBs = nPRBs;
-                hop1.maskPRBs = false(NSizeGrid, 1);
-                hop1.maskPRBs(hop1.PRBstart + (1:nPRBs)) = true;
-                hop1.startSymbol = startSymbol;
-                hop1.nAllocatedSymbols = floor(nAllocatedSymbols / 2);
-                hop1.CHsymbols = false(nSymbolsSlot, 1);
-                hop1.CHsymbols(hop1.startSymbol + (1:hop1.nAllocatedSymbols)) = true;
+            betaDMRS = 10^(-configuration.betaDMRS / 20);
 
-                hop2.DMRSsymbols = (DMRSsymbols & (~hopMask));
-                hop2.DMRSREmask = DMRSREmask;
-                hop2.PRBstart = PRBstart(2);
-                hop2.nPRBs = nPRBs;
-                hop2.maskPRBs = false(NSizeGrid, 1);
-                hop2.maskPRBs(hop2.PRBstart + (1:nPRBs)) = true;
-                hop2.startSymbol = secondHop;
-                hop2.nAllocatedSymbols = ceil(nAllocatedSymbols / 2);
-                hop2.CHsymbols = false(nSymbolsSlot, 1);
-                hop2.CHsymbols(hop2.startSymbol + (1:hop2.nAllocatedSymbols)) = true;
-            else
-                PRBstart = randi([0, NSizeBWP - nPRBs]) + NStartBWP;
-
-                hop1.DMRSsymbols = DMRSsymbols;
-                hop1.DMRSREmask = DMRSREmask;
-                hop1.PRBstart = PRBstart;
-                hop1.nPRBs = nPRBs;
-                hop1.maskPRBs = false(NSizeGrid, 1);
-                hop1.maskPRBs(hop1.PRBstart + (1:nPRBs)) = true;
-                hop1.startSymbol = startSymbol;
-                hop1.nAllocatedSymbols = nAllocatedSymbols;
-                hop1.CHsymbols = false(nSymbolsSlot, 1);
-                hop1.CHsymbols(hop1.startSymbol + (1:hop1.nAllocatedSymbols)) = true;
-
-                secondHop = 'nullopt';
-                hop2.DMRSsymbols = [];
-                hop2.maskPRBs = {};
-            end
+            % Place pilots on the resource grid.
+            transmittedRG = obj.transmitPilots(pilots, betaDMRS, hop1, hop2);
 
             % For now, consider a single-tap channel.
             channelDelay = randi([0, 40]);
             channelCoef = exp(2j * pi * rand);
-            channelTF = fft([zeros(channelDelay, 1); channelCoef; zeros(5, 1)], NSizeGrid * NRE);
+            channelTF = fft([zeros(channelDelay, 1); channelCoef; zeros(5, 1)], obj.NSizeGrid * obj.NRE);
             channelTF = fftshift(channelTF);
             % We assume the channel constant over the entire slot.
-            channelRG = repmat(channelTF, 1, nSymbolsSlot);
+            channelRG = repmat(channelTF, 1, obj.nSymbolsSlot);
 
-            % Reserve matrices for the received signal and the channel estimates.
-            receivedRG = complex(zeros(size(channelRG)));
-            channelEst = complex(zeros(size(channelRG)));
+            % Compute received resource grid.
+            receivedRG = channelRG .* transmittedRG;
+            SNR = 20; % dB
+            noiseVar = 10^(-SNR/10);
+            noise = randn(size(receivedRG)) + 1j * randn(size(receivedRG));
+            noise(receivedRG == 0) = 0;
+            noise = noise * sqrt(noiseVar / 2);
+            receivedRG = receivedRG + noise;
 
-            % Build DM-RS-like pilots.
-            nPilots = nPRBs * sum(DMRSREmask) * nDMRSsymbols;
-            pilots = (2 * randi([0 1], nPilots, 2) - 1) * [1; 1j] / sqrt(2);
-            pilots = reshape(pilots, [], nDMRSsymbols);
-
-            nPilotSymbolsHop1 = sum(hop1.DMRSsymbols);
-            noiseEst = 0;
-            rsrp = 0;
-            estMSE = 0;
-            detectMetricNum = 0;
-
-            % Number of pilots averaged for noise estimation.
-            nPilotsNoiseAvg = 2;
-
-            betaDMRS = 10^(-configuration.betaDMRS / 20);
-
-            processHop(hop1, pilots(:, 1:nPilotSymbolsHop1));
-
-            if ~isempty(hop2.DMRSsymbols)
-                processHop(hop2, pilots(:, (nPilotSymbolsHop1 + 1):end));
-            end
+            [channelEst, noiseEst, rsrp] = obj.estimateChannel(receivedRG, pilots, betaDMRS, hop1, hop2);
 
             % TODO: The ratio of the two quantities below should give a metric that allows us
             % to decide whether pilots were sent or not. However, it should be normalized
             % and it's a bit tricky.
-            detectMetricNum = detectMetricNum / nDMRSsymbols;
+            % detectMetricNum = detectMetricNum / nDMRSsymbols;
             % detectMetricDen = noiseEst;
             % detectionMetric = detectMetricNum / detectMetricDen;
 
-            noiseEst = noiseEst / (nPilots - nPRBs * sum(DMRSREmask) / nPilotsNoiseAvg);
+            noiseEst = noiseEst / (nPilots - configuration.nPRBs * sum(obj.DMRSREmask) / obj.nPilotsNoiseAvg);
             rsrp = rsrp / nPilots;
             epre = rsrp / betaDMRS^2;
             snrEst = epre / noiseEst;
-            estMSE = estMSE / (nPRBs * NRE * nAllocatedSymbols);
 
             % Write the received resource grid.
             [scs, syms, vals] = find(receivedRG);
@@ -316,14 +262,17 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             obj.saveDataFile('_test_pilots', testID, @writeComplexFloatFile, pilots(:));
 
             dmrsPattern = {...
-                DMRSsymbols, ...    % symbols
-                hop1.maskPRBs, ...  % rb_mask
-                hop2.maskPRBs, ...  % rb_mask2
-                secondHop, ...      % hopping_symbol_index
-                DMRSREmask, ...     % re_pattern
+                obj.DMRSsymbols, ...    % symbols
+                hop1.maskPRBs,   ...    % rb_mask
+                hop2.maskPRBs,   ...    % rb_mask2
+                obj.secondHop,   ...    % hopping_symbol_index
+                obj.DMRSREmask,  ...    % re_pattern
                 };
 
-            configuration = {...
+            startSymbol = configuration.symbolAllocation(1);
+            nAllocatedSymbols = configuration.symbolAllocation(2);
+
+            configurationOut = {...
                 'subcarrier_spacing::kHz15', ... % scs
                 'cyclic_prefix::NORMAL', ...     % cp
                 startSymbol, ...                 % first_symbol
@@ -334,15 +283,13 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                 };
 
             context = {...
-                configuration, ...
-                NSizeGrid, ...
-                ... detectionMetric, ...
+                configurationOut, ...
+                obj.NSizeGrid, ...
                 rsrp, ...
                 epre, ...
                 SNR, ...
                 10 * log10(snrEst), ...
                 noiseEst, ...
-                ... estMSE, ...
                 };
 
             testCaseString = obj.testCaseToString(testID, context, false, ...
@@ -351,6 +298,87 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             % Add the test to the header file.
             obj.addTestToHeaderFile(obj.headerFileID, testCaseString);
 
+        end % of function testvectorGenerationCases(...)
+    end % of methods (Test, TestTags = {'testvector'})
+
+    methods (Access = private)
+        function [hop1, hop2] = configureHops(obj, configuration, FrequencyHopping)
+        %Creates a description of the resources allocated in each hop.
+
+            startSymbol = configuration.symbolAllocation(1);
+            nAllocatedSymbols = configuration.symbolAllocation(2);
+            dmrsStrideTime = configuration.dmrsStrideTime;
+
+            % Create a mask of the OFDM symbols carrying DM-RS.
+            obj.DMRSsymbols = false(14, 1);
+            obj.DMRSsymbols(startSymbol + (1:dmrsStrideTime:nAllocatedSymbols)) = true;
+
+            nPRBs = configuration.nPRBs;
+            dmrsOffset = configuration.dmrsOffset;
+            dmrsStrideSCS = configuration.dmrsStrideSCS;
+
+            % Create a DM-RS pattern from the offset and stride.
+            obj.DMRSREmask = false(obj.NRE, 1);
+            obj.DMRSREmask((dmrsOffset + 1):dmrsStrideSCS:end) = true;
+
+            if strcmp(FrequencyHopping, 'intraSlot')
+                PRBstart = randperm(obj.NSizeBWP - nPRBs + 1, 2) - 1 + obj.NStartBWP;
+
+                obj.secondHop = startSymbol + floor(nAllocatedSymbols / 2);
+                hopMask = [true(obj.secondHop, 1); false(obj.nSymbolsSlot - obj.secondHop, 1)];
+
+                hop1.DMRSsymbols = (obj.DMRSsymbols & hopMask);
+                hop1.DMRSREmask = obj.DMRSREmask;
+                hop1.PRBstart = PRBstart(1);
+                hop1.nPRBs = nPRBs;
+                hop1.maskPRBs = false(obj.NSizeGrid, 1);
+                hop1.maskPRBs(hop1.PRBstart + (1:nPRBs)) = true;
+                hop1.startSymbol = startSymbol;
+                hop1.nAllocatedSymbols = floor(nAllocatedSymbols / 2);
+                hop1.CHsymbols = false(obj.nSymbolsSlot, 1);
+                hop1.CHsymbols(hop1.startSymbol + (1:hop1.nAllocatedSymbols)) = true;
+
+                hop2.DMRSsymbols = (obj.DMRSsymbols & (~hopMask));
+                hop2.DMRSREmask = obj.DMRSREmask;
+                hop2.PRBstart = PRBstart(2);
+                hop2.nPRBs = nPRBs;
+                hop2.maskPRBs = false(obj.NSizeGrid, 1);
+                hop2.maskPRBs(hop2.PRBstart + (1:nPRBs)) = true;
+                hop2.startSymbol = obj.secondHop;
+                hop2.nAllocatedSymbols = ceil(nAllocatedSymbols / 2);
+                hop2.CHsymbols = false(obj.nSymbolsSlot, 1);
+                hop2.CHsymbols(hop2.startSymbol + (1:hop2.nAllocatedSymbols)) = true;
+            else
+                PRBstart = randi([0, obj.NSizeBWP - nPRBs]) + obj.NStartBWP;
+                obj.secondHop = 'nullopt';
+
+                hop1.DMRSsymbols = obj.DMRSsymbols;
+                hop1.DMRSREmask = obj.DMRSREmask;
+                hop1.PRBstart = PRBstart;
+                hop1.nPRBs = nPRBs;
+                hop1.maskPRBs = false(obj.NSizeGrid, 1);
+                hop1.maskPRBs(hop1.PRBstart + (1:nPRBs)) = true;
+                hop1.startSymbol = startSymbol;
+                hop1.nAllocatedSymbols = nAllocatedSymbols;
+                hop1.CHsymbols = false(obj.nSymbolsSlot, 1);
+                hop1.CHsymbols(hop1.startSymbol + (1:hop1.nAllocatedSymbols)) = true;
+
+                hop2.DMRSsymbols = [];
+                hop2.maskPRBs = {};
+            end
+        end % of function [hop1 hop2] = configureHops()
+
+        function transmittedRG = transmitPilots(obj, pilots, betaDMRS, hop1, hop2)
+        %Places the pilots on the correct REs and with the correct power on the resource grid.
+            transmittedRG = zeros(obj.NSizeGrid * obj.NRE, obj.nSymbolsSlot);
+
+            nPilotSymbolsHop1 = sum(hop1.DMRSsymbols);
+
+            processHop(hop1, pilots(:, 1:nPilotSymbolsHop1));
+
+            if ~isempty(hop2.DMRSsymbols)
+                processHop(hop2, pilots(:, (nPilotSymbolsHop1 + 1):end));
+            end
 
             %     Nested functions
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -359,49 +387,66 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
 
                 % Create a mask for all subcarriers carrying DM-RS.
                 maskPRBs_ = hop_.maskPRBs;
-                maskREs_ = (kron(maskPRBs_, DMRSREmask) > 0);
-                % Pick the channel coefficients corresponding to the pilots.
-                channelPilots_ = channelRG(maskREs_, hop_.DMRSsymbols);
+                maskREs_ = (kron(maskPRBs_, obj.DMRSREmask) > 0);
 
-                % Compute the received pilots (i.e., each pilot is multiplied by the corresponding
-                % channel coefficient, the scaling factor and, then, noise is added).
-                receivedPilots_ = betaDMRS * channelPilots_ .* pilots_;
+                transmittedRG(maskREs_, hop_.DMRSsymbols) = betaDMRS * pilots_;
+            end % of function processHop(hop_, pilots_)
+        end % of function transmittedRG = transmitPilots(pilots, hop1, hop2)
 
-                noise_ = randn(size(receivedPilots_)) + 1j * randn(size(receivedPilots_));
-                noise_ = noise_ * sqrt(noiseVar / 2);
-                receivedPilots_ = receivedPilots_ + noise_;
 
-                % Place the received pilots on the grid.
-                receivedRG(maskREs_, hop_.DMRSsymbols) = receivedPilots_;
+        function [channelEstRG, noiseEst, rsrp] = estimateChannel(obj, receivedRG, pilots, betaDMRS, hop1, hop2)
+        %Estimates the channel coefficients, the noise variance (cumulative) and the reference-signal received power
+        %   (cumulative) for the allocated resources.
+
+            channelEstRG = zeros(size(receivedRG));
+            noiseEst = 0;
+            rsrp = 0;
+
+            nPilotSymbolsHop1 = sum(hop1.DMRSsymbols);
+
+            processHop(hop1, pilots(:, 1:nPilotSymbolsHop1));
+
+            if ~isempty(hop2.DMRSsymbols)
+                processHop(hop2, pilots(:, (nPilotSymbolsHop1 + 1):end));
+            end
+
+            %     Nested functions
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            function processHop(hop_, pilots_)
+            %Processes the DM-RS corresponding to a single hop.
+
+                % Create a mask for all subcarriers carrying DM-RS.
+                maskPRBs_ = hop_.maskPRBs;
+                maskREs_ = (kron(maskPRBs_, obj.DMRSREmask) > 0);
+
+                % Pick the REs corresponding to the pilots.
+                receivedPilots_ = receivedRG(maskREs_, hop_.DMRSsymbols);
 
                 % LSE-estimate the channel coefficients of the subcarriers carrying DM-RS.
-                nDMRSsymbols = sum(hop_.DMRSsymbols);
+                nDMRSsymbols_ = sum(hop_.DMRSsymbols);
                 recXpilots_ = receivedPilots_ .* conj(pilots_);
-                estimatedChannelP_ = sum(recXpilots_, 2) / betaDMRS / nDMRSsymbols;
-                detectMetricNum = detectMetricNum + norm(recXpilots_, 'fro')^2;
+                estimatedChannelP_ = sum(recXpilots_, 2) / betaDMRS / nDMRSsymbols_;
+                % TODO: at this point, we should compute a metric for signal detection.
+                % detectMetricNum = detectMetricNum + norm(recXpilots_, 'fro')^2;
 
                 % To estimate the noise, we assume the channel is constant over a small number
                 % of adjacent subcarriers.
-                estChannelRB_ = mean(reshape(estimatedChannelP_, nPilotsNoiseAvg, []), 1).';
-                estChannelAvg_ = kron(estChannelRB_, ones(nPilotsNoiseAvg, 1));
+                estChannelRB_ = mean(reshape(estimatedChannelP_, obj.nPilotsNoiseAvg, []), 1).';
+                estChannelAvg_ = kron(estChannelRB_, ones(obj.nPilotsNoiseAvg, 1));
                 noiseEst = noiseEst + norm(receivedPilots_ - betaDMRS * pilots_ ...
-                    .* repmat(estChannelAvg_, 1, nDMRSsymbols), 'fro')^2;
-                rsrp = rsrp + betaDMRS^2 * norm(estimatedChannelP_)^2 * nDMRSsymbols;
+                    .* repmat(estChannelAvg_, 1, nDMRSsymbols_), 'fro')^2;
+                rsrp = rsrp + betaDMRS^2 * norm(estimatedChannelP_)^2 * nDMRSsymbols_;
 
                 % The other subcarriers are linearly interpolated.
-                channelEst = fillChEst(channelEst, estimatedChannelP_, hop_);
-
-                estMSE = estMSE + norm(channelRG(channelEst ~= 0) - channelEst(channelEst ~= 0), 'fro')^2;
+                channelEstRG = fillChEst(channelEstRG, estimatedChannelP_, hop_);
             end
-
-
-        end % of function testvectorGenerationCases(...)
-    end % of methods (Test, TestTags = {'testvector'})
+        end % of function [channelEst, noiseEst, rsrp] = estimateChannel(obj, receivedRG, pilots, betaDMRS, hop1, hop2)
+    end % of methods (Access = private)
 end % of classdef srsChEstimatorUnittest
 
 function channelOut = fillChEst(channelIn, estimated, hop)
-% Linearly interpolates the missing subcarriers and organizes the estimates on
-% a resource grid.
+%Linearly interpolates the missing subcarriers and organizes the estimates on
+%   a resource grid.
     NRE = 12;
     channelOut = channelIn;
     estimatedAll = complex(nan(hop.nPRBs * NRE, 1));
