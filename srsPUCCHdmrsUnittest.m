@@ -45,17 +45,17 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'dmrs_pucch_processor' tests will be erased).
-        outputPath = {['testPUCCHdmrs', datestr(now, 30)]}
+        outputPath = {['testPUCCHdmrs', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
     end
 
     properties (TestParameter)
         %Defines the subcarrier spacing (0, 1).
         numerology = {0, 1}
 
-        %PUCCH format indexes (for now only formats 1 and 2 are supported)
+        %PUCCH format indexes (for now only formats 1 and 2 are supported).
         format = {1, 2}
 
-        %Intra-slot frequency hopping usage (inter-slot hopping is not tested)
+        %Intra-slot frequency hopping usage (inter-slot hopping is not tested).
         intraSlotFreqHopping = {false, true}
 
         %Two test vectors with randomized parameters (e.g. cell ID, slot number etc.) 
@@ -70,16 +70,16 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
         %PHY-layer cell ID (0...1007).
         NCellID = num2cell(0:1007)
 
-        %Min and max symbol length allowed for each of five PUCCH formats
+        %Min and max symbol length allowed for each of five PUCCH formats.
         formatLengthSymbols = [1 2; 4 14; 1 2; 4 14; 4 14]
 
-        %Possible length in number of PRBs for format 3
+        %Possible length in number of PRBs for format 3.
         prbLengthFormat3 = [1:6, 8:10, 12, 15, 16]
 
-        %PUCCH format string following srsgnb repo API
+        %PUCCH format string following srsgnb repo API.
         srsFormatName = 'pucch_format::FORMAT_';
 
-        %Number of symbols per slot considering normal cyclic prefix
+        %Number of symbols per slot considering normal cyclic prefix.
         numSlotSymbols = 14;
     end
 
@@ -105,8 +105,8 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
         %   in the grid with a random valid length in number of PRBs.
         %
         %   Parameters:
-        %   gridSize - size of the resource grid
-        %   format   - PUCCH format
+        %   gridSize - size of the resource grid.
+        %   format   - PUCCH format.
             startPRB = randi([0, gridSize - 1]);
             switch format
                 case {1, 4}
@@ -120,13 +120,13 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
                     nofPRBs = testCase.prbLengthFormat3(randId);
                     setPRBsAsRange = true;
             end
-            % make sure the PRB allocation is not beyond the resource grid
+            % Make sure the PRB allocation is not beyond the resource grid.
             if startPRB + nofPRBs > gridSize
                 nofPRBs = gridSize - startPRB;
             end
-            % for formats 1 and 4 it is just a scalar
+            % For formats 1 and 4 it is just a scalar.
             PRBSet = startPRB;
-            % for formats 2 and 3 it is a range
+            % For formats 2 and 3 it is a range.
             if setPRBsAsRange
                 endPRB = startPRB + nofPRBs - 1;
                 PRBSet = startPRB:endPRB;
@@ -146,23 +146,24 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
             import srsTest.helpers.cellarray2str
             import srsTest.helpers.logical2str;
 
-            % generate a unique test ID by looking at the number of files generated so far
+            % Generate a unique test ID by looking at the number of files
+            % generated so far.
             testID = testCase.generateTestID;
 
-            % use a unique NCellIDLoc, NSlotLoc for each test
+            % Use a unique NCellIDLoc, NSlotLoc for each test.
             randomizedCellID = testCase.randomizeTestvector(testID + 1);
             NCellIDLoc = testCase.NCellID{randomizedCellID};
 
-            % use a random slot number from the allowed range
+            % Use a random slot number from the allowed range.
             if numerology == 0
                 NSlotLoc = randi([0, 9]);
             else
                 NSlotLoc = randi([0, 19]);
             end
-            % format name following srsgnb naming
+            % Format name following srsgnb naming.
             formatString = [testCase.srsFormatName, num2str(format)];
 
-            % fixed parameter values
+            % Fixed parameter values.
             NSizeGrid  = 52;
             NStartGrid = 0;
             NFrame     = 0;
@@ -171,24 +172,31 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
             FrequencyHopping = 'neither';
             SecondHopStartPRB = 0;
 
-            % fix nid and nid0 to physical CellID
+            % Fix nid and nid0 to physical CellID.
             nid  = NCellIDLoc;
             nid0 = NCellIDLoc;
 
-            % currently fixed to 1 port of random number from [0, 7]
+            % Currently fixed to 1 port of random number from [0, 7].
             ports = randi([0, 7]);
             portsStr = cellarray2str({ports}, true);
 
-            % random initial cyclic shift
+            % Random initial cyclic shift.
             InitialCyclicShift = randi([0, 11]);
             
-            % random start PRB index and length in number of PRBs
+            % Random start PRB index and length in number of PRBs.
             PRBSet  = generateRandomPRBallocation(testCase, NSizeGrid, format);
             nofPRBs = size(PRBSet, 2);
 
-            % random start symbol and length in symbols
+            % Random start symbol and length in symbols.
             symbolLength = randi([testCase.formatLengthSymbols(format + 1, 1), ...
                                   testCase.formatLengthSymbols(format + 1, 2)]);
+            
+            % Intra-slot frequency hopping requires at least 2 OFDM
+            % symbols.
+            if (intraSlotFreqHopping && symbolLength == 1)
+                symbolLength = 2;
+            end
+
             maxStartSymbol = testCase.numSlotSymbols - symbolLength - 1;
             if maxStartSymbol > 0
                 startSymbolIndex = randi([0, maxStartSymbol]);
@@ -198,7 +206,7 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
 
             SymbolAllocation = [startSymbolIndex symbolLength];
 
-            % Orhtogonal cover code index
+            % Orhtogonal Cover Code Index.
             OCCI = 0;
             if (format == 1) || (format == 4)
                 % When intraslot frequency hopping is disabled, the OCCI value must be less 
@@ -217,45 +225,50 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
                 end
             end
 
-            % Randomly select SecondHopStartPRB if intra-slot frequency hopping is enabled
+            % Randomly select SecondHopStartPRB if intra-slot frequency
+            % hopping is enabled.
             if intraSlotFreqHopping
                 SecondHopStartPRB = generateRandomSecondHopPRB(NSizeGrid, PRBSet);
-                % set respective MATLAB parameter
+                % Set respective MATLAB parameter.
                 FrequencyHopping   = 'intraSlot';
             end
 
-            % configure the carrier according to the test parameters
+            % Configure the carrier according to the test parameters.
             SubcarrierSpacing = 15 * (2 .^ numerology);
             carrier = srsConfigureCarrier(NCellIDLoc, SubcarrierSpacing, NSizeGrid, ...
                 NStartGrid, NSlotLoc, NFrame, CyclicPrefix);
 
-            % configure the PUCCH according to the test parameters
+            % Configure the PUCCH according to the test parameters.
             pucch = srsConfigurePUCCH(format, SymbolAllocation, PRBSet,...
                 FrequencyHopping, GroupHopping, SecondHopStartPRB, ...
                 InitialCyclicShift, OCCI);
 
-            % call the PUCCH DMRS symbol processor MATLAB functions
+            % Call the PUCCH DMRS symbol processor MATLAB functions.
             [DMRSsymbols, DMRSindices] = srsPUCCHdmrs(carrier, pucch);
 
-            % write each complex symbol into a binary file, and the associated indices to another
+            % Set the DM-RS port indexes.
+            DMRSindices(:, 3) = ports;
+            
+            % Write the complex symbols along with their associated indices
+            % into a binary file.
             testCase.saveDataFile('_test_output', testID, ...
                 @writeResourceGridEntryFile, DMRSsymbols, DMRSindices);
 
-            % generate a 'slot_point' configuration string
+            % Generate a 'slot_point' configuration string.
             slotPointConfig = cellarray2str({numerology, NSlotLoc}, true);
-            % group hopping string following srsgnb naming
+            % Group hopping string following srsgnb naming.
             GroupHoppingStr = ['pucch_group_hopping::', upper(GroupHopping)];
-            % write as true/false
+            % Write as true/false.
             intraSlotFreqHoppingStr = logical2str(intraSlotFreqHopping);
 
-            % generate the test case entry
+            % Generate the test case entry.
             testCaseString = testCase.testCaseToString(testID, ...
                 {formatString, slotPointConfig, ['cyclic_prefix::', upper(CyclicPrefix)], ...
                 GroupHoppingStr, startSymbolIndex, symbolLength, PRBSet(1), ...
                 intraSlotFreqHoppingStr, SecondHopStartPRB, nofPRBs, InitialCyclicShift, ...
                  OCCI, 'false', nid, nid0, portsStr}, true, '_test_output');
 
-            % add the test to the file header
+            % Add the test to the file header.
             testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);
         end % of function testvectorGenerationCases
     end % of methods (Test, TestTags = {'testvector'})
@@ -266,19 +279,19 @@ function SecondHopStartPRB = generateRandomSecondHopPRB(gridSize, PRBSet)
 %   of a second hop in the grid.
 %
 %   Parameters:
-%   gridSize - size of the resource grid
-%   PRBSet   - set of PRBs allocated for the first frequency hop
+%   gridSize - size of the resource grid.
+%   PRBSet   - set of PRBs allocated for the first frequency hop.
     nofPRBs  = size(PRBSet, 2);
     gridPRBs = 0:(gridSize - 1);
     PRBcount = nofPRBs;
     if nofPRBs == 1
-        % a fixup used for a single allocated PRB
+        % A fixup used for a single allocated PRB.
         PRBcount = PRBcount - 1;
     end
     totalPRBs = gridPRBs + PRBcount;
     validStartIndexes = (~ismember(totalPRBs, PRBSet)) & (totalPRBs < gridSize);
 
-    % exclude PRBset used by the first hop
+    % Exclude PRBset used by the first hop.
     validStartIndexes(PRBSet + 1) = 0;
     validSecondHopPRBs = gridPRBs(validStartIndexes);
     SecondHopStartPRB  = validSecondHopPRBs(randi([1, size(validSecondHopPRBs, 2)]));
