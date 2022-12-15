@@ -50,7 +50,7 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'pucch_processor_format1' tests will be erased).
-        outputPath = {['testPUCCHProcessor', datestr(now, 30)]}
+        outputPath = {['testPUCCHProcessorFormat1', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
     end
 
     properties (TestParameter)
@@ -80,8 +80,7 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
             fprintf(fileID, 'struct test_case_t {\n');
             fprintf(fileID, '  pucch_processor::format1_configuration                  config;\n');
             fprintf(fileID, '  std::vector<uint8_t>                                    ack_bits;\n');
-            fprintf(fileID, '  file_vector<resource_grid_reader_spy::expected_entry_t> data_symbols;\n');
-            fprintf(fileID, '  file_vector<resource_grid_reader_spy::expected_entry_t> dmrs_symbols;\n');
+            fprintf(fileID, '  file_vector<resource_grid_reader_spy::expected_entry_t> grid;\n');
             fprintf(fileID, '};\n');
         end
     end % of methods (Access = protected)
@@ -101,8 +100,6 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
 
             import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
             import srsMatlabWrappers.phy.helpers.srsConfigurePUCCH
-            import srsMatlabWrappers.phy.upper.signal_processors.srsPUCCHdmrs
-            import srsMatlabWrappers.phy.upper.channel_processors.srsPUCCH1
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.matlab2srsCyclicPrefix
 
@@ -170,6 +167,10 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
             pucch = srsConfigurePUCCH(1, SymbolAllocation, PRBSet,...
                 FrequencyHopping, GroupHopping, SecondHopStartPRB, ...
                 InitialCyclicShift, OCCI, NStartBWP, NSizeBWP);
+            
+            % Create resource grid.
+            grid = nrResourceGrid(carrier, "OutputDataType", "single");
+            gridDims = size(grid);
 
             ack = randi([0, 1], ackSize, 1);
             sr = [];
@@ -178,21 +179,49 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
                 sr = 1;
             end
 
-            % Call the PUCCH symbol generator MATLAB functions.
-            [symbols, indices] = srsPUCCH1(carrier, pucch, ack, sr);
+             % Get the PUCCH control data indices.
+            pucchDataIdices = nrPUCCHIndices(carrier, pucch);
 
-            % Write each complex symbol into a binary file, and the
-            % associated indices to another.
-            testCase.saveDataFile('_test_input_data', testID, ...
-                @writeResourceGridEntryFile, symbols, indices);
+            % Modulate PUCCH Format 1.
+            FrequencyHopping = 'disabled';
+            if strcmp(pucch.FrequencyHopping, 'intraSlot')
+                FrequencyHopping = 'enabled';
+            end
 
-            % Call the PUCCH DM-RS symbol generator.
-            [DMRSsymbols, DMRSindices] = srsPUCCHdmrs(carrier, pucch);
+            grid(pucchDataIdices) = nrPUCCH1(ack, sr, pucch.SymbolAllocation, ...
+                carrier.CyclicPrefix, carrier.NSlot, carrier.NCellID, ...
+                pucch.GroupHopping, pucch.InitialCyclicShift, FrequencyHopping, ...
+                pucch.OCCI, "OutputDataType", "single");
 
-            % Write each complex symbol into a binary file, and the
-            % associated indices to another.
-            testCase.saveDataFile('_test_input_dmrs', testID, ...
-                @writeResourceGridEntryFile, DMRSsymbols, DMRSindices);
+            % Get the DM-RS indices.
+            pucchDmrsIndices = nrPUCCHDMRSIndices(carrier, pucch);
+            
+            % Generate and map the DM-RS sequence.
+            grid(pucchDmrsIndices) = nrPUCCHDMRS(carrier, pucch, "OutputDataType", "single");
+
+            % Noise variance.
+            snrdB = 30;
+            noiseStdDev = 10 ^ (-snrdB / 20);
+
+            % Create some noise samples.
+            normNoise = (randn(gridDims) + 1i * randn(gridDims)) / sqrt(2);
+
+            % Generate channel estimates as a phase rotation in the frequency
+            % domain.
+            estimates = exp(1i * linspace(0, 2 * pi, gridDims(1))') * ones(1, gridDims(2));
+
+            % Create noisy modulated symbols.
+            rxGrid = estimates .* grid + (noiseStdDev * normNoise);
+
+             % Extract the elements of interest from the grid.
+             rxGridSymbols = [rxGrid(pucchDataIdices); rxGrid(pucchDmrsIndices)];
+             rxGridIndexes = [nrPUCCHIndices(carrier, pucch, 'IndexStyle','subscript', 'IndexBase','0based'); ...
+                nrPUCCHDMRSIndices(carrier, pucch, 'IndexStyle','subscript', 'IndexBase','0based')];
+
+            % Write each complex symbol, along with its associated index,
+            % into a binary file.
+            testCase.saveDataFile('_test_input_symbols', testID, ...
+                @writeResourceGridEntryFile, rxGridSymbols, rxGridIndexes);
 
             % Generate a 'slot_point' configuration.
             slotPointConfig = {...
@@ -227,15 +256,13 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
 
             % Generate test case cell.
             testCaseCell = {...
-                pucchConfig, ...          % cfg
-                num2cell(ack), ...        % ack_bits
-                ...                       % data_symbols
-                ...                       % dmrs_symbols
+                pucchConfig, ...   % config
+                num2cell(ack), ... % ack_bits
                 };
 
             % Generate the test case entry.
             testCaseString = testCase.testCaseToString(testID, ...
-                testCaseCell, false, '_test_input_data', '_test_input_dmrs');
+                testCaseCell, false, '_test_input_symbols');
 
             % Add the test to the file header.
             testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);

@@ -70,10 +70,10 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
         %PHY-layer cell ID (0...1007).
         NCellID = num2cell(0:1007)
 
-        %Min and max symbol length allowed for each of five PUCCH formats.
+        %Minimum and maximum symbol length allowed for each of five PUCCH formats.
         formatLengthSymbols = [1 2; 4 14; 1 2; 4 14; 4 14]
 
-        %Possible length in number of PRBs for format 3.
+        %Possible length in number of PRBs for Format 3.
         prbLengthFormat3 = [1:6, 8:10, 12, 15, 16]
 
         %PUCCH format string following srsgnb repo API.
@@ -243,7 +243,7 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
                 FrequencyHopping, GroupHopping, SecondHopStartPRB, ...
                 InitialCyclicShift, OCCI);
 
-            % Call the PUCCH DMRS symbol processor MATLAB functions.
+            % Call the PUCCH DM-RS symbol processor MATLAB functions.
             [DMRSsymbols, DMRSindices] = srsPUCCHdmrs(carrier, pucch);
 
             % Set the DM-RS port indexes.

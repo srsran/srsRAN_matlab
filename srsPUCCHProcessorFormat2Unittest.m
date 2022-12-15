@@ -259,9 +259,10 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
             % Create some noise samples.
             normNoise = (randn(gridDims) + 1i * randn(gridDims)) / sqrt(2);
 
-            % Create ideal channel estimates for the full resource grid.
-            estimates = ones(gridDims);
-
+            % Generate channel estimates as a phase rotation in the
+            % frequency domain.
+            estimates = exp(1i * linspace(0, 2 * pi, gridDims(1))') * ones(1, gridDims(2));
+            
             % Create noisy modulated symbols.
             rxGrid = estimates .* grid + (noiseStdDev * normNoise);
             
