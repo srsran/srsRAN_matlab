@@ -111,6 +111,7 @@ classdef srsULSCHInfoUnittest < srsTest.srsBlockUnittest
             import srsTest.helpers.cellarray2str
             import srsTest.helpers.symbolAllocationMask2string
             import srsTest.helpers.mcsDescription2Cell
+            import srsTest.helpers.integer2srsBits
 
             % Configure carrier.
             carrier = srsConfigureCarrier;
@@ -151,11 +152,11 @@ classdef srsULSCHInfoUnittest < srsTest.srsBlockUnittest
             mcsDescr = mcsDescription2Cell(pusch.Modulation, targetCodeRate);
 
             ulschConfiguration = {...
-                tbs, ...                                % tbs
+                integer2srsBits(tbs), ...               % tbs
                 mcsDescr, ...                           % mcs_descr
-                nofHarqAckBits, ...                     % nof_harq_ack_bits
-                nofCsiPart1Bits, ...                    % nof_csi_part1_bits
-                nofCsiPart2Bits, ...                    % nof_csi_part2_bits
+                integer2srsBits(nofHarqAckBits), ...    % nof_harq_ack_bits
+                integer2srsBits(nofCsiPart1Bits), ...   % nof_csi_part1_bits
+                integer2srsBits(nofCsiPart2Bits), ...   % nof_csi_part2_bits
                 pusch.UCIScaling, ...                   % alpha_scaling
                 pusch.BetaOffsetACK, ...                % harq_ack_beta_offset
                 pusch.BetaOffsetCSI1, ...               % harq_csi_part1_offset
@@ -170,24 +171,24 @@ classdef srsULSCHInfoUnittest < srsTest.srsBlockUnittest
                 };
 
             schInformation = {...
-                ulschInfo.L, ...     % tb_crc_size
-                baseGraphString, ... % base_graph
-                ulschInfo.C, ...     % nof_cb
-                ulschInfo.F, ...     % nof_filler_bits_per_cb
-                ulschInfo.Zc, ...    % lifting_size
-                ulschInfo.K, ...     % nof_bits_per_cb
+                integer2srsBits(ulschInfo.L), ...     % tb_crc_size
+                baseGraphString, ...                  % base_graph
+                ulschInfo.C, ...                      % nof_cb
+                integer2srsBits(ulschInfo.F), ...     % nof_filler_bits_per_cb
+                ulschInfo.Zc, ...                     % lifting_size
+                integer2srsBits(ulschInfo.K), ...     % nof_bits_per_cb
                 };
 
             ulschInformation = {...
-                schInformation, ...    % sch
-                ulschInfo.GULSCH, ...  % nof_ul_sch_bits
-                ulschInfo.GACK, ...    % nof_harq_ack_bits
-                ulschInfo.GACKRvd, ... % nof_harq_ack_bits
-                ulschInfo.GCSI1, ...   % nof_csi_part1_bits
-                ulschInfo.GCSI2, ...   % nof_csi_part2_bits
-                ulschInfo.QdACK, ...   % nof_harq_ack_re
-                ulschInfo.QdCSI1, ...  % nof_csi_part1_re
-                ulschInfo.QdCSI2, ...  % nof_csi_part2_re
+                schInformation, ...                     % sch
+                integer2srsBits(ulschInfo.GULSCH), ...  % nof_ul_sch_bits
+                integer2srsBits(ulschInfo.GACK), ...    % nof_harq_ack_bits
+                integer2srsBits(ulschInfo.GACKRvd), ... % nof_harq_ack_bits
+                integer2srsBits(ulschInfo.GCSI1), ...   % nof_csi_part1_bits
+                integer2srsBits(ulschInfo.GCSI2), ...   % nof_csi_part2_bits
+                ulschInfo.QdACK, ...                    % nof_harq_ack_re
+                ulschInfo.QdCSI1, ...                   % nof_csi_part1_re
+                ulschInfo.QdCSI2, ...                   % nof_csi_part2_re
                 };
                        
             testCaseCell = {...
