@@ -20,6 +20,10 @@
 %   configuration     - Description of the allocated REs and DM-RS pattern.
 %   FrequencyHopping  - Frequency hopping type.
 %
+%   srsChEstimatorUnittest Methods:
+%
+%   characterize  - Draws the empircical MSE performance curve of the estimator.
+%
 %   srsChEstimatorUnittest Methods (TestTags = {'testvector'}):
 %
 %   testvectorGenerationCases - Generates a test vector according to the provided
@@ -321,6 +325,106 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
         end % of function testvectorGenerationCases(...)
     end % of methods (Test, TestTags = {'testvector'})
 
+    methods % public
+        function [mse, noiseEst, rsrpEst, epreEst] = characterize(obj, configuration, ...
+                FrequencyHopping, channelType, snrValues, nRuns)
+        %characterize - Draw the empircical MSE performance curve of the estimator.
+        %   MSE = characterize(OBJ, CONFIGURATION, FREQUENCYHOPPING, SNRVALUES, NRUNS) returns
+        %   the empirical mean squared error of the channel estimation after NRUNS simulations
+        %   and for all SNRVALUES. CONFIGURATION and FREQUENCYHOPPING provide the physicaly
+        %   channel configuration and CHANNELTYPE specifies the simulated channel model.
+        %
+        %   For CONFIGURATION and FREQUENCYHOPPING, see <a href="matlab:help srsChEstimatorUnittest">the main class documantation</a>.
+        %   SNRVALUES is an array of SNR values in decibel.
+        %   NRUNS is an integer number of simulations.
+            arguments
+                obj (1, 1) srsChEstimatorUnittest
+                configuration (1, 1) struct {mustBeConfiguration}
+                FrequencyHopping (1, :) char {mustBeMember(FrequencyHopping, {'neither', 'intraSlot'})}
+                channelType (1, :) char {mustBeMember(channelType, {'pure-delay', 'TDL-A'})}
+                snrValues double {mustBeReal, mustBeVector}
+                nRuns (1, 1) double {mustBeNonnegative, mustBeInteger}
+            end
+
+            import srsMatlabWrappers.phy.upper.signal_processors.srsChannelEstimator
+
+            % Cannot do frequency hopping if the entire BWP is allocated or if using a single OFDM symbol.
+            assert(~(((configuration.nPRBs == obj.NSizeBWP) || (configuration.symbolAllocation(2) == 1)) ...
+                    && strcmp(FrequencyHopping, 'intraSlot')), 'srsgnb_matlab:srsChEstimatorUnittest', ...
+                    'Unfeasible configuration-frequency hopping combination.');
+
+            assert((sum(configuration.symbolAllocation) <= obj.nSymbolsSlot), ...
+                'srsgnb_matlab:srsChEstimatorUnittest', 'Time allocation exceeds slot length.');
+
+            % Configure carrier.
+            carrier = nrCarrierConfig;
+            carrier.CyclicPrefix = 'Normal';
+            carrier.SubcarrierSpacing = 15; % kHz
+            carrier.NSlot = 0;
+            carrier.NSizeGrid = obj.NSizeGrid;
+
+            waveformInfo = nrOFDMInfo(carrier);
+            channel = configureChannel(channelType, waveformInfo.SampleRate, ...
+                carrier.SubcarrierSpacing);
+
+            % Configure each hop.
+            [hop1, hop2] = obj.configureHops(configuration, FrequencyHopping);
+
+            % Build DM-RS-like pilots.
+            nDMRSsymbols = sum(obj.DMRSsymbols);
+            nPilots = configuration.nPRBs * sum(obj.DMRSREmask) * nDMRSsymbols;
+            pilots = (2 * randi([0 1], nPilots, 2) - 1) * [1; 1j] / sqrt(2);
+            pilots = reshape(pilots, [], nDMRSsymbols);
+
+            betaDMRS = 10^(-configuration.betaDMRS / 20);
+
+            % Place pilots on the resource grid.
+            transmittedRG = obj.transmitPilots(pilots, betaDMRS, hop1, hop2);
+
+            transmittedWF = nrOFDMModulate(carrier, transmittedRG);
+
+            mse = zeros(length(snrValues), 1);
+            noiseEst = zeros(length(snrValues), nRuns);
+            rsrpEst = zeros(length(snrValues), nRuns);
+            epreEst = zeros(length(snrValues), nRuns);
+
+            for iRun = 1:nRuns
+                reset(channel);
+                [receivedWF0, pathGains, sampleTimes] = channel(transmittedWF);
+
+                noise0 = randn(size(receivedWF0)) + 1j * randn(size(receivedWF0));
+
+                iSNR = 0;
+                for SNR = snrValues
+                    iSNR = iSNR + 1;
+                    noiseVar = 10^(-SNR/10) / waveformInfo.Nfft;
+                    noise = noise0 * sqrt(noiseVar / 2);
+
+                    receivedWF = receivedWF0 + noise;
+
+                    % Compute received resource grid.
+                    receivedRG = nrOFDMDemodulate(carrier, receivedWF);
+
+                    EstimatorConfig.DMRSSymbolMask = obj.DMRSsymbols;
+                    EstimatorConfig.DMRSREmask = obj.DMRSREmask;
+                    EstimatorConfig.nPilotsNoiseAvg = sum(obj.DMRSREmask);
+                    [channelEst, noiseEstL, rsrpEstL, epreEstL] = srsChannelEstimator(receivedRG, pilots, betaDMRS, hop1, hop2, EstimatorConfig);
+                    noiseEst(iSNR, iRun) = noiseEstL;
+                    rsrpEst(iSNR, iRun) = rsrpEstL;
+                    epreEst(iSNR, iRun) = epreEstL;
+
+                    % Get the true channel, for comparison.
+                    pathFilters = channel.getPathFilters();
+                    channelTrue = nrPerfectChannelEstimate(carrier, pathGains, pathFilters, 0, sampleTimes);
+
+                    estErrors = channelEst(channelEst ~= 0) - channelTrue(channelEst ~= 0);
+
+                    mse(iSNR) = mse(iSNR) + sum(abs(estErrors).^2) / length(estErrors) / nRuns;
+                end
+            end
+        end % of function testvectorGenerationCases(...)
+    end % of methods % public
+
     methods (Access = private)
         function [hop1, hop2] = configureHops(obj, configuration, FrequencyHopping)
         %Creates a description of the resources allocated in each hop.
@@ -414,3 +518,88 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
         end % of function transmittedRG = transmitPilots(pilots, hop1, hop2)
     end % of methods (Access = private)
 end % of classdef srsChEstimatorUnittest
+
+function channel = configureChannel(chModel, SampleRate, SubcarrierSpacing)
+    channel = nrTDLChannel;
+    channel.NumTransmitAntennas = 1;
+    channel.NumReceiveAntennas = 1;
+    channel.MaximumDopplerShift = 0;
+    channel.SampleRate = SampleRate;
+    channel.RandomStream = 'Global stream';
+    if strcmp(chModel, 'pure-delay')
+        channel.DelayProfile = 'Custom';
+        % Random delay, at most one fourth of the cyclic prefix length.
+        channel.PathDelays = rand() * 0.018 / SubcarrierSpacing / 1000;
+        channel.AveragePathGains = 0;
+        channel.FadingDistribution = 'Rayleigh';
+    elseif strcmp(chModel, 'TDL-A')
+        channel.DelayProfile = 'TDL-A';
+        channel.DelaySpread = 30e-9;
+    else
+        error('srsgnb_matlab:srsChEstimatorUnittest:configureChannel', ...
+            'Unknown channel model %s', chModel);
+    end
+end
+
+
+function mustBeConfiguration(a)
+    if ~isfield(a, 'nPRBs')
+        eidType = 'srsChEstimatorUnittest:characterize';
+        msgType = 'Missing configuration field "nPRBs."';
+        throwAsCaller(MException(eidType, msgType));
+    end
+    mustBeScalarOrEmpty(a.nPRBs);
+    mustBeInteger(a.nPRBs);
+    mustBeInRange(a.nPRBs, 1, 51);
+
+    if ~isfield(a, 'symbolAllocation')
+        eidType = 'srsChEstimatorUnittest:characterize';
+        msgType = 'Missing configuration field "symbolAllocation".';
+        throwAsCaller(MException(eidType, msgType));
+    end
+    mustBeVector(a.symbolAllocation)
+    if numel(a.symbolAllocation) ~= 2
+        eidType = 'srsChEstimatorUnittest:characterize';
+        msgType = 'Configuration field "symbolAllocation" should be an array of two elements.';
+        throwAsCaller(MException(eidType, msgType));
+    end
+    mustBeInteger(a.symbolAllocation);
+    mustBeNonnegative(a.symbolAllocation);
+    if (a.symbolAllocation(1) + a.symbolAllocation(2) > 14)
+        eidType = 'srsChEstimatorUnittest:characterize';
+        msgType = 'Inconsistent symbol allocation.';
+        throwAsCaller(MException(eidType, msgType));
+    end
+
+    if ~isfield(a, 'dmrsOffset')
+        eidType = 'srsChEstimatorUnittest:characterize';
+        msgType = 'Missing configuration field "dmrsOffset".';
+        throwAsCaller(MException(eidType, msgType));
+    end
+    mustBeScalarOrEmpty(a.dmrsOffset);
+    mustBeMember(a.dmrsOffset, [0, 1]);
+
+    if ~isfield(a, 'dmrsStrideSCS')
+        eidType = 'srsChEstimatorUnittest:characterize';
+        msgType = 'Missing configuration field "dmrsStrideSCS".';
+        throwAsCaller(MException(eidType, msgType));
+    end
+    mustBeScalarOrEmpty(a.dmrsStrideSCS);
+    mustBeMember(a.dmrsStrideSCS, [1, 2, 3]);
+
+    if ~isfield(a, 'dmrsStrideTime')
+        eidType = 'srsChEstimatorUnittest:characterize';
+        msgType = 'Missing configuration field "dmrsStrideTime".';
+        throwAsCaller(MException(eidType, msgType));
+    end
+    mustBeScalarOrEmpty(a.dmrsStrideTime);
+    mustBeMember(a.dmrsStrideTime, [1, 2, 4]);
+
+    if ~isfield(a, 'betaDMRS')
+        eidType = 'srsChEstimatorUnittest:characterize';
+        msgType = 'Missing configuration field "betaDMRS".';
+        throwAsCaller(MException(eidType, msgType));
+    end
+    mustBeScalarOrEmpty(a.betaDMRS);
+    mustBeMember(a.betaDMRS, [-3, 0]);
+end
