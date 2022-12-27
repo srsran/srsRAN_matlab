@@ -46,7 +46,7 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'ulsch_demultiplex' tests will be erased).
-        outputPath = {['testULSCHDemultiplex', datestr(now, 30)]}
+        outputPath = {['testULSCHDemultiplex', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
     end
 
     properties (TestParameter)

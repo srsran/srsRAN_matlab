@@ -45,7 +45,7 @@ classdef srsOFDMModulatorUnittest < srsTest.srsBlockUnittest
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'ofdm_modulator' tests will be erased).
-        outputPath = {['testOFDMmodulator', datestr(now, 30)]}
+        outputPath = {['testOFDMmodulator', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
     end
 
     properties (TestParameter)

@@ -44,7 +44,7 @@ classdef srsShortBlockDetectorUnittest < srsTest.srsBlockUnittest
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'short_block_detector' tests will be erased).
-        outputPath = {['testShortBlockDetector', datestr(now, 30)]}
+        outputPath = {['testShortBlockDetector', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
     end
 
     properties (TestParameter)

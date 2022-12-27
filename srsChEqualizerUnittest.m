@@ -9,7 +9,7 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'channel_equalizer' tests will be erased).
-        outputPath = {['testChEqualizer', datestr(now, 30)]}
+        outputPath = {['testChEqualizer', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
     end
 
     properties (TestParameter)

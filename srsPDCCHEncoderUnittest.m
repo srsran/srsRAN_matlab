@@ -48,7 +48,7 @@ classdef srsPDCCHEncoderUnittest < srsTest.srsBlockUnittest
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'pdcch_encoder' tests will be erased).
-        outputPath = {['testPDCCHencoder', datestr(now, 30)]}
+        outputPath = {['testPDCCHencoder', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
     end
 
     properties (TestParameter)

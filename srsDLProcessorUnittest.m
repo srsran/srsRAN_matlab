@@ -43,7 +43,7 @@ classdef srsDLProcessorUnittest < srsTest.srsBlockUnittest
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'dl_processor' tests will be erased).
-        outputPath = {['DLProcessor', datestr(now, 30)]}
+        outputPath = {['DLProcessor', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
     end
 
     properties (TestParameter)

@@ -49,7 +49,7 @@ classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'pucch_detector' tests will be erased).
-        outputPath = {['testPUCCHdetector', char(datetime('now', 'Format', 'yyyyMMddHH''T''hhmmss'))]}
+        outputPath = {['testPUCCHdetector', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
     end
 
     properties (TestParameter)

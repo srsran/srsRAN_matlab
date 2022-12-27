@@ -49,7 +49,7 @@ classdef srsSSBProcessorUnittest < srsTest.srsBlockUnittest
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'ssb_processor' tests will be erased).
-        outputPath = {['testSSBProcessor', datestr(now, 30)]}
+        outputPath = {['testSSBProcessor', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
     end
 
     properties (TestParameter)

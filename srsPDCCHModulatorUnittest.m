@@ -58,7 +58,7 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'dmrs_pddch_processor' tests will be erased).
-        outputPath = {['testPDCCHmodulator', datestr(now, 30)]}
+        outputPath = {['testPDCCHmodulator', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
     end
 
     properties (TestParameter)

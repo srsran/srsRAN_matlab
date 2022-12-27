@@ -44,7 +44,7 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'pucch_demodulator_format2' tests will be erased).
-        outputPath = {['testPUCCHDemodulatorFormat2', char(datetime('now', 'Format', 'yyyyMMddHH''T''hhmmss'))]}
+        outputPath = {['testPUCCHDemodulatorFormat2', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
     end
 
     properties (TestParameter)

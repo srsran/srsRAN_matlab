@@ -47,7 +47,7 @@ classdef srsCSIRSUnittest < srsTest.srsBlockUnittest
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'csi_rs_processor' tests will be erased).
-        outputPath = {['testCSIRS', datestr(now, 30)]}
+        outputPath = {['testCSIRS', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
     end
 
     properties (TestParameter)

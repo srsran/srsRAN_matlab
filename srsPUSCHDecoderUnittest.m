@@ -44,7 +44,7 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'pusch_decoder' tests will be erased).
-        outputPath = {['testPUSCHDecoder', char(datetime('now', 'Format', 'yyyyMMddHH''T''hhmmss'))]}
+        outputPath = {['testPUSCHDecoder', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
     end
 
     properties (TestParameter)

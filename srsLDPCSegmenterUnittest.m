@@ -42,7 +42,7 @@ classdef srsLDPCSegmenterUnittest < srsTest.srsBlockUnittest
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'ldpc_segmenter' tests will be erased).
-        outputPath = {['testLDPCsegmenter', datestr(now, 30)]}
+        outputPath = {['testLDPCsegmenter', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
     end
 
     properties (TestParameter)

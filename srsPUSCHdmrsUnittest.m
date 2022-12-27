@@ -52,7 +52,7 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'dmrs_pusch_estimator' tests will be erased).
-        outputPath = {['testPUSCHdmrs']}%, datestr(now, 30)]}
+        outputPath = {['testPUSCHdmrs', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
     end
 
     properties (TestParameter)

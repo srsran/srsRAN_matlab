@@ -44,7 +44,7 @@ classdef srsShortBlockEncoderUnittest < srsTest.srsBlockUnittest
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'short_block_encoder' tests will be erased).
-        outputPath = {['testShortBlockEncoder', datestr(now, 30)]}
+        outputPath = {['testShortBlockEncoder', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
     end
 
     properties (TestParameter)

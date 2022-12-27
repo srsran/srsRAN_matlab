@@ -45,7 +45,7 @@ classdef srsOFDMDemodulatorUnittest < srsTest.srsBlockUnittest
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'ofdm_demodulator' tests will be erased).
-        outputPath = {['testOFDMdemodulator', datestr(now, 30)]}
+        outputPath = {['testOFDMdemodulator', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
     end
 
     properties (TestParameter)

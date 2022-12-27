@@ -44,7 +44,7 @@ classdef srsDemodulationMapperUnittest < srsTest.srsBlockUnittest
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'modulation_mapper' tests will be erased).
-        outputPath = {['testDemodulationMapper', datestr(now, 30)]}
+        outputPath = {['testDemodulationMapper', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
     end
 
     properties (TestParameter)

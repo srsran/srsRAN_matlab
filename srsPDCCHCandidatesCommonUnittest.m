@@ -46,7 +46,7 @@ classdef srsPDCCHCandidatesCommonUnittest < srsTest.srsBlockUnittest
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'pdccg_candidates_common' tests will be erased).
-        outputPath = {['testPDCCHCandidatesCommon', datestr(now, 30)]}
+        outputPath = {['testPDCCHCandidatesCommon', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
     end
 
     properties (TestParameter)

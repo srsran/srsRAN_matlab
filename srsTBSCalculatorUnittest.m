@@ -54,7 +54,7 @@ classdef srsTBSCalculatorUnittest < srsTest.srsBlockUnittest
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'pdccg_candidates_common' tests will be erased).
-        outputPath = {['testTBSCalculator', datestr(now, 30)]}
+        outputPath = {['testTBSCalculator', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
     end
 
     properties (TestParameter)

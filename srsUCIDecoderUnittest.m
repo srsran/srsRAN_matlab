@@ -43,7 +43,7 @@ classdef srsUCIDecoderUnittest < srsTest.srsBlockUnittest
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'uci_decoder' tests will be erased).
-        outputPath = {['testUCIDecoder', char(datetime('now', 'Format', 'yyyyMMddHH''T''hhmmss'))]}
+        outputPath = {['testUCIDecoder', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
     end
 
     properties (TestParameter)

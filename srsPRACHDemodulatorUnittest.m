@@ -48,7 +48,7 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'ofdm_prach_demodulator' tests will be erased).
-        outputPath = {['testPRACHDemodulator', datestr(now, 30)]}
+        outputPath = {['testPRACHDemodulator', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
     end
 
     properties (TestParameter)

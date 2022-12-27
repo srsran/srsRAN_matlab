@@ -44,7 +44,7 @@ classdef srsLDPCEncoderUnittest < srsTest.srsBlockUnittest
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'ldpc_encoder' tests will be erased).
-        outputPath = {['testLDPCencoder', datestr(now, 30)]}
+        outputPath = {['testLDPCencoder', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
     end
 
     properties (TestParameter)

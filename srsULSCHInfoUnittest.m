@@ -50,7 +50,7 @@ classdef srsULSCHInfoUnittest < srsTest.srsBlockUnittest
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'ulsch_info' tests will be erased).
-        outputPath = {['testULSCHInfo', datestr(now, 30)]}
+        outputPath = {['testULSCHInfo', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
     end
 
     properties (TestParameter)

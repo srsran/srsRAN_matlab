@@ -55,7 +55,7 @@ classdef srsLDPCRateMatcherUnittest < srsTest.srsBlockUnittest
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'ldpc_rate_matcher' tests will be erased).
-        outputPath = {['testLDPCratematcher', char(datetime('now', 'Format', 'yyyyMMddHH''T''hhmmss'))]}
+        outputPath = {['testLDPCratematcher', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
     end
 
     properties (TestParameter)

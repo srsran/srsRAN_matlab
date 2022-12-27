@@ -48,7 +48,7 @@ classdef srsPRACHGeneratorUnittest < srsTest.srsBlockUnittest
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'prach_generator' tests will be erased).
-        outputPath = {['testPRACHGenerator', datestr(now, 30)]}
+        outputPath = {['testPRACHGenerator', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
     end
 
     properties (TestParameter)
