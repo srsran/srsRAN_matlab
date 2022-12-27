@@ -4,6 +4,7 @@
 #include "srsgnb/phy/upper/channel_processors/pusch_decoder_result.h"
 #include "srsgnb/phy/upper/rx_softbuffer_pool.h"
 #include "srsgnb/ran/modulation_scheme.h"
+#include "srsgnb/support/units.h"
 #include "srsgnb_matlab/support/matlab_to_srs.h"
 
 #include <memory>
@@ -120,8 +121,11 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
   seg_cfg.rv                       = in_seg_cfg["rv"][0];
   seg_cfg.Nref                     = in_seg_cfg["Nref"][0];
 
-  unsigned tbs       = in_seg_cfg["tbs"][0];
-  unsigned tbs_bytes = tbs / 8;
+  units::bits tbs(static_cast<unsigned>(in_seg_cfg["tbs"][0]));
+  if (!tbs.is_byte_exact()) {
+    mex_abort("The TBS is not an exact number of bytes.");
+  }
+  units::bytes tbs_bytes = tbs.round_up_to_bytes();
 
   in_struct_array                    = inputs[5];
   Struct                   in_buf_id = in_struct_array[0];
@@ -146,7 +150,7 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
   rx_softbuffer*               softbuffer = retrieve_softbuffer(key, buf_id, nof_codeblocks);
   pusch_decoder_result         dec_result = {};
   pusch_decoder::configuration cfg        = {seg_cfg, 6, true, new_data};
-  std::vector<uint8_t>         rx_tb(tbs_bytes);
+  std::vector<uint8_t>         rx_tb(tbs_bytes.value());
   decoder->decode(rx_tb, dec_result, softbuffer, llrs, cfg);
 
   TypedArray<uint8_t> out = factory.createArray({rx_tb.size(), 1}, rx_tb.cbegin(), rx_tb.cend());
