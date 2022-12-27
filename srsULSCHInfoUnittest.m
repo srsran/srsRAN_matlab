@@ -80,13 +80,13 @@ classdef srsULSCHInfoUnittest < srsTest.srsBlockUnittest
     end
 
     methods (Access = protected)
-        function addTestIncludesToHeaderFile(obj, fileID)
+        function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
             
             fprintf(fileID, '#include "srsgnb/ran/pusch/ulsch_info.h"\n');
         end
 
-        function addTestDefinitionToHeaderFile(obj, fileID)
+        function addTestDefinitionToHeaderFile(~, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
 
             fprintf(fileID, 'struct test_case_t {\n');

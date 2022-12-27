@@ -59,7 +59,7 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
     end
 
     methods (Access = protected)
-        function addTestIncludesToHeaderFile(obj, fileID)
+        function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
            
             fprintf(fileID, '#include "../../support/resource_grid_test_doubles.h"\n');
@@ -67,7 +67,7 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
             fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
         end
 
-        function addTestDefinitionToHeaderFile(obj, fileID)
+        function addTestDefinitionToHeaderFile(~, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
            
             fprintf(fileID, 'struct context_t {\n');
@@ -155,9 +155,6 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
             pucch = srsConfigurePUCCH(2, NStartBWP, NSizeBWP, SymbolAllocation, ... 
                  PRBSet, FrequencyHopping, NID, RNTI);         
 
-            % QPSK modulation has 2 bit per symbol.
-            modulationOrder = 2;
-            
             % Number of PUCCH Subcarriers.
             nofPUCCHSubcs = PRBNum * 12;
 

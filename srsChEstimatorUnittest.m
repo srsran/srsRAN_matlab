@@ -293,8 +293,8 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             % to decide whether pilots were sent or not. However, it should be normalized
             % and it's a bit tricky.
             detectMetricNum = detectMetricNum / nDMRSsymbols;
-            detectMetricDen = noiseEst;
-            detectionMetric = detectMetricNum / detectMetricDen;
+            % detectMetricDen = noiseEst;
+            % detectionMetric = detectMetricNum / detectMetricDen;
 
             noiseEst = noiseEst / (nPilots - nPRBs * sum(DMRSREmask) / nPilotsNoiseAvg);
             rsrp = rsrp / nPilots;

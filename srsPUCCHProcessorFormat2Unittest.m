@@ -76,7 +76,7 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
     end
 
     methods (Access = protected)
-        function addTestIncludesToHeaderFile(obj, fileID)
+        function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
            
             fprintf(fileID, '#include "../../support/resource_grid_test_doubles.h"\n');
@@ -84,7 +84,7 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
             fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
         end
 
-        function addTestDefinitionToHeaderFile(obj, fileID)
+        function addTestDefinitionToHeaderFile(~, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
            
             fprintf(fileID, 'struct context_t {\n');

@@ -76,7 +76,7 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
     end
 
     methods (Access = protected)
-        function addTestIncludesToHeaderFile(obj, fileID)
+        function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
 
 
@@ -85,7 +85,7 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
             fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
         end
 
-        function addTestDefinitionToHeaderFile(obj, fileID)
+        function addTestDefinitionToHeaderFile(~, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
             fprintf(fileID, 'struct test_case_t {\n');
             fprintf(fileID, '  dmrs_pusch_estimator::configuration                     config;\n');
@@ -132,7 +132,6 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
             RNTI = 0;
             NStartBWP = 0;
             NSizeBWP = NSizeGrid;
-            referencePointKrb = 0;
             NIDNSCID = NCellID;
             NID = NCellID;
             Modulation = '16QAM';

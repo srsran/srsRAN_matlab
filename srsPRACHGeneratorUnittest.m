@@ -165,10 +165,7 @@ classdef srsPRACHGeneratorUnittest < srsTest.srsBlockUnittest
             end
 
             % Generate waveform
-            [~, gridset, info] = srsPRACHgenerator(carrier, prach);
-
-            % Calculate the DFT size for 15kHz SCS
-            dftSize15kHz = gridset.Info.SampleRate / 15e3;
+            [~, ~, info] = srsPRACHgenerator(carrier, prach);
 
             % Write the generated PRACH sequence into a binary file
             testCase.saveDataFile('_test_output', TestID, ...
@@ -186,8 +183,6 @@ classdef srsPRACHGeneratorUnittest < srsTest.srsBlockUnittest
                 otherwise
                     error('Invalid restricted set %s', prach.RestrictedSet);
             end
-
-            Numerology = ['subcarrier_spacing::kHz' num2str(carrier.SubcarrierSpacing)];
 
             % srsgnb PRACH configuration
             srsPRACHConfig = {...

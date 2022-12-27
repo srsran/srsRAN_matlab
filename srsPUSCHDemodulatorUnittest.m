@@ -97,8 +97,6 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
         %getPlaceholders Generates a list of the RE containing repetition
         %   placeholders and their respective soft bits indexes for x and y 
         %   placeholders. All indexes are 0based.
-            xIndexes = [];
-            yIndexes = [];
 
             % Deduce modulation order.
             Qm = 1;
@@ -117,17 +115,26 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             % probability of placeholder is zero.
             if (Qm < 2) || (ProbPlaceholder == 0)
                 reIndexes = {};
+                xIndexes = [];
+                yIndexes = [];
                 return;
             end
 
             % Select REs that contain placeholders.
             reIndexes = 1:floor(1 / ProbPlaceholder):(NumRe - 1);
-            
+
+            nIndexes = numel(reIndexes) * NumLayers;
+            xIndexes = nan(nIndexes * (Qm - 2), 1);
+            yIndexes = nan(nIndexes, 1);
+
             % Generate placeholder bit indexes.
+            i = 0;
             for reIndex = reIndexes
                 for layer = 0:NumLayers-1
-                    xIndexes = [xIndexes; ((reIndex * NumLayers + layer) * Qm + transpose(2:Qm - 1))];
-                    yIndexes = [yIndexes; ((reIndex * NumLayers + layer) * Qm + 1)];
+                    offset = i * (Qm - 2);
+                    xIndexes(offset + (1:Qm-2)) = (reIndex * NumLayers + layer) * Qm + transpose(2:Qm - 1);
+                    i = i + 1;
+                    yIndexes(i) = (reIndex * NumLayers + layer) * Qm + 1;
                 end
             end
 
@@ -153,7 +160,6 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
 
             import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
             import srsMatlabWrappers.phy.helpers.srsConfigurePUSCH
-            import srsMatlabWrappers.phy.helpers.srsIndexes0BasedSubscrit
             import srsMatlabWrappers.phy.upper.channel_modulation.srsDemodulator
             import srsMatlabWrappers.phy.upper.equalization.srsChannelEqualizer
             import srsTest.helpers.symbolAllocationMask2string
