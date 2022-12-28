@@ -58,8 +58,43 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
         PRBAllocation = {0, 1}
 
         %Modulation and coding scheme index.
-        mcs = num2cell(0:28)
+        mcs = num2cell(0:27)
     end
+
+    properties (Constant, Hidden)
+        % Currently fixed parameter values (e.g., single layer = single TB/codeword, no retransmissions)
+        % Resuource grid size and first RB.
+        NSizeGrid = 25
+        NStartGrid = 0
+        % Number of transmission layers.
+        NumLayers = 1
+        % Bandwidth part start PRB and size.
+        NStartBWP = 0
+        NSizeBWP = srsPUSCHDecoderUnittest.NSizeGrid
+        % MCS table.
+        mcsTable = 'qam256'
+        % Multiple HARQ processes flag: true if active, false is only one process allowed.
+        MultipleHARQProcesses = true
+        % Redundancy version sequence.
+        RVsequence = [0, 2, 3, 1]
+    end % of properties (Constant, Hidden)
+
+    properties (Hidden)
+        %Transport block size.
+        TransportBlockSize
+        %Target code rate.
+        TargetCodeRate
+        %ID of the HARQ process.
+        HARQProcessID
+        %Length of the encoded transport block.
+        encodedTBLength
+        %Modulation scheme
+        Modulation
+        %UL-SCH and UCI coding information.
+        ulschInfo
+        %Total number of allocated resource elements.
+        nofREs
+    end % of properties (Hidden)
 
     methods (Access = protected)
         function addTestIncludesToHeaderFile(~, fileID)
@@ -84,142 +119,152 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
     end % of methods (Access = protected)
 
     methods (TestClassSetup)
-        function classSetup(testCase)
+        function classSetup(obj)
             orig = rng;
-            testCase.addTeardown(@rng,orig)
+            obj.addTeardown(@rng,orig)
             rng('default');
         end
     end % of methods (TestClassSetup)
 
+    methods (Access = private)
+        function setupsimulation(obj, SymbolAllocation, PRBAllocation, mcs)
+        % Sets secondary simulation variables.
+
+            import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
+            import srsMatlabWrappers.phy.helpers.srsConfigurePUSCH
+            import srsMatlabWrappers.phy.helpers.srsExpandMCS
+            import srsMatlabWrappers.phy.helpers.srsGetModulation
+
+            if PRBAllocation == 0
+                % Allocate the entire BWP.
+                PRBstart = 0;
+                PRBend = 24;
+            else
+                % Random allocation (at least 2 PRBs).
+                PRBstart = randi([0, 12]);
+                PRBend = randi([13, 24]);
+            end
+
+            PRBSet = PRBstart:PRBend;
+
+            % Random HARQ ID.
+            obj.HARQProcessID = randi([1, 8]);
+
+            % Configure the carrier according to the test parameters.
+            NSizeGridLoc = obj.NSizeGrid;
+            NStartGridLoc = obj.NStartGrid;
+            carrier = srsConfigureCarrier(NSizeGridLoc, NStartGridLoc);
+
+            % Get the target code rate (R) and modulation order (Qm) corresponding
+            % to the current modulation and scheme configuration.
+            [R, Qm] = srsExpandMCS(mcs, obj.mcsTable);
+            obj.TargetCodeRate = R/1024;
+            obj.Modulation = srsGetModulation(Qm);
+            ModulationLoc = obj.Modulation{1};
+
+            % Configure the PUSCH according to the test parameters.
+            NStartBWPLoc = obj.NStartBWP;
+            NSizeBWPLoc = obj.NSizeBWP;
+            NumLayersLoc = obj.NumLayers;
+            pusch = srsConfigurePUSCH(NStartBWPLoc, NSizeBWPLoc, ModulationLoc, ...
+                NumLayersLoc, SymbolAllocation, PRBSet);
+
+            % Get the encoded TB length.
+            [PUSCHIndices, PUSCHInfo] = nrPUSCHIndices(carrier, pusch);
+            obj.nofREs = length(PUSCHIndices);
+            obj.encodedTBLength = obj.nofREs * Qm;
+
+            % Compute the transport block size.
+            obj.TransportBlockSize = nrTBS(ModulationLoc, obj.NumLayers, ...
+                numel(PRBSet), PUSCHInfo.NREPerPRB, obj.TargetCodeRate);
+
+            % Get UL-SCH coding information.
+            obj.ulschInfo = nrULSCHInfo(pusch, obj.TargetCodeRate, obj.TransportBlockSize, 0, 0, 0);
+        end % of function setupsimulation(obj, SymbolAllocation, PRBAllocation, mcs)
+    end % of methods (Access = Private)
+
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(testCase, SymbolAllocation, PRBAllocation, mcs)
+        function testvectorGenerationCases(obj, SymbolAllocation, PRBAllocation, mcs)
         %testvectorGenerationCases Generates a test vector for the given SymbolAllocation,
         %   PRBAllocation and mcs. Other parameters (e.g., the HARQProcessID) are
         %   generated randomly.
 
-            import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
             import srsMatlabWrappers.phy.helpers.srsConfigureULSCHEncoder
             import srsMatlabWrappers.phy.helpers.srsConfigureULSCHDecoder
-            import srsMatlabWrappers.phy.helpers.srsConfigurePUSCH
-            import srsMatlabWrappers.phy.helpers.srsExpandMCS
-            import srsMatlabWrappers.phy.helpers.srsGetModulation
             import srsTest.helpers.bitPack
             import srsTest.helpers.writeUint8File
             import srsTest.helpers.writeInt8File
 
-            % Generate a unique test ID
-            testID = testCase.generateTestID;
+            % Generate a unique test ID.
+            testID = obj.generateTestID;
 
-            % Set randomized values
-            if PRBAllocation == 0
-                PRBstart = 0;
-                PRBend = 24;
-            else
-                PRBstart = randi([0, 12]);
-                PRBend = randi([13, 24]);
-            end
-            HARQProcessID = randi([1, 8]);
+            setupsimulation(obj, SymbolAllocation, PRBAllocation, mcs);
 
-            % current fixed parameter values (e.g., single layer = single TB/codeword, no retransmissions)
-            NSizeGrid = 25;
-            NStartGrid = 0;
-            NumLayersLoc = 1;
-            NStartBWP = 0;
-            NSizeBWP = NSizeGrid;
-            PRBSet = PRBstart:PRBend;
-            mcsTable = 'qam256';
-            MultipleHARQProcesses = true;
-            RVsequence = [0, 2, 3, 1];
+            % Fill a transport block with random bits.
+            TB = randi([0 1], obj.TransportBlockSize, 1);
 
-            % skip those invalid configuration cases
-            isMCSConfigOK = (~strcmp(mcsTable, 'qam256') || mcs < 28);
+            % Configure the PUSCH encoder and decoder.
+            MultipleHARQProcessesLoc = obj.MultipleHARQProcesses;
+            TargetCodeRateLoc = obj.TargetCodeRate;
+            TransportBlockLength = obj.TransportBlockSize;
+            ULSCHEncoder = srsConfigureULSCHEncoder(MultipleHARQProcessesLoc, TargetCodeRateLoc);
+            ULSCHDecoder = srsConfigureULSCHDecoder(MultipleHARQProcessesLoc, ...
+                TargetCodeRateLoc, TransportBlockLength);
 
-            if ~isMCSConfigOK
-                return;
-            end
+            % Add the generated TB to the encoder.
+            setTransportBlock(ULSCHEncoder, TB, obj.HARQProcessID);
 
-            % configure the carrier according to the test parameters
-            carrier = srsConfigureCarrier(NSizeGrid, NStartGrid);
-
-            % get the target code rate (R) and modulation order (Qm) corresponding
-            % to the current modulation and scheme configuration
-            [R, Qm] = srsExpandMCS(mcs, mcsTable);
-            TargetCodeRate = R/1024;
-            Modulation = srsGetModulation(Qm);
-            ModulationLoc = Modulation{1};
-
-            % configure the PUSCH according to the test parameters
-            pusch = srsConfigurePUSCH(NStartBWP, NSizeBWP, ModulationLoc, ...
-                NumLayersLoc, SymbolAllocation, PRBSet);
-
-            % get the encoded TB length
-            [PUSCHIndices, PUSCHInfo] = nrPUSCHIndices(carrier, pusch);
-            nofREs = length(PUSCHIndices);
-            encodedTBLength = nofREs * Qm;
-
-            % generate the TB to be encoded
-            TransportBlockLength = nrTBS(ModulationLoc, NumLayersLoc, ...
-                numel(PRBSet), PUSCHInfo.NREPerPRB, TargetCodeRate);
-            TB = randi([0 1], TransportBlockLength, 1);
-
-            % configure the PUSCH encoder and decoder
-            ULSCHEncoder = srsConfigureULSCHEncoder(MultipleHARQProcesses, TargetCodeRate);
-            ULSCHDecoder = srsConfigureULSCHDecoder(MultipleHARQProcesses, ...
-                TargetCodeRate, TransportBlockLength);
-
-            % add the generated TB to the encoder
-            setTransportBlock(ULSCHEncoder, TB, HARQProcessID);
-
-            nRVs = numel(RVsequence);
-            cw = nan(encodedTBLength, nRVs);
-            cwLLRs = nan(encodedTBLength, nRVs);
+            % Allocate arrays for the codeblocks.
+            nRVs = numel(obj.RVsequence);
+            cw = nan(obj.encodedTBLength, nRVs);
+            cwLLRs = nan(obj.encodedTBLength, nRVs);
 
             for iRV = 1:nRVs
-                RV = RVsequence(iRV);
+                RV = obj.RVsequence(iRV);
 
-                % call the PUSCH encoding MATLAB functions
-                cw(:, iRV) = ULSCHEncoder(ModulationLoc, NumLayersLoc, encodedTBLength, RV, HARQProcessID);
+                % Call the PUSCH encoding MATLAB functions.
+                cw(:, iRV) = ULSCHEncoder(obj.Modulation{1}, obj.NumLayers, ...
+                    obj.encodedTBLength, RV, obj.HARQProcessID);
 
                 % Even though we could have different modulations, for the purposes of this
                 % simulation, real-valued BPSK is enough to generate meaningul LLRs.
                 cwLLRs(:, iRV) = 10 - 20 * cw(:, iRV);
-                % add some (very little) noise
+                % Add some (very little) noise.
                 snr = 20; % dB
-                cwLLRs(:, iRV) = cwLLRs(:, iRV) + 10 * randn(encodedTBLength, 1) * 10^(-snr / 20);
+                cwLLRs(:, iRV) = cwLLRs(:, iRV) + 10 * randn(obj.encodedTBLength, 1) * 10^(-snr / 20);
 
             end
             % Decode the first transmission (it doesn't make sense to decode all
             % of them since MATLAB flushes the decoder buffer if the CRC is OK).
-            rxTB = ULSCHDecoder(cwLLRs(:, 1), ModulationLoc, NumLayersLoc, RVsequence(1), HARQProcessID);
+            rxTB = ULSCHDecoder(cwLLRs(:, 1), obj.Modulation{1}, obj.NumLayers, ...
+                obj.RVsequence(1), obj.HARQProcessID);
             % Check that there were no errors (expected, since the SNR is very high).
             assert(all(rxTB == TB), 'Decoding errors.');
 
-            % clip and quantize
+            % Clip and quantize the log-likelihood ratios.
             cwLLRs(cwLLRs > 20) = 20;
             cwLLRs(cwLLRs < -20) = -20;
             cwLLRs = round(cwLLRs * 6); % this is codeblocks * 120 / 20
-            % write the LLRs to a binary file
-            testCase.saveDataFile('_test_input', testID, @writeInt8File, cwLLRs(:));
+            % Write the LLRs to a binary file.
+            obj.saveDataFile('_test_input', testID, @writeInt8File, cwLLRs(:));
 
-            % write the TBs to a binary file in packed format
+            % Write the TBs to a binary file in packed format.
             TBPkd = bitPack(TB);
-            testCase.saveDataFile('_test_output', testID, @writeUint8File, TBPkd);
+            obj.saveDataFile('_test_output', testID, @writeUint8File, TBPkd);
 
-            % obtain the related LDPC encoding parameters
-            info = nrULSCHInfo(pusch, TargetCodeRate, TransportBlockLength, 0, 0, 0);
-            % generate the test case entry
+            % Generate the test case entry.
             Nref = ULSCHEncoder.LimitedBufferSize;
-            % 25344 is the maximum coded length of a code block and implies no limit on the buffer size
+            % 25344 is the maximum coded length of a code block and implies no limit on the buffer size.
             if Nref >= 25344
               Nref = 0;
             end
-            testCaseString = testCase.testCaseToString(testID, ...
-                {{['ldpc_base_graph_type::BG', num2str(info.BGN)], 0, ...
-                    ['modulation_scheme::', Modulation{2}], Nref, ...
-                    NumLayersLoc, nofREs}, RVsequence}, false, '_test_input', '_test_output');
+            testCaseString = obj.testCaseToString(testID, ...
+                {{['ldpc_base_graph_type::BG', num2str(obj.ulschInfo.BGN)], 0, ...
+                    ['modulation_scheme::', obj.Modulation{2}], Nref, ...
+                    obj.NumLayers, obj.nofREs}, obj.RVsequence}, false, '_test_input', '_test_output');
 
-            % add the test to the file header
-            testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);
+            % Add the test to the file header.
+            obj.addTestToHeaderFile(obj.headerFileID, testCaseString);
 
         end % of function testvectorGenerationCases
     end % of methods (Test, TestTags = {'testvector'})
