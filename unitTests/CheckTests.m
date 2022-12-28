@@ -143,17 +143,29 @@ classdef CheckTests < matlab.unittest.TestCase
             workDir = fullfile(obj.tmpOutputPath, className);
             extParams = Parameter.fromData('outputPath', {workDir});
             % Check whether the class generates test vectors.
-            tagged = TestSuite.fromClass(classMeta, 'Tag', 'testvector', ...
+            taggedTV = TestSuite.fromClass(classMeta, 'Tag', 'testvector', ...
                 'ExternalParameters', extParams);
             msg = sprintf('Class %s has no tests with tag ''testvector''.',  className);
-            obj.assertFalse(isempty(tagged), msg);
+            obj.assertFalse(isempty(taggedTV), msg);
 
             % Try to run one of the tests.
             try
-                assertSuccess(tagged(1).run());
+                assertSuccess(taggedTV(1).run());
             catch
                 msg = sprintf('Class %s cannot run the example test.',  className);
                 obj.assertFail(msg);
+            end
+
+            % Check whether the class testes a mex wrapper.
+            taggedMEX = TestSuite.fromClass(classMeta, 'Tag', 'testmex', ...
+                'ExternalParameters', extParams);
+            if ~isempty(taggedMEX)
+                try
+                    assertSuccess(taggedMEX(1).run());
+                catch
+                    %TODO: change to assertFail
+                    fprintf('The mex wrapper test for %s couldn''t run.', className);
+                end
             end
 
             % Check whether the header and vector test files are generated.
