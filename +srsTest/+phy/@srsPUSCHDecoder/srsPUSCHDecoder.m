@@ -19,10 +19,11 @@
 %
 %   srsPUSCHDecoder Methods:
 %
-%   step      - Decodes one PUSCH codeword.
-%   resetCRCS - Resets the CRC state of a softbuffer.
-%   release   - Allows reconfiguration.
-%   isLocked  - Locked status (logical).
+%   step               - Decodes one PUSCH codeword.
+%   resetCRCS          - Resets the CRC state of a softbuffer.
+%   release            - Allows reconfiguration.
+%   isLocked           - Locked status (logical).
+%   configureSegment   - Static helper method for filling the SEGCONFIG input of "step".
 %
 %   Step method syntax
 %
@@ -165,4 +166,35 @@ classdef srsPUSCHDecoder < matlab.System
         %MEX function doing the actual work. See the Doxygen documentation.
         varargout = pusch_decoder_mex(varargin)
     end % of methods (Access = private)
+
+    methods (Static)
+        function segmentCfg = configureSegment(NumLayers, NumREs, TBSize, TargetCodeRate, Modulation, RV, Nref)
+        %configureSegment Static helper method for filling the SEGCONFIG input of "step"
+        %   SEGMENTCFG = configureSegment(NUMLAYERS, NUMRES, TBSIZE, TARGETCODERATE, MODULATION, RV, NREF)
+        %   generates a segment configuration for NUMLAYERS transmission layers, NUMRES allocated REs per layer,
+        %   transport block size TBSIZE, target code rate TARGETCODERATE, modulation MODULATION and redundancy
+        %   version RV. NREF limits the rate-matcher buffer size (set to zero for unlimited buffer size).
+            arguments
+                NumLayers      (1, 1) double {mustBeInteger, mustBeInRange(NumLayers, 1, 4)} = 1
+                NumREs         (1, 1) double {mustBeInteger, mustBePositive} = 12
+                TBSize         (1, 1) double {mustBeInteger, mustBePositive} = 100
+                TargetCodeRate (1, 1) double {mustBeInRange(TargetCodeRate, 0, 1, 'exclusive')} = 0.5
+                Modulation     (1, :) char   {mustBeMember(Modulation, ...
+                                                  {'pi/2-BPSK', 'QPSK', '16QAM', '64QAM', '256QAM'})} = 'QPSK'
+                RV             (1, 1) double {mustBeInteger, mustBeInRange(RV, 0, 3)} = 0
+                Nref           (1, 1) double {mustBeInteger, mustBeNonnegative} = 0
+            end
+
+            segmentInfo = nrULSCHInfo(TBSize, TargetCodeRate);
+
+            segmentCfg.nof_layers = NumLayers;
+            segmentCfg.rv = RV;
+            segmentCfg.Nref = Nref;
+            segmentCfg.nof_ch_symbols = NumREs;
+            segmentCfg.modulation = Modulation;
+            segmentCfg.base_graph = segmentInfo.BGN;
+            segmentCfg.tbs = TBSize;
+            segmentCfg.nof_codeblocks = segmentInfo.C;
+        end % of function segmentCfg = configureSegment(...)
+    end % of methods (Static)
 end % of classdef srsPUSCHDecoder < matlab.System
