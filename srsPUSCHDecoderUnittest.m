@@ -26,6 +26,10 @@
 %   testvectorGenerationCases - Generates a test vectors according to the provided
 %                               parameters.
 %
+%   srsPUSCHDecoderUnittest Methods (TestTags = {'testmex'}):
+%
+%   mexTest  - Tests the mex wrapper of the SRSGNB PUSCH decoder.
+%
 %   srsPUSCHDecoderUnittest Methods (Access = protected):
 %
 %   addTestIncludesToHeaderFile     - Adds include directives to the test header file.
@@ -268,4 +272,88 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
 
         end % of function testvectorGenerationCases
     end % of methods (Test, TestTags = {'testvector'})
+
+    methods (Test, TestTags = {'testmex'})
+        function mexTest(obj, SymbolAllocation, PRBAllocation, mcs)
+        %mexTest  Tests the mex wrapper of the SRSGNB PUSCH decoder.
+        %   mexTest(OBJ, SYMBOLALLOCATION, PRBALLOCATION, MCS) runs a short simulation with
+        %   a PUSCH transmission over the OFDM symbols in SYMBOLALLOCATION and the PRBs in
+        %   PRBALLOCATION, using the modulation-coding scheme in MCS. The PUSCH is then
+        %   decoded using the mex wrapper of the SRSGNB C++ component. The test is considered
+        %   as passed if the transmitted and received transport blocks are equal.
+
+            import srsMatlabWrappers.phy.helpers.srsConfigureULSCHEncoder
+            import srsTest.phy.srsPUSCHDecoder
+            import srsTest.helpers.bitPack
+
+            setupsimulation(obj, SymbolAllocation, PRBAllocation, mcs);
+
+            % Fill a transport block with random bits.
+            TB = randi([0 1], obj.TransportBlockSize, 1);
+
+            % Configure the PUSCH encoder.
+            MultipleHARQProcessesLoc = obj.MultipleHARQProcesses;
+            TargetCodeRateLoc = obj.TargetCodeRate;
+            TransportBlockLength = obj.TransportBlockSize;
+            ULSCHEncoder = srsConfigureULSCHEncoder(MultipleHARQProcessesLoc, TargetCodeRateLoc);
+
+            Nref = ULSCHEncoder.LimitedBufferSize;
+            % 25344 is the maximum coded length of a code block and implies no limit on the buffer size.
+            if Nref >= 25344
+              Nref = 0;
+            end
+
+            % Configure the SRS PUSCH decoder mex.
+            ULSCHDecoder = srsPUSCHDecoder('maxCodeblockSize', obj.ulschInfo.N, ...
+                'maxSoftbuffers', 2, 'maxCodeblocks', obj.ulschInfo.C);
+
+            % Add the generated TB to the encoder.
+            setTransportBlock(ULSCHEncoder, TB, obj.HARQProcessID);
+
+            % Fill segment configuration for the decoder.
+            segmentCfg = srsPUSCHDecoder.configureSegment(obj.NumLayers, obj.nofREs, ...
+                TransportBlockLength, TargetCodeRateLoc, obj.Modulation{1}, 0, Nref);
+
+            % Fill the HARQ buffer ID.
+            HARQBufID.rnti = 1;
+            HARQBufID.harq_ack_id = obj.HARQProcessID;
+            HARQBufID.nof_codeblocks = segmentCfg.nof_codeblocks;
+
+            % Pack the transport block for comparison.
+            TBpacked = uint8(bitPack(TB));
+
+            % Nominal SNR value to add some noise.
+            snr = 20; % dB
+
+            nRVs = numel(obj.RVsequence);
+            for iRV = 1:nRVs
+                RV = obj.RVsequence(iRV);
+
+                % Call the PUSCH encoding MATLAB functions.
+                cw = ULSCHEncoder(obj.Modulation{1}, obj.NumLayers, ...
+                    obj.encodedTBLength, RV, obj.HARQProcessID);
+
+                % Even though we could have different modulations, for the purposes of this
+                % simulation, real-valued BPSK is enough to generate meaningul LLRs.
+                cwLLRs = 10 - 20 * double(cw);
+                % Add some (very little) noise.
+                cwLLRs = cwLLRs + 10 * randn(obj.encodedTBLength, 1) * 10^(-snr / 20);
+
+                % Clip and quantize the log-likelihood ratios.
+                cwLLRs(cwLLRs > 20) = 20;
+                cwLLRs(cwLLRs < -20) = -20;
+                cwLLRs = round(cwLLRs * 6); % this is codeblocks * 120 / 20
+
+                segmentCfg.RV = RV;
+                isNewData = (RV == obj.RVsequence(1));
+
+                % Decode the first transmission (it doesn't make sense to decode all
+                % of them since MATLAB flushes the decoder buffer if the CRC is OK).
+                rxTB = ULSCHDecoder(int8(cwLLRs), isNewData, segmentCfg, HARQBufID);
+                % Check that there were no errors (expected, since the SNR is very high).
+                obj.assertEqual(rxTB, TBpacked, 'Decoding errors.');
+            end
+
+        end % of function mextest
+    end % of methods (Test, TestTags = {'testmex'})
 end % of classdef srsPUSCHDecoderUnittest
