@@ -1,9 +1,5 @@
 classdef PUSCHBLER < handle
     properties
-        %Number of 10 ms frames.
-        NFrames (1, 1) double {mustBeInteger, mustBePositive} = 10
-        %SNR range in dB.
-        SNRrange (1, :) double {mustBeReal, mustBeFinite} = -2:3
         %Perfect channel estimation flag.
         PerfectChannelEstimator (1, 1) logical = true
         %Flag for displaying simulation information.
@@ -17,7 +13,7 @@ classdef PUSCHBLER < handle
         %Cyclic prefix: 'Normal' or 'Extended' (Extended CP is relevant for 60 kHz SCS only)
         CyclicPrefix = 'Normal'
         %Cell identity.
-        NCellID (1, 1) double {mustBeInteger, mustBeInRange(NCellID, 0, 1007)} = 1
+        NCellID (1, 1) double {mustBeReal, mustBeInteger, mustBeInRange(NCellID, 0, 1007)} = 1
         %PUSCH allocated PRBs.
         PRBSet = 0:51
         %PUSCH OFDM symbol allocation in each slot.
@@ -53,6 +49,8 @@ classdef PUSCHBLER < handle
     end % of properties
 
     properties (SetAccess = private)
+        %SNR range in dB.
+        SNRrange = []
         %Counter of all transmitted transport blocks.
         MaxThroughputCtr = []
         %Counter of correctly received transport blocks (MATLAB case).
@@ -148,11 +146,23 @@ classdef PUSCHBLER < handle
             bler = obj.MissedBlocksSRSCtr ./ obj.TotalBlocksCtr;
         end
 
-        function run(obj)
+        function run(obj, SNRIn, nFrames)
+            arguments
+                obj (1, 1) PUSCHBLER
+                %SNR range in dB.
+                SNRIn double {mustBeReal, mustBeFinite, mustBeVector}
+                %Number of 10 ms frames.
+                nFrames (1, 1) double {mustBeInteger, mustBePositive} = 10
+            end
+
+            % Ensure SNRIn has no repetitions and is a row vector.
+            SNRIn = unique(SNRIn);
+            SNRIn = SNRIn(:).';
+
             % Simulation Length and SNR Points.
             simParameters = struct();             % Clean simParameters structure to contain all key simulation parameters.
-            simParameters.NFrames = obj.NFrames;
-            simParameters.SNRIn = obj.SNRrange;
+            simParameters.NFrames = nFrames;
+            simParameters.SNRIn = SNRIn;
 
             % Channel Estimator Configuration.
             simParameters.PerfectChannelEstimator = obj.PerfectChannelEstimator;
@@ -630,13 +640,19 @@ classdef PUSCHBLER < handle
                 end
 
             end
+
             % Export results.
-            obj.MaxThroughputCtr = maxThroughput;
-            obj.ThroughputMATLABCtr = simThroughput;
-            obj.ThroughputSRSCtr = simThroughputSRS;
-            obj.TotalBlocksCtr = totalBlocks;
-            obj.MissedBlocksMATLABCtr = simBLER;
-            obj.MissedBlocksSRSCtr = simBLERSRS;
+            [~, repeatedIdx] = intersect(obj.SNRrange, SNRIn);
+            obj.SNRrange(repeatedIdx) = [];
+            [obj.SNRrange, sortedIdx] = sort([obj.SNRrange SNRIn]);
+
+            obj.MaxThroughputCtr = joinArrays(obj.MaxThroughputCtr, maxThroughput, repeatedIdx, sortedIdx);
+            obj.ThroughputMATLABCtr = joinArrays(obj.ThroughputMATLABCtr, simThroughput, repeatedIdx, sortedIdx);
+            obj.ThroughputSRSCtr = joinArrays(obj.ThroughputSRSCtr, simThroughputSRS, repeatedIdx, sortedIdx);
+            obj.TotalBlocksCtr = joinArrays(obj.TotalBlocksCtr, totalBlocks, repeatedIdx, sortedIdx);
+            obj.MissedBlocksMATLABCtr = joinArrays(obj.MissedBlocksMATLABCtr, simBLER, repeatedIdx, sortedIdx);
+            obj.MissedBlocksSRSCtr = joinArrays(obj.MissedBlocksSRSCtr, simBLERSRS, repeatedIdx, sortedIdx);
+
         end % of function run()
 
         function plot(obj)
@@ -682,6 +698,12 @@ end % of classdef PUSCHBLER
 
 
 % %% Local Functions
+function mixedArray = joinArrays(arrayA, arrayB, removeFromA, outputOrder)
+    arrayA(removeFromA) = [];
+    mixedArray = [arrayA; arrayB];
+    mixedArray = mixedArray(outputOrder);
+end
+
 function [cfg, segCfg] = srsPUSCHDecConfig(simParameters)
 % Creates the configuration structure for the srsPUSCHDecoder.
     pusch = simParameters.PUSCH;
