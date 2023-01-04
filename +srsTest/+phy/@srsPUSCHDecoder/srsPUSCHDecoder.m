@@ -22,6 +22,7 @@
 %   step               - Decodes one PUSCH codeword.
 %   resetCRCS          - Resets the CRC state of a softbuffer.
 %   release            - Allows reconfiguration.
+%   reset              - Clears the content of the softbuffer pool.
 %   isLocked           - Locked status (logical).
 %   configureSegment   - Static helper method for filling the SEGCONFIG input of "step".
 %
@@ -101,11 +102,7 @@ classdef srsPUSCHDecoder < matlab.System
     methods (Access = protected)
         function setupImpl(obj)
         %Creates a softbuffer pool with the given characteristics and stores its ID.
-            sbpdesc.max_codeblock_size = obj.maxCodeblockSize;
-            sbpdesc.max_softbuffers = obj.maxSoftbuffers;
-            sbpdesc.max_nof_codeblocks = obj.maxCodeblocks;
-            % Not used (for now), but we need to set it to a value larger than 0.
-            sbpdesc.expire_timeout_slots = 10;
+            sbpdesc = obj.createSoftBufferDptn;
 
             id = obj.pusch_decoder_mex('new', sbpdesc);
 
@@ -154,13 +151,57 @@ classdef srsPUSCHDecoder < matlab.System
                llrs, newData, segConfig, harqBufID);
         end % function step(...)
 
+        function resetImpl(obj)
+        % Releases the softbuffer pool and creates a new one.
+            if (obj.softbufferPoolID == 0)
+                return;
+            end
+
+            obj.pusch_decoder_mex('release', obj.softbufferPoolID);
+            setupImpl(obj);
+        end
+
         function releaseImpl(obj)
         % Releases the softbuffer pool and sets softbufferPoolID to zero.
+            if (obj.softbufferPoolID == 0)
+                return;
+            end
 
             obj.pusch_decoder_mex('release', obj.softbufferPoolID);
             obj.softbufferPoolID = 0;
         end % function releaseImpl(obj)
+
+        function s = saveObjectImpl(obj)
+        % Save all public properties.
+        % Note: At the moment we have no access to the internal memory of the MEX block and
+        % we can only save the configuration of the decoder, not its state.
+            s = saveObjectImpl@matlab.System(obj);
+        end
+
+        function loadObjectImpl(obj, s, wasInUse)
+        % Loads an srsPUSCHDecoder object from a file.
+        % Note: Due to the limitations of the mex, we can only save the configuration of
+        % the decoder, not its internal (MEX) state. Therefore, even if the object was
+        % saved in the locked state, this function returns an object with an empty
+        % softbuffer pool.
+            loadObjectImpl@matlab.System(obj, s, wasInUse);
+
+            if wasInUse
+                setupImpl(obj);
+            end
+        end
     end % of methods (Access = protected)
+
+    methods (Access = private)
+        function softbufferDptn = createSoftBufferDptn(obj)
+        %Creates a softbuffer configuration structure.
+            softbufferDptn.max_codeblock_size = obj.maxCodeblockSize;
+            softbufferDptn.max_softbuffers = obj.maxSoftbuffers;
+            softbufferDptn.max_nof_codeblocks = obj.maxCodeblocks;
+            % Not used (for now), but we need to set it to a value larger than 0.
+            softbufferDptn.expire_timeout_slots = 10;
+        end
+    end % of methods (Access = private)
 
     methods (Access = private, Static)
         %MEX function doing the actual work. See the Doxygen documentation.
