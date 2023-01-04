@@ -758,6 +758,70 @@ classdef PUSCHBLER < matlab.System
         end
     end
 
+    function s = saveObjectImpl(obj)
+        % Save all public properties.
+        s = saveObjectImpl@matlab.System(obj);
+
+        if isLocked(obj)
+            % Save child objects.
+            s.Carrier = matlab.System.saveObject(obj.Carrier);
+            s.PUSCH = matlab.System.saveObject(obj.PUSCH);
+            s.PUSCHExtension = matlab.System.saveObject(obj.PUSCHExtension);
+            s.PUSCHIndices = matlab.System.saveObject(obj.PUSCHIndices);
+            s.PUSCHIndicesInfo = matlab.System.saveObject(obj.PUSCHIndicesInfo);
+            s.Channel = matlab.System.saveObject(obj.Channel);
+            s.EncodeULSCH = matlab.System.saveObject(obj.EncodeULSCH);
+            s.DecodeULSCH = matlab.System.saveObject(obj.DecodeULSCH);
+            s.DecodeULSCHsrs = matlab.System.saveObject(obj.DecodeULSCHsrs);
+            s.SegmentCfg = matlab.System.saveObject(obj.SegmentCfg);
+
+            % Save FFT size.
+            s.Nfft = obj.Nfft;
+
+            % Save counters.
+            s.SNRrange = obj.SNRrange;
+            s.MaxThroughputCtr = obj.MaxThroughputCtr;
+            s.ThroughputMATLABCtr = obj.ThroughputMATLABCtr;
+            s.ThroughputSRSCtr = obj.ThroughputSRSCtr;
+            s.TotalBlocksCtr = obj.TotalBlocksCtr;
+            s.MissedBlocksMATLABCtr = obj.MissedBlocksMATLABCtr;
+            s.MissedBlocksSRSCtr = obj.MissedBlocksSRSCtr;
+            s.TBS = obj.TBS;
+        end
+    end % of function s = saveObjectImpl(obj)
+
+    function loadObjectImpl(obj, s, wasInUse)
+        if wasInUse
+            % Save child objects.
+            obj.Carrier = matlab.System.loadObject(s.Carrier);
+            obj.PUSCH = matlab.System.loadObject(s.PUSCH);
+            obj.PUSCHExtension = matlab.System.loadObject(s.PUSCHExtension);
+            obj.PUSCHIndices = matlab.System.loadObject(s.PUSCHIndices);
+            obj.PUSCHIndicesInfo = matlab.System.loadObject(s.PUSCHIndicesInfo);
+            obj.Channel = matlab.System.loadObject(s.Channel);
+            obj.EncodeULSCH = matlab.System.loadObject(s.EncodeULSCH);
+            obj.DecodeULSCH = matlab.System.loadObject(s.DecodeULSCH);
+            obj.DecodeULSCHsrs = matlab.System.loadObject(s.DecodeULSCHsrs);
+            obj.SegmentCfg = matlab.System.loadObject(s.SegmentCfg);
+
+            % Save FFT size.
+            obj.Nfft = s.Nfft;
+
+            % Save counters.
+            obj.SNRrange = s.SNRrange;
+            obj.MaxThroughputCtr = s.MaxThroughputCtr;
+            obj.ThroughputMATLABCtr = s.ThroughputMATLABCtr;
+            obj.ThroughputSRSCtr = s.ThroughputSRSCtr;
+            obj.TotalBlocksCtr = s.TotalBlocksCtr;
+            obj.MissedBlocksMATLABCtr = s.MissedBlocksMATLABCtr;
+            obj.MissedBlocksSRSCtr = s.MissedBlocksSRSCtr;
+            obj.TBS = s.TBS;
+        end
+
+        % Load all public properties.
+        loadObjectImpl@matlab.System(obj, s, wasInUse);
+    end % of function s = saveObjectImpl(obj)
+
 end % of methods (Access = protected)
 end % of classdef PUSCHBLER
 
