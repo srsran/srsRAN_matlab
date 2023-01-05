@@ -24,16 +24,20 @@ classdef PUSCHBLER < matlab.System
         %PUSCH allocated PRBs.
         PRBSet = 0:51
         %PUSCH OFDM symbol allocation in each slot.
-        SymbolAllocation = [0, 13]
+        SymbolAllocation = [0, 14]
         %PUSCH mapping type ('A'(slot-wise), (1)B'(non slot-wise)).
         MappingType (1, 1) char {mustBeMember(MappingType, ['A', 'B'])} = 'A'
         %Radio network temporary identifier (0,...,65535),
         RNTI (1, 1) double {mustBeReal, mustBeInteger, mustBeInRange(RNTI, 0, 65535)} = 1
         %Number of PUSCH transmission layers.
         NumLayers (1, 1) double {mustBeReal, mustBeInteger, mustBeInRange(NumLayers, 1, 4)} = 1
-        %Modulation scheme.
+        %Modulation Coding Scheme table.
+        MCSTable (1, :) char {mustBeMember(MCSTable, {'qam64', 'qam256', 'qam64LowSE', 'custom'})} = 'qam64'
+        %Modulation Coding Scheme index (inactive if "MCSTable == 'custom'").
+        MCSIndex (1, 1) double {mustBeReal, mustBeInteger, mustBeInRange(MCSIndex, 0, 28)} = 0
+        %Modulation scheme (only when "MCSTable == 'custom'").
         Modulation (1, :) char {mustBeMember(Modulation, {'pi/2-BPSK', 'QPSK', '16QAM', '64QAM', '256QAM'})} = 'QPSK'
-        %Target code rate.
+        %Target code rate (only when "MCSTable == 'custom'").
         TargetCodeRate (1, 1) double {mustBeReal, mustBeInRange(TargetCodeRate, 0, 1, 'exclusive')} = 193 / 1024
         %Mapping type A only: First DM-RS symbol position (2, 3).
         DMRSTypeAPosition (1, 1) double {mustBeReal, mustBeMember(DMRSTypeAPosition, [2, 3])} = 2
@@ -44,16 +48,21 @@ classdef PUSCHBLER < matlab.System
         %DM-RS configuration type (1, 2).
         DMRSConfigurationType (1, 1) double {mustBeReal, mustBeMember(DMRSConfigurationType, [1, 2])} = 1
         %Channel delay profile ('AWGN'(no delay), 'TDL-A'(Indoor hotspot model)).
-        DelayProfile (1, :) char {mustBeMember(DelayProfile, {'AWGN', 'TDL-A'})} = 'TDL-A'
+        DelayProfile (1, :) char {mustBeMember(DelayProfile, {'AWGN', 'TDL-A'})} = 'AWGN'
         %TDL-A delay profile only: Delay spread in seconds.
         DelaySpread (1, 1) double {mustBeReal, mustBeNonnegative} = 30e-9
         %TDL-A delay profile only: Maximum Doppler shift in hertz.
-        MaximumDopplerShift (1, 1) double {mustBeReal, mustBeNonnegative} = 5
+        MaximumDopplerShift (1, 1) double {mustBeReal, mustBeNonnegative} = 0
         %HARQ flag: true for enabling retransmission with RV sequence [0, 2, 3, 1], false for no retransmissions.
         EnableHARQ (1, 1) logical = false
         %PUSCH decoder type ('matlab', 'srs' (requires mex), 'both')
         DecoderType (1, :) char {mustBeMember(DecoderType, {'matlab', 'srs', 'both'})} = 'matlab'
     end % of properties (Nontunable)
+
+    properties % Tunable
+        %Quick-simulation flag: set to true to stop each point after 100 failed transport blocks.
+        QuickSimulation (1, 1) logical = true
+    end % of properties Tunable
 
     properties (SetAccess = private)
         %SNR range in dB.
@@ -75,6 +84,8 @@ classdef PUSCHBLER < matlab.System
     end % of properties (SetAccess = private)
 
     properties (Dependent)
+        %Maximum achievable throughput (in Mbps).
+        MaxThroughput
         %Throughput in Mbps (MATLAB case).
         ThroughputMATLAB
         %Throughput in Mbps (SRS case).
@@ -178,6 +189,10 @@ classdef PUSCHBLER < matlab.System
             bler = obj.MissedBlocksSRSCtr ./ obj.TotalBlocksCtr;
         end
 
+        function maxTP = get.MaxThroughput(obj)
+            maxTP = obj.TBS * 1e-3;
+        end
+
         function plot(obj)
         %Display the measured throughput and BLER.
 
@@ -198,26 +213,30 @@ classdef PUSCHBLER < matlab.System
             legendstrings = {};
 
             if plotMATLABDecoder
-                plot(obj.SNRrange, obj.ThroughputMATLABCtr * 100 ./ obj.MaxThroughputCtr, 'o-.')
+                plot(obj.SNRrange, obj.ThroughputMATLABCtr * 100 ./ obj.MaxThroughputCtr, 'o-.', ...
+                    'LineWidth', 1)
                 legendstrings{end + 1} = 'MATLAB';
             end
             if plotSRSDecoder
                 hold on;
-                plot(obj.SNRrange, obj.ThroughputSRSCtr * 100 ./ obj.MaxThroughputCtr, '^-.')
+                plot(obj.SNRrange, obj.ThroughputSRSCtr * 100 ./ obj.MaxThroughputCtr, '^-.', ...
+                    'LineWidth', 1, 'Color', [0.8500 0.3250 0.0980])
                 legendstrings{end + 1} = 'SRS';
                 hold off;
             end
-            xlabel('SNR (dB)'); ylabel('Throughput (%)'); grid on; legend(legendstrings);
+            xlabel('SNR (dB)'); ylabel('Throughput (%)'); grid on; legend(legendstrings, 'Location', 'northwest');
             title(titleString);
 
             figure;
             set(gca, "YScale", "log")
             if plotMATLABDecoder
-                semilogy(obj.SNRrange, obj.MissedBlocksMATLABCtr ./ obj.TotalBlocksCtr, 'o-.')
+                semilogy(obj.SNRrange, obj.MissedBlocksMATLABCtr ./ obj.TotalBlocksCtr, 'o-.', ...
+                    'LineWidth', 1)
             end
             if plotSRSDecoder
                 hold on;
-                semilogy(obj.SNRrange, obj.MissedBlocksSRSCtr ./ obj.TotalBlocksCtr, '^-.')
+                semilogy(obj.SNRrange, obj.MissedBlocksSRSCtr ./ obj.TotalBlocksCtr, '^-.', ...
+                    'LineWidth', 1, 'Color', [0.8500 0.3250 0.0980])
                 hold off;
             end
             xlabel('SNR (dB)'); ylabel('BLER'); grid on; legend(legendstrings);
@@ -227,6 +246,14 @@ classdef PUSCHBLER < matlab.System
 
     methods (Access = protected)
         function setupImpl(obj)
+
+            % Expand modulation and coding scheme.
+            if ~strcmp(obj.MCSTable, 'custom')
+                [cc, mm] = srsMatlabWrappers.phy.helpers.srsExpandMCS(obj.MCSIndex, obj.MCSTable);
+                obj.TargetCodeRate = cc / 1024;
+                mString = srsMatlabWrappers.phy.helpers.srsGetModulation(mm);
+                obj.Modulation = mString{1};
+            end
 
             % Carrier and PUSCH Configuration.
             %
@@ -302,15 +329,16 @@ classdef PUSCHBLER < matlab.System
             channel.NumReceiveAntennas = obj.NRxAnts;
 
             % Assign simulation channel parameters and waveform sample rate to the object
-            channel.MaximumDopplerShift = obj.MaximumDopplerShift;
             channel.SampleRate = waveformInfo.SampleRate;
             channel.DelaySpread = obj.DelaySpread;
 
             if strcmp(obj.DelayProfile, 'AWGN')
                 channel.DelayProfile = 'custom';
+                channel.MaximumDopplerShift = 0;
                 channel.PathDelays = 0;
                 channel.AveragePathGains = 0;
             else
+                channel.MaximumDopplerShift = obj.MaximumDopplerShift;
                 channel.DelayProfile = obj.DelayProfile;
             end
 
@@ -346,6 +374,9 @@ classdef PUSCHBLER < matlab.System
         end % of setupImpl
 
         function validatePropertiesImpl(obj)
+            if (strcmp(obj.MCSTable, 'qam256') && (obj.MCSIndex == 28))
+                error('The maximum allowed MCS index for MCS Table ''qam256'' is 27.');
+            end
             tmp = struct();
             tmp.PUSCH.NumLayers = obj.NumLayers;
             tmp.NTxAnts = obj.NTxAnts;
@@ -359,7 +390,7 @@ classdef PUSCHBLER < matlab.System
             obj (1, 1) PUSCHBLER
             %SNR range in dB.
             SNRIn double {mustBeReal, mustBeFinite, mustBeVector}
-            %Number of 10 ms frames.
+            %Number of 10-ms frames.
             nFrames (1, 1) double {mustBeInteger, mustBePositive} = 10
         end
 
@@ -404,7 +435,7 @@ classdef PUSCHBLER < matlab.System
         displayDiagnostics = obj.DisplayDiagnostics;
         displaySimulationInformation = obj.DisplaySimulationInformation;
 
-        useMATLABDecoder = (strcmp(decoderType, 'matlab') || strcmp(decoderType,' both'));
+        useMATLABDecoder = (strcmp(decoderType, 'matlab') || strcmp(decoderType, 'both'));
         useSRSDecoder = (strcmp(decoderType, 'srs') || strcmp(decoderType, 'both'));
 
         % Array to store the simulation throughput and BLER for all SNR points.
@@ -414,6 +445,8 @@ classdef PUSCHBLER < matlab.System
         % Array to store the simulation throughput and BLER for all SNR points.
         simThroughputSRS = zeros(length(SNRIn), 1);
         simBLERSRS = zeros(length(SNRIn), 1);
+
+        quickSim = obj.QuickSimulation;
 
         % %%% Simulation loop.
 
@@ -601,7 +634,8 @@ classdef PUSCHBLER < matlab.System
                     % scheme.
                     dmrsLayerSymbols = nrPUSCHDMRS(carrier, puschNonCodebook);
                     dmrsLayerIndices = nrPUSCHDMRSIndices(carrier, puschNonCodebook);
-                    [estChannelGrid, noiseEst] = nrChannelEstimate(carrier, rxGrid, dmrsLayerIndices, dmrsLayerSymbols, 'CDMLengths', pusch.DMRS.CDMLengths);
+                    [estChannelGrid, noiseEst] = nrChannelEstimate(carrier, rxGrid, ...
+                        dmrsLayerIndices, dmrsLayerSymbols, 'CDMLengths', pusch.DMRS.CDMLengths);
                 end
 
                 % Get PUSCH resource elements from the received grid.
@@ -683,7 +717,7 @@ classdef PUSCHBLER < matlab.System
                 end
 
                 % To speed the simulation up, we stop after 100 missed transport blocks.
-                if (~useMATLABDecoder || (simBLER(snrIdx) >= 100)) && (~useSRSDecoder || (simBLERSRS(snrIdx) >= 100))
+                if quickSim && (~useMATLABDecoder || (simBLER(snrIdx) >= 100)) && (~useSRSDecoder || (simBLERSRS(snrIdx) >= 100))
                     break;
                 end
             end
@@ -753,6 +787,22 @@ classdef PUSCHBLER < matlab.System
                 flag = (obj.MappingType == 'B');
             case {'DelaySpread', 'MaximumDopplerShift'}
                 flag = strcmp(obj.DelayProfile, 'AWGN');
+            case {'ThroughputMATLABCtr', 'MissedBlocksMATLABCtr'}
+                flag = isempty(obj.SNRrange) || strcmp(obj.DecoderType, 'srs');
+            case {'ThroughputSRSCtr', 'MissedBlocksSRSCtr'}
+                flag = isempty(obj.SNRrange) || strcmp(obj.DecoderType, 'matlab');
+            case {'SNRrange', 'MaxThroughputCtr', 'TotalBlocksCtr'}
+                flag = isempty(obj.SNRrange);
+            case {'Modulation', 'TargetCodeRate'}
+                flag = ~strcmp(obj.MCSTable, 'custom') && ~obj.isLocked;
+            case 'MCSIndex'
+                flag = strcmp(obj.MCSTable, 'custom');
+            case {'TBS', 'MaxThroughput'}
+                flag = isempty(obj.TBS);
+            case {'ThroughputMATLAB', 'BlockErrorRateMATLAB'}
+                flag = isempty(obj.ThroughputMATLABCtr) || strcmp(obj.DecoderType, 'srs');
+            case {'ThroughputSRS', 'BlockErrorRateSRS'}
+                flag = isempty(obj.ThroughputSRSCtr) || strcmp(obj.DecoderType, 'matlab');
             otherwise
                 flag = false;
         end
