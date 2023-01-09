@@ -1,21 +1,21 @@
-%srsCSIRSUnittest Unit tests for NZP-CSI-RS processor functions.
+%srsNZPCSIRSGeneratorUnittest Unit tests for NZP-CSI-RS processor functions.
 %   This class implements unit tests for the NZP-CSI-RS processor functions using the
 %   matlab.unittest framework. The simplest use consists in creating an object with
-%       testCase = srsCSIRSUnittest
+%       testCase = srsNZPCSIRSGeneratorUnittest
 %   and then running all the tests with
 %       testResults = testCase.run
 %
-%   srsCSIRSUnittest Properties (Constant):
+%   srsNZPCSIRSGeneratorUnittest Properties (Constant):
 %
 %   srsBlock      - The tested block (i.e., 'csi_rs_processor').
 %   srsBlockType  - The type of the tested block, including layer
 %                   (i.e., 'phy/upper/signal_processors').
 %
-%   srsCSIRSUnittest Properties (ClassSetupParameter):
+%   srsNZPCSIRSGeneratorUnittest Properties (ClassSetupParameter):
 %
 %   outputPath - Path to the folder where the test results are stored.
 %
-%   srsCSIRSUnittest Properties (TestParameter):
+%   srsNZPCSIRSGeneratorUnittest Properties (TestParameter):
 %
 %   RowNumber     - CSI-RS table row number (0, 1, ..., 12).
 %   Numerology    - Defines the subcarrier spacing (0, 1, 2, 3, 4).
@@ -24,22 +24,22 @@
 %   k_0           - Frequency domain location reference 0.
 %   l_0           - Time domain location reference 0.
 %  
-%   srsCSIRSUnittest Methods (TestTags = {'testvector'}):
+%   srsNZPCSIRSGeneratorUnittest Methods (TestTags = {'testvector'}):
 %
 %   testvectorGenerationCases - Generates a test vectors according to the provided
 %                               parameters.
 %
-%   srsCSIRSUnittest Methods (Access = protected):
+%   srsNZPCSIRSGeneratorUnittest Methods (Access = protected):
 %
 %   addTestIncludesToHeaderFile     - Adds include directives to the test header file.
 %   addTestDefinitionToHeaderFile   - Adds details (e.g., type/variable declarations)
 %                                     to the test header file.
 %
 %  See also matlab.unittest.
-classdef srsCSIRSUnittest < srsTest.srsBlockUnittest
+classdef srsNZPCSIRSGeneratorUnittest < srsTest.srsBlockUnittest
     properties (Constant)
         %Name of the tested block.
-        srsBlock = 'csi_rs_processor'
+        srsBlock = 'nzp_csi_rs_generator'
 
         %Type of the tested block.
         srsBlockType = 'phy/upper/signal_processors'
@@ -227,27 +227,27 @@ end % of classdef srsCSIRSUnittest
 
 function DensityStr = matlab2srsCSIRSDensity (Density)
 % matlab2srsCSIRSDensity Generates the Density string to be used in the test header file.
-    DensityStr = 'csi_rs_freq_density::';
+    DensityStr = 'csi_rs_freq_density_type::';
     if (strcmp(Density, 'one'))
-        DensityStr = [DensityStr 'ONE'];
+        DensityStr = [DensityStr 'one'];
     elseif (strcmp(Density, 'dot5odd'))
-        DensityStr = [DensityStr 'DOT5_ODD_RB'];
+        DensityStr = [DensityStr 'dot5_odd_RB'];
     elseif (strcmp(Density, 'dot5even'))
-        DensityStr = [DensityStr 'DOT5_EVEN_RB'];
+        DensityStr = [DensityStr 'dot5_even_RB'];
     elseif (strcmp(Density, 'three'))
-        DensityStr = [DensityStr 'THREE'];
+        DensityStr = [DensityStr 'three'];
     end
 end
 
 function CDMStr = matlab2srsCDMType(CDMType)
  % matlab2srsCDMType Generates the CDM string to be used in the test header file.
     if (strcmp(CDMType, 'FD-CDM2'))
-        CDMStr = 'csi_rs_cdm_type::FD_CDM2';
+        CDMStr = 'csi_rs_cdm_type::fd_CDM2';
     elseif (strcmp(CDMType, 'noCDM'))
-        CDMStr = 'csi_rs_cdm_type::NO_CDM';
+        CDMStr = 'csi_rs_cdm_type::no_CDM';
     elseif (strcmp(CDMType, 'CDM4'))
-        CDMStr = 'csi_rs_cdm_type::CDM4_FD2_TD2';
+        CDMStr = 'csi_rs_cdm_type::cdm4_FD2_TD2';
     else
-        CDMStr = 'csi_rs_cdm_type::CDM8_FD2_TD4';
+        CDMStr = 'csi_rs_cdm_type::cdm8_FD2_TD4';
     end
 end

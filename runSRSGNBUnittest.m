@@ -49,8 +49,6 @@ function unittestClass = name2Class(name)
     switch name
         case 'channel_equalizer'
             unittestClass = ?srsChEqualizerUnittest;
-        case 'csi_rs_processor'
-            unittestClass = ?srsCSIRSUnittest;
         case 'demodulation_mapper'
             unittestClass = ?srsDemodulationMapperUnittest;
         case 'dft_processor'
@@ -75,6 +73,8 @@ function unittestClass = name2Class(name)
             unittestClass = ?srsLDPCSegmenterUnittest;
         case 'modulation_mapper'
             unittestClass = ?srsModulationMapperUnittest;
+        case 'nzp_csi_rs_generator'
+            unittestClass = ?srsNZPCSIRSGeneratorUnittest;
         case 'ofdm_demodulator'
             unittestClass = ?srsOFDMDemodulatorUnittest;
         case 'ofdm_modulator'
