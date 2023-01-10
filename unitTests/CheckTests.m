@@ -6,7 +6,9 @@
 %   1. the class is an implementation of the main abstract test class;
 %   2. all mandatory properties and methods are defined;
 %   3. an object of the class can be instantiated correctly;
-%   4. the test has the 'testvector' tag.
+%   4. the test has the 'testvector' tag;
+%   5. an example test vector is generated and stored correctly;
+%   6. the mex test (if it exists) runs properly.
 %
 %   CheckTests Properties (Constant):
 %
@@ -24,11 +26,15 @@
 %
 %   classSetup - Test setup.
 %
-%   CheckTests Methods (Test):
+%   CheckTests Methods (Test, TestTags = {'testvector'}):
 %
-%   runTest   - Main test method.
-%   checkList - Secondary test to ensure the list of SRS blocks is not
-%               over-populated.
+%   runDefinitionTest  - Checks that test classes are properly defined.
+%   runVectorTest      - Checks that the testvector functionalities of the test classes
+%                        are correct.
+%   runMexTest         - Checks that the testmex functionalities of the test classes
+%                        are correct.
+%   checkList          - Secondary test to ensure the list of SRS blocks is not
+%                        over-populated.
 %
 %   Example
 %      runtests('CheckTests')
@@ -89,28 +95,24 @@ classdef CheckTests < matlab.unittest.TestCase
         end
     end
 
-    methods (Test)
-        function runTest(obj, testName)
-        %runTest carries out the test as described in the class help.
+    methods (Test, TestTags = {'testvector'})
+        function runDefinitionTest(obj, testName)
+        %runDefinitionTest checks that the test class with the given name is properly defined.
 
             import matlab.unittest.constraints.IsSubsetOf
-            import matlab.unittest.constraints.IsFile
-            import matlab.unittest.TestSuite
-            import matlab.unittest.parameters.Parameter
 
             className = testName(1:end-2);
             classMeta = meta.class.fromName(className);
-
-            % Check whether test is inherited from srsBlockUnittest
+            % Check whether test is inherited from srsBlockUnittest.
             supClasses = {classMeta.SuperclassList(:).Name};
             msg = sprintf('Class %s does not inherit from srsBlockUnittest.', className);
             obj.assertThat({'srsTest.srsBlockUnittest'}, IsSubsetOf(supClasses), msg);
 
-            % Check whether the test is abstract
+            % Check whether the test is abstract.
             msg = sprintf('Class %s is abstract.', className);
             obj.assertFalse(classMeta.Abstract, msg);
 
-            % Check whether test has the mandatory properties
+            % Check whether test has the mandatory properties.
             props = {classMeta.PropertyList(:).Name};
             [blockFlag, blockIdx] = ismember('srsBlock', props);
             [typeFlag, typeIdx] = ismember('srsBlockType', props);
@@ -118,18 +120,35 @@ classdef CheckTests < matlab.unittest.TestCase
             msg = sprintf('Class %s misses one or more mandatory properties.', className);
             obj.assertTrue(blockFlag && typeFlag && pathFlag, msg);
 
-            % Check whether test has the mandatory methods
+            % Check whether test has the mandatory methods.
             meths = {classMeta.MethodList(:).Name};
             msg = sprintf('Class %s misses one or more mandatory methods.', className);
             obj.assertThat({'addTestDefinitionToHeaderFile', 'addTestIncludesToHeaderFile'}, ...
                 IsSubsetOf(meths), msg);
 
-            % Check whether the block and block type are correct
+            % Check whether the block and block type are correct.
             blockVal = classMeta.PropertyList(blockIdx).DefaultValue;
             typeVal = classMeta.PropertyList(typeIdx).DefaultValue;
             msg = sprintf('Class %s refers to invalid block ''%s/%s''.',  ...
                 className, typeVal, blockVal);
             obj.assertThat({[typeVal '/' blockVal]}, IsSubsetOf(obj.fullBlocks), msg);
+        end % of function runDefinitionTest(obj, testName)
+
+        function runVectorTest(obj, testName)
+        %runVectorTest checks that the testvector functionalities of the test class with
+        %   the given name are correct.
+
+            import matlab.unittest.constraints.IsFile
+            import matlab.unittest.TestSuite
+            import matlab.unittest.parameters.Parameter
+
+            className = testName(1:end-2);
+            classMeta = meta.class.fromName(className);
+
+            % Get the block name associated to the test.
+            props = {classMeta.PropertyList(:).Name};
+            [~, blockIdx] = ismember('srsBlock', props);
+            blockVal = classMeta.PropertyList(blockIdx).DefaultValue;
 
             % Check whether an object of class testName can be instantiated.
             constructor = str2func(className);
@@ -156,18 +175,6 @@ classdef CheckTests < matlab.unittest.TestCase
                 obj.assertFail(msg);
             end
 
-            % Check whether the class testes a mex wrapper.
-            taggedMEX = TestSuite.fromClass(classMeta, 'Tag', 'testmex', ...
-                'ExternalParameters', extParams);
-            if ~isempty(taggedMEX)
-                try
-                    assertSuccess(taggedMEX(1).run());
-                catch
-                    %TODO: change to assertFail
-                    fprintf('The mex wrapper test for %s couldn''t run.', className);
-                end
-            end
-
             % Check whether the header and vector test files are generated.
             fileName = fullfile(workDir, [blockVal '_test_data']);
             msg = sprintf('Class %s cannot create the test vector header file.', className);
@@ -189,7 +196,7 @@ classdef CheckTests < matlab.unittest.TestCase
                 blockVal, rtest(1).TestClass, className);
             obj.assertMatches(rtest(1).TestClass, className, msg);
 
-        end % of function runTest(obj, testName)
+        end % of function runVectorTest(obj, testName)
 
         function checkList(obj)
         %checkList checks that all blocks in listSRSblocks have a test.
@@ -207,10 +214,39 @@ classdef CheckTests < matlab.unittest.TestCase
                 end
             end % of for iBlock
         end % of function checkList
-    end % of methods (Test)
+    end % of methods (Test, TestTags = {'testvector'})
+
+    methods (Test, TestTags = {'testmex'})
+        function runMexTest(obj, testName)
+        %runMexTest checks that the testmex functionalities of the test class with
+        %   the given name are correct.
+
+            import matlab.unittest.TestSuite
+
+            className = testName(1:end-2);
+            classMeta = meta.class.fromName(className);
+
+            % Get the block name associated to the test.
+            props = {classMeta.PropertyList(:).Name};
+            [~, blockIdx] = ismember('srsBlock', props);
+            blockVal = classMeta.PropertyList(blockIdx).DefaultValue;
+
+            % Check whether the class tests a mex wrapper.
+            taggedMEX = TestSuite.fromClass(classMeta, 'Tag', 'testmex');
+            obj.assumeNotEmpty(taggedMEX);
+
+            try
+                assertSuccess(taggedMEX(1).run());
+            catch
+                msg = sprintf('The mex wrapper test for %s couldn''t run.', className);
+                obj.assertFail(msg);
+            end
+
+        end % of function runVectorTest(obj, testName)
+    end % of methods (Test, TestTags = {'testmex'})
 end % of classdef CheckTests
 
-%hasDataFile Checks whether a test has an associated data file
+%hasDataFile Checks whether a test has an associated data file.
 function flag = hasDataFile(workDir, blockVal)
     flag = false;
 
