@@ -154,9 +154,9 @@ std::unique_ptr<srsgnb::pusch_decoder> create_pusch_decoder()
 {
   using namespace srsgnb;
 
-  std::shared_ptr<crc_calculator_factory> crc_calculator_factory = create_crc_calculator_factory_sw();
+  std::shared_ptr<crc_calculator_factory> crc_calculator_factory = create_crc_calculator_factory_sw("auto");
 
-  std::shared_ptr<ldpc_decoder_factory> ldpc_decoder_factory = create_ldpc_decoder_factory_sw("generic");
+  std::shared_ptr<ldpc_decoder_factory> ldpc_decoder_factory = create_ldpc_decoder_factory_sw("auto");
 
   std::shared_ptr<ldpc_rate_dematcher_factory> ldpc_rate_dematcher_factory = create_ldpc_rate_dematcher_factory_sw();
 
