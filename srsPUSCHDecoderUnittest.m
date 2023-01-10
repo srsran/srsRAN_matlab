@@ -62,7 +62,7 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
         PRBAllocation = {0, 1}
 
         %Modulation and coding scheme index.
-        mcs = num2cell(0:27)
+        mcs = num2cell(0:28)
     end
 
     properties (Constant, Hidden)
@@ -76,7 +76,7 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
         NStartBWP = 0
         NSizeBWP = srsPUSCHDecoderUnittest.NSizeGrid
         % MCS table.
-        mcsTable = 'qam256'
+        mcsTable = 'qam64'
         % Multiple HARQ processes flag: true if active, false is only one process allowed.
         MultipleHARQProcesses = true
         % Redundancy version sequence.
@@ -175,8 +175,8 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
 
             % Get the encoded TB length.
             [PUSCHIndices, PUSCHInfo] = nrPUSCHIndices(carrier, pusch);
-            obj.nofREs = length(PUSCHIndices);
-            obj.encodedTBLength = obj.nofREs * Qm;
+            obj.nofREs = PUSCHInfo.Gd;
+            obj.encodedTBLength = PUSCHInfo.G;
 
             % Compute the transport block size.
             obj.TransportBlockSize = nrTBS(ModulationLoc, obj.NumLayers, ...
