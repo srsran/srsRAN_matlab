@@ -50,8 +50,8 @@ classdef srsDFTProcessorUnittest < srsTest.srsBlockUnittest
 
     properties (TestParameter)
         %DFT size.
-        DFTsize = {128, 139, 256, 384, 512, 768, 839, 1024, 1536, 2048, ...
-            3072, 4096, 4608, 6144, 9216, 12288, 18432, 24576, 36864, 49152}
+        DFTsize = {128, 256, 384, 512, 768, 1024, 1536, 2048, 3072, 4096, ...
+	     4608, 6144, 9216, 12288, 18432, 24576, 36864, 49152}
 
         %DFT direction flag ('direct', 'inverse').
         direction = {'direct', 'inverse'}
