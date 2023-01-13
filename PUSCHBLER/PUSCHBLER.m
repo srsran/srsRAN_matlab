@@ -690,10 +690,7 @@ classdef PUSCHBLER < matlab.System
                     % Decode the UL-SCH transport channel with the SRS decoder.
                     %
                     % First, quantize the LLRs.
-                    llrsTmp = ulschLLRs;
-                    llrsTmp(llrsTmp > 20) = 20;
-                    llrsTmp(llrsTmp < -20) = -20;
-                    ulschLLRsInt8 = int8(llrsTmp * 6);
+                    ulschLLRsInt8 = quantize(ulschLLRs, pusch.Modulation);
 
                     % Set the RV.
                     segmentCfg.rv = harqEntity.RedundancyVersion;
@@ -904,6 +901,27 @@ function [cfg, segCfg] = srsPUSCHDecConfig(carrier, pusch, puschextra)
     segCfg.base_graph = segmentInfo.BGN;
     segCfg.tbs = trBlkSize;
     segCfg.nof_codeblocks = segmentInfo.C;
+end
+
+function softBitsQuant = quantize(softBits, mod)
+%Soft-bit quantization.
+    rangeLimitInt = 120;
+    switch mod
+        case {'BPSK', 'pi/2-BPSK', 'QPSK'}
+            rangeLimitFloat = 24;
+        case '16QAM'
+            rangeLimitFloat = 20;
+        case '64QAM'
+            rangeLimitFloat = 20;
+        case '256QAM'
+            rangeLimitFloat = 20;
+        otherwise
+            error('srsDemodulator:Unknown constellation.');
+    end
+    softBitsQuant = softBits;
+    clipIdx = (abs(softBits) > rangeLimitFloat);
+    softBitsQuant(clipIdx) = rangeLimitFloat * sign(softBitsQuant(clipIdx));
+    softBitsQuant = round(softBitsQuant * rangeLimitInt / rangeLimitFloat);
 end
 
 function validateNumLayers(simParameters)
