@@ -82,13 +82,13 @@ function softBitsQuant = quantize(softBits, mod)
     rangeLimitInt = 120;
     switch mod
         case {'BPSK', 'pi/2-BPSK', 'QPSK'}
-            rangeLimitFloat = 600;
+            rangeLimitFloat = 24;
         case '16QAM'
-            rangeLimitFloat = 300;
+            rangeLimitFloat = 20;
         case '64QAM'
-            rangeLimitFloat = 150;
+            rangeLimitFloat = 20;
         case '256QAM'
-            rangeLimitFloat = 90;
+            rangeLimitFloat = 20;
         otherwise
             error('srsDemodulator:Unknown constellation.');
     end
