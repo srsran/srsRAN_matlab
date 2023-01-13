@@ -1,3 +1,108 @@
+%PUSCHBLER PUSCH block error rate and throughput simulator.
+%   PUSCHSIM = PUSCHBLER creates a PUSCH simulator object, PUSCHSIM. This object
+%   simulates a PUSCH transmission according to the specified setup (see list of
+%   PUSCHBLER properties below).
+%
+%   Step method syntax
+%
+%   step(PUSCHSIM, SNRIN) runs a PUSCH simulation corresponding to ten 10-ms
+%   frames for each one of the SNR values (dB) specified in SNRIN (a real-valued array).
+%   When the simulation is over, the results will be available as properties of
+%   the PUSCHSIM object (see below).
+%
+%   step(PUSCHSIM, SNRIN, NFRAMES) runs simulations corresponding to NFRAMES 10-ms
+%   frames. Setting parameter QuickSimulation to true, each simulated point is
+%   stopped earlier when reaching 100 failed transport block transmissions.
+%
+%   Being a MATLAB system object, the PUSCHSIM object may be called directly as
+%   a function instead of using the step method. For example, step(PUSCHSIM, SNRIN)
+%   is equivalent to PUSCHSIM(SNRIN).
+%
+%   Note: Successive calls of the step method will result in a combined set
+%   of simulation results spanning all the provided SNR values (common SNR values
+%   will be overwritten by the last call of the step method). Call the reset
+%   method to start a new simulation from scratch without changing the parameters.
+%
+%   Note: Calling the step method locks the object (the locked status can be
+%   verified with the logical method isLocked). Once the object is locked,
+%   simulation parameters cannot be changed (unless they are marked as tunable)
+%   until the release method is called. It is worth mentioning that releasing
+%   a PUSCHBLER object implies resetting the simulation results.
+%
+%   Note: PUSCHBLER objects can be saved and loaded normally as all MATLAB objects.
+%   Saving an unlocked object only stores the simulation configuration. Saving
+%   a locked object also stores all simulation results so that the simulation
+%   can be resumed after loading the object.
+%
+%   PUSCHBLER methods:
+%
+%   step        - Runs a PUSCH simulation (see above).
+%   release     - Allows property value changes (implies reset).
+%   clone       - Creates PUSCHBLER object with same property values.
+%   isLocked    - Locked status (logical).
+%   reset       - Resets simulated data.
+%   plot        - Plots throughput and BLER curves (if simulated data are present).
+%
+%   PUSCHBLER properties (all nontunable, unless otherwise specified):
+%
+%   NTxAnts                      - Number of transmit antennas (temporarily
+%                                  constant and fixed to 1).
+%   NRxAnts                      - Number of receive antennas (temporarily
+%                                  constant and fixed to 1).
+%   PerfectChannelEstimator      - Perfect channel estimation flag.
+%   DisplaySimulationInformation - Flag for displaying simulation information.
+%   DisplayDiagnostics           - Flag for displaying simulation diagnostics.
+%   NSizeGrid                    - Bandwidth as a number of resource blocks.
+%   SubcarrierSpacing            - Subcarrier spacing in kHz.
+%   CyclicPrefix                 - Cyclic prefix: 'Normal' or 'Extended'
+%                                  (Extended CP is relevant for 60 kHz SCS only).
+%   NCellID                      - Cell identity.
+%   PRBSet                       - PUSCH allocated PRBs (specify as an array, e.g. 0:51).
+%   SymbolAllocation             - PUSCH OFDM symbol allocation.
+%   MappingType                  - PUSCH mapping type ('A'(slot-wise), 'B'(non slot-wise)).
+%   RNTI                         - Radio network temporary identifier (0...65535).
+%   NumLayers                    - Number of PUSCH transmission layers (1...4).
+%   MCSTable                     - Modulation Coding Scheme table.
+%   MCSIndex                     - Modulation Coding Scheme index
+%                                  (inactive if "MCSTable == 'custom'").
+%   Modulation                   - Modulation scheme (inactive if "MCSTable == 'custom'").
+%   TargetCodeRate               - Target code rate (inactive if "MCSTable == 'custom'").
+%   DMRSTypeAPosition            - First DM-RS symbol position (2, 3)
+%                                  (relevant only for mapping type A).
+%   DMRSLength                   - Number of front-loaded DM-RS symbols
+%                                  (1(single symbol), 2(double symbol)).
+%   DMRSAdditionalPosition       - Additional DM-RS symbol positions (0...3).
+%   DMRSConfigurationType        - DM-RS configuration type (1, 2).
+%   DelayProfile                 - Channel delay profile ('AWGN'(no delay, no Doppler),
+%                                  'TDL-A'(indoor hotspot model)).
+%   DelaySpread                  - Delay spread in seconds (TDL-A delay profile only)
+%   MaximumDopplerShift          - Maximum Doppler shift in hertz (TDL-A delay profile only)
+%   EnableHARQ                   - HARQ flag: true for enabling retransmission with
+%                                  RV sequence [0, 2, 3, 1], false for no retransmissions.
+%   DecoderType                  - PUSCH decoder type ('matlab', 'srs' (requires mex), 'both')
+%   QuickSimulation              - Quick-simulation flag: set to true to stop
+%                                  each point after 100 failed transport blocks (tunable).
+%
+%   When the simulation is over, the object allows access to the following
+%   results properties.
+%
+%   SNRrange              - Simulated SNR range in dB.
+%   MaxThroughputCtr      - Counter of transmitted transport blocks.
+%   ThroughputMATLABCtr   - Counter of correctly received transport blocks (MATLAB case).
+%   ThroughputSRSCtr      - Counter of correctly received transport blocks (SRS case).
+%   TotalBlocksCtr        - Counter of newly transmitted transport blocks (ignoring repetitions).
+%   MissedBlocksMATLABCtr - Counter of missed transport blocks, after all
+%                           allowed retransmissions (MATLAB case).
+%   MissedBlocksSRSCtr    - Counter of missed transport blocks, after all
+%                           allowed retransmissions (SRS case).
+%   TBS                   - Transport block size in bits.
+%   MaxThroughput         - Maximum achievable throughput in Mbps.
+%   ThroughputMATLAB      - Throughput in Mbps (MATLAB case).
+%   ThroughputSRS         - Throughput in Mbps (SRS case).
+%   BlockErrorRateMATLAB  - Transport block error rate (MATLAB case).
+%   BlockErrorRateSRS     - Transport block error rate (SRS case).
+%
+%   Remark: The simulation loop is heavily based on the <a href="https://www.mathworks.com/help/5g/ug/nr-pusch-throughput.html">NR PUSCH Throughput</a> MATLAB example by MathWorks.
 classdef PUSCHBLER < matlab.System
     properties (Constant)
         %Number of transmit antennas.
@@ -15,7 +120,7 @@ classdef PUSCHBLER < matlab.System
         DisplayDiagnostics (1, 1) logical = false
         %Bandwidth in number of resource blocks.
         NSizeGrid = 52
-        %Subcarrier spacing in kHz.
+        %Subcarrier spacing in kHz (15, 30, 60, 120).
         SubcarrierSpacing = 15
         %Cyclic prefix: 'Normal' or 'Extended' (Extended CP is relevant for 60 kHz SCS only)
         CyclicPrefix = 'Normal'
@@ -24,20 +129,26 @@ classdef PUSCHBLER < matlab.System
         %PUSCH allocated PRBs.
         PRBSet = 0:51
         %PUSCH OFDM symbol allocation in each slot.
+        %   Specify as a two-element array, where the first element represents the
+        %   start of symbol allocation (0-based) and the second element represents
+        %   the number of allocated OFDM symbols (e.g., [0 14]).
         SymbolAllocation = [0, 14]
-        %PUSCH mapping type ('A'(slot-wise), (1)B'(non slot-wise)).
+        %PUSCH mapping type ('A'(slot-wise), 'B'(non slot-wise)).
         MappingType (1, 1) char {mustBeMember(MappingType, ['A', 'B'])} = 'A'
-        %Radio network temporary identifier (0,...,65535),
+        %Radio network temporary identifier (0...65535).
         RNTI (1, 1) double {mustBeReal, mustBeInteger, mustBeInRange(RNTI, 0, 65535)} = 1
         %Number of PUSCH transmission layers.
         NumLayers (1, 1) double {mustBeReal, mustBeInteger, mustBeInRange(NumLayers, 1, 4)} = 1
         %Modulation Coding Scheme table.
+        %   Choose between 'qam64', 'qam256', 'qam64LowSE' and 'custom'.
         MCSTable (1, :) char {mustBeMember(MCSTable, {'qam64', 'qam256', 'qam64LowSE', 'custom'})} = 'qam64'
         %Modulation Coding Scheme index (inactive if "MCSTable == 'custom'").
         MCSIndex (1, 1) double {mustBeReal, mustBeInteger, mustBeInRange(MCSIndex, 0, 28)} = 0
         %Modulation scheme (only when "MCSTable == 'custom'").
+        %   Choose between 'pi/2-BPSK', 'QPSK', '16QAM', '64QAM' and '256QAM'.
         Modulation (1, :) char {mustBeMember(Modulation, {'pi/2-BPSK', 'QPSK', '16QAM', '64QAM', '256QAM'})} = 'QPSK'
         %Target code rate (only when "MCSTable == 'custom'").
+        %   A real number between 0 and 1, excluded.
         TargetCodeRate (1, 1) double {mustBeReal, mustBeInRange(TargetCodeRate, 0, 1, 'exclusive')} = 193 / 1024
         %Mapping type A only: First DM-RS symbol position (2, 3).
         DMRSTypeAPosition (1, 1) double {mustBeReal, mustBeMember(DMRSTypeAPosition, [2, 3])} = 2
@@ -75,9 +186,9 @@ classdef PUSCHBLER < matlab.System
         ThroughputSRSCtr = []
         %Counter of newly transmitted transport blocks (ignoring repetitions).
         TotalBlocksCtr = []
-        %Counter of missed trasport blocks, after all allowed retransmissions (MATLAB case).
+        %Counter of missed transport blocks, after all allowed retransmissions (MATLAB case).
         MissedBlocksMATLABCtr = []
-        %Counter of missed trasport blocks, after all allowed retransmissions (SRS case).
+        %Counter of missed transport blocks, after all allowed retransmissions (SRS case).
         MissedBlocksSRSCtr = []
         %Transport block size in bits.
         TBS = []
@@ -795,7 +906,7 @@ classdef PUSCHBLER < matlab.System
             case 'MCSIndex'
                 flag = strcmp(obj.MCSTable, 'custom');
             case {'TBS', 'MaxThroughput'}
-                flag = isempty(obj.TBS);
+                flag = isempty(obj.TBS) || ~obj.isLocked;
             case {'ThroughputMATLAB', 'BlockErrorRateMATLAB'}
                 flag = isempty(obj.ThroughputMATLABCtr) || strcmp(obj.DecoderType, 'srs');
             case {'ThroughputSRS', 'BlockErrorRateSRS'}
