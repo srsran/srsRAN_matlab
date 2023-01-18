@@ -174,7 +174,7 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
                 NumLayersLoc, SymbolAllocation, PRBSet);
 
             % Get the encoded TB length.
-            [PUSCHIndices, PUSCHInfo] = nrPUSCHIndices(carrier, pusch);
+            [~, PUSCHInfo] = nrPUSCHIndices(carrier, pusch);
             obj.nofREs = PUSCHInfo.Gd;
             obj.encodedTBLength = PUSCHInfo.G;
 
