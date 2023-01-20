@@ -34,7 +34,7 @@
 %   srsTest.analizers.srsPUSCHAnalizer(jsonConfig, '/tmp/ul_rg_0.bin');
 %   
 
-function srsPUSCHAnalizer(jsonConfig, rgFilename)
+function srsPUSCHAnalizer(jsonConfig, rgFilename, rgOffset, rgSize)
 %% Imprt dependencies.
 import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
 import srsMatlabWrappers.phy.helpers.srsConfigurePUSCH
@@ -51,8 +51,8 @@ carrier.SubcarrierSpacing = config.scs;
 carrier.CyclicPrefix = config.cp;
 carrier.NSizeGrid = config.grid_size_rb;
 carrier.NStartGrid = 0;
-carrier.NSlot = rem(config.slot, carrier.SlotsPerFrame);
-carrier.NFrame = config.slot / carrier.SlotsPerFrame;
+carrier.NSlot = config.slot;
+carrier.NFrame = config.frame;
 
 % PUSCH configuration.
 pusch = srsConfigurePUSCH();
@@ -61,7 +61,7 @@ pusch.NStartBWP = config.bwp_start_rb;
 pusch.Modulation = config.modulation;
 pusch.NumLayers = config.nof_tx_layers;
 pusch.SymbolAllocation = [config.time_alloc(1), config.time_alloc(2)];
-pusch.PRBSet = config.freq_alloc(1):sum(config.freq_alloc - 1);
+pusch.PRBSet = config.freq_alloc(1):(sum(config.freq_alloc) - 1);
 pusch.NID = config.n_id;
 pusch.RNTI = hex2dec(config.rnti);
 pusch.DMRS.NIDNSCID = config.scrambling_id;
@@ -80,14 +80,14 @@ ulschInfo = nrULSCHInfo(TransportBlockLength, TargetCodeRate);
 
 %% Load resource grid.
 % Read file containing the resource grid.
-rgSamples = readComplexFloatFile(rgFilename);
+rgSamples = readComplexFloatFile(rgFilename, rgOffset, rgSize);
 
 % Create resource grid.
 rxGrid = nrResourceGrid(carrier);
-gridDimensions = size(grid);
+gridDimensions = size(rxGrid);
 
 % Map the samples from the file to the grid.
-rxGrid(:) = readComplexFloatFile(rgFilename);
+rxGrid(:) = rgSamples(:);
 
 % Free unused samples.
 clear rgSamples;
@@ -98,6 +98,11 @@ dmrsInd = nrPUSCHDMRSIndices(carrier, pusch);
 dmrsSym = nrPUSCHDMRS(carrier, pusch);
 
 [H, nVar, estInfo] = nrChannelEstimate(carrier, rxGrid, dmrsInd, dmrsSym);
+
+if pusch.DMRS.NumCDMGroupsWithoutData
+    H = H * sqrt(1 / 2);
+end
+    
 
 %% Equalize.
 [dataInd, puschInfo] = nrPUSCHIndices(carrier, pusch);
@@ -136,7 +141,7 @@ subplot(NumYPlots, NumXPlots, 1);
 subcIndexes = 0:gridDimensions(1) - 1;
 symbolIndexes = 0:gridDimensions(2) - 1;
 [symbolIndexes, subcIndexes] = meshgrid(symbolIndexes, subcIndexes);
-surf(symbolIndexes, subcIndexes, abs(grid), 'LineStyle','none', 'FaceColor','flat');
+surf(symbolIndexes, subcIndexes, abs(rxGrid), 'LineStyle','none', 'FaceColor','flat');
 view(0, 90);
 shading flat;
 colormap parula;
