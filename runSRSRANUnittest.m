@@ -101,6 +101,10 @@ function unittestClass = name2Class(name)
             unittestClass = ?srsPDSCHModulatorUnittest;
         case 'port_channel_estimator'
             unittestClass = ?srsChEstimatorUnittest;
+        case 'prach_demodulator'
+            unittestClass = ?srsPRACHDemodulatorUnittest;
+        case 'prach_detector'
+            unittestClass = ?srsPRACHDetectorUnittest;
         case 'prach_generator'
             unittestClass = ?srsPRACHGeneratorUnittest;
         case 'pucch_demodulator_format2'

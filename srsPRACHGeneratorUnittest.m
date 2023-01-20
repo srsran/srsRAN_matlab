@@ -114,6 +114,7 @@ classdef srsPRACHGeneratorUnittest < srsTest.srsBlockUnittest
         %and PreambleIndex are generated randomly.
 
             import srsTest.helpers.writeComplexFloatFile
+            import srsMatlabWrappers.phy.helpers.srsSelectPRACHConfigurationIndex
             import srsMatlabWrappers.phy.upper.channel_processors.srsPRACHgenerator
 
             % Generate a unique test ID
@@ -144,7 +145,7 @@ classdef srsPRACHGeneratorUnittest < srsTest.srsBlockUnittest
                 otherwise
                     error('Invalid duplex mode %s', DuplexMode);
             end
-            prach.ConfigurationIndex = selectConfigurationIndex(ConfigurationsTable, PreambleFormat);
+            prach.ConfigurationIndex = srsSelectPRACHConfigurationIndex(ConfigurationsTable, PreambleFormat);
 
             % Select PRACH subcarrier spacing from the selected format.
             switch PreambleFormat
@@ -202,16 +203,3 @@ classdef srsPRACHGeneratorUnittest < srsTest.srsBlockUnittest
         end % of function testvectorGenerationCases
     end % of methods (Test, TestTags = {'testvector'})
 end % of classdef srsPRACHGeneratorUnittest
-
-function ConfigurationIndex = selectConfigurationIndex(ConfigurationsTable, PreambleFormat)
-%selectConfigurationIndex selects a valid configuration index.
-%   CONFIGURATIONINDEX = selectConfigurationIndex(CONFIGURATIONSTABLE, PREAMBLEFORMAT)
-%   Gets the first configuration index CONFIGURATIONINDEX in a configurations table  CONFIGURATIONSTABLE with the
-%   given preamble format PREAMBLEFORMAT.
-  for rowIndex = 1:height(ConfigurationsTable)
-      if ConfigurationsTable.PreambleFormat{rowIndex} == PreambleFormat
-          ConfigurationIndex = ConfigurationsTable.ConfigurationIndex(rowIndex);
-          return;
-      end
-  end
-end
