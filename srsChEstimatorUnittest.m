@@ -188,6 +188,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
         %testvectorGenerationCases - Generates a test vector according to the provided
         %   CONFIGURATION and FREQUENCYHOPPING type.
 
+            import srsMatlabWrappers.phy.upper.signal_processors.srsChannelEstimator
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.writeComplexFloatFile
 
@@ -234,7 +235,9 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             noise = noise * sqrt(noiseVar / 2);
             receivedRG = receivedRG + noise;
 
-            [channelEst, noiseEst, rsrp] = obj.estimateChannel(receivedRG, pilots, betaDMRS, hop1, hop2);
+            EstimatorConfig.DMRSREmask = obj.DMRSREmask;
+            EstimatorConfig.nPilotsNoiseAvg = obj.nPilotsNoiseAvg;
+            [channelEst, noiseEst, rsrp] = srsChannelEstimator(receivedRG, pilots, betaDMRS, hop1, hop2, EstimatorConfig);
 
             % TODO: The ratio of the two quantities below should give a metric that allows us
             % to decide whether pilots were sent or not. However, it should be normalized
@@ -392,79 +395,5 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                 transmittedRG(maskREs_, hop_.DMRSsymbols) = betaDMRS * pilots_;
             end % of function processHop(hop_, pilots_)
         end % of function transmittedRG = transmitPilots(pilots, hop1, hop2)
-
-
-        function [channelEstRG, noiseEst, rsrp] = estimateChannel(obj, receivedRG, pilots, betaDMRS, hop1, hop2)
-        %Estimates the channel coefficients, the noise variance (cumulative) and the reference-signal received power
-        %   (cumulative) for the allocated resources.
-
-            channelEstRG = zeros(size(receivedRG));
-            noiseEst = 0;
-            rsrp = 0;
-
-            nPilotSymbolsHop1 = sum(hop1.DMRSsymbols);
-
-            processHop(hop1, pilots(:, 1:nPilotSymbolsHop1));
-
-            if ~isempty(hop2.DMRSsymbols)
-                processHop(hop2, pilots(:, (nPilotSymbolsHop1 + 1):end));
-            end
-
-            %     Nested functions
-            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            function processHop(hop_, pilots_)
-            %Processes the DM-RS corresponding to a single hop.
-
-                % Create a mask for all subcarriers carrying DM-RS.
-                maskPRBs_ = hop_.maskPRBs;
-                maskREs_ = (kron(maskPRBs_, obj.DMRSREmask) > 0);
-
-                % Pick the REs corresponding to the pilots.
-                receivedPilots_ = receivedRG(maskREs_, hop_.DMRSsymbols);
-
-                % LSE-estimate the channel coefficients of the subcarriers carrying DM-RS.
-                nDMRSsymbols_ = sum(hop_.DMRSsymbols);
-                recXpilots_ = receivedPilots_ .* conj(pilots_);
-                estimatedChannelP_ = sum(recXpilots_, 2) / betaDMRS / nDMRSsymbols_;
-                % TODO: at this point, we should compute a metric for signal detection.
-                % detectMetricNum = detectMetricNum + norm(recXpilots_, 'fro')^2;
-
-                % To estimate the noise, we assume the channel is constant over a small number
-                % of adjacent subcarriers.
-                estChannelRB_ = mean(reshape(estimatedChannelP_, obj.nPilotsNoiseAvg, []), 1).';
-                estChannelAvg_ = kron(estChannelRB_, ones(obj.nPilotsNoiseAvg, 1));
-                noiseEst = noiseEst + norm(receivedPilots_ - betaDMRS * pilots_ ...
-                    .* repmat(estChannelAvg_, 1, nDMRSsymbols_), 'fro')^2;
-                rsrp = rsrp + betaDMRS^2 * norm(estimatedChannelP_)^2 * nDMRSsymbols_;
-
-                % The other subcarriers are linearly interpolated.
-                channelEstRG = fillChEst(channelEstRG, estimatedChannelP_, hop_);
-            end
-        end % of function [channelEst, noiseEst, rsrp] = estimateChannel(obj, receivedRG, pilots, betaDMRS, hop1, hop2)
     end % of methods (Access = private)
 end % of classdef srsChEstimatorUnittest
-
-function channelOut = fillChEst(channelIn, estimated, hop)
-%Linearly interpolates the missing subcarriers and organizes the estimates on
-%   a resource grid.
-    NRE = 12;
-    channelOut = channelIn;
-    estimatedAll = complex(nan(hop.nPRBs * NRE, 1));
-    maskAll = repmat(hop.DMRSREmask, hop.nPRBs, 1);
-    estimatedAll(maskAll) = estimated;
-    filledIndices = find(maskAll);
-    nFilledIndices = length(filledIndices);
-    for i = 1:nFilledIndices-1
-        start = filledIndices(i) + 1;
-        stop = filledIndices(i+1) - 1;
-        stride = stop - start + 1;
-        span = estimatedAll(stop + 1) - estimatedAll(start - 1);
-        estimatedAll(start:stop) = estimatedAll(start - 1) + span * (1:stride) / (stride + 1);
-    end
-    estimatedAll(filledIndices(end):end) = estimatedAll(filledIndices(end));
-    estimatedAll(1:filledIndices(1)) = estimatedAll(filledIndices(1));
-
-    occupiedSCs = (NRE * hop.PRBstart):(NRE * (hop.PRBstart + hop.nPRBs) - 1);
-    occupiedSymbols = hop.startSymbol + (0:hop.nAllocatedSymbols-1);
-    channelOut(1 + occupiedSCs, 1 + occupiedSymbols) = repmat(estimatedAll, 1, hop.nAllocatedSymbols);
-end
