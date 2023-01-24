@@ -46,6 +46,13 @@ function [channelEstRG, noiseEst, rsrp] = srsChannelEstimator(receivedRG, pilots
         processHop(hop2, pilots(:, (nPilotSymbolsHop1 + 1):end));
     end
 
+    nDMRSsymbols = sum(config.DMRSSymbolMask);
+    nPilots = hop1.nPRBs * sum(config.DMRSREmask) * nDMRSsymbols;
+
+    rsrp = rsrp / nPilots;
+
+    noiseEst = noiseEst / (nPilots - hop1.nPRBs * sum(config.DMRSREmask) / config.nPilotsNoiseAvg);
+
     %     Nested functions
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     function processHop(hop_, pilots_)

@@ -235,6 +235,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             noise = noise * sqrt(noiseVar / 2);
             receivedRG = receivedRG + noise;
 
+            EstimatorConfig.DMRSSymbolMask = obj.DMRSsymbols;
             EstimatorConfig.DMRSREmask = obj.DMRSREmask;
             EstimatorConfig.nPilotsNoiseAvg = obj.nPilotsNoiseAvg;
             [channelEst, noiseEst, rsrp] = srsChannelEstimator(receivedRG, pilots, betaDMRS, hop1, hop2, EstimatorConfig);
@@ -246,8 +247,6 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             % detectMetricDen = noiseEst;
             % detectionMetric = detectMetricNum / detectMetricDen;
 
-            noiseEst = noiseEst / (nPilots - configuration.nPRBs * sum(obj.DMRSREmask) / obj.nPilotsNoiseAvg);
-            rsrp = rsrp / nPilots;
             epre = rsrp / betaDMRS^2;
             snrEst = epre / noiseEst;
 
@@ -282,7 +281,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                 nAllocatedSymbols, ...           % nof_symbols
                 {dmrsPattern}, ...               % dmrs_patterns
                 {0}, ...                         % rx_ports
-                configuration.betaDMRS, ...      % betaDMRS
+                betaDMRS, ...                    % betaDMRS
                 };
 
             context = {...
