@@ -222,7 +222,7 @@ classdef srsDLProcessorUnittest < srsTest.srsBlockUnittest
                     slotConfig,...         % slot
                     cyclicPrefixStr,...    % cp
                     coresetDescription,... % coreset
-                    {dciDescription},...   % dci_list
+                    dciDescription,...     % dci_list
                     };
 
                 % Generate PDSCH transmission entry
