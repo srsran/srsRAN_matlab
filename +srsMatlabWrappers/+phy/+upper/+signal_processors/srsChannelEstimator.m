@@ -52,6 +52,10 @@ function [channelEstRG, noiseEst, rsrp] = srsChannelEstimator(receivedRG, pilots
     rsrp = rsrp / nPilots;
 
     noiseEst = noiseEst / (nPilots - hop1.nPRBs * sum(config.DMRSREmask) / config.nPilotsNoiseAvg);
+    if (size(pilots, 2) < 3) || ~isempty(hop2.DMRSsymbols)
+        epre = rsrp / betaDMRS^2;
+        noiseEst = epre * 10^(-3);
+    end
 
     %     Nested functions
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%

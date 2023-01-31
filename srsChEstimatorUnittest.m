@@ -51,9 +51,6 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
         NSizeBWP = 51
         NStartBWP = 1
         NSizeGrid = srsChEstimatorUnittest.NSizeBWP + srsChEstimatorUnittest.NStartBWP
-
-        % Number of pilots averaged for noise estimation.
-        nPilotsNoiseAvg = 2
     end % of properties (Hidden, Constant)
 
     properties (ClassSetupParameter)
@@ -237,7 +234,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
 
             EstimatorConfig.DMRSSymbolMask = obj.DMRSsymbols;
             EstimatorConfig.DMRSREmask = obj.DMRSREmask;
-            EstimatorConfig.nPilotsNoiseAvg = obj.nPilotsNoiseAvg;
+            EstimatorConfig.nPilotsNoiseAvg = sum(obj.DMRSREmask);
             [channelEst, noiseEst, rsrp] = srsChannelEstimator(receivedRG, pilots, betaDMRS, hop1, hop2, EstimatorConfig);
 
             % TODO: The ratio of the two quantities below should give a metric that allows us
