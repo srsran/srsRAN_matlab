@@ -235,7 +235,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             EstimatorConfig.DMRSSymbolMask = obj.DMRSsymbols;
             EstimatorConfig.DMRSREmask = obj.DMRSREmask;
             EstimatorConfig.nPilotsNoiseAvg = sum(obj.DMRSREmask);
-            [channelEst, noiseEst, rsrp] = srsChannelEstimator(receivedRG, pilots, betaDMRS, hop1, hop2, EstimatorConfig);
+            [channelEst, noiseEst, rsrp, epre] = srsChannelEstimator(receivedRG, pilots, betaDMRS, hop1, hop2, EstimatorConfig);
 
             % TODO: The ratio of the two quantities below should give a metric that allows us
             % to decide whether pilots were sent or not. However, it should be normalized
@@ -244,8 +244,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             % detectMetricDen = noiseEst;
             % detectionMetric = detectMetricNum / detectMetricDen;
 
-            epre = rsrp / betaDMRS^2;
-            snrEst = epre / noiseEst;
+            snrEst = rsrp / betaDMRS^2 / noiseEst;
 
             % Write the received resource grid.
             [scs, syms, vals] = find(receivedRG);

@@ -1,6 +1,6 @@
-function [channelEstRG, noiseEst, rsrp] = srsChannelEstimator(receivedRG, pilots, betaDMRS, hop1, hop2, config)
+function [channelEstRG, noiseEst, rsrp, epre] = srsChannelEstimator(receivedRG, pilots, betaDMRS, hop1, hop2, config)
 %srsChannelEstimator channel estimation.
-%   [CHANNELESTRG, NOISEEST, RSRP] = srsChannelEstimator(RECEIVEDRG, PILOTS, BETADMRS, HOP1, HOP2, CONFIG)
+%   [CHANNELESTRG, NOISEEST, RSRP, EPRE] = srsChannelEstimator(RECEIVEDRG, PILOTS, BETADMRS, HOP1, HOP2, CONFIG)
 %   estimates the channel coefficients for the REs resulting from the provided
 %   configuration (see below) from the observations in the resource grid RECEIVEDRG.
 %   The transmission is assumed to be single-layer.
@@ -33,10 +33,13 @@ function [channelEstRG, noiseEst, rsrp] = srsChannelEstimator(receivedRG, pilots
 %   CHANNELESTRG - Estimated channel coefficients organized in a resource grid
 %   NOISEEST     - Estiamted noise variance
 %   RSRP         - Estimated reference-signal received power
+%   EPRE         - Average receive-side energy per reference-signal resource
+%                  element (including noise).
 
     channelEstRG = zeros(size(receivedRG));
     noiseEst = 0;
     rsrp = 0;
+    epre = 0;
 
     nPilotSymbolsHop1 = sum(hop1.DMRSsymbols);
 
@@ -50,10 +53,10 @@ function [channelEstRG, noiseEst, rsrp] = srsChannelEstimator(receivedRG, pilots
     nPilots = hop1.nPRBs * sum(config.DMRSREmask) * nDMRSsymbols;
 
     rsrp = rsrp / nPilots;
+    epre = epre / nPilots;
 
     noiseEst = noiseEst / (nPilots - hop1.nPRBs * sum(config.DMRSREmask) / config.nPilotsNoiseAvg);
     if (size(pilots, 2) < 3) || ~isempty(hop2.DMRSsymbols)
-        epre = rsrp / betaDMRS^2;
         noiseEst = epre * 10^(-3);
     end
 
@@ -68,6 +71,9 @@ function [channelEstRG, noiseEst, rsrp] = srsChannelEstimator(receivedRG, pilots
 
         % Pick the REs corresponding to the pilots.
         receivedPilots_ = receivedRG(maskREs_, hop_.DMRSsymbols);
+
+        % Compute receive side DM-RS EPRE.
+        epre = epre + norm(receivedPilots_, 'fro')^2;
 
         % LSE-estimate the channel coefficients of the subcarriers carrying DM-RS.
         nDMRSsymbols_ = sum(hop_.DMRSsymbols);
