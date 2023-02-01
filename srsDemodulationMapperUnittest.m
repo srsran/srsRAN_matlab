@@ -122,7 +122,7 @@ classdef srsDemodulationMapperUnittest < srsTest.srsBlockUnittest
             testCase.saveDataFile('_test_soft_bits', testID, @writeInt8File, softBits);
 
             % hard decision
-            hardBits = (1 - (softBits >= 0));
+            hardBits = (1 - (softBits > 0));
 
             % write hard bits into a binary file
             testCase.saveDataFile('_test_hard_bits', testID, @writeUint8File, hardBits);
