@@ -7,6 +7,7 @@
 #include "srsgnb/phy/upper/channel_processors/pusch_decoder.h"
 #include "srsgnb/phy/upper/rx_softbuffer.h"
 #include "srsgnb/phy/upper/rx_softbuffer_pool.h"
+#include "srsgnb/phy/upper/unique_rx_softbuffer.h"
 #include "srsgnb_matlab/srsgnb_mex_dispatcher.h"
 #include "srsgnb_matlab/support/memento.h"
 
@@ -40,7 +41,8 @@ class MexFunction : public srsgnb_mex_dispatcher
     /// \param[in] id              Softbuffer identifier (UE RNTI and HARQ process ID).
     /// \param[in] nof_codeblocks  Number of codeblocks forming the codeword (or, equivalently, the transport block).
     /// \return A pointer to the identified softbuffer.
-    srsgnb::rx_softbuffer* retrieve_softbuffer(const srsgnb::rx_softbuffer_identifier& id, unsigned nof_codeblocks);
+    srsgnb::unique_rx_softbuffer retrieve_softbuffer(const srsgnb::rx_softbuffer_identifier& id,
+                                                     unsigned                                nof_codeblocks);
 
   private:
     /// Pointer to the softbuffer pool stored in the memento.
@@ -73,7 +75,7 @@ private:
   /// \param[in] id              The softbuffer identifier (UE RNTI and HARQ process ID).
   /// \param[in] nof_codeblocks  The number of codeblocks in the current codeword.
   /// \return A pointer to the requested softbuffer from the softbuffer pool associated to the given memento identifier.
-  srsgnb::rx_softbuffer*
+  srsgnb::unique_rx_softbuffer
   retrieve_softbuffer(uint64_t key, const srsgnb::rx_softbuffer_identifier& id, unsigned nof_codeblocks);
 
   /// Checks that outputs/inputs arguments match the requirements of method_step().
@@ -158,7 +160,8 @@ std::unique_ptr<srsgnb::pusch_decoder> create_pusch_decoder()
 
   std::shared_ptr<ldpc_decoder_factory> ldpc_decoder_factory = create_ldpc_decoder_factory_sw("auto");
 
-  std::shared_ptr<ldpc_rate_dematcher_factory> ldpc_rate_dematcher_factory = create_ldpc_rate_dematcher_factory_sw("auto");
+  std::shared_ptr<ldpc_rate_dematcher_factory> ldpc_rate_dematcher_factory =
+      create_ldpc_rate_dematcher_factory_sw("auto");
 
   std::shared_ptr<ldpc_segmenter_rx_factory> segmenter_rx_factory = create_ldpc_segmenter_rx_factory_sw();
 

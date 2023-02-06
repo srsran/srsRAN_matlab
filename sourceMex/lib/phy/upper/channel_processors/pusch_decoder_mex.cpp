@@ -14,13 +14,13 @@ using namespace matlab::data;
 using namespace srsgnb;
 using namespace srsgnb_matlab;
 
-rx_softbuffer* MexFunction::pusch_memento::retrieve_softbuffer(const rx_softbuffer_identifier& id,
-                                                               const unsigned                  nof_codeblocks)
+unique_rx_softbuffer MexFunction::pusch_memento::retrieve_softbuffer(const rx_softbuffer_identifier& id,
+                                                                     const unsigned                  nof_codeblocks)
 {
   return pool->reserve_softbuffer({}, id, nof_codeblocks);
 }
 
-rx_softbuffer*
+unique_rx_softbuffer
 MexFunction::retrieve_softbuffer(uint64_t key, const rx_softbuffer_identifier& id, const unsigned nof_codeblocks)
 {
   std::shared_ptr<memento> mem = storage.get_memento(key);
@@ -28,9 +28,9 @@ MexFunction::retrieve_softbuffer(uint64_t key, const rx_softbuffer_identifier& i
     mex_abort(fmt::format("Cannot retrieve rx_softbuffer_pool with key {}.", key));
   }
 
-  auto           pusch_mem  = std::dynamic_pointer_cast<pusch_memento>(storage.get_memento(key));
-  rx_softbuffer* softbuffer = pusch_mem->retrieve_softbuffer(id, nof_codeblocks);
-  if (softbuffer == nullptr) {
+  auto                 pusch_mem  = std::dynamic_pointer_cast<pusch_memento>(storage.get_memento(key));
+  unique_rx_softbuffer softbuffer = pusch_mem->retrieve_softbuffer(id, nof_codeblocks);
+  if (!softbuffer.is_valid()) {
     std::string msg =
         fmt::format("Cannot retrieve softbuffer with key {}, buffer ID ({}, {}) and nr. of codeblocks {}.",
                     key,
@@ -147,11 +147,11 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
 
   uint64_t key = static_cast<TypedArray<uint64_t> >(inputs[1])[0];
 
-  rx_softbuffer*               softbuffer = retrieve_softbuffer(key, buf_id, nof_codeblocks);
+  unique_rx_softbuffer         softbuffer = retrieve_softbuffer(key, buf_id, nof_codeblocks);
   pusch_decoder_result         dec_result = {};
   pusch_decoder::configuration cfg        = {seg_cfg, 6, true, new_data};
   std::vector<uint8_t>         rx_tb(tbs_bytes.value());
-  decoder->decode(rx_tb, dec_result, softbuffer, llrs, cfg);
+  decoder->decode(rx_tb, dec_result, &softbuffer.get(), llrs, cfg);
 
   TypedArray<uint8_t> out = factory.createArray({rx_tb.size(), 1}, rx_tb.cbegin(), rx_tb.cend());
   outputs[0]              = out;
@@ -190,8 +190,8 @@ void MexFunction::method_reset_crcs(ArgumentList& outputs, ArgumentList& inputs)
 
   uint64_t key = static_cast<TypedArray<uint64_t> >(inputs[1])[0];
 
-  rx_softbuffer* softbuffer = retrieve_softbuffer(key, buf_id, nof_codeblocks);
-  softbuffer->reset_codeblocks_crc();
+  unique_rx_softbuffer softbuffer = retrieve_softbuffer(key, buf_id, nof_codeblocks);
+  softbuffer.get().reset_codeblocks_crc();
 }
 
 void MexFunction::method_release(ArgumentList& outputs, ArgumentList& inputs)
