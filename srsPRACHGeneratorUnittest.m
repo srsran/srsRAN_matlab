@@ -114,6 +114,7 @@ classdef srsPRACHGeneratorUnittest < srsTest.srsBlockUnittest
         %and PreambleIndex are generated randomly.
 
             import srsTest.helpers.writeComplexFloatFile
+            import srsMatlabWrappers.phy.helpers.srsConfigurePRACH
             import srsMatlabWrappers.phy.helpers.srsSelectPRACHConfigurationIndex
             import srsMatlabWrappers.phy.upper.channel_processors.srsPRACHgenerator
 
@@ -125,14 +126,10 @@ classdef srsPRACHGeneratorUnittest < srsTest.srsBlockUnittest
             carrier.CyclicPrefix = 'normal';
             carrier.NSizeGrid = CarrierBandwidth;
 
-            % Generate PRACH configuration
-            prach = nrPRACHConfig;
-            prach.DuplexMode = DuplexMode;
-            prach.SequenceIndex = randi([0, 1023], 1, 1);
-            prach.PreambleIndex = randi([0, 63], 1, 1);
-            prach.RestrictedSet = RestrictedSet;
-            prach.ZeroCorrelationZone = ZeroCorrelationZone;
-            prach.RBOffset = RBOffset;
+            % Generate PRACH configuration.
+            SequenceIndex = randi([0, 1023], 1, 1);
+            PreambleIndex = randi([0, 63], 1, 1);
+            prach = srsConfigurePRACH(DuplexMode, SequenceIndex, PreambleIndex, RestrictedSet, ZeroCorrelationZone, RBOffset, PreambleFormat);
 
             % Set parameters that depend on the duplex mode.
             switch DuplexMode
@@ -146,24 +143,6 @@ classdef srsPRACHGeneratorUnittest < srsTest.srsBlockUnittest
                     error('Invalid duplex mode %s', DuplexMode);
             end
             prach.ConfigurationIndex = srsSelectPRACHConfigurationIndex(ConfigurationsTable, PreambleFormat);
-
-            % Select PRACH subcarrier spacing from the selected format.
-            switch PreambleFormat
-                case '0'
-                    prach.SubcarrierSpacing = 1.25;
-                    prach.LRA = 839;
-                case '1'
-                    prach.SubcarrierSpacing = 1.25;
-                    prach.LRA = 839;
-                case '2'
-                    prach.SubcarrierSpacing = 1.25;
-                    prach.LRA = 839;
-                case '3'
-                    prach.SubcarrierSpacing = 5;
-                    prach.LRA = 839;
-                otherwise
-                    error('Preamble format %s not implemented.', PreambleFormat);
-            end
 
             % Generate waveform
             [~, ~, info] = srsPRACHgenerator(carrier, prach);

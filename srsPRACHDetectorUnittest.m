@@ -26,7 +26,7 @@
 %
 %   srsPRACHDetectorUnittest Methods (TestTags = {'testvector'}):
 %
-%   testvectorGenerationCases - Generates a test vectors according to the provided
+%   testvectorGenerationCases - Generates a test vector according to the provided
 %                               parameters.
 %
 %   srsPRACHDetectorUnittest Methods (TestTags = {'testmex'}):
@@ -42,13 +42,14 @@
 %  See also matlab.unittest.
 classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
     properties (Constant)
-        %Name of the tested block. It should be noted that the 'testvector'
-        %   generation method is conforming the testvectors naming and data
-        %   structuring to that of 'srsPRACHGeneratorUnittest', taking into
-        %   account that the 'prach_detector_vectortest' test application
-        %   of SRSGNB has been implemented to reuse the testvectors that it
-        %   produces. Hence 'srsBlock' is not set to 'prach_detector' as it
-        %   would be usually done.
+        %Name of the tested block. 
+        %   It should be noted that the 'testvector' generation method is 
+        %   conforming the testvectors naming and data structuring to that 
+        %   of 'srsPRACHGeneratorUnittest', taking into account that the 
+        %   'prach_detector_vectortest' test application of SRSGNB has been
+        %   implemented to reuse the testvectors that it produces. Hence 
+        %   'srsBlock' is not set to 'prach_detector' as it would be usually
+        %   done.
         srsBlock = 'prach_generator'
 
         %Type of the tested block.
@@ -82,14 +83,15 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
         %Frequency-domain sequence mapping.
         %   Starting resource block (RB) index of the initial uplink bandwidth
         %   part (BWP) relative to carrier resource grid.
-	    RBOffset = {0, 13, 28};
+        RBOffset = {0, 13, 28}
+
+        % Currently fixed parameter values (e.g., sample delay).
+        DelaySamples = {-8, 0, 1, 3}
     end
 
     properties (Constant, Hidden)
-        % Currently fixed parameter values (e.g., XXX)
-
-        %TBD: Fill or remove.
-
+        % DFT size of the PRACH detector.
+        DFTsizeDetector = 1536
     end % of properties (Constant, Hidden)
 
     properties (Hidden)
@@ -133,6 +135,7 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
         function setupsimulation(obj, DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet, ZeroCorrelationZone, RBOffset)
         % Sets secondary simulation variables.
 
+            import srsMatlabWrappers.phy.helpers.srsConfigurePRACH
             import srsMatlabWrappers.phy.helpers.srsSelectPRACHConfigurationIndex
         
             % Generate carrier configuration.
@@ -141,14 +144,10 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
             obj.carrier.NSizeGrid = CarrierBandwidth;
     
             % Generate PRACH configuration.
-            obj.prach = nrPRACHConfig;
-            obj.prach.DuplexMode = DuplexMode;
-            obj.prach.SequenceIndex = randi([0, 1023], 1, 1);%834;
-            obj.prach.PreambleIndex = randi([0, 63], 1, 1);%57;
-            obj.prach.RestrictedSet = RestrictedSet;
-            obj.prach.ZeroCorrelationZone = ZeroCorrelationZone;
-            obj.prach.RBOffset = RBOffset;
-    
+            SequenceIndex = randi([0, 1023], 1, 1);
+            PreambleIndex = randi([0, 63], 1, 1);
+            obj.prach = srsConfigurePRACH(DuplexMode, SequenceIndex, PreambleIndex, RestrictedSet, ZeroCorrelationZone, RBOffset, PreambleFormat);
+
             % Set parameters that depend on the duplex mode.
             switch DuplexMode
                 case 'FDD'
@@ -161,24 +160,6 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
                     error('Invalid duplex mode %s', DuplexMode);
             end
             obj.prach.ConfigurationIndex = srsSelectPRACHConfigurationIndex(ConfigurationsTable, PreambleFormat);
-    
-            % Select PRACH subcarrier spacing from the selected format.
-            switch PreambleFormat
-                case '0'
-                    obj.prach.SubcarrierSpacing = 1.25;
-                    obj.prach.LRA = 839;
-                case '1'
-                    obj.prach.SubcarrierSpacing = 1.25;
-                    obj.prach.LRA = 839;
-                case '2'
-                    obj.prach.SubcarrierSpacing = 1.25;
-                    obj.prach.LRA = 839;
-                case '3'
-                    obj.prach.SubcarrierSpacing = 5;
-                    obj.prach.LRA = 839;
-                otherwise
-                    error('Preamble format %s not implemented.', PreambleFormat);
-            end
         end % of function setupsimulation(obj, SymbolAllocation, PRBAllocation, mcs)
     end % of methods (Access = Private)
 
@@ -235,10 +216,10 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
 
             % srsgnb PRACH configuration.
             srsPRACHConfig = {...
-                srsPRACHFormat, ...            % format
+                srsPRACHFormat, ...                % format
                 obj.prach.SequenceIndex, ...       % root_sequence_index
                 obj.prach.PreambleIndex, ...       % preamble_index
-                srsRestrictedSet, ...          % restricted_set
+                srsRestrictedSet, ...              % restricted_set
                 obj.prach.ZeroCorrelationZone, ... % zero_correlation_zone
                 };
 
@@ -253,22 +234,61 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
     end % of methods (Test, TestTags = {'testvector'})
 
     methods (Test, TestTags = {'testmex'})
-        function mexTest(obj, DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet, ZeroCorrelationZone, RBOffset)
-        %mexTest  Tests the mex wrapper of the SRSGNB PUSCH decoder.
-        %   mexTest(OBJ, DUPLEXMODE, CARRIERBANDWIDTH, PREAMBLEFORMAT, 
-        %   RESTRICTEDSET, ZEROCORRELATIONZONE, RBOFFSET) runs a short 
-        %   simulation with an UL transmission using a carrier with duplex
-        %   mode DUPLEXMODE and a bandiwth of CARRIERBANDWITH PRBs. This
-        %   transmision comprises a PRACH signal using preamble format 
-        %   PREAMBLEFORMAT, restricted set configuration RESTRICTEDSET, 
-        %   cyclic shift index configuration ZEROCORRELATIONINDEX and a RB
-        %   offset RBOFFSET. The PRACH transmission is demodulated in 
-        %   Matlab and PRACH detection is then performed using the mex 
-        %   wraper of the SRSGNB C++ component. The test is considered
-        %   as passed if the detected PRACH is equal to the transmitted one.
+        function mexTest(obj, DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet, ZeroCorrelationZone, RBOffset, DelaySamples)
+            %mexTest  Tests the mex wrapper of the SRSGNB PRACH detector.
+            %   mexTest(OBJ, DUPLEXMODE, CARRIERBANDWIDTH, PREAMBLEFORMAT, 
+            %   RESTRICTEDSET, ZEROCORRELATIONZONE, RBOFFSET) runs a short 
+            %   simulation with a UL transmission using a carrier with duplex
+            %   mode DUPLEXMODE and a bandiwth of CARRIERBANDWITH PRBs. This
+            %   transmision comprises a PRACH signal using preamble format 
+            %   PREAMBLEFORMAT, restricted set configuration RESTRICTEDSET, 
+            %   cyclic shift index configuration ZEROCORRELATIONINDEX and a RB
+            %   offset RBOFFSET. The PRACH transmission is demodulated in 
+            %   MATLAB and PRACH detection is then performed using the mex 
+            %   wrapper of the SRSGNB C++ component. The test is considered
+            %   as passed if the detected PRACH is equal to the transmitted one.
+    
+            import srsMatlabWrappers.phy.upper.channel_processors.srsPRACHgenerator
+            import srsMatlabWrappers.phy.upper.channel_processors.srsPRACHdemodulator
+            import srsTest.phy.srsPRACHDetector
+    
+            % Configure the test.
+            setupsimulation(obj, DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet, ZeroCorrelationZone, RBOffset);
+    
+            % Generate waveform.
+            [waveform, gridset, info] = srsPRACHgenerator(obj.carrier, obj.prach);
+    
+            % Remove the time offset.
+            if gridset.Info.OffsetLength
+                waveform = waveform(gridset.Info.OffsetLength+1:end);
+            end
+    
+            % Nominal SNR value to add some noise.
+            snr = 30; % dB
+            noiseStdDev = 10 ^ (-snr / 20);
 
-        %TBD: Add implementation.
+            % Add some (very little) noise.
+            waveformLength = length(waveform);
+            normNoise = (randn(waveformLength, 1) + 1i * randn(waveformLength, 1)) / sqrt(2);
+            waveform = waveform + (noiseStdDev * normNoise);
+    
+            % Demodulate the PRACH signal.
+            PRACHSymbols = srsPRACHdemodulator(obj.carrier, obj.prach, gridset, waveform, info);
 
+            % Configure the SRS PRACH detector mex.
+            PRACHDetector = srsPRACHDetector('DelaySamples', DelaySamples);
+
+            % Fill the PRACH configuration for the detector.
+            PRACHCfg = srsPRACHDetector.configurePRACH(obj.prach);
+            
+            % Run the PRACH detector.
+            PRACHdetectionResult = PRACHDetector(PRACHSymbols, PRACHCfg);
+
+            % Verify the correct detection (expected, since the SNR is very high).
+            obj.assertEqual(double(PRACHdetectionResult.nof_detected_preambles), 1, 'More than one PRACH preamble detected.');
+            expectedDelay = DelaySamples / (obj.DFTsizeDetector * obj.prach.SubcarrierSpacing*1000);
+            obj.assertEqual(PRACHdetectionResult.time_advance, expectedDelay, 'Expected delay error.');
+            obj.assertEqual(double(PRACHdetectionResult.preamble_index), PRACHCfg.preamble_index, 'PRACH preamble index error.');
         end % of function mextest
     end % of methods (Test, TestTags = {'testmex'})
 end % of classdef srsPUSCHDecoderUnittest
