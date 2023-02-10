@@ -155,10 +155,31 @@ classdef srsOFDMDemodulatorUnittest < srsTest.srsBlockUnittest
                 testCase.saveDataFile('_test_output', testID, ...
                     @writeResourceGridEntryFile, demodulatedGrid, inputIndices);
 
+                cpString = ['cyclic_prefix::', upper(CyclicPrefix)];
+
+                % Select a DFT window offset between 0 to half cyclic
+                % prefix length.
+                DftWindowOffset = randi([0, (72 * DFTsize) / 2048]);
+
+                configCell = {
+                    numerology, ...       % numerology
+                    NSizeGrid, ...        % bw_rb
+                    DFTsize, ...          % dft_size
+                    cpString, ...         % cp
+                    DftWindowOffset, ...  % nof_samples_window_offset
+                    scale, ...            % scale
+                    CarrierFrequency, ... % center_freq_hz
+                    };
+
+                ofdmDemodulatorConfigCell = {
+                    configCell, ... % config
+                    portIdx, ...    % port_idx
+                    NSlotLoc, ...   % slot_idx
+                    };
+
                 % generate the test case entry
-                testCaseString = testCase.testCaseToString(testID, {{numerology, NSizeGrid, ...
-                    DFTsize, ['cyclic_prefix::', upper(CyclicPrefix)], scale, CarrierFrequency}, ...
-                    portIdx, NSlotLoc}, true, '_test_input', '_test_output');
+                testCaseString = testCase.testCaseToString(testID, ...
+                    ofdmDemodulatorConfigCell, true, '_test_input', '_test_output');
 
                 % add the test to the file header
                 testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);
