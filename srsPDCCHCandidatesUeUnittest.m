@@ -8,7 +8,7 @@
 %
 %   srsPDCCHCandidatesUeUnittest Properties (Constant):
 %
-%   srsBlock      - The tested block (i.e., 'pdcch_candidates_Ue').
+%   srsBlock      - The tested block (i.e., 'pdcch_candidates_ue').
 %   srsBlockType  - The type of the tested block, including layer
 %                   (i.e., 'ran/pdcch').
 %
@@ -45,7 +45,7 @@ classdef srsPDCCHCandidatesUeUnittest < srsTest.srsBlockUnittest
     end
 
     properties (ClassSetupParameter)
-        %Path to results folder (old 'pdccg_candidates_Ue' tests will be erased).
+        %Path to results folder (old 'pdcch_candidates_ue' tests will be erased).
         outputPath = {['testPDCCHCandidatesUe', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
     end
 
@@ -107,7 +107,7 @@ classdef srsPDCCHCandidatesUeUnittest < srsTest.srsBlockUnittest
 
         candidates = srsPDCCHCandidatesUE(numCCEs, numCandidates, aggregationLevel, CoresetId, rnti, slotNum);
 
-        % generate a unique test ID
+        % Generate a unique test ID.
         testID = testCase.generateTestID;
 
         aggregationLevelString = ['aggregation_level::n' num2str(aggregationLevel)];
@@ -133,11 +133,11 @@ classdef srsPDCCHCandidatesUeUnittest < srsTest.srsBlockUnittest
 
         testCaseData = {configStr, candidatesStr};
 
-        % generate the test case entry
+        % Generate the test case entry.
         testCaseString = testCase.testCaseToString(testID, testCaseData,...
             false);
 
-        % add the test to the file header
+        % Add the test to the file header.
         testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);
             
         end % of function testvectorGenerationCases
