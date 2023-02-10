@@ -1,6 +1,6 @@
-function [channelEstRG, noiseEst, rsrp, epre] = srsChannelEstimator(receivedRG, pilots, betaDMRS, hop1, hop2, config)
+function [channelEstRG, noiseEst, rsrp, epre, timeAlignment] = srsChannelEstimator(receivedRG, pilots, betaDMRS, hop1, hop2, config)
 %srsChannelEstimator channel estimation.
-%   [CHANNELESTRG, NOISEEST, RSRP, EPRE] = srsChannelEstimator(RECEIVEDRG, PILOTS, BETADMRS, HOP1, HOP2, CONFIG)
+%   [CHANNELESTRG, NOISEEST, RSRP, EPRE, TIMEALIGNMENT] = srsChannelEstimator(RECEIVEDRG, PILOTS, BETADMRS, HOP1, HOP2, CONFIG)
 %   estimates the channel coefficients for the REs resulting from the provided
 %   configuration (see below) from the observations in the resource grid RECEIVEDRG.
 %   The transmission is assumed to be single-layer.
@@ -13,8 +13,9 @@ function [channelEstRG, noiseEst, rsrp, epre] = srsChannelEstimator(receivedRG, 
 %   HOP1       - Configuration of the first intraSlot frequency hop (see below)
 %   HOP2       - Configuration of the second intraSlot frequency hop (see below)
 %   CONFIG     - General configuration (struct with fields DMRSREmask, pattern
-%                of REs carrying DM-RS inside a DM-RS dedicated PRB, and
-%                nPilotsNoiseAvg, number of pilots used for noise averaging)
+%                of REs carrying DM-RS inside a DM-RS dedicated PRB,
+%                nPilotsNoiseAvg, number of pilots used for noise averaging, and scs,
+%                subcarrier spacing in hertz)
 %
 %   Each hop is configured by a struct with fields
 %   DMRSsymbols       - OFDM symbols carrying DM-RS in the first hop (logical mask)
@@ -40,8 +41,11 @@ function [channelEstRG, noiseEst, rsrp, epre] = srsChannelEstimator(receivedRG, 
     noiseEst = 0;
     rsrp = 0;
     epre = 0;
+    timeAlignment = 0;
 
     nPilotSymbolsHop1 = sum(hop1.DMRSsymbols);
+
+    scs = config.scs;
 
     processHop(hop1, pilots(:, 1:nPilotSymbolsHop1));
 
@@ -59,6 +63,11 @@ function [channelEstRG, noiseEst, rsrp, epre] = srsChannelEstimator(receivedRG, 
     if (size(pilots, 2) < 3) || ~isempty(hop2.DMRSsymbols)
         noiseEst = epre * 10^(-3);
     end
+
+    if ~isempty(hop2.DMRSsymbols)
+        timeAlignment = timeAlignment / 2;
+    end
+
 
     %     Nested functions
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -81,6 +90,21 @@ function [channelEstRG, noiseEst, rsrp, epre] = srsChannelEstimator(receivedRG, 
         estimatedChannelP_ = sum(recXpilots_, 2) / betaDMRS / nDMRSsymbols_;
         % TODO: at this point, we should compute a metric for signal detection.
         % detectMetricNum = detectMetricNum + norm(recXpilots_, 'fro')^2;
+
+        % Estimate time alignment.
+        estChannelSC_ = zeros(length(maskREs_), 1);
+        estChannelSC_(maskREs_) = estimatedChannelP_;
+        fftSize_ = 4096;
+        channelIRlp_ = ifft(estChannelSC_, fftSize_);
+        halfCPLength_ = floor((144 / 2) * fftSize_ / 2048);
+        [maxDelay_, iMaxDelay_] = max(channelIRlp_(1:halfCPLength_));
+        [maxAdvance_, iMaxAdvance_] = max(channelIRlp_(end-halfCPLength_+1:end));
+        if abs(maxDelay_) >= abs(maxAdvance_)
+            iMax_ = iMaxDelay_ - 1;
+        else
+            iMax_ = -(halfCPLength_ - iMaxAdvance_ + 1);
+        end
+        timeAlignment = timeAlignment + iMax_ / fftSize_ / scs;
 
         % To estimate the noise, we assume the channel is constant over a small number
         % of adjacent subcarriers.

@@ -173,6 +173,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             fprintf(fileID, '  float                                                   snr_true       = 0;\n');
             fprintf(fileID, '  float                                                   snr_est        = 0;\n');
             fprintf(fileID, '  float                                                   noise_var_est  = 0;\n');
+            fprintf(fileID, '  float                                                   ta_us          = 0;\n');
             fprintf(fileID, '  file_vector<resource_grid_reader_spy::expected_entry_t> grid;\n');
             fprintf(fileID, '  file_vector<cf_t>                                       pilots;\n');
             fprintf(fileID, '  file_vector<resource_grid_reader_spy::expected_entry_t> estimates;\n');
@@ -215,10 +216,12 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             % Place pilots on the resource grid.
             transmittedRG = obj.transmitPilots(pilots, betaDMRS, hop1, hop2);
 
-            % For now, consider a single-tap channel.
-            channelDelay = randi([0, 40]);
+            % For now, consider a single-tap channel (max delay is 1/4 of
+            % the cyclic prefix length).
+            fftSize =  obj.NSizeGrid * obj.NRE;
+            channelDelay = randi([0, floor(fftSize * 0.07 * 0.25)]);
             channelCoef = exp(2j * pi * rand);
-            channelTF = fft([zeros(channelDelay, 1); channelCoef; zeros(5, 1)], obj.NSizeGrid * obj.NRE);
+            channelTF = fft([zeros(channelDelay, 1); channelCoef; zeros(5, 1)], fftSize);
             channelTF = fftshift(channelTF);
             % We assume the channel constant over the entire slot.
             channelRG = repmat(channelTF, 1, obj.nSymbolsSlot);
@@ -235,7 +238,9 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             EstimatorConfig.DMRSSymbolMask = obj.DMRSsymbols;
             EstimatorConfig.DMRSREmask = obj.DMRSREmask;
             EstimatorConfig.nPilotsNoiseAvg = sum(obj.DMRSREmask);
-            [channelEst, noiseEst, rsrp, epre] = srsChannelEstimator(receivedRG, pilots, betaDMRS, hop1, hop2, EstimatorConfig);
+            EstimatorConfig.scs = 15000;
+            [channelEst, noiseEst, rsrp, epre, timeAlignment] = srsChannelEstimator(receivedRG, ...
+                pilots, betaDMRS, hop1, hop2, EstimatorConfig);
 
             % TODO: The ratio of the two quantities below should give a metric that allows us
             % to decide whether pilots were sent or not. However, it should be normalized
@@ -288,6 +293,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                 SNR, ...
                 10 * log10(snrEst), ...
                 noiseEst, ...
+                timeAlignment * 1e6, ...
                 };
 
             testCaseString = obj.testCaseToString(testID, context, false, ...
