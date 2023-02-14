@@ -73,7 +73,7 @@ classdef srsULSCHInfoUnittest < srsTest.srsBlockUnittest
         nofHarqAckBits = {0, 1, 2, 4}
 
         %Number of CSI-Part1 bits.
-        nofCsiPart1Bits = {0}
+        nofCsiPart1Bits = {0, 1, 4}
 
         %Number of CSI-Part2 bits.
         nofCsiPart2Bits = {0}

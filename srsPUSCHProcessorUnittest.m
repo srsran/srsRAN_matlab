@@ -76,7 +76,7 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
         nofHarqAck = {0, 1, 10}
 
         %Number of CSI-Part1 bits multiplexed with the message.
-        nofCsiPart1 = {0};
+        nofCsiPart1 = {0, 1, 4};
 
         %Number of CSI-Part2 bits multiplexed with the message.
         nofCsiPart2= {0};
@@ -139,9 +139,9 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
 
             % Minimum number of PRB is one if two or less UCI bits are 
             % multiplexed. Otherwise, 10 PRB.
-            MinNumPrb = 1;
+            MinNumPrb = 2;
             if nofHarqAck + nofCsiPart1 + nofCsiPart2 > 2
-                MinNumPrb = 10;
+                MinNumPrb = 20;
             end
 
             % Select carrier configuration.
