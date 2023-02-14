@@ -295,6 +295,7 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             mcsDescr = mcsDescription2Cell(pusch.Modulation, targetCodeRate);
 
             pduDescription = {...
+                'nullopt', ...                                % context
                 slotConfig, ...                               % slot
                 pusch.RNTI, ...                               % rnti
                 carrier.NSizeGrid, ...                        % bwp_size_rb

@@ -219,6 +219,7 @@ classdef srsDLProcessorUnittest < srsTest.srsBlockUnittest
 
                 % Prepare PDCCH PDU
                 pduDescription = {...
+                    'nullopt', ...         % context
                     slotConfig,...         % slot
                     cyclicPrefixStr,...    % cp
                     coresetDescription,... % coreset
@@ -304,6 +305,7 @@ classdef srsDLProcessorUnittest < srsTest.srsBlockUnittest
 
                 % Prepare PDSCH configuration
                 pdschPDUCell = {...
+                    'nullopt', ...                % context
                     slotConfig, ...               % Slot
                     pdschConfig.RNTI, ...         % RNTI
                     bwpConfig.NSizeBWP, ...       % BWP size

@@ -223,7 +223,7 @@ classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
                 groupHoppingConfig,        ... % PUCCH group hopping type
                 port,                      ... % antenna port
                 betaPUCCH,                 ... % amplitude scaling factor
-                pucch.OCCI, ...                % time_domain_occ
+                pucch.OCCI,                ... % time_domain_occ
                 pucch.InitialCyclicShift,  ... % initial_cyclic_shift
                 NCellID,                   ... % pseudorandom initializer
                 ackSize,                   ... % number of ACK bits
