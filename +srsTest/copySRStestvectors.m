@@ -46,7 +46,7 @@ function copySRStestvectors(origin, destination, targetBlock, srsDir)
             % create file names
             headerFile = fullfile(origin, [block '_test_data.h']);
             tarFile = fullfile(origin, [block '_test_data.tar.gz']);
-            finalDest = fullfile(destination, 'unittests', blockType);
+            finalDest = fullfile(destination, 'tests/unittests', blockType);
 
             % ensure the finalDest exists
             if (~exist(finalDest, "dir"))
