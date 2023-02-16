@@ -213,15 +213,16 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
                 cfg.DMRSSymbolMask = hop.DMRSsymbols;
                 cfg.DMRSREmask = hop.DMRSREmask;
                 cfg.nPilotsNoiseAvg = 2;
+                cfg.scs = SubcarrierSpacing * 1000;
                 [estChannel, estNoiseVar, estRSRP] = srsChannelEstimator(receivedRG, ...
                     pilots, amplitude, hop, hop2, cfg);
 
                 % Write simulation data.
                 testCase.saveDataFile('_test_output', testID, ...
                     @writeResourceGridEntryFile, receivedRG(symbolIndicesLinear), symbolIndices);
-                [scs, syms, vals] = find(estChannel);
+                [subcarriers, syms, vals] = find(estChannel);
                 testCase.saveDataFile('_ch_estimates', testID, ...
-                    @writeResourceGridEntryFile, vals, [scs, syms, zeros(length(scs), 1)] - 1);
+                    @writeResourceGridEntryFile, vals, [subcarriers, syms, zeros(length(subcarriers), 1)] - 1);
             end
 
             % Generate a 'slot_point' configuration string.
