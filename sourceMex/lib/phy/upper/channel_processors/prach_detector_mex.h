@@ -3,23 +3,23 @@
 
 #pragma once
 
-#include "srsgnb/phy/generic_functions/generic_functions_factories.h"
-#include "srsgnb/phy/support/support_factories.h"
-#include "srsgnb/phy/upper/channel_processors/channel_processor_factories.h"
-#include "srsgnb/phy/upper/channel_processors/prach_detector.h"
-#include "srsgnb_matlab/srsgnb_mex_dispatcher.h"
+#include "srsran_matlab/srsran_mex_dispatcher.h"
+#include "srsran/phy/generic_functions/generic_functions_factories.h"
+#include "srsran/phy/support/support_factories.h"
+#include "srsran/phy/upper/channel_processors/channel_processor_factories.h"
+#include "srsran/phy/upper/channel_processors/prach_detector.h"
 
 /// \brief Factory method for a PRACH detector.
 ///
 /// Creates and assemblies all the necessary components (DFT, PRACH generator, ...) for a fully-functional
 /// PRACH detector.
-static std::unique_ptr<srsgnb::prach_detector> create_prach_detector();
+static std::unique_ptr<srsran::prach_detector> create_prach_detector();
 
 /// Fixed DFT size of the PRACH detecter.
 static constexpr unsigned DFT_SIZE_DETECTOR = 1536;
 
-/// Implements a PRACH detector following the srsgnb_mex_dispatcher template.
-class MexFunction : public srsgnb_mex_dispatcher
+/// Implements a PRACH detector following the srsran_mex_dispatcher template.
+class MexFunction : public srsran_mex_dispatcher
 {
 public:
   /// \brief Constructor.
@@ -27,12 +27,13 @@ public:
   /// Stores the string identifier&ndash;method pairs that form the public interface of the PRACH decoder MEX object.
   MexFunction()
   {
-    // Ensure srsgnb PRACH decoder was created successfully.
+    // Ensure srsran PRACH decoder was created successfully.
     if (!detector) {
-      mex_abort("Cannot create srsgnb PRACH detector.");
+      mex_abort("Cannot create srsran PRACH detector.");
     }
 
-    create_callback("set_delay", [this](ArgumentList& out, ArgumentList& in) { return this->method_set_delay(out, in); });
+    create_callback("set_delay",
+                    [this](ArgumentList& out, ArgumentList& in) { return this->method_set_delay(out, in); });
     create_callback("step", [this](ArgumentList& out, ArgumentList& in) { return this->method_step(out, in); });
   }
 
@@ -79,12 +80,12 @@ private:
   void method_step(ArgumentList& outputs, ArgumentList& inputs);
 
   /// A pointer to the actual PUSCH decoder.
-  std::unique_ptr<srsgnb::prach_detector> detector = create_prach_detector();
+  std::unique_ptr<srsran::prach_detector> detector = create_prach_detector();
 };
 
-std::unique_ptr<srsgnb::prach_detector> create_prach_detector()
+std::unique_ptr<srsran::prach_detector> create_prach_detector()
 {
-  using namespace srsgnb;
+  using namespace srsran;
 
   std::shared_ptr<dft_processor_factory> dft_factory = create_dft_processor_factory_generic();
 

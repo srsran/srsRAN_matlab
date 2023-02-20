@@ -43,14 +43,7 @@
 classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
     properties (Constant)
         %Name of the tested block. 
-        %   It should be noted that the 'testvector' generation method is 
-        %   conforming the testvectors naming and data structuring to that 
-        %   of 'srsPRACHGeneratorUnittest', taking into account that the 
-        %   'prach_detector_vectortest' test application of SRSGNB has been
-        %   implemented to reuse the testvectors that it produces. Hence 
-        %   'srsBlock' is not set to 'prach_detector' as it would be usually
-        %   done.
-        srsBlock = 'prach_generator'
+        srsBlock = 'prach_detector'
 
         %Type of the tested block.
         srsBlockType = 'phy/upper/channel_processors'
@@ -92,6 +85,10 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
     properties (Constant, Hidden)
         % DFT size of the PRACH detector.
         DFTsizeDetector = 1536
+        % Start preamble index to monitor.
+        StartPreambleIndex = 0
+        % Number of preamble indices to monitor.
+        NofPreamblesIndices = 64
     end % of properties (Constant, Hidden)
 
     properties (Hidden)
@@ -106,7 +103,7 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
 
             fprintf(fileID, [...
-                '#include "srsgnb/phy/upper/channel_processors/prach_generator.h"\n'...
+                '#include "srsgnb/phy/upper/channel_processors/prach_detector.h"\n'...
                 '#include "srsgnb/support/file_vector.h"\n'...
                 ]);
         end
@@ -116,8 +113,8 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
 
             fprintf(fileID, [...
                 'struct test_case_t {\n'...
-                '  prach_generator::configuration config;\n'...
-                '  file_vector<cf_t> sequence;\n'...
+                '  prach_detector::configuration config;\n'...
+                '  file_vector<cf_t> symbols;\n'...
                 '};\n'...
                 ]);
         end
@@ -169,11 +166,6 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
         %   DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet,
         %   ZeroCorrelationZone and RBOffset. The parameters SequenceIndex
         %   and PreambleIndex are generated randomly.
-        %   It should be noted that the generated testvectors will conform
-        %   to the naming and data structuring of 'srsPRACHGeneratorUnittest',
-        %   taking into account that the 'prach_detector_vectortest' test 
-        %   application of SRSGNB has been implemented to reuse the 
-        %   testvectors that it produces.
 
             import srsTest.helpers.writeComplexFloatFile
             import srsMatlabWrappers.phy.upper.channel_processors.srsPRACHgenerator
@@ -194,7 +186,7 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
             end
 
             % Demodulate the PRACH signal.
-            PRACHSymbols = srsPRACHdemodulator(obj.carrier, obj.prach, gridset, waveform, info);
+            PRACHSymbols = srsPRACHdemodulator(obj.carrier, obj.prach, gridset.Info, waveform, info);
 
             % Write the generated PRACH sequence into a binary file.
             obj.saveDataFile('_test_output', TestID, ...
@@ -214,18 +206,20 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
                     error('Invalid restricted set %s', ojb.prach.RestrictedSet);
             end
 
-            % srsgnb PRACH configuration.
-            srsPRACHConfig = {...
-                srsPRACHFormat, ...                % format
-                obj.prach.SequenceIndex, ...       % root_sequence_index
-                obj.prach.PreambleIndex, ...       % preamble_index
-                srsRestrictedSet, ...              % restricted_set
-                obj.prach.ZeroCorrelationZone, ... % zero_correlation_zone
+            % srsgnb PRACH detector configuration.
+            srsPRACHDetectorConfig = {...
+                obj.prach.SequenceIndex, ...        % root_sequence_index
+                srsPRACHFormat, ...                 % format
+                srsRestrictedSet, ...               % restricted_set
+                obj.prach.PreambleIndex, ...        % preamble_index                
+                obj.prach.ZeroCorrelationZone, ...  % zero_correlation_zone
+                obj.StartPreambleIndex, ...         % start_preamble_index
+                obj.NofPreamblesIndices, ...        % nof_preamble_indices
                 };
 
             % Generate the test case entry.
             testCaseString = obj.testCaseToString(TestID, ...
-                srsPRACHConfig, true, '_test_output');
+                srsPRACHDetectorConfig, true, '_test_output');
 
             % Add the test to the file header.
             obj.addTestToHeaderFile(obj.headerFileID, testCaseString);
@@ -273,7 +267,7 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
             waveform = waveform + (noiseStdDev * normNoise);
     
             % Demodulate the PRACH signal.
-            PRACHSymbols = srsPRACHdemodulator(obj.carrier, obj.prach, gridset, waveform, info);
+            PRACHSymbols = srsPRACHdemodulator(obj.carrier, obj.prach, gridset.Info, waveform, info);
 
             % Configure the SRS PRACH detector mex.
             PRACHDetector = srsPRACHDetector('DelaySamples', DelaySamples);

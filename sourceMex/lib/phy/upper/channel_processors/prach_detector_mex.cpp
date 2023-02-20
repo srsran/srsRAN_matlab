@@ -1,11 +1,11 @@
 #include "prach_detector_mex.h"
-#include "srsgnb/srsvec/copy.h"
-#include "srsgnb_matlab/support/matlab_to_srs.h"
+#include "srsran_matlab/support/matlab_to_srs.h"
+#include "srsran/srsvec/copy.h"
 
 using matlab::mex::ArgumentList;
 using namespace matlab::data;
-using namespace srsgnb;
-using namespace srsgnb_matlab;
+using namespace srsran;
+using namespace srsran_matlab;
 
 void MexFunction::check_step_outputs_inputs(ArgumentList outputs, ArgumentList inputs)
 {
@@ -63,12 +63,12 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
     // Create buffer.
     std::unique_ptr<prach_buffer> buffer = create_prach_buffer_long();
     if (!buffer) {
-      mex_abort("Cannot create srsgnb PRACH buffer long.");
+      mex_abort("Cannot create srsran PRACH buffer long.");
     }
 
     // Get frequency domain data.
     const TypedArray<std::complex<double>> in_cft_array = inputs[1];
-    std::vector<cf_t>      frequency_data(in_cft_array.cbegin(), in_cft_array.cend());
+    std::vector<cf_t>                      frequency_data(in_cft_array.cbegin(), in_cft_array.cend());
     std::transform(
         frequency_data.begin(), frequency_data.end(), frequency_data.begin(), [&, n = 0](cf_t sample) mutable {
           return sample * std::exp(-COMPLEX_J * TWOPI * static_cast<float>(n++) * static_cast<float>(delay_samples) /
@@ -90,22 +90,23 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
       prach_detection_result::preamble_indication& preamble_indication          = result.preambles.back();
       StructArray                                  detected_preamble_indication = factory.createStructArray({1, 1},
                                                                            {"nof_detected_preambles",
-                                                                            "preamble_index",
-                                                                            "time_advance",
-                                                                            "power_dB",
-                                                                            "snr_dB",
-                                                                            "rssi_dB",
-                                                                            "time_resolution",
-                                                                            "time_advance_max"});
+                                                                                                             "preamble_index",
+                                                                                                             "time_advance",
+                                                                                                             "power_dB",
+                                                                                                             "snr_dB",
+                                                                                                             "rssi_dB",
+                                                                                                             "time_resolution",
+                                                                                                             "time_advance_max"});
       detected_preamble_indication[0]["nof_detected_preambles"] = factory.createScalar(result.preambles.size());
-      detected_preamble_indication[0]["preamble_index"]         = factory.createScalar(preamble_indication.preamble_index);
-      detected_preamble_indication[0]["time_advance"]           = factory.createScalar(preamble_indication.time_advance.to_seconds());
-      detected_preamble_indication[0]["power_dB"]               = factory.createScalar(preamble_indication.power_dB);
-      detected_preamble_indication[0]["snr_dB"]                 = factory.createScalar(preamble_indication.snr_dB);
-      detected_preamble_indication[0]["rssi_dB"]                = factory.createScalar(result.rssi_dB);
-      detected_preamble_indication[0]["time_resolution"]        = factory.createScalar(result.time_resolution.to_seconds());
-      detected_preamble_indication[0]["time_advance_max"]       = factory.createScalar(result.time_advance_max.to_seconds());
-      outputs[0]                                                = detected_preamble_indication;
+      detected_preamble_indication[0]["preamble_index"] = factory.createScalar(preamble_indication.preamble_index);
+      detected_preamble_indication[0]["time_advance"] =
+          factory.createScalar(preamble_indication.time_advance.to_seconds());
+      detected_preamble_indication[0]["power_dB"]         = factory.createScalar(preamble_indication.power_dB);
+      detected_preamble_indication[0]["snr_dB"]           = factory.createScalar(preamble_indication.snr_dB);
+      detected_preamble_indication[0]["rssi_dB"]          = factory.createScalar(result.rssi_dB);
+      detected_preamble_indication[0]["time_resolution"]  = factory.createScalar(result.time_resolution.to_seconds());
+      detected_preamble_indication[0]["time_advance_max"] = factory.createScalar(result.time_advance_max.to_seconds());
+      outputs[0]                                          = detected_preamble_indication;
     }
   } else {
     std::cout << "Skipping test case with 'RESTRICTED' set configuration.\n";

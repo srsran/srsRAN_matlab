@@ -3,18 +3,14 @@
 %   returns a set of frequency-domain symbols PRACHSYMBOLS comprising the 5G
 %   5G NR physical random access channel (PRACH) given input CARRIER and 
 %   PRACH parameters, PRACH waveform WAVEFORM and two structure arrays 
-%   GRIDSET and INFO.
+%   GRIDINFO and INFO.
 %
-%   GRIDSET is a structure array containing the following fields:
-%
-%   Info                - Structure with information corresponding to the
-%                         PRACH OFDM modulation. If the PRACH is configured 
-%                         for FR2 or the PRACH slot for the current
-%                         configuration spans more than one subframe, some
-%                         of the OFDM-related information may be different
-%                         between PRACH slots. In this case, the info
-%                         structure is an array of the same length as the
-%                         number of PRACH slots in the waveform.
+%   GRIDINFO is a structure array containing information corresponding to the
+%   PRACH OFDM modulation. If the PRACH is configured for FR2 or the PRACH 
+%   slot for the current configuration spans more than one subframe, some
+%   of the OFDM-related information may be different between PRACH slots. 
+%   In this case, the info structure is an array of the same length as the
+%   number of PRACH slots in the waveform.
 %
 %   INFO is a structure containing the following fields:
 %
@@ -35,11 +31,11 @@
 %
 %   See also nrPRACHConfig, nrPRACH, nrPRACHIndices, nrCarrierConfig, srsPRACHgenerator.
 
-function PRACHSymbols = srsPRACHdemodulator(carrier, prach, gridset, waveform, info)
+function PRACHSymbols = srsPRACHdemodulator(carrier, prach, gridInfo, waveform, info)
     
     % Main PRACH demodulation parameters.
-    prachDFTSize = gridset.Info.Nfft;
-    nofSymbols = length(gridset.Info.SymbolLengths);
+    prachDFTSize = gridInfo.Nfft;
+    nofSymbols = length(gridInfo.SymbolLengths);
     NRE = 12;
     K = carrier.SubcarrierSpacing / prach.SubcarrierSpacing;
     PRACHgridSize = carrier.NSizeGrid * K * NRE;
@@ -51,8 +47,8 @@ function PRACHSymbols = srsPRACHdemodulator(carrier, prach, gridset, waveform, i
     symbolOffset = 0;
     for symbolIndex = 0:nofSymbols-1
         % Symbol-specific PRACH demodulation parameters.
-        prachSymbolLength = gridset.Info.SymbolLengths(symbolIndex+1);
-        prachCPSize = gridset.Info.CyclicPrefixLengths(symbolIndex+1);
+        prachSymbolLength = gridInfo.SymbolLengths(symbolIndex+1);
+        prachCPSize = gridInfo.CyclicPrefixLengths(symbolIndex+1);
 
         % Remove the CP.
         noCPprach = waveform(symbolOffset + prachCPSize + 1 : end);

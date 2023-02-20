@@ -17,7 +17,7 @@ matlab_add_mex(
     R2018a
 )
 
-target_link_libraries(prach_detector_mex srsgnb::srsgnb_channel_processors srsgnb::srsgnb_generic_funcs)
+target_link_libraries(prach_detector_mex srsran::srsran_channel_processors srsran::srsran_generic_funcs)
 
 set_target_properties(prach_detector_mex
     PROPERTIES
