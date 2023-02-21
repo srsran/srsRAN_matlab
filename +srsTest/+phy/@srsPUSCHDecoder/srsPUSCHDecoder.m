@@ -1,5 +1,5 @@
-%srsPUSCHDecoder MATLAB interface to SRGNB PUSCH decoder.
-%   User-friendly interface to the SRSGNB PUSCH decoder class, which is wrapped
+%srsPUSCHDecoder MATLAB interface to SRSRAN PUSCH decoder.
+%   User-friendly interface to the SRSRAN PUSCH decoder class, which is wrapped
 %   by the MEX static method pusch_decoder_mex.
 %
 %   PUSCHDEC = srsPUSCHDecoder(SBPDESC) creates a PHY Uplink Shared Channel decoder

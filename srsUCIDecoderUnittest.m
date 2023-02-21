@@ -54,7 +54,7 @@ classdef srsUCIDecoderUnittest < srsTest.srsBlockUnittest
 
         %Modulation scheme, described as a three-entry cell array. The first
         %entry is the modulation order, the second and the third are the
-        %corresponding labels for MATLAB and SRSGNB, respectively.
+        %corresponding labels for MATLAB and SRSRAN, respectively.
         %Example: modScheme = {4, '16QAM', 'QAM16'}
         modScheme = {{1, 'pi/2-BPSK', 'BPSK'}, {2, 'QPSK', 'QPSK'}, {4, '16QAM', 'QAM16'}, ...
             {6, '64QAM', 'QAM64'}, {8, '256QAM', 'QAM256'}}
@@ -64,10 +64,10 @@ classdef srsUCIDecoderUnittest < srsTest.srsBlockUnittest
         function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
 
-            fprintf(fileID, '#include "srsgnb/phy/upper/channel_processors/uci_decoder.h"\n');
-            fprintf(fileID, '#include "srsgnb/phy/upper/log_likelihood_ratio.h"\n');
-            fprintf(fileID, '#include "srsgnb/ran/modulation_scheme.h"\n');
-            fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
+            fprintf(fileID, '#include "srsran/phy/upper/channel_processors/uci_decoder.h"\n');
+            fprintf(fileID, '#include "srsran/phy/upper/log_likelihood_ratio.h"\n');
+            fprintf(fileID, '#include "srsran/ran/modulation_scheme.h"\n');
+            fprintf(fileID, '#include "srsran/support/file_vector.h"\n');
         end
 
         function addTestDefinitionToHeaderFile(~, fileID)
@@ -91,7 +91,7 @@ classdef srsUCIDecoderUnittest < srsTest.srsBlockUnittest
             import srsTest.helpers.writeUint8File
             import srsTest.helpers.writeInt8File
 
-            % The current srsGNB implementation only supports UCI messages
+            % The current srsRAN implementation only supports UCI messages
             % up to 11 bits.
             isASupported = A < 12;
             if (~isASupported)

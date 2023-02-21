@@ -72,8 +72,8 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
             
             fprintf(fileID, '#include "../../support/resource_grid_test_doubles.h"\n');
-            fprintf(fileID, '#include "srsgnb/phy/upper/channel_processors/pusch_demodulator.h"\n');
-            fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
+            fprintf(fileID, '#include "srsran/phy/upper/channel_processors/pusch_demodulator.h"\n');
+            fprintf(fileID, '#include "srsran/support/file_vector.h"\n');
         end
 
         function addTestDefinitionToHeaderFile(~, fileID)

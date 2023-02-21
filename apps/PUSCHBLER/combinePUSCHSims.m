@@ -62,16 +62,16 @@ function [tableSRS, tableMATLAB] = combinePUSCHSims(files)
     for iFile = 1:numCurves
         filename = files(iFile);
         fprintf('Processing file %s...\n', filename);
-        assert(exist(filename, 'file') == 2, 'srsgnb_matlab:combinePUSCHSims', 'File not found.');
+        assert(exist(filename, 'file') == 2, 'srsran_matlab:combinePUSCHSims', 'File not found.');
 
         S = load(filename);
         puschName = fieldnames(S);
-        assert(numel(puschName) == 1, 'srsgnb_matlab:combinePUSCHSims', ...
+        assert(numel(puschName) == 1, 'srsran_matlab:combinePUSCHSims', ...
             'File doesn''t contain a single object.');
         puschsim = S.(puschName{1});
-        assert(isa(puschsim, 'PUSCHBLER'), 'srsgnb_matlab::combinePUSCHSims', ...
+        assert(isa(puschsim, 'PUSCHBLER'), 'srsran_matlab::combinePUSCHSims', ...
             'File doesn''t contain a PUSCHBLER object');
-        assert(puschsim.isLocked, 'srsgnb_matlab::combinePUSCHSims', ...
+        assert(puschsim.isLocked, 'srsran_matlab::combinePUSCHSims', ...
             'Object %s is unlocked', puschName{1});
 
         SNRrange = puschsim.SNRrange;

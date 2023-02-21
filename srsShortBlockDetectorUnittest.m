@@ -60,9 +60,9 @@ classdef srsShortBlockDetectorUnittest < srsTest.srsBlockUnittest
         %addTestIncludesToHeaderFile(OBJ, FILEID) adds include directives to
         %   the header file pointed by FILEID, which describes the test vectors.
 
-            fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
-            fprintf(fileID, '#include "srsgnb/ran/modulation_scheme.h"\n');
-            fprintf(fileID, '#include "srsgnb/phy/upper/log_likelihood_ratio.h"\n');
+            fprintf(fileID, '#include "srsran/support/file_vector.h"\n');
+            fprintf(fileID, '#include "srsran/ran/modulation_scheme.h"\n');
+            fprintf(fileID, '#include "srsran/phy/upper/log_likelihood_ratio.h"\n');
         end
 
         function addTestDefinitionToHeaderFile(~, fileID)

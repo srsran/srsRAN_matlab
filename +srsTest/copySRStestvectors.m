@@ -3,13 +3,13 @@ function copySRStestvectors(origin, destination, targetBlock, srsDir)
 %   copySRStestvectors(ORIGIN, DESTINATION) copies all test vector files (both
 %   header files and tar.gz files) found in folder ORIGIN to the proper
 %   subfolder of DESTINATION. Here, DESTINATION stands for a root directory of
-%   the SRSGNB software.
+%   the SRSRAN software.
 %
 %   copySRStestvectors(ORIGIN, DESTINATION, BLOCK) copies only the test vectors
-%   corresponding to the SRSGNB block BLOCK.
+%   corresponding to the SRSRAN block BLOCK.
 %
 %   copySRStestvectors(ORIGIN, DESTINATION, BLOCK, SRSDIR) specifies SRSDIR as
-%   the srsgnb_matlab root directory (defaults to current directory).
+%   the srsran_matlab root directory (defaults to current directory).
 
     arguments
         origin      (1, :) char {mustBeFolder}

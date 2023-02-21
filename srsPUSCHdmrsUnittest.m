@@ -88,8 +88,8 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
 
 
             fprintf(fileID, '#include "../../support/resource_grid_test_doubles.h"\n');
-            fprintf(fileID, '#include "srsgnb/phy/upper/signal_processors/dmrs_pusch_estimator.h"\n');
-            fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
+            fprintf(fileID, '#include "srsran/phy/upper/signal_processors/dmrs_pusch_estimator.h"\n');
+            fprintf(fileID, '#include "srsran/support/file_vector.h"\n');
         end
 
         function addTestDefinitionToHeaderFile(~, fileID)
@@ -191,7 +191,7 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
                 estNoiseVar = 0;
             else
                 % Ensure we are transmitting on a single layer.
-                assert(all(symbolIndices(:, 3) == 0), 'srsgnb_matlab:srsPUSCHdmrsUnittest', ...
+                assert(all(symbolIndices(:, 3) == 0), 'srsran_matlab:srsPUSCHdmrsUnittest', ...
                     'Multi-layer channel estimation not enabled yet.');
                 channel = createChannel(carrier);
 

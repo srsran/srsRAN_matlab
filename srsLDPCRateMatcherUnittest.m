@@ -70,7 +70,7 @@ classdef srsLDPCRateMatcherUnittest < srsTest.srsBlockUnittest
 
         %Modulation scheme, described as a three-entry cell array. The first
         %entry is the modulation order, the second and the third are the
-        %corresponding labels for MATLAB and SRSGNB, respectively.
+        %corresponding labels for MATLAB and SRSRAN, respectively.
         %Example: modScheme = {4, '16QAM', 'QAM16'}
         modScheme = {{1, 'BPSK', 'BPSK'}, {2, 'QPSK', 'QPSK'}, {4, '16QAM', 'QAM16'}, ...
             {6, '64QAM', 'QAM64'}, {8, '256QAM', 'QAM256'}}
@@ -84,8 +84,8 @@ classdef srsLDPCRateMatcherUnittest < srsTest.srsBlockUnittest
         %addTestIncludesToHeaderFile(OBJ, FILEID) adds include directives to
         %   the header file pointed by FILEID, which describes the test vectors.
 
-            fprintf(fileID, '#include "srsgnb/ran/modulation_scheme.h"\n');
-            fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
+            fprintf(fileID, '#include "srsran/ran/modulation_scheme.h"\n');
+            fprintf(fileID, '#include "srsran/support/file_vector.h"\n');
         end
 
         function addTestDefinitionToHeaderFile(~, fileID)
@@ -139,7 +139,7 @@ classdef srsLDPCRateMatcherUnittest < srsTest.srsBlockUnittest
             codeblock = randi([0, 1], CBlckLength, 1);
             codeblock(fillerIdx) = -1;
 
-            % SRSGNB rate matcher works on a codeblock basis and its transparent
+            % SRSRAN rate matcher works on a codeblock basis and its transparent
             % to the number of transmission layers, which is therefore fixed
             % to 1 in these simulations.
             nTxLayers = 1;

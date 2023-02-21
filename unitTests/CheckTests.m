@@ -12,7 +12,7 @@
 %
 %   CheckTests Properties (Constant):
 %
-%   fullBlocks - List of all possible SRSGNB blocks.
+%   fullBlocks - List of all possible SRSRAN blocks.
 %
 %   CheckTests Properties (TestParameters):
 %
@@ -44,12 +44,12 @@
 classdef CheckTests < matlab.unittest.TestCase
     properties (TestParameter)
         %Test to check. File name of one of the 'srsBlockUnittest' subclasses defining
-        %   the tests for an SRSGNB block (e.g., 'srsModulationMapperUnittest.m').
+        %   the tests for an SRSRAN block (e.g., 'srsModulationMapperUnittest.m').
         testName
     end
 
     properties (Constant)
-        %List of all possible SRSGNB blocks. Here, block names include their type
+        %List of all possible SRSRAN blocks. Here, block names include their type
         %   (e.g., 'phy/upper/channel_modulation/modulation_mapper').
         fullBlocks = srsTest.listSRSblocks('full')
     end
@@ -63,7 +63,7 @@ classdef CheckTests < matlab.unittest.TestCase
     methods (TestParameterDefinition, Static)
         function testName = obtainTestNames()
         %obtainTestNames initializes the testName parameter by selecting the proper files
-        %   in the srsgnb_matlab root directory.
+        %   in the srsran_matlab root directory.
 
             % Get all .m files in root directory.
             tmp = what('..');
@@ -84,7 +84,7 @@ classdef CheckTests < matlab.unittest.TestCase
 
     methods (TestClassSetup)
         function classSetup(obj)
-        %classSetup adds the srsgnb_matlab root directory to the MATLAB path.
+        %classSetup adds the srsran_matlab root directory to the MATLAB path.
             import matlab.unittest.fixtures.PathFixture
             import matlab.unittest.fixtures.TemporaryFolderFixture;
 
@@ -185,14 +185,14 @@ classdef CheckTests < matlab.unittest.TestCase
                 obj.assertTrue(~isempty(dir([fileName, '*.tar.gz'])), msg);
             end
 
-            % Check whether runSRSGNBUnittest can run the current test.
+            % Check whether runSRSRANUnittest can run the current test.
             try
-                rtest = runSRSGNBUnittest(blockVal, 'testvector');
+                rtest = runSRSRANUnittest(blockVal, 'testvector');
             catch
-                msg = sprintf('runSRSGNBUnittest cannot run a test for block %s.', blockVal);
+                msg = sprintf('runSRSRANUnittest cannot run a test for block %s.', blockVal);
                 obj.assertFail(msg);
             end
-            msg = sprintf('runSRSGNBUnittest maps block %s to class %s instead of class %s.', ...
+            msg = sprintf('runSRSRANUnittest maps block %s to class %s instead of class %s.', ...
                 blockVal, rtest(1).TestClass, className);
             obj.assertMatches(rtest(1).TestClass, className, msg);
 
@@ -205,11 +205,11 @@ classdef CheckTests < matlab.unittest.TestCase
             nBlocks = numel(blocks);
 
             for iBlock = 1:nBlocks
-                % Check whether runSRSGNBUnittest has a test for the current block.
+                % Check whether runSRSRANUnittest has a test for the current block.
                 try
-                    [~] = runSRSGNBUnittest(blocks{iBlock}, 'testvector');
+                    [~] = runSRSRANUnittest(blocks{iBlock}, 'testvector');
                 catch
-                    msg = sprintf('runSRSGNBUnittest does not have a test for block %s.', blocks{iBlock});
+                    msg = sprintf('runSRSRANUnittest does not have a test for block %s.', blocks{iBlock});
                     obj.assertFail(msg);
                 end
             end % of for iBlock

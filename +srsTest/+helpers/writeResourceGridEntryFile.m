@@ -2,7 +2,7 @@
 %   writeResourceGridEntryFile(FILENAME, DATA, INDICES) generates a new binary
 %   file FILENAME containing a set of complex symbols and its related indices,
 %   formatted to match the 'file_vector<resource_grid_spy::entry_t>' structures
-%   used by the SRSGNB.
+%   used by the SRSRAN.
 
 function writeResourceGridEntryFile(filename, dataIn, indices)
 % Make sure data has a good format.

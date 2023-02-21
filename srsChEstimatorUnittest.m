@@ -156,8 +156,8 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
         %addTestIncludesToHeaderFile(OBJ, FILEID) adds include directives to
         %   the header file pointed by FILEID, which describes the test vectors.
             fprintf(fileID, '#include "../../support/resource_grid_test_doubles.h"\n');
-            fprintf(fileID, '#include "srsgnb/phy/upper/signal_processors/port_channel_estimator.h"\n');
-            fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
+            fprintf(fileID, '#include "srsran/phy/upper/signal_processors/port_channel_estimator.h"\n');
+            fprintf(fileID, '#include "srsran/support/file_vector.h"\n');
 
         end
 
@@ -197,7 +197,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             end
 
             assert((sum(configuration.symbolAllocation) <= obj.nSymbolsSlot), ...
-                'srsgnb_matlab:srsChEstimatorUnittest', 'Time allocation exceeds slot length.');
+                'srsran_matlab:srsChEstimatorUnittest', 'Time allocation exceeds slot length.');
 
             % Generate a unique test ID.
             testID = obj.generateTestID;

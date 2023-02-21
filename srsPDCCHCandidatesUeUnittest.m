@@ -64,7 +64,7 @@ classdef srsPDCCHCandidatesUeUnittest < srsTest.srsBlockUnittest
         function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
 
-            fprintf(fileID, '#include "srsgnb/ran/pdcch/pdcch_candidates.h"\n');
+            fprintf(fileID, '#include "srsran/ran/pdcch/pdcch_candidates.h"\n');
         end
 
         function addTestDefinitionToHeaderFile(~, fileID)

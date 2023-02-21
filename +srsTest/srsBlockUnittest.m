@@ -1,4 +1,4 @@
-%srsBlockUnittest Unit test template for SRSGNB blocks (Abstract class).
+%srsBlockUnittest Unit test template for SRSRAN blocks (Abstract class).
 %   Common functionalities shared by all SRS unit tests. Derives from
 %   'matlab.unittest.TestCase'.
 %
@@ -78,7 +78,7 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
     end % of properties (Abstract, ClassSetupParameter)
 
     properties (Hidden)
-        %Path of the tested block relative to the SRSGNB include root folder,
+        %Path of the tested block relative to the SRSRAN include root folder,
         %in guard format (e.g., all capitals and with underscores).
         pathInRepo    (1, :) char
 
@@ -127,9 +127,9 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
         %   the header file pointed by FILEID, which describes the test vectors. This
         %   method is meant for blocks of type "phy/upper/signal_processors".
 
-            fprintf(fileID, '#include "srsgnb/%s/%s.h"\n', ...
+            fprintf(fileID, '#include "srsran/%s/%s.h"\n', ...
                 obj.srsBlockType, obj.srsBlock);
-            fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
+            fprintf(fileID, '#include "srsran/support/file_vector.h"\n');
             fprintf(fileID, '#include "../../support/resource_grid_test_doubles.h"\n');
         end
 
@@ -138,9 +138,9 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
         %   the header file pointed by FILEID, which describes the test vectors. This
         %   method is meant for blocks of type "phy/upper/channel_processors".
 
-            fprintf(fileID, '#include "srsgnb/%s/%s.h"\n', ...
+            fprintf(fileID, '#include "srsran/%s/%s.h"\n', ...
                 obj.srsBlockType, obj.srsBlock);
-            fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
+            fprintf(fileID, '#include "srsran/support/file_vector.h"\n');
             if ~endsWith(obj.srsBlock, '_encoder')
                 fprintf(fileID, '#include "../../support/resource_grid_test_doubles.h"\n');
             end
@@ -151,9 +151,9 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
         %   the header file pointed by FILEID, which describes the test vectors. This
         %   method is meant for blocks of type "phy/upper/channel_modulation".
 
-            fprintf(fileID, '#include "srsgnb/%s/%s.h"\n', ...
+            fprintf(fileID, '#include "srsran/%s/%s.h"\n', ...
                 obj.srsBlockType, obj.srsBlock);
-            fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
+            fprintf(fileID, '#include "srsran/support/file_vector.h"\n');
         end
 
         function addTestDefinitionToHeaderFilePHYsigproc(obj, fileID)
@@ -270,7 +270,7 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
             addTestIncludesToHeaderFile(obj, fileID);
 
             fprintf(fileID, '\n');
-            fprintf(fileID, 'namespace srsgnb {\n');
+            fprintf(fileID, 'namespace srsran {\n');
             fprintf(fileID, '\n');
 
             addTestDefinitionToHeaderFile(obj, fileID);
@@ -289,7 +289,7 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
             fprintf(fileID, '// clang-format on\n');
             fprintf(fileID, '};\n');
             fprintf(fileID, '\n');
-            fprintf(fileID, '} // srsgnb\n');
+            fprintf(fileID, '} // srsran\n');
             fprintf(fileID, '\n');
 
             fclose(fileID);

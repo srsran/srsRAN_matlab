@@ -73,7 +73,7 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
         %Frequency-domain sequence mapping.
         %   Starting resource block (RB) index of the initial uplink bandwidth
         %   part (BWP) relative to carrier resource grid.
-	RBOffset = {0, 13, 28};
+        RBOffset = {0, 13, 28};
     end
 
     methods (Access = protected)
@@ -81,8 +81,8 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
 
             fprintf(fileID, [...
-                '#include "srsgnb/phy/lower/modulation/ofdm_prach_demodulator.h"\n'...
-                '#include "srsgnb/support/file_vector.h"\n'...
+                '#include "srsran/phy/lower/modulation/ofdm_prach_demodulator.h"\n'...
+                '#include "srsran/support/file_vector.h"\n'...
                 ]);
         end
 
@@ -186,7 +186,7 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
             testCase.saveDataFile('_test_input', TestID, ...
                 @writeComplexFloatFile, waveform);
 
-	    % Write the PRACH symbols into a binary file
+            % Write the PRACH symbols into a binary file
             testCase.saveDataFile('_test_output', TestID, ...
                 @writeComplexFloatFile, info.PRACHSymbols);
 
@@ -194,7 +194,7 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
             srsPRACHFormat = ['preamble_format::FORMAT', prach.Format];
             Numerology = ['subcarrier_spacing::kHz' num2str(carrier.SubcarrierSpacing)];
 
-            % srsgnb PRACH configuration
+            % srsran PRACH configuration
             srsPRACHConfig = {...
                 srsPRACHFormat, ...    % format
                 prach.RBOffset, ...    % rb_offset

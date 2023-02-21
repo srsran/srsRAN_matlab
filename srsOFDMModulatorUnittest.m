@@ -146,9 +146,9 @@ classdef srsOFDMModulatorUnittest < srsTest.srsBlockUnittest
                 timeDomainData = nrOFDMModulate(carrier, reshape(inputData, [NSizeGrid * 12, carrier.SymbolsPerSlot]), ...
                     'Windowing', 0, 'CarrierFrequency', CarrierFrequency);
 
-                % apply the requested scale and homogenize the output values with those of srsgnb
-                srsGNBscaleFactor = DFTsize;
-                timeDomainData = timeDomainData * scale * srsGNBscaleFactor;
+                % apply the requested scale and homogenize the output values with those of srsran
+                srsRANscaleFactor = DFTsize;
+                timeDomainData = timeDomainData * scale * srsRANscaleFactor;
 
                 % write the time-domain data into a binary file
                 testCase.saveDataFile('_test_output', testID, ...

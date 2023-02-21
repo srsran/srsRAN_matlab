@@ -28,7 +28,7 @@
 %
 %   srsPUSCHDecoderUnittest Methods (TestTags = {'testmex'}):
 %
-%   mexTest  - Tests the mex wrapper of the SRSGNB PUSCH decoder.
+%   mexTest  - Tests the mex wrapper of the SRSRAN PUSCH decoder.
 %
 %   srsPUSCHDecoderUnittest Methods (Access = protected):
 %
@@ -104,8 +104,8 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
         function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
 
-            fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
-            fprintf(fileID, '#include "srsgnb/phy/upper/codeblock_metadata.h"\n');
+            fprintf(fileID, '#include "srsran/support/file_vector.h"\n');
+            fprintf(fileID, '#include "srsran/phy/upper/codeblock_metadata.h"\n');
 
         end
 
@@ -275,11 +275,11 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
 
     methods (Test, TestTags = {'testmex'})
         function mexTest(obj, SymbolAllocation, PRBAllocation, mcs)
-        %mexTest  Tests the mex wrapper of the SRSGNB PUSCH decoder.
+        %mexTest  Tests the mex wrapper of the SRSRAN PUSCH decoder.
         %   mexTest(OBJ, SYMBOLALLOCATION, PRBALLOCATION, MCS) runs a short simulation with
         %   a PUSCH transmission over the OFDM symbols in SYMBOLALLOCATION and the PRBs in
         %   PRBALLOCATION, using the modulation-coding scheme in MCS. The PUSCH is then
-        %   decoded using the mex wrapper of the SRSGNB C++ component. The test is considered
+        %   decoded using the mex wrapper of the SRSRAN C++ component. The test is considered
         %   as passed if the transmitted and received transport blocks are equal.
 
             import srsMatlabWrappers.phy.helpers.srsConfigureULSCHEncoder

@@ -1,18 +1,18 @@
-%runSRSGNBUnittest Main SRSGNB test interface.
-%   runSRSGNBUnittest(BLOCKNAME, 'testvector') generates test vectors for the
-%   SRSGNB block BLOCKNAME. The resulting test vectores are stored in the folder
+%runSRSRANUnittest Main SRSRAN test interface.
+%   runSRSRANUnittest(BLOCKNAME, 'testvector') generates test vectors for the
+%   SRSRAN block BLOCKNAME. The resulting test vectores are stored in the folder
 %   'testvector_outputs' in the current directory. Example:
-%      runSRSGNBUnittest('modulation_mapper', 'testvector')
+%      runSRSRANUnittest('modulation_mapper', 'testvector')
 %
-%   runSRSGNBUnittest(BLOCKNAME, 'srsPHYvalidation') tests the SRSGNB block
+%   runSRSRANUnittest(BLOCKNAME, 'srsPHYvalidation') tests the SRSRAN block
 %   BLOCKNAME by running a MEX version of it.
 %
-%   runSRSGNBUnittest('all', ...) runs all the tests of the specified type.
+%   runSRSRANUnittest('all', ...) runs all the tests of the specified type.
 %
-%   TEST = runSRSGNBUnittest(...) returns a Test object TEST withouth running it.
+%   TEST = runSRSRANUnittest(...) returns a Test object TEST withouth running it.
 %   The test can be later executed with the command TEST.run.
 
-function test = runSRSGNBUnittest(blockName, testType)
+function test = runSRSRANUnittest(blockName, testType)
     arguments
         blockName char {mustBeSRSBlock}
         testType  char {mustBeMember(testType, {'testvector'})}
@@ -38,7 +38,7 @@ function test = runSRSGNBUnittest(blockName, testType)
     else
         nrPHYtestvectorTests.run;
     end % of if nargout == 1
-end % of runSRSGNBUnittest
+end % of runSRSRANUnittest
 
 function mustBeSRSBlock(a)
     validBlocks = union({'all'}, srsTest.listSRSblocks);
@@ -130,7 +130,7 @@ function unittestClass = name2Class(name)
         case 'ulsch_info'
             unittestClass = ?srsULSCHInfoUnittest;
         otherwise
-            error('SRSGNB:runSRSGNBUnittest:unknownBlock', ...
+            error('srsran_matlab:runSRSRANUnittest:unknownBlock', ...
                 'No unit test for block %s.\n', name);
     end
 end

@@ -1,4 +1,4 @@
-%rbAllocationIndexes2String Generates an RB allocation string object compatible with srsgnb.
+%rbAllocationIndexes2String Generates an RB allocation string object compatible with srsran.
 %   OUTPUTSTRING = rbAllocationIndexes2String(VRBINDEXES)
 %   generates an RB allocation string OUTPUTSTRING from a vector of VRB
 %   indexes VRBINDEXES.

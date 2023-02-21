@@ -53,7 +53,7 @@ classdef srsModulationMapperUnittest < srsTest.srsBlockUnittest
 
         %Modulation scheme, described as a three-entry cell array. The first
         %entry is the modulation order, the second and the third are the
-        %corresponding labels for MATLAB and SRSGNB, respectively.
+        %corresponding labels for MATLAB and SRSRAN, respectively.
         %Example: modScheme = {4, '16QAM', 'QAM16'}
         modScheme = {{1, 'BPSK', 'BPSK'}, {2, 'QPSK', 'QPSK'}, {4, '16QAM', 'QAM16'}, ...
             {6, '64QAM', 'QAM64'}, {8, '256QAM', 'QAM256'}}

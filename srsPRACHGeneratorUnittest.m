@@ -80,8 +80,8 @@ classdef srsPRACHGeneratorUnittest < srsTest.srsBlockUnittest
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
 
             fprintf(fileID, [...
-                '#include "srsgnb/phy/upper/channel_processors/prach_generator.h"\n'...
-                '#include "srsgnb/support/file_vector.h"\n'...
+                '#include "srsran/phy/upper/channel_processors/prach_generator.h"\n'...
+                '#include "srsran/support/file_vector.h"\n'...
                 ]);
         end
 
@@ -184,7 +184,7 @@ classdef srsPRACHGeneratorUnittest < srsTest.srsBlockUnittest
                     error('Invalid restricted set %s', prach.RestrictedSet);
             end
 
-            % srsgnb PRACH configuration
+            % srsran PRACH configuration
             srsPRACHConfig = {...
                 srsPRACHFormat, ...            % format
                 prach.SequenceIndex, ...       % root_sequence_index

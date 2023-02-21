@@ -83,10 +83,10 @@ classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
         %   the header file pointed by FILEID, which describes the test vectors.
 
             fprintf(fileID, '#include "../../support/resource_grid_test_doubles.h"\n');
-            fprintf(fileID, '#include "srsgnb/phy/upper/channel_processors/pucch_detector.h"\n');
-            fprintf(fileID, '#include "srsgnb/ran/cyclic_prefix.h"\n');
-            fprintf(fileID, '#include "srsgnb/ran/pucch/pucch_mapping.h"\n');
-            fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
+            fprintf(fileID, '#include "srsran/phy/upper/channel_processors/pucch_detector.h"\n');
+            fprintf(fileID, '#include "srsran/ran/cyclic_prefix.h"\n');
+            fprintf(fileID, '#include "srsran/ran/pucch/pucch_mapping.h"\n');
+            fprintf(fileID, '#include "srsran/support/file_vector.h"\n');
         end
 
         function addTestDefinitionToHeaderFile(~, fileID)

@@ -76,7 +76,7 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
         %Possible length in number of PRBs for Format 3.
         prbLengthFormat3 = [1:6, 8:10, 12, 15, 16]
 
-        %PUCCH format string following srsgnb repo API.
+        %PUCCH format string following srsran repo API.
         srsFormatName = 'pucch_format::FORMAT_';
 
         %Number of symbols per slot considering normal cyclic prefix.
@@ -160,7 +160,7 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
             else
                 NSlotLoc = randi([0, 19]);
             end
-            % Format name following srsgnb naming.
+            % Format name following srsran naming.
             formatString = [testCase.srsFormatName, num2str(format)];
 
             % Fixed parameter values.
@@ -256,7 +256,7 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
 
             % Generate a 'slot_point' configuration string.
             slotPointConfig = cellarray2str({numerology, NSlotLoc}, true);
-            % Group hopping string following srsgnb naming.
+            % Group hopping string following srsran naming.
             GroupHoppingStr = ['pucch_group_hopping::', upper(GroupHopping)];
             % Write as true/false.
             intraSlotFreqHoppingStr = logical2str(intraSlotFreqHopping);

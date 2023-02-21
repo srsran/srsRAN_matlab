@@ -5,10 +5,10 @@
 %   BLOCKS = listSRSblocks('name') is the same as above.
 %
 %   BLOCKS = listSRSblocks('full') prepends each block name with the block path
-%   relative the the SRSGNB root folder.
+%   relative the the SRSRAN root folder.
 %
 %   BLOCKS = listSRSblocks('path') only returns a list of the paths (relative to
-%   the SRSGNB root folder) where the tested blocks are located.
+%   the SRSRAN root folder) where the tested blocks are located.
 %
 function blocks = listSRSblocks(format)
     arguments

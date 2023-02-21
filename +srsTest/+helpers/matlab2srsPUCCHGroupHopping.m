@@ -1,7 +1,7 @@
 %matlab2srsPUCCHGroupHopping Generates a PUCCH group hopping string.
 %   GROUPHOPPINGSTRING = matlab2srsPUCCHGroupHopping(GROUPHOPPING) returns a
 %   string GROUPHOPPINGSTRING that is compliant with the C++ enum class element
-%   used in SRSGNB to identify the PUCCH group hopping type GROUPHOPPING.
+%   used in SRSRAN to identify the PUCCH group hopping type GROUPHOPPING.
 %
 % See also nrPUCCH0Config, nrPUCCH1Config, nrPUCCH2Config, nrPUCCH3Config, nrPUCCH4Config.
 

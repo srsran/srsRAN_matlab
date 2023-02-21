@@ -53,7 +53,7 @@ classdef srsDemodulationMapperUnittest < srsTest.srsBlockUnittest
 
         %Modulation scheme, described as a three-entry cell array. The first
         %entry is the modulation order, the second and the third are the
-        %corresponding labels for MATLAB and SRSGNB, respectively.
+        %corresponding labels for MATLAB and SRSRAN, respectively.
         %Example: modScheme = {4, '16QAM', 'QAM16'}
         modScheme = {{1, 'BPSK', 'BPSK'}, {1, 'pi/2-BPSK', 'PI_2_BPSK'}, {2, 'QPSK', 'QPSK'}, ...
             {4, '16QAM', 'QAM16'}, {6, '64QAM', 'QAM64'}, {8, '256QAM', 'QAM256'}}
@@ -63,7 +63,7 @@ classdef srsDemodulationMapperUnittest < srsTest.srsBlockUnittest
         function addTestIncludesToHeaderFile(obj, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
             addTestIncludesToHeaderFilePHYchmod(obj, fileID);
-            fprintf(fileID, '#include "srsgnb/phy/upper/log_likelihood_ratio.h"\n');
+            fprintf(fileID, '#include "srsran/phy/upper/log_likelihood_ratio.h"\n');
         end
 
         function addTestDefinitionToHeaderFile(~, fileID)

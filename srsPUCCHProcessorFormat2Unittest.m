@@ -80,8 +80,8 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
            
             fprintf(fileID, '#include "../../support/resource_grid_test_doubles.h"\n');
-            fprintf(fileID, '#include "srsgnb/phy/upper/channel_processors/pucch_processor.h"\n');
-            fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
+            fprintf(fileID, '#include "srsran/phy/upper/channel_processors/pucch_processor.h"\n');
+            fprintf(fileID, '#include "srsran/support/file_vector.h"\n');
         end
 
         function addTestDefinitionToHeaderFile(~, fileID)
@@ -165,7 +165,7 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
             UCIPayload = [harqAckPayload; SRPayload; CSI1Payload; CSI2Payload];
 
             assert(length(UCIPayload) == nofUCIBits, ...
-                'srsgnb_matlab:srsPUCCHProcessorFormat2Unittest', 'Wrong UCI payload length');
+                'srsran_matlab:srsPUCCHProcessorFormat2Unittest', 'Wrong UCI payload length');
             
             % CRC bits added before coding.
             nofCRCBits = 0;
@@ -242,7 +242,7 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
             grid(pucchDataIdices) = nrPUCCH2(uciCW, NID, RNTI, "OutputDataType", "single");
 
             assert(length(pucchDataIdices) * modulationOrder == CodeWordLength, ...
-                'srsgnb_matlab:srsPUCCHProcessorFormat2Unittest', ...
+                'srsran_matlab:srsPUCCHProcessorFormat2Unittest', ...
                 'UCI codeword length and number of PUCCH F2 RE are not consistent');
          
             % Get the DM-RS indices.
@@ -292,7 +292,7 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
             rxUCIPayload = nrUCIDecode(schSoftBits, nofUCIBits);
 
             assert(isequal(rxUCIPayload, UCIPayload), ...
-                'srsgnb_matlab:srsPUCCHProcessorFormat2Unittest', ...
+                'srsran_matlab:srsPUCCHProcessorFormat2Unittest', ...
                 'Decoded UCI payload has errors');
 
             % Extract the elements of interest from the grid.

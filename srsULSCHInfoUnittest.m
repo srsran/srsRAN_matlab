@@ -83,7 +83,7 @@ classdef srsULSCHInfoUnittest < srsTest.srsBlockUnittest
         function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
             
-            fprintf(fileID, '#include "srsgnb/ran/pusch/ulsch_info.h"\n');
+            fprintf(fileID, '#include "srsran/ran/pusch/ulsch_info.h"\n');
         end
 
         function addTestDefinitionToHeaderFile(~, fileID)

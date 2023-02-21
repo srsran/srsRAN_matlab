@@ -1,6 +1,6 @@
-%integer2srsBits Convert a nonnegative integer to an SRSGNB amount of bits.
+%integer2srsBits Convert a nonnegative integer to an SRSRAN amount of bits.
 %   B = integer2srsBits(I) converts the nonnegative integer I to an initialization
-%   string of a "srsgnb::units::bits" variable containing I bits.
+%   string of a "srsran::units::bits" variable containing I bits.
 function bitString = integer2srsBits(int)
     arguments
         int (1, 1) double {mustBeInteger, mustBeNonnegative}

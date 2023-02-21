@@ -67,9 +67,9 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
         function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
             
-            fprintf(fileID, '#include "srsgnb/phy/upper/channel_processors/ulsch_demultiplex.h"\n');
-            fprintf(fileID, '#include "srsgnb/phy/upper/log_likelihood_ratio.h"\n');
-            fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
+            fprintf(fileID, '#include "srsran/phy/upper/channel_processors/ulsch_demultiplex.h"\n');
+            fprintf(fileID, '#include "srsran/phy/upper/log_likelihood_ratio.h"\n');
+            fprintf(fileID, '#include "srsran/support/file_vector.h"\n');
         end
 
         function addTestDefinitionToHeaderFile(~, fileID)

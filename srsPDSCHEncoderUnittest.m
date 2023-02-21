@@ -65,8 +65,8 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
         function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
 
-            fprintf(fileID, '#include "srsgnb/support/file_vector.h"\n');
-            fprintf(fileID, '#include "srsgnb/phy/upper/codeblock_metadata.h"\n');
+            fprintf(fileID, '#include "srsran/support/file_vector.h"\n');
+            fprintf(fileID, '#include "srsran/phy/upper/codeblock_metadata.h"\n');
 
         end
 
