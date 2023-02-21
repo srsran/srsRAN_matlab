@@ -14,8 +14,8 @@
 /// first input. A MexFunction that inherits from this template should establish the identifier&ndash;method pairs
 /// in the constructor.
 ///
-/// All the methods managed by the dispatcher should take the same arguments as srsgnb_mex_dispatcher::operator()().
-class srsgnb_mex_dispatcher : public matlab::mex::Function
+/// All the methods managed by the dispatcher should take the same arguments as srsran_mex_dispatcher::operator()().
+class srsran_mex_dispatcher : public matlab::mex::Function
 {
 public:
   /// Alias for MATLAB type.
@@ -78,4 +78,3 @@ private:
   /// Engine to access the MATLAB shell.
   std::shared_ptr<matlab::engine::MATLABEngine> matlabPtr = getEngine();
 };
-

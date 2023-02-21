@@ -1,18 +1,18 @@
 #include "pusch_decoder_mex.h"
 #include "fmt/format.h"
-#include "srsgnb/phy/upper/channel_coding/ldpc/ldpc.h"
-#include "srsgnb/phy/upper/channel_processors/pusch_decoder_result.h"
-#include "srsgnb/phy/upper/rx_softbuffer_pool.h"
-#include "srsgnb/ran/modulation_scheme.h"
-#include "srsgnb/support/units.h"
-#include "srsgnb_matlab/support/matlab_to_srs.h"
+#include "srsran/phy/upper/channel_coding/ldpc/ldpc.h"
+#include "srsran/phy/upper/channel_processors/pusch_decoder_result.h"
+#include "srsran/phy/upper/rx_softbuffer_pool.h"
+#include "srsran/ran/modulation_scheme.h"
+#include "srsran/support/units.h"
+#include "srsran_matlab/support/matlab_to_srs.h"
 
 #include <memory>
 
 using matlab::mex::ArgumentList;
 using namespace matlab::data;
-using namespace srsgnb;
-using namespace srsgnb_matlab;
+using namespace srsran;
+using namespace srsran_matlab;
 
 unique_rx_softbuffer MexFunction::pusch_memento::retrieve_softbuffer(const rx_softbuffer_identifier& id,
                                                                      const unsigned                  nof_codeblocks)

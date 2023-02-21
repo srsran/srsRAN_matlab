@@ -9,7 +9,7 @@ endif(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
 # Project setup
 ########################################################################
 cmake_minimum_required(VERSION 3.14)
-project(srsgnb-matlab VERSION 0.1)
+project(srsran-matlab VERSION 0.1)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -62,10 +62,10 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
 
 find_package(Matlab REQUIRED)
 
-find_package(SRSGNB MODULE REQUIRED)
+find_package(SRSRAN MODULE REQUIRED)
 
-include(${SRSGNB_BINARY_DIR}/srsgnb.cmake)
-include_directories(${CMAKE_SOURCE_DIR}/include ${SRSGNB_INCLUDE_DIR} ${SRSGNB_SOURCE_DIR}/external/fmt/include)
+include(${SRSRAN_BINARY_DIR}/srsran.cmake)
+include_directories(${CMAKE_SOURCE_DIR}/include ${SRSRAN_INCLUDE_DIR} ${SRSRAN_SOURCE_DIR}/external/fmt/include)
 
 add_subdirectory(lib)
 add_subdirectory(unittests)

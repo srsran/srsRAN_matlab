@@ -1,18 +1,18 @@
 /// \file
-/// \brief srsgnb_mex_dispatcher unit test.
+/// \brief srsran_mex_dispatcher unit test.
 ///
-/// This file defines a class that derives from srsgnb_mex_dispatcher with two simple methods. Once the mex is built,
+/// This file defines a class that derives from srsran_mex_dispatcher with two simple methods. Once the mex is built,
 /// the user should check its behavior from the MATLAB shell.
 
-#include "srsgnb_matlab/srsgnb_mex_dispatcher.h"
+#include "srsran_matlab/srsran_mex_dispatcher.h"
 
 #include <map>
 
 using namespace matlab::data;
 using matlab::mex::ArgumentList;
 
-/// Example MexFunction class inherited from srsgnb_mex_dispatcher.
-class MexFunction : public srsgnb_mex_dispatcher
+/// Example MexFunction class inherited from srsran_mex_dispatcher.
+class MexFunction : public srsran_mex_dispatcher
 {
 public:
   /// \brief Constructor.

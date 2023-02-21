@@ -32,7 +32,7 @@ if (DOXYGEN_FOUND)
 
   # directories and files to process for all the docs
   set(docs_inputs ${CMAKE_CURRENT_SOURCE_DIR}
-                  ${CMAKE_HOME_DIRECTORY}/include/srsgnb_matlab
+                  ${CMAKE_HOME_DIRECTORY}/include/srsran_matlab
                   ${CMAKE_HOME_DIRECTORY}/lib
                   ${CMAKE_HOME_DIRECTORY}/unittests
   )

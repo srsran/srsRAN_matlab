@@ -4,7 +4,7 @@ matlab_add_mex(
     R2018a
 )
 
-target_link_libraries(pusch_decoder_mex srsgnb::srsgnb_channel_processors)
+target_link_libraries(pusch_decoder_mex srsran::srsran_channel_processors)
 
 set_target_properties(pusch_decoder_mex
     PROPERTIES

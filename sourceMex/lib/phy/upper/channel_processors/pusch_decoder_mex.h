@@ -3,13 +3,13 @@
 
 #pragma once
 
-#include "srsgnb/phy/upper/channel_processors/channel_processor_factories.h"
-#include "srsgnb/phy/upper/channel_processors/pusch_decoder.h"
-#include "srsgnb/phy/upper/rx_softbuffer.h"
-#include "srsgnb/phy/upper/rx_softbuffer_pool.h"
-#include "srsgnb/phy/upper/unique_rx_softbuffer.h"
-#include "srsgnb_matlab/srsgnb_mex_dispatcher.h"
-#include "srsgnb_matlab/support/memento.h"
+#include "srsran/phy/upper/channel_processors/channel_processor_factories.h"
+#include "srsran/phy/upper/channel_processors/pusch_decoder.h"
+#include "srsran/phy/upper/rx_softbuffer.h"
+#include "srsran/phy/upper/rx_softbuffer_pool.h"
+#include "srsran/phy/upper/unique_rx_softbuffer.h"
+#include "srsran_matlab/srsran_mex_dispatcher.h"
+#include "srsran_matlab/support/memento.h"
 
 #include <memory>
 
@@ -17,10 +17,10 @@
 ///
 /// Creates and assemblies all the necessary components (LDPC blocks, CRC calculators, ...) for a fully-functional
 /// PUSCH decoder.
-static std::unique_ptr<srsgnb::pusch_decoder> create_pusch_decoder();
+static std::unique_ptr<srsran::pusch_decoder> create_pusch_decoder();
 
-/// Implements a PUSCH decoder following the srsgnb_mex_dispatcher template.
-class MexFunction : public srsgnb_mex_dispatcher
+/// Implements a PUSCH decoder following the srsran_mex_dispatcher template.
+class MexFunction : public srsran_mex_dispatcher
 {
   /// State snapshot of a PUSCH decoder MEX object.
   class pusch_memento : public memento
@@ -31,7 +31,7 @@ class MexFunction : public srsgnb_mex_dispatcher
     /// The memento object consists of the pointer to the \c rx_softbuffer_pool used by the PUSCH decoder to store and
     /// combine LLRs from different retransmissions as well as segment data corresponding to decoded codeblocks that
     /// pass the CRC checksum.
-    explicit pusch_memento(std::unique_ptr<srsgnb::rx_softbuffer_pool> p) : pool(std::move(p)){};
+    explicit pusch_memento(std::unique_ptr<srsran::rx_softbuffer_pool> p) : pool(std::move(p)){};
 
     /// \brief Gets a softbuffer from the softbuffer pool stored in the memento.
     ///
@@ -41,12 +41,12 @@ class MexFunction : public srsgnb_mex_dispatcher
     /// \param[in] id              Softbuffer identifier (UE RNTI and HARQ process ID).
     /// \param[in] nof_codeblocks  Number of codeblocks forming the codeword (or, equivalently, the transport block).
     /// \return A pointer to the identified softbuffer.
-    srsgnb::unique_rx_softbuffer retrieve_softbuffer(const srsgnb::rx_softbuffer_identifier& id,
+    srsran::unique_rx_softbuffer retrieve_softbuffer(const srsran::rx_softbuffer_identifier& id,
                                                      unsigned                                nof_codeblocks);
 
   private:
     /// Pointer to the softbuffer pool stored in the memento.
-    std::unique_ptr<srsgnb::rx_softbuffer_pool> pool;
+    std::unique_ptr<srsran::rx_softbuffer_pool> pool;
   };
 
 public:
@@ -55,9 +55,9 @@ public:
   /// Stores the string identifier&ndash;method pairs that form the public interface of the PUSCH decoder MEX object.
   MexFunction()
   {
-    // Ensure srsgnb PUSCH decoder was created successfully.
+    // Ensure srsran PUSCH decoder was created successfully.
     if (!decoder) {
-      mex_abort("Cannot create srsgnb PUSCH decoder.");
+      mex_abort("Cannot create srsran PUSCH decoder.");
     }
 
     create_callback("new", [this](ArgumentList& out, ArgumentList& in) { return this->method_new(out, in); });
@@ -75,8 +75,8 @@ private:
   /// \param[in] id              The softbuffer identifier (UE RNTI and HARQ process ID).
   /// \param[in] nof_codeblocks  The number of codeblocks in the current codeword.
   /// \return A pointer to the requested softbuffer from the softbuffer pool associated to the given memento identifier.
-  srsgnb::unique_rx_softbuffer
-  retrieve_softbuffer(uint64_t key, const srsgnb::rx_softbuffer_identifier& id, unsigned nof_codeblocks);
+  srsran::unique_rx_softbuffer
+  retrieve_softbuffer(uint64_t key, const srsran::rx_softbuffer_identifier& id, unsigned nof_codeblocks);
 
   /// Checks that outputs/inputs arguments match the requirements of method_step().
   void check_step_outputs_inputs(matlab::mex::ArgumentList outputs, matlab::mex::ArgumentList inputs);
@@ -89,7 +89,7 @@ private:
   ///
   /// The method accepts only two inputs.
   ///   - The string <tt>"new"</tt>.
-  ///   - A one-dimensional structure with fields (see also srsgnb::rx_softbuffer_pool_description):
+  ///   - A one-dimensional structure with fields (see also srsran::rx_softbuffer_pool_description):
   ///      - \c max_codeblock_size, maximum size of the codeblocks stored in the pool;
   ///      - \c max_softbuffers, maximum number of softbuffers managed by the pool;
   ///      - \c max_nof_codeblocks, maximum number of codeblocks managed by the pool (shared by all softbuffers); and
@@ -146,15 +146,15 @@ private:
   void method_release(ArgumentList& outputs, ArgumentList& inputs);
 
   /// A pointer to the actual PUSCH decoder.
-  std::unique_ptr<srsgnb::pusch_decoder> decoder = create_pusch_decoder();
+  std::unique_ptr<srsran::pusch_decoder> decoder = create_pusch_decoder();
 
   /// A container for pusch_memento objects.
   memento_storage storage = {};
 };
 
-std::unique_ptr<srsgnb::pusch_decoder> create_pusch_decoder()
+std::unique_ptr<srsran::pusch_decoder> create_pusch_decoder()
 {
-  using namespace srsgnb;
+  using namespace srsran;
 
   std::shared_ptr<crc_calculator_factory> crc_calculator_factory = create_crc_calculator_factory_sw("auto");
 
@@ -175,4 +175,3 @@ std::unique_ptr<srsgnb::pusch_decoder> create_pusch_decoder()
 
   return pusch_decoder_factory->create();
 }
-
