@@ -74,7 +74,7 @@ protected:
 
 private:
   /// Container of the identifier&ndash;method pairs.
-  std::map<std::string, std::function<void(ArgumentList&, ArgumentList&)> > callbacks = {};
+  std::map<std::string, std::function<void(ArgumentList&, ArgumentList&)>> callbacks = {};
   /// Engine to access the MATLAB shell.
   std::shared_ptr<matlab::engine::MATLABEngine> matlabPtr = getEngine();
 };

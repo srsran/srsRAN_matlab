@@ -1,11 +1,11 @@
 #include "pusch_decoder_mex.h"
-#include "fmt/format.h"
+#include "srsran_matlab/support/matlab_to_srs.h"
 #include "srsran/phy/upper/channel_coding/ldpc/ldpc.h"
 #include "srsran/phy/upper/channel_processors/pusch_decoder_result.h"
 #include "srsran/phy/upper/rx_softbuffer_pool.h"
 #include "srsran/ran/modulation_scheme.h"
 #include "srsran/support/units.h"
-#include "srsran_matlab/support/matlab_to_srs.h"
+#include "fmt/format.h"
 
 #include <memory>
 
@@ -108,7 +108,7 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
   const TypedArray<int8_t>                in_int8_array = inputs[2];
   const std::vector<log_likelihood_ratio> llrs(in_int8_array.cbegin(), in_int8_array.cend());
 
-  bool new_data = static_cast<TypedArray<bool> >(inputs[3])[0];
+  bool new_data = static_cast<TypedArray<bool>>(inputs[3])[0];
 
   StructArray      in_struct_array = inputs[4];
   Struct           in_seg_cfg      = in_struct_array[0];
@@ -145,7 +145,7 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
     mex_abort(msg);
   }
 
-  uint64_t key = static_cast<TypedArray<uint64_t> >(inputs[1])[0];
+  uint64_t key = static_cast<TypedArray<uint64_t>>(inputs[1])[0];
 
   unique_rx_softbuffer         softbuffer = retrieve_softbuffer(key, buf_id, nof_codeblocks);
   pusch_decoder_result         dec_result = {};
@@ -188,7 +188,7 @@ void MexFunction::method_reset_crcs(ArgumentList& outputs, ArgumentList& inputs)
 
   unsigned nof_codeblocks = in_buf_id["nof_codeblocks"][0];
 
-  uint64_t key = static_cast<TypedArray<uint64_t> >(inputs[1])[0];
+  uint64_t key = static_cast<TypedArray<uint64_t>>(inputs[1])[0];
 
   unique_rx_softbuffer softbuffer = retrieve_softbuffer(key, buf_id, nof_codeblocks);
   softbuffer.get().reset_codeblocks_crc();
@@ -208,7 +208,7 @@ void MexFunction::method_release(ArgumentList& outputs, ArgumentList& inputs)
     mex_abort("Input softbufferPoolID should be a scalar uint64_t");
   }
 
-  uint64_t key = static_cast<TypedArray<uint64_t> >(inputs[1])[0];
+  uint64_t key = static_cast<TypedArray<uint64_t>>(inputs[1])[0];
 
   if (storage.release_memento(key) == 0) {
     std::string msg = fmt::format("Something wrong, there was no softbuffer pool with softbufferPoolID {}.", key);

@@ -10,7 +10,6 @@
 #pragma once
 
 #include "srsran/support/srsran_assert.h"
-
 #include <map>
 #include <memory>
 
@@ -34,7 +33,7 @@ public:
   size_t store(const std::shared_ptr<memento>& mem)
   {
     srsran_assert(mem, "Null memento");
-    size_t key = std::hash<std::shared_ptr<memento> >()(mem);
+    size_t key = std::hash<std::shared_ptr<memento>>()(mem);
     storage.emplace(key, mem);
     return key;
   }
@@ -47,7 +46,7 @@ public:
       return nullptr;
     }
     std::shared_ptr<memento> out    = found->second;
-    size_t                   chksum = std::hash<std::shared_ptr<memento> >()(out);
+    size_t                   chksum = std::hash<std::shared_ptr<memento>>()(out);
     if (chksum != key) {
       return nullptr;
     }
@@ -60,5 +59,5 @@ public:
 
 private:
   /// Container for the identifier&ndash;memento pairs.
-  std::map<size_t, std::shared_ptr<memento> > storage = {};
+  std::map<size_t, std::shared_ptr<memento>> storage = {};
 };

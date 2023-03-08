@@ -9,7 +9,7 @@ AlignEscapedNewlines: Right
 AlignOperands:   true
 AlignTrailingComments: true
 AllowAllParametersOfDeclarationOnNextLine: false # Changed
-#AllowAllArgumentsOnNextLine: false # Changed
+AllowAllArgumentsOnNextLine: true # Changed
 AllowShortBlocksOnASingleLine: false
 AllowShortCaseLabelsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: Inline #Changed
@@ -21,7 +21,7 @@ AlwaysBreakBeforeMultilineStrings: false
 AlwaysBreakTemplateDeclarations: true #Changed
 BinPackArguments: false
 BinPackParameters: false
-BraceWrapping:   
+BraceWrapping:
   AfterClass:      true #Changed
   AfterControlStatement: false
   AfterEnum:       false
@@ -39,7 +39,7 @@ BraceWrapping:
   SplitEmptyNamespace: true
 BreakBeforeBinaryOperators: None
 BreakBeforeBraces: Custom #Changed
-BreakBeforeInheritanceComma: false 
+BreakBeforeInheritanceComma: false
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializersBeforeComma: false 
 BreakConstructorInitializers: AfterColon      #Changed
@@ -48,7 +48,7 @@ BreakStringLiterals: true
 ColumnLimit:     120 #Changed
 CommentPragmas:  '^ IWYU pragma:'
 CompactNamespaces: false
-ConstructorInitializerAllOnOneLineOrOnePerLine: true #Changed 
+ConstructorInitializerAllOnOneLineOrOnePerLine: true #Changed
 ConstructorInitializerIndentWidth: 2 #Changed
 ContinuationIndentWidth: 4
 Cpp11BracedListStyle: true
@@ -56,16 +56,18 @@ DerivePointerAlignment: false
 DisableFormat:   false
 ExperimentalAutoDetectBinPacking: false
 FixNamespaceComments: true
-ForEachMacros:   
+ForEachMacros:
   - foreach
   - Q_FOREACH
   - BOOST_FOREACH
 IncludeBlocks:   Preserve
-IncludeCategories: 
-  - Regex:           '^"(llvm|llvm-c|clang|clang-c)/'
+IncludeCategories: #Changed
+  - Regex:           '^"srsran_matlab/'
     Priority:        2
-  - Regex:           '^(<|"(gtest|gmock|isl|json)/)'
+  - Regex:           '^"(srsran|llvm|llvm-c|clang|clang-c)/'
     Priority:        3
+  - Regex:           '^(<|"(CLI|fmt|gtest|gmock|isl|json)/)'
+    Priority:        4
   - Regex:           '.*'
     Priority:        1
 IncludeIsMainRegex: '(Test)?$'
@@ -105,7 +107,7 @@ SpacesInContainerLiterals: true
 SpacesInCStyleCastParentheses: false
 SpacesInParentheses: false
 SpacesInSquareBrackets: false
-Standard:        Cpp03 #Changed
+Standard:        c++14 #Changed
 TabWidth:        8
 UseTab:          Never
 ...

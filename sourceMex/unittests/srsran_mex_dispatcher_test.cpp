@@ -41,7 +41,7 @@ void MexFunction::method_one(ArgumentList& outputs, ArgumentList& inputs)
     mex_abort("Input must be a scalar double.");
   }
 
-  double in = static_cast<TypedArray<double> >(inputs[1])[0];
+  double in = static_cast<TypedArray<double>>(inputs[1])[0];
   std::cout << "This is method one with input " << in << ".\n";
   outputs[0] = factory.createScalar(in + 1);
 }
@@ -55,7 +55,7 @@ void MexFunction::method_two(ArgumentList& outputs, ArgumentList& inputs)
     mex_abort("Input must be a scalar double.");
   }
 
-  double in = static_cast<TypedArray<double> >(inputs[1])[0];
+  double in = static_cast<TypedArray<double>>(inputs[1])[0];
   std::cout << "This is method two with input " << in << ".\n";
   outputs[0] = factory.createScalar(in + 2);
 }
