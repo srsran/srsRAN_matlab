@@ -124,7 +124,7 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
         CORESETID = randi([1, 10]);
 
         % Current fixed parameter values (e.g., maximum grid size with current interleaving
-        %   configuration, CORESET will use all available frequency resources)
+        % configuration, CORESET will use all available frequency resources).
         CyclicPrefix = 'normal';
         NStartGrid = 0;
         NFrame = randi([0, 1023]);
@@ -143,7 +143,7 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
             CCEREGMapping, REGBundleSize, InterleaverSize, CORESETID);
 
         % Select number of candidates.
-        NumCandidates = floor(CORESET.NCCE ./ [1,2,4,8,16]);
+        NumCandidates = floor(CORESET.NCCE ./ [1, 2, 4, 8, 16]);
         NumCandidates(NumCandidates > 8) = 8;
 
         % Configure Search Space.
@@ -244,11 +244,11 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
             dciConfig, ...     % dci
             };
 
-        % generate the test case entry
+        % Generate the test case entry.
         testCaseString = testCase.testCaseToString(testID, ...
             configCell, true, '_test_output');
 
-        % add the test to the file header
+        % Add the test to the file header.
         testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);
         end % of function testvectorGenerationCases
     end % of methods (Test, TestTags = {'testvector'})

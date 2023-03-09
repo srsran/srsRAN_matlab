@@ -1,5 +1,5 @@
 %srsConfigureSearchSpace Generates a search space object.
-%   SEACRCHSPACE = srsConfigureSearchSpace(VARARGIN) returns a search space object with the requested configuration.
+%   SEARCHSPACE = srsConfigureSearchSpace(VARARGIN) returns a search space object with the requested configuration.
 %   The names of the input parameters are assumed to coincide with those of the properties of
 %   nrSearchSpaceConfig, with the exception of the suffix 'Loc' which is accepted.
 %
