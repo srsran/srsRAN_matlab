@@ -53,8 +53,6 @@ function unittestClass = name2Class(name)
             unittestClass = ?srsDemodulationMapperUnittest;
         case 'dft_processor'
             unittestClass = ?srsDFTProcessorUnittest;
-        case 'dl_processor'
-            unittestClass = ?srsDLProcessorUnittest;
         case 'dmrs_pbch_processor'
             unittestClass = ?srsPBCHdmrsUnittest;
         case 'dmrs_pdcch_processor'
@@ -99,6 +97,8 @@ function unittestClass = name2Class(name)
             unittestClass = ?srsPDSCHEncoderUnittest;
         case 'pdsch_modulator'
             unittestClass = ?srsPDSCHModulatorUnittest;
+        case 'pdsch_processor'
+            unittestClass = ?srsPDSCHProcessorUnittest;
         case 'port_channel_estimator'
             unittestClass = ?srsChEstimatorUnittest;
         case 'prach_demodulator'
