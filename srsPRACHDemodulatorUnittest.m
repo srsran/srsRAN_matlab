@@ -61,7 +61,8 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
         CarrierBandwidth = {52, 79, 106}
 
         %Preamble formats.
-        PreambleFormat = {'0', '1', '2', '3'}
+        PreambleFormat = {'0', '1', '2', '3', 'A1', 'A1/B1', 'A2', ...
+            'A2/B2', 'A3', 'A3/B3', 'B1', 'B4', 'C0', 'C2'}
 
         %Restricted set type.
         %   Possible values are {'UnrestrictedSet', 'RestrictedSetTypeA', 'RestrictedSetTypeB'}.
@@ -168,7 +169,11 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
                     prach.SubcarrierSpacing = 5;
                     prach.LRA = 839;
                 otherwise
-                    error('Preamble format %s not implemented.', PreambleFormat);
+                    prach.SubcarrierSpacing = carrier.SubcarrierSpacing;
+                    prach.LRA = 139;
+                    if strcmp(DuplexMode, 'TDD')
+                        prach.ActivePRACHSlot = 1;
+                    end
             end
 
             % Generate waveform
@@ -191,14 +196,14 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
                 @writeComplexFloatFile, info.PRACHSymbols);
 
 
-            srsPRACHFormat = ['preamble_format::FORMAT', prach.Format];
+            srsPRACHFormat = sprintf('to_prach_format_type("%s")', prach.Format);
             Numerology = ['subcarrier_spacing::kHz' num2str(carrier.SubcarrierSpacing)];
 
             % srsran PRACH configuration
             srsPRACHConfig = {...
                 srsPRACHFormat, ...    % format
                 prach.RBOffset, ...    % rb_offset
-		carrier.NSizeGrid, ... % nof_prb_ul_grid
+                carrier.NSizeGrid, ... % nof_prb_ul_grid
                 Numerology, ...        % pusch_scs
                 };
 
@@ -224,7 +229,7 @@ function ConfigurationIndex = selectConfigurationIndex(ConfigurationsTable, Prea
 %   Gets the first configuration index CONFIGURATIONINDEX in a configurations table  CONFIGURATIONSTABLE with the
 %   given preamble format PREAMBLEFORMAT.
   for rowIndex = 1:height(ConfigurationsTable)
-      if ConfigurationsTable.PreambleFormat{rowIndex} == PreambleFormat
+      if strcmp(ConfigurationsTable.PreambleFormat{rowIndex}, PreambleFormat)
           ConfigurationIndex = ConfigurationsTable.ConfigurationIndex(rowIndex);
           return;
       end
