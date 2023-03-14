@@ -300,7 +300,7 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
 
             fprintf(fileID, '/*\n');
             fprintf(fileID, ' *\n');
-            fprintf(fileID, ' * Copyright 2013-2022 Software Radio Systems Limited\n');
+            fprintf(fileID, ' * Copyright 2021-2023 Software Radio Systems Limited\n');
             fprintf(fileID, ' *\n');
             fprintf(fileID, ' * By using this file, you agree to the terms and conditions set\n');
             fprintf(fileID, ' * forth in the LICENSE file which can be found at the top level of\n');
