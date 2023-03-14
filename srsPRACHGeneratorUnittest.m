@@ -61,7 +61,8 @@ classdef srsPRACHGeneratorUnittest < srsTest.srsBlockUnittest
         CarrierBandwidth = {52, 106}
 
         %Preamble formats.
-        PreambleFormat = {'0', '1', '2', '3'}
+        PreambleFormat = {'0', '1', '2', '3', 'A1', 'A1/B1', 'A2', ...
+            'A2/B2', 'A3', 'A3/B3', 'B1', 'B4', 'C0', 'C2'}
 
         %Restricted set type.
         %   Possible values are {'UnrestrictedSet', 'RestrictedSetTypeA', 'RestrictedSetTypeB'}.
@@ -115,7 +116,6 @@ classdef srsPRACHGeneratorUnittest < srsTest.srsBlockUnittest
 
             import srsTest.helpers.writeComplexFloatFile
             import srsMatlabWrappers.phy.helpers.srsConfigurePRACH
-            import srsMatlabWrappers.phy.helpers.srsSelectPRACHConfigurationIndex
             import srsMatlabWrappers.phy.upper.channel_processors.srsPRACHgenerator
 
             % Generate a unique test ID
@@ -135,14 +135,11 @@ classdef srsPRACHGeneratorUnittest < srsTest.srsBlockUnittest
             switch DuplexMode
                 case 'FDD'
                     carrier.SubcarrierSpacing = 15;
-                    ConfigurationsTable = prach.Tables.ConfigurationsFR1PairedSUL;
                 case 'TDD'
                     carrier.SubcarrierSpacing = 30;
-                    ConfigurationsTable = prach.Tables.ConfigurationsFR1Unpaired;
                 otherwise
                     error('Invalid duplex mode %s', DuplexMode);
             end
-            prach.ConfigurationIndex = srsSelectPRACHConfigurationIndex(ConfigurationsTable, PreambleFormat);
 
             % Generate waveform
             [~, ~, info] = srsPRACHgenerator(carrier, prach);
@@ -151,7 +148,7 @@ classdef srsPRACHGeneratorUnittest < srsTest.srsBlockUnittest
             testCase.saveDataFile('_test_output', TestID, ...
                 @writeComplexFloatFile, info.PRACHSymbols(1:prach.LRA));
 
-            srsPRACHFormat = ['preamble_format::FORMAT', prach.Format];
+            srsPRACHFormat = sprintf('to_prach_format_type("%s")', prach.Format);
 
             switch prach.RestrictedSet
                 case 'UnrestrictedSet'

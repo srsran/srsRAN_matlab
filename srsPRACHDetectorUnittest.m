@@ -133,7 +133,6 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
         % Sets secondary simulation variables.
 
             import srsMatlabWrappers.phy.helpers.srsConfigurePRACH
-            import srsMatlabWrappers.phy.helpers.srsSelectPRACHConfigurationIndex
         
             % Generate carrier configuration.
             obj.carrier = nrCarrierConfig;
@@ -149,14 +148,11 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
             switch DuplexMode
                 case 'FDD'
                     obj.carrier.SubcarrierSpacing = 15;
-                    ConfigurationsTable = obj.prach.Tables.ConfigurationsFR1PairedSUL;
                 case 'TDD'
                     obj.carrier.SubcarrierSpacing = 30;
-                    ConfigurationsTable = obj.prach.Tables.ConfigurationsFR1Unpaired;
                 otherwise
                     error('Invalid duplex mode %s', DuplexMode);
             end
-            obj.prach.ConfigurationIndex = srsSelectPRACHConfigurationIndex(ConfigurationsTable, PreambleFormat);
         end % of function setupsimulation(obj, SymbolAllocation, PRBAllocation, mcs)
     end % of methods (Access = Private)
 

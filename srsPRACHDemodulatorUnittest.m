@@ -122,6 +122,7 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
         %   and PreambleIndex are generated randomly.
 
             import srsTest.helpers.writeComplexFloatFile
+            import srsMatlabWrappers.phy.helpers.srsConfigurePRACH
             import srsMatlabWrappers.phy.upper.channel_processors.srsPRACHgenerator
 
             % Generate a unique test ID
@@ -131,49 +132,20 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
             carrier = nrCarrierConfig;
             carrier.CyclicPrefix = 'normal';
             carrier.NSizeGrid = CarrierBandwidth;
-
-            % Generate PRACH configuration
-            prach = nrPRACHConfig;
-            prach.DuplexMode = DuplexMode;
-            prach.SequenceIndex = randi([0, 1023], 1, 1);
-            prach.PreambleIndex = randi([0, 63], 1, 1);
-            prach.RestrictedSet = RestrictedSet;
-            prach.ZeroCorrelationZone = ZeroCorrelationZone;
-            prach.RBOffset = RBOffset;
+            
+            % Generate PRACH configuration.
+            SequenceIndex = randi([0, 1023], 1, 1);
+            PreambleIndex = randi([0, 63], 1, 1);
+            prach = srsConfigurePRACH(DuplexMode, SequenceIndex, PreambleIndex, RestrictedSet, ZeroCorrelationZone, RBOffset, PreambleFormat);
 
             % Set parameters that depend on the duplex mode.
             switch DuplexMode
                 case 'FDD'
                     carrier.SubcarrierSpacing = 15;
-                    ConfigurationsTable = prach.Tables.ConfigurationsFR1PairedSUL;
                 case 'TDD'
                     carrier.SubcarrierSpacing = 30;
-                    ConfigurationsTable = prach.Tables.ConfigurationsFR1Unpaired;
                 otherwise
                     error('Invalid duplex mode %s', DuplexMode);
-            end
-            prach.ConfigurationIndex = selectConfigurationIndex(ConfigurationsTable, PreambleFormat);
-
-            % Select PRACH subcarrier spacing from the selected format.
-            switch PreambleFormat
-                case '0'
-                    prach.SubcarrierSpacing = 1.25;
-                    prach.LRA = 839;
-                case '1'
-                    prach.SubcarrierSpacing = 1.25;
-                    prach.LRA = 839;
-                case '2'
-                    prach.SubcarrierSpacing = 1.25;
-                    prach.LRA = 839;
-                case '3'
-                    prach.SubcarrierSpacing = 5;
-                    prach.LRA = 839;
-                otherwise
-                    prach.SubcarrierSpacing = carrier.SubcarrierSpacing;
-                    prach.LRA = 139;
-                    if strcmp(DuplexMode, 'TDD')
-                        prach.ActivePRACHSlot = 1;
-                    end
             end
 
             % Generate waveform
@@ -222,16 +194,3 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
         end % of function testvectorGenerationCases
     end % of methods (Test, TestTags = {'testvector'})
 end % of classdef srsPRACHDemodulatorUnittest
-
-function ConfigurationIndex = selectConfigurationIndex(ConfigurationsTable, PreambleFormat)
-%selectConfigurationIndex selects a valid configuration index.
-%   CONFIGURATIONINDEX = selectConfigurationIndex(CONFIGURATIONSTABLE, PREAMBLEFORMAT)
-%   Gets the first configuration index CONFIGURATIONINDEX in a configurations table  CONFIGURATIONSTABLE with the
-%   given preamble format PREAMBLEFORMAT.
-  for rowIndex = 1:height(ConfigurationsTable)
-      if strcmp(ConfigurationsTable.PreambleFormat{rowIndex}, PreambleFormat)
-          ConfigurationIndex = ConfigurationsTable.ConfigurationIndex(rowIndex);
-          return;
-      end
-  end
-end
