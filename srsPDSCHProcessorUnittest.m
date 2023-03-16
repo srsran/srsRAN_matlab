@@ -18,11 +18,12 @@
 %
 %   srsPDSCHProcessorUnittest Properties (TestParameter):
 %
-%   BWPConfig        - BWP configuration.
-%   Modulation       - Modulation scheme.
-%   SymbolAllocation - PDSCH start symbol index and number of symbols.
-%   targetCodeRate   - DL-SCH target code rate.
-%   RvdElements      - Sets reserved resource elements within the grid.
+%   BWPConfig          - BWP configuration.
+%   Modulation         - Modulation scheme.
+%   SymbolAllocation   - PDSCH start symbol index and number of symbols.
+%   targetCodeRate     - DL-SCH target code rate.
+%   DMRSReferencePoint - PDSCH DM-RS subcarrier reference point.
+%   RvdElements        - Sets reserved resource elements within the grid.
 %
 %   srsPDSCHProcessorUnittest Methods (TestTags = {'testvector'}):
 %
@@ -55,9 +56,9 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
         %   The bandwidth part is described by a two-element array with the starting
         %   PRB and the total number of PRBs (1...275).
         %   Example: [0, 25].
-        BWPConfig = {[0, 25], [0, 52], [0, 106]}
+        BWPConfig = {[1, 25], [2, 52], [0, 106]}
                 
-        %Modulation {pi/2-BPSK, QPSK, 16-QAM, 64-QAM, 256-QAM}.
+        %Modulation {QPSK, 16-QAM, 64-QAM, 256-QAM}.
         Modulation = {'QPSK', '16QAM', '64QAM', '256QAM'}
         
         %Symbols allocated to the PDSCH transmission.
@@ -68,6 +69,10 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
 
         %Target code rate.
         targetCodeRate = {0.1, 0.5, 0.8}
+
+        %PDSCH DM-RS subcarrier reference point.
+        %    It can be either CRB 0 or PRB 0 within the BWP.
+        DMRSReferencePoint = {'CRB0', 'PRB0'};
 
         %Reserved Elements.
         %   Adds reserved Resource Elements to the grid, where PDSCH allocation is not allowed.
@@ -90,7 +95,7 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
 
             fprintf(fileID, [...
-                '/// Describes a Resource Grid entry (shorts the type).\n'...
+                '/// Resource Grid entry.\n'...
                 'using rg_entry = resource_grid_writer_spy::expected_entry_t;\n'...
                 '\n'...
                 'struct test_case_context {\n'...
@@ -109,22 +114,22 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
     end % of methods (Access = protected)
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(testCase, BWPConfig, Modulation, SymbolAllocation, targetCodeRate, RvdElements)
+        function testvectorGenerationCases(testCase, BWPConfig, Modulation, ...
+                SymbolAllocation, targetCodeRate, DMRSReferencePoint, RvdElements)
         %testvectorGenerationCases Generates a test vector for the given
-        %   BWP, modulation scheme, symbol allocation, target code rate and
-        %   reserved element settings. Other parameters, such as PDSCH
-        %   frequency allocation, slot number, RNTI, scrambling
-        %   identifiers and DM-RS additional positions are randomly
-        %   generated.
+        %   BWP, modulation scheme, symbol allocation, target code rate, 
+        %   DM-RS reference point and reserved element settings. Other 
+        %   parameters, such as subcarrier spacing, PDSCH frequency  
+        %   allocation, slot number, RNTI, scrambling identifiers and DM-RS 
+        %   additional positions are randomly generated.
 
             import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
-            import srsMatlabWrappers.phy.helpers.srsConfigurePDSCH
             import srsMatlabWrappers.phy.helpers.srsCSIRSValidateConfig
+            import srsMatlabWrappers.phy.helpers.srsCSIRS2ReservedCell
             import srsTest.helpers.writeUint8File
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.rbAllocationIndexes2String
             import srsTest.helpers.symbolAllocationMask2string
-            import srsTest.helpers.indices2REPattern
             import srsTest.helpers.bitPack
 
             % Generate a unique test ID.
@@ -132,9 +137,17 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
 
             % Carrier configuration parameters.
             NCellID = randi([0, 1007]);
-            NSizeGrid = BWPConfig(2);
-            NStartGrid = BWPConfig(1);
+            
+            % BWP allocation, referenced to CRB0.
+            NStartBWP = BWPConfig(1);
+            NSizeBWP = BWPConfig(2);
 
+            % Grid starts at CRB0.
+            NStartGrid = 0;
+
+            % Grid size must be large enough to hold the BWP.
+            NSizeGrid = NStartBWP + NSizeBWP;
+            
             % Generate carrier configuration.
             carrier = srsConfigureCarrier(NCellID, NSizeGrid, NStartGrid);
 
@@ -145,28 +158,41 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
             MinNumPrb = 1;
 
             % Random parameters.
-            NSlot = randi([0, carrier.SlotsPerFrame]);
             RNTI = randi([1, 65535]);
             NID = randi([0, 1023]);
             NIDNSCID = randi([0, 65535]);
-            NSCID = randi([0, 1]); 
+            NSCID = randi([0, 1]);
+            
+            % 15 or 30 kHz subcarrier spacing.
+            carrier.SubcarrierSpacing = 15 * randi([1, 2]);
+            NSlot = randi([0, carrier.SlotsPerFrame]);
 
-            % PDSCH frequency allocation.
-            PrbStart = randi([0, NSizeGrid - MinNumPrb]);
-            NumPrb = randi([MinNumPrb, NSizeGrid - PrbStart]);
+            % PDSCH frequency allocation within the BWP, referenced to PRB 0 of the BWP.
+            PdschStartRB = randi([0, NSizeBWP - MinNumPrb]);
+            PdschNumRB = randi([MinNumPrb, NSizeBWP - PdschStartRB]);
 
             % Additional DM-RS positions.
             DMRSAdditionalPosition = randi([0, 3]);
             
-            % Create PDSCH configuration.
-            pdsch = srsConfigurePDSCH(Modulation, SymbolAllocation, RNTI, NID);            
-            
-            % Set paramters.
+            % Set carrier paramters.
+            carrier.NStartGrid = NStartGrid;
+            carrier.NSizeGrid = NSizeGrid;
+            carrier.NCellID = NCellID;
             carrier.NSlot = NSlot;
-            pdsch.PRBSet = PrbStart + (0:NumPrb - 1);
+            
+            % Create and set PDSCH config.
+            pdsch = nrPDSCHConfig;
+            pdsch.RNTI = RNTI;
+            pdsch.NID = NID;
+            pdsch.Modulation = Modulation;
+            pdsch.SymbolAllocation = SymbolAllocation;
+            pdsch.NStartBWP = NStartBWP;
+            pdsch.NSizeBWP = NSizeBWP;
+            pdsch.PRBSet = PdschStartRB + (0:PdschNumRB - 1);
             pdsch.DMRS.DMRSAdditionalPosition = DMRSAdditionalPosition;
             pdsch.DMRS.NIDNSCID = NIDNSCID;
             pdsch.DMRS.NSCID = NSCID;
+            pdsch.DMRS.DMRSReferencePoint = DMRSReferencePoint;
 
             % Create reserved RE Pattern list.
             rvdREPatternList = {};
@@ -180,8 +206,8 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
                 csirs1.Density = 'three';
                 csirs1.SymbolLocations = {0};
                 csirs1.SubcarrierLocations = {0};
-                csirs1.NumRB = BWPConfig(2);
-                csirs1.RBOffset = BWPConfig(1);
+                csirs1.NumRB = NSizeBWP;
+                csirs1.RBOffset = NStartBWP;
                 csirs1.NID = NID;
             
                 % Create a second ZP-CSI-RS resource with differnt RE
@@ -190,11 +216,11 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
                 csirs2.CSIRSType = 'zp';
                 csirs2.CSIRSPeriod = 'on';
                 csirs2.RowNumber = 2;
-                csirs2.Density = 'one';
+                csirs2.Density = 'dot5odd';
                 csirs2.SymbolLocations = {randi([1, 13])};
                 csirs2.SubcarrierLocations = {randi([0, 11])};
-                csirs2.NumRB = BWPConfig(2);
-                csirs2.RBOffset = BWPConfig(1);
+                csirs2.NumRB = NSizeBWP;
+                csirs2.RBOffset = NStartBWP;
                 csirs2.NID = NID;
               
                 % Validate the CSI-RS resources.
@@ -203,25 +229,22 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
                     error('invalid CSIRS configuration');
                 end
     
-                % Compute the CSI-RS indices within the slot.
-                CSIRSIndices1 = nrCSIRSIndices(carrier, csirs1, 'IndexStyle', 'subscript', 'IndexBase', '0based');
-                CSIRSIndices2 = nrCSIRSIndices(carrier, csirs2, 'IndexStyle', 'subscript', 'IndexBase', '0based');
-               
-                % Generate RE patterns from the CSI-RS indices.
-                rvdREPattern1 = indices2REPattern(CSIRSIndices1);
-                rvdREPattern2 = indices2REPattern(CSIRSIndices2);
-                
-                % Populate the Reserved RE pattern list.
-                rvdREPatternList{1} = rvdREPattern1;
-                rvdREPatternList{2} = rvdREPattern2;
+                % Generate RE patterns from the CSI-RS resources.
+                rvdREPatternList = srsCSIRS2ReservedCell(carrier, {csirs1, csirs2});
                 
                 % Add the CSI-RS indices to the PDSCH reserved RE list.
-                pdsch.ReservedRE = [nrCSIRSIndices(carrier, csirs1, 'IndexBase', '0based'); ...
-                   nrCSIRSIndices(carrier, csirs2, 'IndexBase', '0based')];
+                CSIRSIndices = [nrCSIRSIndices(carrier, csirs1, 'IndexStyle','subscript', 'IndexBase', '0based'); ...
+                   nrCSIRSIndices(carrier, csirs2, 'IndexStyle','subscript', 'IndexBase', '0based')];
+
+                % Flatten the index format.
+                CSIRSIndices = CSIRSIndices(:, 1) + 12 * NSizeBWP * CSIRSIndices(:, 2);
+
+                % Change the RE reference point from CRB0 to the BWP Start.
+                pdsch.ReservedRE = CSIRSIndices - 12 * NStartBWP;
             end
 
             % Generate PDSCH resource grid indices.
-            [pdschDataIndices, pdschInfo] = nrPDSCHIndices(carrier, pdsch,'IndexStyle','subscript', 'IndexBase','0based');
+            [pdschDataIndices, pdschInfo] = nrPDSCHIndices(carrier, pdsch, 'IndexStyle','subscript', 'IndexBase','0based');
 
             % Generate PDSCH DM-RS resource grid indices.
             pdschDMRSIndices = nrPDSCHDMRSIndices(carrier, pdsch, 'IndexStyle','subscript', 'IndexBase','0based');
@@ -271,12 +294,13 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
             slotConfig = {log2(carrier.SubcarrierSpacing/15), carrier.NSlot};
             portsString = '{0}';
             dmrsTypeString = sprintf('dmrs_type::TYPE%d', pdsch.DMRS.DMRSConfigurationType);
-            refPointStr = ['pdsch_processor::pdu_t::', pdsch.DMRS.DMRSReferencePoint  ];
+            refPointStr = ['pdsch_processor::pdu_t::', pdsch.DMRS.DMRSReferencePoint];
             numCDMGroupsWithoutData = pdsch.DMRS.NumCDMGroupsWithoutData;
             baseGraphString = ['ldpc_base_graph_type::BG', num2str(dlschInfo.BGN)];
             TBSLBRMBytes = encDL.LimitedBufferSize / 8;
       
-            % Generate Resource Block allocation string.
+            % Generate Resource Block allocation string, referenced to the
+            % starting PRB of the BWP.
             RBAllocationString = rbAllocationIndexes2String(pdsch.PRBSet);
 
             % Convert cyclic prefix to string.
@@ -303,13 +327,13 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
                 'nullopt', ...                 % context
                 slotConfig, ...                % slot
                 pdsch.RNTI, ...                % rnti
-                carrier.NSizeGrid, ...         % bwp_size_rb
-                carrier.NStartGrid, ...        % bwp_start_rb
+                pdsch.NSizeBWP, ...            % bwp_size_rb
+                pdsch.NStartBWP, ...           % bwp_start_rb
                 cyclicPrefixStr, ...           % cp
                 {{modString1, rv}}, ...        % codewords
                 pdsch.NID, ...                 % n_id
                 portsString, ...               % ports
-                refPointStr,...                % ref_point
+                refPointStr, ...               % ref_point
                 dmrsSymbolMask, ...            % dmrs_symbol_mask
                 dmrsTypeString, ...            % dmrs
                 NIDNSCID, ...                  % scrambling_id
