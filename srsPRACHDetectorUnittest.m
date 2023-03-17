@@ -31,7 +31,7 @@
 %
 %   srsPRACHDetectorUnittest Methods (TestTags = {'testmex'}):
 %
-%   mexTest  - Tests the mex wrapper of the SRSGNB PRACH detector.
+%   mexTest  - Tests the mex wrapper of the SRSRAN PRACH detector.
 %
 %   srsPRACHDetectorUnittest Methods (Access = protected):
 %
@@ -103,8 +103,8 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
 
             fprintf(fileID, [...
-                '#include "srsgnb/phy/upper/channel_processors/prach_detector.h"\n'...
-                '#include "srsgnb/support/file_vector.h"\n'...
+                '#include "srsran/phy/upper/channel_processors/prach_detector.h"\n'...
+                '#include "srsran/support/file_vector.h"\n'...
                 ]);
         end
 
@@ -112,8 +112,12 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
 
             fprintf(fileID, [...
-                'struct test_case_t {\n'...
+                'struct context_t {\n'...
                 '  prach_detector::configuration config;\n'...
+                '  prach_detection_result        result;\n'...
+                '};\n'...
+                'struct test_case_t {\n'...
+                '  context_t context;\n'...
                 '  file_vector<cf_t> symbols;\n'...
                 '};\n'...
                 ]);
@@ -189,7 +193,7 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
                 @writeComplexFloatFile, PRACHSymbols);
 
             % Prepare the test header file.
-            srsPRACHFormat = ['preamble_format::FORMAT', obj.prach.Format];
+            srsPRACHFormat = sprintf('to_prach_format_type("%s")', obj.prach.Format);
 
             switch obj.prach.RestrictedSet
                 case 'UnrestrictedSet'
@@ -202,20 +206,38 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
                     error('Invalid restricted set %s', ojb.prach.RestrictedSet);
             end
 
-            % srsgnb PRACH detector configuration.
+            % PRACH detector configuration.
             srsPRACHDetectorConfig = {...
                 obj.prach.SequenceIndex, ...        % root_sequence_index
                 srsPRACHFormat, ...                 % format
                 srsRestrictedSet, ...               % restricted_set
-                obj.prach.PreambleIndex, ...        % preamble_index                
                 obj.prach.ZeroCorrelationZone, ...  % zero_correlation_zone
                 obj.StartPreambleIndex, ...         % start_preamble_index
                 obj.NofPreamblesIndices, ...        % nof_preamble_indices
                 };
 
+            srsPreambleIndication = {...
+                obj.prach.PreambleIndex, ...            % preamble_index
+                'phy_time_unit::from_seconds(0.0)', ... % time_advance
+                0.0, ...                                % power_dB
+                0.0, ...                                % snr_dB
+                };
+
+            srsPrachDetectionResult = {...
+                0.0, ...                                % rssi_dB
+                'phy_time_unit::from_seconds(0.0)', ... % time_resolution
+                'phy_time_unit::from_seconds(0.0)', ... % time_advance_max
+                {srsPreambleIndication}, ...            % preambles
+                };
+
+            srsContext = {
+                srsPRACHDetectorConfig, ...  % config
+                srsPrachDetectionResult, ... % result
+                };
+
             % Generate the test case entry.
             testCaseString = obj.testCaseToString(TestID, ...
-                srsPRACHDetectorConfig, true, '_test_output');
+                srsContext, true, '_test_output');
 
             % Add the test to the file header.
             obj.addTestToHeaderFile(obj.headerFileID, testCaseString);
@@ -225,7 +247,7 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
 
     methods (Test, TestTags = {'testmex'})
         function mexTest(obj, DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet, ZeroCorrelationZone, RBOffset, DelaySamples)
-            %mexTest  Tests the mex wrapper of the SRSGNB PRACH detector.
+            %mexTest  Tests the mex wrapper of the SRSRAN PRACH detector.
             %   mexTest(OBJ, DUPLEXMODE, CARRIERBANDWIDTH, PREAMBLEFORMAT, 
             %   RESTRICTEDSET, ZEROCORRELATIONZONE, RBOFFSET) runs a short 
             %   simulation with a UL transmission using a carrier with duplex
@@ -235,7 +257,7 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
             %   cyclic shift index configuration ZEROCORRELATIONINDEX and a RB
             %   offset RBOFFSET. The PRACH transmission is demodulated in 
             %   MATLAB and PRACH detection is then performed using the mex 
-            %   wrapper of the SRSGNB C++ component. The test is considered
+            %   wrapper of the SRSRAN C++ component. The test is considered
             %   as passed if the detected PRACH is equal to the transmitted one.
     
             import srsMatlabWrappers.phy.upper.channel_processors.srsPRACHgenerator
