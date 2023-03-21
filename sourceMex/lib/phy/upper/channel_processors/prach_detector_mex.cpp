@@ -61,7 +61,7 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
     detector_config.nof_preamble_indices  = 64;
 
     // Create buffer.
-    std::unique_ptr<prach_buffer> buffer = create_prach_buffer_long();
+    std::unique_ptr<prach_buffer> buffer = create_prach_buffer_long(1);
     if (!buffer) {
       mex_abort("Cannot create srsran PRACH buffer long.");
     }
@@ -76,7 +76,7 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
         });
 
     // Fill buffer with time frequency-domain data.
-    srsvec::copy(buffer->get_symbol(0), span<cf_t>(frequency_data).first(839));
+    srsvec::copy(buffer->get_symbol(0, 0, 0, 0), span<cf_t>(frequency_data).first(839));
 
     // Run generator.
     prach_detection_result result = detector->detect(*buffer, detector_config);

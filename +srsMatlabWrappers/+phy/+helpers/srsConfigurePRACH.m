@@ -32,7 +32,7 @@ function prach = setPreambleFormat(prach, PreambleFormat)
     % Select configuration index according to the duplex mode and preamble
     % format.
     prach.ConfigurationIndex = srsSelectPRACHConfigurationIndex(prach.DuplexMode, PreambleFormat);
-    
+
     % Force PRACH parameters that depend on the format.
     switch PreambleFormat
         case '0'

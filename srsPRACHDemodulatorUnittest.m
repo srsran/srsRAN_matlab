@@ -58,7 +58,7 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
         DuplexMode = {'FDD', 'TDD'}
 
         %Carrier bandwidth in PRB.
-        CarrierBandwidth = {52, 79, 106}
+        CarrierBandwidth = {79, 106}
 
         %Preamble formats.
         PreambleFormat = {'0', '1', '2', '3', 'A1', 'A1/B1', 'A2', ...
@@ -74,7 +74,7 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
         %Frequency-domain sequence mapping.
         %   Starting resource block (RB) index of the initial uplink bandwidth
         %   part (BWP) relative to carrier resource grid.
-        RBOffset = {0, 13, 28};
+        RBOffset = {0, 2};
     end
 
     methods (Access = protected)
@@ -83,6 +83,7 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
 
             fprintf(fileID, [...
                 '#include "srsran/phy/lower/modulation/ofdm_prach_demodulator.h"\n'...
+                '#include "srsran/phy/lower/sampling_rate.h"\n'...
                 '#include "srsran/support/file_vector.h"\n'...
                 ]);
         end
@@ -92,7 +93,7 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
 
             fprintf(fileID, [...
                 'struct prach_context {\n'...
-                '  unsigned dft_size_15kHz;\n'...
+                '  sampling_rate srate;\n'...
                 '  ofdm_prach_demodulator::configuration config;\n'...
                 '};\n'...
                 '\n'...
@@ -135,8 +136,10 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
             
             % Generate PRACH configuration.
             SequenceIndex = randi([0, 1023], 1, 1);
-            PreambleIndex = randi([0, 63], 1, 1);
-            prach = srsConfigurePRACH(DuplexMode, SequenceIndex, PreambleIndex, RestrictedSet, ZeroCorrelationZone, RBOffset, PreambleFormat);
+            prach = srsConfigurePRACH(DuplexMode, SequenceIndex, RestrictedSet, ZeroCorrelationZone, RBOffset, PreambleFormat);
+            
+            % Select a symbolic number of frequency-domain occasions.
+            NumFreqOccasions = 2;
 
             % Set parameters that depend on the duplex mode.
             switch DuplexMode
@@ -148,41 +151,87 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
                     error('Invalid duplex mode %s', DuplexMode);
             end
 
-            % Generate waveform
-            [waveform, gridset, info] = srsPRACHgenerator(carrier, prach);
+            % Get PRACH modulation information.
+            PrachOfdmInfo = nrPRACHOFDMInfo(carrier, prach);
 
-            % Remove time offset
-            if gridset.Info.OffsetLength
-                waveform = waveform(gridset.Info.OffsetLength+1:end);
+            % Allocate the modulated waveform.
+            waveform = zeros(sum(PrachOfdmInfo.SymbolLengths), 1);
+
+            % Prepare matrix with PRACH symbols to modulate.
+            PRACHSymbols = nan(prach.LRA, NumFreqOccasions, prach.NumTimeOccasions);
+
+            % Generate a waveform for each time and frequency occasion.
+            for TimeIndex = 1:prach.NumTimeOccasions
+                for FrequencyIndex = 1:NumFreqOccasions
+                    % Select time- and frequency-domain occasion.
+                    prach.TimeIndex = TimeIndex - 1;
+                    prach.FrequencyIndex = FrequencyIndex - 1;
+
+                    % Select a random preamble index.
+                    prach.PreambleIndex = randi([0, 63]);
+
+                    % Generate waveform for each occasion.
+                    [occasion, gridset, info] = srsPRACHgenerator(carrier, prach);
+        
+                    % Remove time offset.
+                    if gridset.Info.OffsetLength
+                        occasion = occasion(gridset.Info.OffsetLength+1:end);
+                    end
+    
+                    % Combine the waveform of each occasion.
+                    waveform = occasion + waveform;
+
+                    % Store PRACH sequence.
+                    PRACHSymbols(:, FrequencyIndex, TimeIndex) = info.PRACHSymbols(1:prach.LRA);
+                end % for FrequencyIndex = NumFreqOccasions
+            end % for TimeIndex = 0:prach.NumTimeOccasions
+
+            % Correct waveform scaling for the demodulator.
+            ofdmInfo = nrOFDMInfo(carrier);
+            prachInfo = nrPRACHOFDMInfo(carrier, prach);
+            scaling = sqrt(prach.LRA * ofdmInfo.Nfft / prachInfo.Nfft);
+            waveform = waveform * scaling;
+
+            % Reset time and frequency indexes.
+            prach.TimeIndex = 0;
+            prach.FrequencyIndex = 0;
+
+            % Select the starting symbol within the slot and duration in symbols.
+            StartSymbolWithinSlot = mod(prach.SymbolLocation, 14);
+            if strcmp(PreambleFormat, 'C0')
+                % Undoes MATLAB constrain, explained in nrPRACHConfig help.
+                StartSymbolWithinSlot = mod(prach.SymbolLocation * 2, 14);
             end
 
-            % Calculate the DFT size for 15kHz SCS
-            dftSize15kHz = gridset.Info.SampleRate / 15e3;
+            % Convert the sampling rate to srsRAN format.
+            srsSampleRateString = sprintf('sampling_rate::from_MHz(%.2f)', gridset.Info.SampleRate / 1e6);
 
-            % Write the generated PRACH sequence into a binary file
+            % Write the generated PRACH sequence into a binary file.
             testCase.saveDataFile('_test_input', TestID, ...
                 @writeComplexFloatFile, waveform);
 
-            % Write the PRACH symbols into a binary file
+            % Write the PRACH symbols into a binary file.
             testCase.saveDataFile('_test_output', TestID, ...
-                @writeComplexFloatFile, info.PRACHSymbols);
+                @writeComplexFloatFile, PRACHSymbols);
 
-
-            srsPRACHFormat = sprintf('to_prach_format_type("%s")', prach.Format);
+            srsPRACHFormat = sprintf('to_prach_format_type("%s")', PreambleFormat);
             Numerology = ['subcarrier_spacing::kHz' num2str(carrier.SubcarrierSpacing)];
 
             % srsran PRACH configuration
             srsPRACHConfig = {...
-                srsPRACHFormat, ...    % format
-                prach.RBOffset, ...    % rb_offset
-                carrier.NSizeGrid, ... % nof_prb_ul_grid
-                Numerology, ...        % pusch_scs
+                srsPRACHFormat, ...                   % format
+                max([1, prach.NumTimeOccasions]), ... % nof_td_occasions
+                max([1, NumFreqOccasions]), ...       % nof_fd_occasions
+                StartSymbolWithinSlot , ...           % start_symbol
+                prach.RBOffset, ...                   % rb_offset
+                carrier.NSizeGrid, ...                % nof_prb_ul_grid
+                Numerology, ...                       % pusch_scs
                 };
 
             % test context
             srsTestContext = {
-                dftSize15kHz, ...      % dft_size_15kHz
-                srsPRACHConfig, ...    % config
+                srsSampleRateString, ... % srate
+                srsPRACHConfig, ...      % config
                 };
 
             % Generate the test case entry
@@ -194,3 +243,4 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
         end % of function testvectorGenerationCases
     end % of methods (Test, TestTags = {'testvector'})
 end % of classdef srsPRACHDemodulatorUnittest
+

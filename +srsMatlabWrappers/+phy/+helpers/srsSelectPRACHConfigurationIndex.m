@@ -12,11 +12,7 @@ function ConfigurationIndex = srsSelectPRACHConfigurationIndex(DuplexMode, Pream
         error('Unhandled duplex mode %s.', DuplexMode);
     end
     
-    % Find a row index in the table that matches the preamble format.
-    for rowIndex = 1:height(table)
-        if strcmp(table.PreambleFormat{rowIndex}, PreambleFormat)
-            ConfigurationIndex = table.ConfigurationIndex(rowIndex);
-            return;
-        end
-    end
+    % Find the first row index in the table that matches the preamble format.
+    rowIndex = find(strcmp(table.PreambleFormat, PreambleFormat), 1);
+    ConfigurationIndex = table.ConfigurationIndex(rowIndex);
 end
