@@ -67,21 +67,9 @@ inline srsran::restricted_set_config matlab_to_srs_restricted_set(const std::str
 /// \brief Converts a MATLAB PRACH preamble format identifier to an SRSRAN PRACH preamble identifier.
 /// \param[in] preamble_format  A string identifying a NR PRACH preamble format according to MATLAB convention.
 /// \return A PRACH preamble format according to SRSRAN convention.
-inline srsran::preamble_format matlab_to_srs_preamble_format(const std::string& preamble_format)
+inline srsran::prach_format_type matlab_to_srs_preamble_format(const std::string& preamble_format)
 {
-  if (preamble_format == "0") {
-    return srsran::preamble_format::FORMAT0;
-  }
-  if (preamble_format == "1") {
-    return srsran::preamble_format::FORMAT1;
-  }
-  if (preamble_format == "2") {
-    return srsran::preamble_format::FORMAT2;
-  }
-  if (preamble_format == "3") {
-    return srsran::preamble_format::FORMAT3;
-  }
-  return srsran::preamble_format::OTHER;
+  return srsran::to_prach_format_type(preamble_format.c_str());
 }
 
 } // namespace srsran_matlab
