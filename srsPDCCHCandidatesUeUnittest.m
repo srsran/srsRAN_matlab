@@ -110,14 +110,16 @@ classdef srsPDCCHCandidatesUeUnittest < srsTest.srsBlockUnittest
         % Generate a unique test ID.
         testID = testCase.generateTestID;
 
-        aggregationLevelString = ['aggregation_level::n' num2str(aggregationLevel)];
+        aggregationLevelString = sprintf('aggregation_level::n%d', aggregationLevel);
+        CoresetIdString = sprintf('to_coreset_id(%d)', CoresetId);
+        rntiString = sprintf('to_rnti(%d)', rnti);
 
         configCell = {...
             aggregationLevelString, ... % L
             numCandidates, ...          % nof_candidates
             numCCEs, ...                % nof_cce_coreset
-            CoresetId, ...              % coreset_id
-            rnti, ...                   % rnti
+            CoresetIdString, ...        % coreset_id
+            rntiString, ...             % rnti
             slotNum, ...                % slot_index
             };
 
