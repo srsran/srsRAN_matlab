@@ -50,15 +50,19 @@ function PRACHSymbols = srsPRACHdemodulator(carrier, prach, gridInfo, waveform, 
     
     % Main PRACH demodulation parameters.
     prachDFTSize = gridInfo.Nfft;
-    nofSymbols = length(gridInfo.SymbolLengths);
+    nofSymbols = length(info.PRACHSymbols) / prach.LRA;
     NRE = 12;
     K = carrier.SubcarrierSpacing / prach.SubcarrierSpacing;
     PRACHgridSize = carrier.NSizeGrid * K * NRE;
     halfPRACHgridSize = PRACHgridSize / 2;
 
+    nAntennas = size(waveform, 2);
+
+    carrierInfo = nrOFDMInfo(carrier);
+
     % Demodulate the PRACH symbol(s).
-    PRACHSymbol = zeros(prach.LRA, 1);
-    PRACHSymbols = zeros(prach.LRA * nofSymbols, 1);
+    PRACHSymbolTmp = complex(nan(prach.LRA, nAntennas));
+    PRACHSymbols = complex(nan(prach.LRA * nofSymbols, nAntennas));
     symbolOffset = 0;
     for symbolIndex = 0:nofSymbols-1
         % Symbol-specific PRACH demodulation parameters.
@@ -66,14 +70,14 @@ function PRACHSymbols = srsPRACHdemodulator(carrier, prach, gridInfo, waveform, 
         prachCPSize = gridInfo.CyclicPrefixLengths(symbolIndex+1);
 
         % Remove the CP.
-        noCPprach = waveform(symbolOffset + prachCPSize + 1 : end);
+        noCPprach = waveform(symbolOffset + prachCPSize + 1 : end , :);
 
         % DFT.
-        freqPRACH = fft(noCPprach(1:prachDFTSize), prachDFTSize); 
+        freqPRACH = fft(noCPprach(1:prachDFTSize, :), prachDFTSize);
         
         % Upper and lower grid.
-        lowerPRACHgrid = freqPRACH(end - halfPRACHgridSize + 1 : end);
-        upperPRACHgrid = freqPRACH(1 : halfPRACHgridSize);
+        lowerPRACHgrid = freqPRACH(end - halfPRACHgridSize + 1 : end, :);
+        upperPRACHgrid = freqPRACH(1 : halfPRACHgridSize, :);
     
         % Initial subcarrier.
         kStart = info.PRACHIndices(prach.LRA * symbolIndex + 1) - PRACHgridSize * symbolIndex - 1;
@@ -82,22 +86,24 @@ function PRACHSymbols = srsPRACHdemodulator(carrier, prach, gridInfo, waveform, 
         if kStart < halfPRACHgridSize
             N = min(halfPRACHgridSize - kStart, prach.LRA);
             % Copy first N subcarriers of the sequence in the lower half grid.
-            PRACHSymbol(1 : N) = lowerPRACHgrid(kStart + 1 : kStart + N);
+            PRACHSymbolTmp(1:N, :) = lowerPRACHgrid(kStart + 1 : kStart + N, :);
             % Copy the remaining sequence values from the upper half grid.
             if N < prach.LRA
-                PRACHSymbol(N + 1 : end) = upperPRACHgrid(1 : prach.LRA-N);
+                PRACHSymbolTmp(N + 1 : end, :) = upperPRACHgrid(1 : prach.LRA-N, :);
             end
         else
             % Copy the sequence in the upper half grid.
-            PRACHSymbol = upperPRACHgrid(kStart - halfPRACHgridSize + 1 : kStart - halfPRACHgridSize + prach.LRA);
+            PRACHSymbolTmp = upperPRACHgrid(kStart - halfPRACHgridSize + 1 : kStart - halfPRACHgridSize + prach.LRA, :);
         end
     
-        % Scale according to the expected Matlab-generated results.
-        scaling = sqrt(mean(abs(info.PRACHSymbols(1 : prach.LRA)).^2)) / sqrt(mean(abs(PRACHSymbol).^2));
-        PRACHSymbol = PRACHSymbol.' * scaling;
+        % Revert power scaling: MATLAB scales the transmitted power so that the
+        % PSD is one when normalized wrt the carrier SCS (whereas we want a PSD
+        % of LRA when nomralized wrt the PRACH SCS).
+        scaling = sqrt(prach.LRA) / sqrt(prachDFTSize / carrierInfo.Nfft);
+        PRACHSymbolTmp = PRACHSymbolTmp * scaling;
 
         % Advance the time signal pointer and update the output array.
         symbolOffset = symbolOffset + prachSymbolLength;
-        PRACHSymbols(prach.LRA * symbolIndex + 1 : prach.LRA * (symbolIndex + 1)) = PRACHSymbol;
+        PRACHSymbols(prach.LRA * symbolIndex + 1 : prach.LRA * (symbolIndex + 1), :) = PRACHSymbolTmp;
     end
 end
