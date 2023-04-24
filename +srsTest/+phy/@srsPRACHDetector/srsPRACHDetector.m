@@ -1,5 +1,5 @@
-%srsPRACHDetector MATLAB interface to SRGNB PRACH detector.
-%   User-friendly interface to the SRSGNB PRACH detector class, which is wrapped
+%srsPRACHDetector MATLAB interface to srsRAN PRACH detector.
+%   User-friendly interface to the srsRAN PRACH detector class, which is wrapped
 %   by the MEX static method prach_detector_mex.
 %
 %   PRACHDET = srsPRACHDetector(DELAYSAMPLES) creates a PHY PRACH Detector

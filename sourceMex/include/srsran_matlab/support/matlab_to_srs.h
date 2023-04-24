@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "srsran/phy/upper/dmrs_mapping.h"
 #include "srsran/ran/ldpc_base_graph.h"
 #include "srsran/ran/modulation_scheme.h"
 #include "srsran/support/error_handling.h"
@@ -15,8 +16,11 @@ namespace srsran_matlab {
 /// \return A modulation identifier according to SRSRAN convention.
 inline srsran::modulation_scheme matlab_to_srs_modulation(const std::string& modulation_name)
 {
-  if ((modulation_name == "BPSK") || (modulation_name == "pi/2-BPSK")) {
+  if (modulation_name == "BPSK") {
     return srsran::modulation_scheme::BPSK;
+  }
+  if (modulation_name == "pi/2-BPSK") {
+    return srsran::modulation_scheme::PI_2_BPSK;
   }
   if (modulation_name == "QPSK") {
     return srsran::modulation_scheme::QPSK;
@@ -70,6 +74,20 @@ inline srsran::restricted_set_config matlab_to_srs_restricted_set(const std::str
 inline srsran::prach_format_type matlab_to_srs_preamble_format(const std::string& preamble_format)
 {
   return srsran::to_prach_format_type(preamble_format.c_str());
+}
+
+/// \brief Converts a MATLAB DM-RS type to an SRSRAN DM-RS type.
+/// \param[in] type A DM-RS type in {1, 2}.
+/// \return A DM-RS type identifier according to SRSRAN convention.
+inline srsran::dmrs_type matlab_to_srs_dmrs_type(unsigned type)
+{
+  if (type == 1) {
+    return srsran::dmrs_type::TYPE1;
+  }
+  if (type == 2) {
+    return srsran::dmrs_type::TYPE2;
+  }
+  srsran::srsran_terminate("Unknown DMRS type {}.", type);
 }
 
 } // namespace srsran_matlab
