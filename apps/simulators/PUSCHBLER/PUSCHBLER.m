@@ -514,489 +514,489 @@ classdef PUSCHBLER < matlab.System
 
         function stepImpl(obj, SNRIn, nFrames)
             arguments
-            obj (1, 1) PUSCHBLER
-            %SNR range in dB.
-            SNRIn double {mustBeReal, mustBeFinite, mustBeVector}
-            %Number of 10-ms frames.
-            nFrames (1, 1) double {mustBeInteger, mustBePositive} = 10
-        end
+                obj (1, 1) PUSCHBLER
+                %SNR range in dB.
+                SNRIn double {mustBeReal, mustBeFinite, mustBeVector}
+                %Number of 10-ms frames.
+                nFrames (1, 1) double {mustBeInteger, mustBePositive} = 10
+            end
 
-        % Ensure SNRIn has no repetitions and is a row vector.
-        SNRIn = unique(SNRIn);
-        SNRIn = SNRIn(:).';
+            % Ensure SNRIn has no repetitions and is a row vector.
+            SNRIn = unique(SNRIn);
+            SNRIn = SNRIn(:).';
 
-        % Get the maximum number of delayed samples by a channel multipath
-        % component. This is calculated from the channel path with the largest
-        % delay and the implementation delay of the channel filter. This is
-        % required later to flush the channel filter to obtain the received signal.
-        chInfo = info(obj.Channel);
-        maxChDelay = ceil(max(chInfo.PathDelays*obj.Channel.SampleRate)) + chInfo.ChannelFilterDelay;
+            % Get the maximum number of delayed samples by a channel multipath
+            % component. This is calculated from the channel path with the largest
+            % delay and the implementation delay of the channel filter. This is
+            % required later to flush the channel filter to obtain the received signal.
+            chInfo = info(obj.Channel);
+            maxChDelay = ceil(max(chInfo.PathDelays*obj.Channel.SampleRate)) + chInfo.ChannelFilterDelay;
 
-        % Array to store the maximum throughput and the number of transmitted transport blocks for all SNR points.
-        maxThroughput = zeros(length(SNRIn), 1);
-        totalBlocks = zeros(length(SNRIn), 1);
+            % Array to store the maximum throughput and the number of transmitted transport blocks for all SNR points.
+            maxThroughput = zeros(length(SNRIn), 1);
+            totalBlocks = zeros(length(SNRIn), 1);
 
-        % Set up redundancy version (RV) sequence for all HARQ processes.
-        if obj.PUSCHExtension.EnableHARQ
-            % From PUSCH demodulation requirements in RAN WG4 meeting #88bis (R4-1814062).
-            rvSeq = [0 2 3 1];
-        else
-            % HARQ disabled - single transmission with RV=0, no retransmissions.
-            rvSeq = 0;
-        end
+            % Set up redundancy version (RV) sequence for all HARQ processes.
+            if obj.PUSCHExtension.EnableHARQ
+                % From PUSCH demodulation requirements in RAN WG4 meeting #88bis (R4-1814062).
+                rvSeq = [0 2 3 1];
+            else
+                % HARQ disabled - single transmission with RV=0, no retransmissions.
+                rvSeq = 0;
+            end
 
-        % Take copies of channel-level parameters to simplify subsequent parameter referencing.
-        carrier = obj.Carrier;
-        pusch = obj.PUSCH;
-        puschextra = obj.PUSCHExtension;
-        decoderType = obj.DecoderType;
-        nRxAnts = obj.NRxAnts;
-        nTxAnts = obj.NTxAnts;
-        trBlkSize = obj.TBS;
-        segmentCfg = obj.SegmentCfg;
-        puschBitCapacity = obj.PUSCHIndicesInfo.G;
-        puschIndices = obj.PUSCHIndices;
-        perfectChannelEstimator = obj.PerfectChannelEstimator;
-        delayProfile = obj.DelayProfile;
-        nFFT = obj.Nfft;
-        displayDiagnostics = obj.DisplayDiagnostics;
-        displaySimulationInformation = obj.DisplaySimulationInformation;
+            % Take copies of channel-level parameters to simplify subsequent parameter referencing.
+            carrier = obj.Carrier;
+            pusch = obj.PUSCH;
+            puschextra = obj.PUSCHExtension;
+            decoderType = obj.DecoderType;
+            nRxAnts = obj.NRxAnts;
+            nTxAnts = obj.NTxAnts;
+            trBlkSize = obj.TBS;
+            segmentCfg = obj.SegmentCfg;
+            puschBitCapacity = obj.PUSCHIndicesInfo.G;
+            puschIndices = obj.PUSCHIndices;
+            perfectChannelEstimator = obj.PerfectChannelEstimator;
+            delayProfile = obj.DelayProfile;
+            nFFT = obj.Nfft;
+            displayDiagnostics = obj.DisplayDiagnostics;
+            displaySimulationInformation = obj.DisplaySimulationInformation;
 
-        useMATLABDecoder = (strcmp(decoderType, 'matlab') || strcmp(decoderType, 'both'));
-        useSRSDecoder = (strcmp(decoderType, 'srs') || strcmp(decoderType, 'both'));
+            useMATLABDecoder = (strcmp(decoderType, 'matlab') || strcmp(decoderType, 'both'));
+            useSRSDecoder = (strcmp(decoderType, 'srs') || strcmp(decoderType, 'both'));
 
-        % Array to store the simulation throughput and BLER for all SNR points.
-        simThroughput = zeros(length(SNRIn), 1);
-        simBLER = zeros(length(SNRIn), 1);
+            % Array to store the simulation throughput and BLER for all SNR points.
+            simThroughput = zeros(length(SNRIn), 1);
+            simBLER = zeros(length(SNRIn), 1);
 
-        % Array to store the simulation throughput and BLER for all SNR points.
-        simThroughputSRS = zeros(length(SNRIn), 1);
-        simBLERSRS = zeros(length(SNRIn), 1);
+            % Array to store the simulation throughput and BLER for all SNR points.
+            simThroughputSRS = zeros(length(SNRIn), 1);
+            simBLERSRS = zeros(length(SNRIn), 1);
 
-        quickSim = obj.QuickSimulation;
+            quickSim = obj.QuickSimulation;
 
-        % %%% Simulation loop.
+            % %%% Simulation loop.
 
-        for snrIdx = 1:numel(SNRIn)    % comment out for parallel computing
+            for snrIdx = 1:numel(SNRIn)    % comment out for parallel computing
 
-            % Reset the random number generator so that each SNR point will
-            % experience the same noise realization.
-            rng('default');
+                % Reset the random number generator so that each SNR point will
+                % experience the same noise realization.
+                rng('default');
 
-            obj.DecodeULSCH.reset();        % Reset decoder at the start of each SNR point
-            pathFilters = [];
+                obj.DecodeULSCH.reset();        % Reset decoder at the start of each SNR point
+                pathFilters = [];
 
-            % Create PUSCH object configured for the non-codebook transmission
-            % scheme, used for receiver operations that are performed with respect
-            % to the PUSCH layers.
-            puschNonCodebook = pusch;
-            puschNonCodebook.TransmissionScheme = 'nonCodebook';
+                % Create PUSCH object configured for the non-codebook transmission
+                % scheme, used for receiver operations that are performed with respect
+                % to the PUSCH layers.
+                puschNonCodebook = pusch;
+                puschNonCodebook.TransmissionScheme = 'nonCodebook';
 
-            % Prepare simulation for new SNR point.
-            SNRdB = SNRIn(snrIdx);
-            fprintf('\nSimulating transmission scheme 1 (%dx%d) and SCS=%dkHz with %s channel at %gdB SNR for %d 10ms frame(s)\n', ...
-                nTxAnts, nRxAnts, carrier.SubcarrierSpacing, ...
-                delayProfile, SNRdB, nFrames);
+                % Prepare simulation for new SNR point.
+                SNRdB = SNRIn(snrIdx);
+                fprintf('\nSimulating transmission scheme 1 (%dx%d) and SCS=%dkHz with %s channel at %gdB SNR for %d 10ms frame(s)\n', ...
+                    nTxAnts, nRxAnts, carrier.SubcarrierSpacing, ...
+                    delayProfile, SNRdB, nFrames);
 
-            % Specify the fixed order in which we cycle through the HARQ process IDs.
-            harqSequence = 0:puschextra.NHARQProcesses-1;
+                % Specify the fixed order in which we cycle through the HARQ process IDs.
+                harqSequence = 0:puschextra.NHARQProcesses-1;
 
-            % Initialize the state of all HARQ processes.
-            harqEntity = HARQEntity(harqSequence, rvSeq);
+                % Initialize the state of all HARQ processes.
+                harqEntity = HARQEntity(harqSequence, rvSeq);
 
-            % Reset the channel so that each SNR point will experience the same
-            % channel realization.
-            reset(obj.Channel);
+                % Reset the channel so that each SNR point will experience the same
+                % channel realization.
+                reset(obj.Channel);
 
-            % Total number of slots in the simulation period.
-            NSlots = nFrames * carrier.SlotsPerFrame;
+                % Total number of slots in the simulation period.
+                NSlots = nFrames * carrier.SlotsPerFrame;
 
-            % Timing offset, updated in every slot for perfect synchronization and
-            % when the correlation is strong for practical synchronization.
-            offset = 0;
+                % Timing offset, updated in every slot for perfect synchronization and
+                % when the correlation is strong for practical synchronization.
+                offset = 0;
 
-            % Loop over the entire waveform length
-            for nslot = 0:NSlots-1
+                % Loop over the entire waveform length
+                for nslot = 0:NSlots-1
 
-                % Update the carrier slot numbers for new slot.
-                carrier.NSlot = nslot;
+                    % Update the carrier slot numbers for new slot.
+                    carrier.NSlot = nslot;
 
-                % HARQ processing
-                %
-                % Create HARQ ID for the SRS decoder.
-                % Set the HARQ ID.
-                harqBufID.rnti = pusch.RNTI;
-                harqBufID.harq_ack_id = harqEntity.HARQProcessID;
-                harqBufID.nof_codeblocks = segmentCfg.nof_codeblocks;
-
-                % If new data for current process then create a new UL-SCH transport block.
-                if harqEntity.NewData
-                    trBlk = randi([0 1], trBlkSize, 1);
-                    setTransportBlock(obj.EncodeULSCH, trBlk, harqEntity.HARQProcessID);
-                    % If new data because of previous RV sequence time out then flush decoder soft buffer explicitly.
-                    if harqEntity.SequenceTimeout
-                        resetSoftBuffer(obj.DecodeULSCH, harqEntity.HARQProcessID);
-                    end
-                    % The SRS decoder must be reset explicitely in any case.
-                    obj.DecodeULSCHsrs.resetCRCS(harqBufID);
-
-                    % Increment counter of transmitted transport blocks.
-                    totalBlocks(snrIdx) = totalBlocks(snrIdx) + 1;
-                end
-
-                % Encode the UL-SCH transport block.
-                codedTrBlock = obj.EncodeULSCH(pusch.Modulation, pusch.NumLayers, ...
-                    puschBitCapacity, harqEntity.RedundancyVersion, harqEntity.HARQProcessID);
-
-                % Create resource grid for a slot.
-                puschGrid = nrResourceGrid(carrier, nTxAnts);
-
-                % PUSCH modulation, including codebook based MIMO precoding if TxScheme = 'codebook'.
-                puschSymbols = nrPUSCH(carrier, pusch, codedTrBlock);
-
-                % Implementation-specific PUSCH MIMO precoding and mapping. This
-                % MIMO precoding step is in addition to any codebook based
-                % MIMO precoding done during PUSCH modulation above.
-                if (strcmpi(pusch.TransmissionScheme, 'codebook'))
-                    % Codebook based MIMO precoding, F precodes between PUSCH
-                    % transmit antenna ports and transmit antennas.
-                    F = eye(pusch.NumAntennaPorts, nTxAnts);
-                else
-                    % Non-codebook based MIMO precoding, F precodes between PUSCH
-                    % layers and transmit antennas.
-                    F = eye(pusch.NumLayers, nTxAnts);
-                end
-                [~, puschAntIndices] = nrExtractResources(puschIndices, puschGrid);
-                puschGrid(puschAntIndices) = puschSymbols * F;
-
-                % Implementation-specific PUSCH DM-RS MIMO precoding and mapping.
-                % The first DM-RS creation includes codebook based MIMO precoding if applicable.
-                dmrsSymbols = nrPUSCHDMRS(carrier, pusch);
-                dmrsIndices = nrPUSCHDMRSIndices(carrier, pusch);
-                for p = 1:size(dmrsSymbols, 2)
-                    [~, dmrsAntIndices] = nrExtractResources(dmrsIndices(:, p), puschGrid);
-                    puschGrid(dmrsAntIndices) = puschGrid(dmrsAntIndices) + dmrsSymbols(:, p) * F(p, :);
-                end
-
-                % OFDM modulation.
-                txWaveform = nrOFDMModulate(carrier, puschGrid);
-
-                % Pass data through channel model. Append zeros at the end of the
-                % transmitted waveform to flush channel content. These zeros take
-                % into account any delay introduced in the channel. This is a mix
-                % of multipath delay and implementation delay. This value may
-                % change depending on the sampling rate, delay profile and delay
-                % spread.
-                txWaveform = [txWaveform; zeros(maxChDelay, size(txWaveform, 2))]; %#ok<AGROW>
-                [rxWaveform, pathGains, sampleTimes] = obj.Channel(txWaveform);
-
-                % Add AWGN to the received time domain waveform
-                % Normalize noise power by the IFFT size used in OFDM modulation,
-                % as the OFDM modulator applies this normalization to the
-                % transmitted waveform. Also normalize by the number of receive
-                % antennas, as the channel model applies this normalization to the
-                % received waveform, by default.
-                SNR = 10^(SNRdB/10);
-                N0 = 1 / sqrt(2.0 * nRxAnts * double(nFFT) * SNR);
-                noise = N0 * complex(randn(size(rxWaveform)), randn(size(rxWaveform)));
-                rxWaveform = rxWaveform + noise;
-
-                if (perfectChannelEstimator)
-                    % Perfect synchronization. Use information provided by the
-                    % channel to find the strongest multipath component.
-                    pathFilters = getPathFilters(obj.Channel);
-                    [offset, ~] = nrPerfectTimingEstimate(pathGains, pathFilters);
-                else
-                    % Practical synchronization. Correlate the received waveform
-                    % with the PUSCH DM-RS to give timing offset estimate 't' and
-                    % correlation magnitude 'mag'. The function
-                    % hSkipWeakTimingOffset is used to update the receiver timing
-                    % offset. If the correlation peak in 'mag' is weak, the current
-                    % timing estimate 't' is ignored and the previous estimate
-                    % 'offset' is used.
-                    [t, mag] = nrTimingEstimate(carrier, rxWaveform, dmrsIndices, dmrsSymbols);
-                    offset = hSkipWeakTimingOffset(offset, t, mag);
-                    % Display a warning if the estimated timing offset exceeds the
-                    % maximum channel delay.
-                    if offset > maxChDelay
-                        warning(['Estimated timing offset (%d) is greater than the maximum channel delay (%d).' ...
-                            ' This will result in a decoding failure. This may be caused by low SNR,' ...
-                            ' or not enough DM-RS symbols to synchronize successfully.'], offset, maxChDelay);
-                    end
-                end
-                rxWaveform = rxWaveform(1+offset:end, :);
-
-                % Perform OFDM demodulation on the received data to recreate the
-                % resource grid, including padding in the event that practical
-                % synchronization results in an incomplete slot being demodulated.
-                rxGrid = nrOFDMDemodulate(carrier, rxWaveform);
-                [K, L, R] = size(rxGrid);
-                if (L < carrier.SymbolsPerSlot)
-                    rxGrid = cat(2, rxGrid, zeros(K, carrier.SymbolsPerSlot - L, R));
-                end
-
-                if (perfectChannelEstimator)
-                    % Perfect channel estimation, use the value of the path gains
-                    % provided by the channel.
-                    estChannelGrid = nrPerfectChannelEstimate(carrier, pathGains, pathFilters, offset, sampleTimes);
-
-                    % Get perfect noise estimate (from the noise realization).
-                    noiseGrid = nrOFDMDemodulate(carrier, noise(1+offset:end, :));
-                    noiseEst = var(noiseGrid(:));
-
-                    % Apply MIMO deprecoding to estChannelGrid to give an estimate
-                    % per transmission layer.
-                    K = size(estChannelGrid, 1);
-                    estChannelGrid = reshape(estChannelGrid, K*carrier.SymbolsPerSlot*nRxAnts, nTxAnts);
-                    estChannelGrid = estChannelGrid * F.';
-                    if (strcmpi(pusch.TransmissionScheme, 'codebook'))
-                        W = nrPUSCHCodebook(pusch.NumLayers, pusch.NumAntennaPorts, pusch.TPMI, pusch.TransformPrecoding);
-                        estChannelGrid = estChannelGrid * W.';
-                    end
-                    estChannelGrid = reshape(estChannelGrid, K, carrier.SymbolsPerSlot, nRxAnts, []);
-                else
-                    % Practical channel estimation between the received grid and
-                    % each transmission layer, using the PUSCH DM-RS for each layer
-                    % which are created by specifying the non-codebook transmission
-                    % scheme.
-                    dmrsLayerSymbols = nrPUSCHDMRS(carrier, puschNonCodebook);
-                    dmrsLayerIndices = nrPUSCHDMRSIndices(carrier, puschNonCodebook);
-                    [estChannelGrid, noiseEst] = nrChannelEstimate(carrier, rxGrid, ...
-                        dmrsLayerIndices, dmrsLayerSymbols, 'CDMLengths', pusch.DMRS.CDMLengths);
-                end
-
-                % Get PUSCH resource elements from the received grid.
-                [puschRx, puschHest] = nrExtractResources(puschIndices, rxGrid, estChannelGrid);
-
-                % Equalization.
-                [puschEq, csi] = nrEqualizeMMSE(puschRx, puschHest, noiseEst);
-
-                % Decode PUSCH physical channel.
-                [ulschLLRs, rxSymbols] = nrPUSCHDecode(carrier, puschNonCodebook, puschEq, noiseEst);
-
-                % Display EVM per layer, per slot and per RB. Reference symbols for
-                % each layer are created by specifying the non-codebook
-                % transmission scheme.
-                if (displayDiagnostics)
-                    refSymbols = nrPUSCH(carrier, puschNonCodebook, codedTrBlock);
-                    plotLayerEVM(NSlots, nslot, puschNonCodebook, size(puschGrid), puschIndices, refSymbols, puschEq);
-                end
-
-                % Apply channel state information (CSI) produced by the equalizer,
-                % including the effect of transform precoding if enabled.
-                if (pusch.TransformPrecoding)
-                    MSC = MRB * 12;
-                    csi = nrTransformDeprecode(csi, MRB) / sqrt(MSC);
-                    csi = repmat(csi((1:MSC:end).'), 1, MSC).';
-                    csi = reshape(csi, size(rxSymbols));
-                end
-                csi = nrLayerDemap(csi);
-                Qm = length(ulschLLRs) / length(rxSymbols);
-                csi = reshape(repmat(csi{1}.', Qm, 1), [], 1);
-                ulschLLRs = ulschLLRs .* csi;
-
-                % Store values to calculate BLER.
-                isLastRetransmission = (harqEntity.RedundancyVersion == rvSeq(end));
-
-                blkerrBoth = false;
-
-                if useMATLABDecoder
-                    % Decode the UL-SCH transport channel.
-                    obj.DecodeULSCH.TransportBlockLength = trBlkSize;
-                    [decbits, blkerr] = obj.DecodeULSCH(ulschLLRs, pusch.Modulation, ...
-                        pusch.NumLayers, harqEntity.RedundancyVersion, harqEntity.HARQProcessID);
-
-                    % Store values to calculate throughput and BLER.
-                    simThroughput(snrIdx) = simThroughput(snrIdx) + (~blkerr * trBlkSize);
-                    simBLER(snrIdx) = simBLER(snrIdx) + (isLastRetransmission && any(decbits ~= trBlk));
-
-                    blkerrBoth = blkerr;
-                end
-
-                if useSRSDecoder
-                    % Decode the UL-SCH transport channel with the SRS decoder.
+                    % HARQ processing
                     %
-                    % First, quantize the LLRs.
-                    ulschLLRsInt8 = quantize(ulschLLRs, pusch.Modulation);
+                    % Create HARQ ID for the SRS decoder.
+                    % Set the HARQ ID.
+                    harqBufID.rnti = pusch.RNTI;
+                    harqBufID.harq_ack_id = harqEntity.HARQProcessID;
+                    harqBufID.nof_codeblocks = segmentCfg.nof_codeblocks;
 
-                    % Set the RV.
-                    segmentCfg.rv = harqEntity.RedundancyVersion;
+                    % If new data for current process then create a new UL-SCH transport block.
+                    if harqEntity.NewData
+                        trBlk = randi([0 1], trBlkSize, 1);
+                        setTransportBlock(obj.EncodeULSCH, trBlk, harqEntity.HARQProcessID);
+                        % If new data because of previous RV sequence time out then flush decoder soft buffer explicitly.
+                        if harqEntity.SequenceTimeout
+                            resetSoftBuffer(obj.DecodeULSCH, harqEntity.HARQProcessID);
+                        end
+                        % The SRS decoder must be reset explicitely in any case.
+                        obj.DecodeULSCHsrs.resetCRCS(harqBufID);
 
-                    [decbitsSRS, statsSRS] = obj.DecodeULSCHsrs(ulschLLRsInt8, harqEntity.NewData, segmentCfg, harqBufID);
+                        % Increment counter of transmitted transport blocks.
+                        totalBlocks(snrIdx) = totalBlocks(snrIdx) + 1;
+                    end
 
-                    % Store values to calculate throughput and BLER.
-                    simThroughputSRS(snrIdx) = simThroughputSRS(snrIdx) + (statsSRS.crc_ok * trBlkSize);
-                    simBLERSRS(snrIdx) = simBLERSRS(snrIdx) + (isLastRetransmission && any(decbitsSRS ~= srsTest.helpers.bitPack(trBlk)));
+                    % Encode the UL-SCH transport block.
+                    codedTrBlock = obj.EncodeULSCH(pusch.Modulation, pusch.NumLayers, ...
+                        puschBitCapacity, harqEntity.RedundancyVersion, harqEntity.HARQProcessID);
 
-                    blkerrBoth = blkerrBoth || (~statsSRS.crc_ok);
+                    % Create resource grid for a slot.
+                    puschGrid = nrResourceGrid(carrier, nTxAnts);
+
+                    % PUSCH modulation, including codebook based MIMO precoding if TxScheme = 'codebook'.
+                    puschSymbols = nrPUSCH(carrier, pusch, codedTrBlock);
+
+                    % Implementation-specific PUSCH MIMO precoding and mapping. This
+                    % MIMO precoding step is in addition to any codebook based
+                    % MIMO precoding done during PUSCH modulation above.
+                    if (strcmpi(pusch.TransmissionScheme, 'codebook'))
+                        % Codebook based MIMO precoding, F precodes between PUSCH
+                        % transmit antenna ports and transmit antennas.
+                        F = eye(pusch.NumAntennaPorts, nTxAnts);
+                    else
+                        % Non-codebook based MIMO precoding, F precodes between PUSCH
+                        % layers and transmit antennas.
+                        F = eye(pusch.NumLayers, nTxAnts);
+                    end
+                    [~, puschAntIndices] = nrExtractResources(puschIndices, puschGrid);
+                    puschGrid(puschAntIndices) = puschSymbols * F;
+
+                    % Implementation-specific PUSCH DM-RS MIMO precoding and mapping.
+                    % The first DM-RS creation includes codebook based MIMO precoding if applicable.
+                    dmrsSymbols = nrPUSCHDMRS(carrier, pusch);
+                    dmrsIndices = nrPUSCHDMRSIndices(carrier, pusch);
+                    for p = 1:size(dmrsSymbols, 2)
+                        [~, dmrsAntIndices] = nrExtractResources(dmrsIndices(:, p), puschGrid);
+                        puschGrid(dmrsAntIndices) = puschGrid(dmrsAntIndices) + dmrsSymbols(:, p) * F(p, :);
+                    end
+
+                    % OFDM modulation.
+                    txWaveform = nrOFDMModulate(carrier, puschGrid);
+
+                    % Pass data through channel model. Append zeros at the end of the
+                    % transmitted waveform to flush channel content. These zeros take
+                    % into account any delay introduced in the channel. This is a mix
+                    % of multipath delay and implementation delay. This value may
+                    % change depending on the sampling rate, delay profile and delay
+                    % spread.
+                    txWaveform = [txWaveform; zeros(maxChDelay, size(txWaveform, 2))]; %#ok<AGROW>
+                    [rxWaveform, pathGains, sampleTimes] = obj.Channel(txWaveform);
+
+                    % Add AWGN to the received time domain waveform
+                    % Normalize noise power by the IFFT size used in OFDM modulation,
+                    % as the OFDM modulator applies this normalization to the
+                    % transmitted waveform. Also normalize by the number of receive
+                    % antennas, as the channel model applies this normalization to the
+                    % received waveform, by default.
+                    SNR = 10^(SNRdB/10);
+                    N0 = 1 / sqrt(2.0 * nRxAnts * double(nFFT) * SNR);
+                    noise = N0 * complex(randn(size(rxWaveform)), randn(size(rxWaveform)));
+                    rxWaveform = rxWaveform + noise;
+
+                    if (perfectChannelEstimator)
+                        % Perfect synchronization. Use information provided by the
+                        % channel to find the strongest multipath component.
+                        pathFilters = getPathFilters(obj.Channel);
+                        [offset, ~] = nrPerfectTimingEstimate(pathGains, pathFilters);
+                    else
+                        % Practical synchronization. Correlate the received waveform
+                        % with the PUSCH DM-RS to give timing offset estimate 't' and
+                        % correlation magnitude 'mag'. The function
+                        % hSkipWeakTimingOffset is used to update the receiver timing
+                        % offset. If the correlation peak in 'mag' is weak, the current
+                        % timing estimate 't' is ignored and the previous estimate
+                        % 'offset' is used.
+                        [t, mag] = nrTimingEstimate(carrier, rxWaveform, dmrsIndices, dmrsSymbols);
+                        offset = hSkipWeakTimingOffset(offset, t, mag);
+                        % Display a warning if the estimated timing offset exceeds the
+                        % maximum channel delay.
+                        if offset > maxChDelay
+                            warning(['Estimated timing offset (%d) is greater than the maximum channel delay (%d).' ...
+                                ' This will result in a decoding failure. This may be caused by low SNR,' ...
+                                ' or not enough DM-RS symbols to synchronize successfully.'], offset, maxChDelay);
+                        end
+                    end
+                    rxWaveform = rxWaveform(1+offset:end, :);
+
+                    % Perform OFDM demodulation on the received data to recreate the
+                    % resource grid, including padding in the event that practical
+                    % synchronization results in an incomplete slot being demodulated.
+                    rxGrid = nrOFDMDemodulate(carrier, rxWaveform);
+                    [K, L, R] = size(rxGrid);
+                    if (L < carrier.SymbolsPerSlot)
+                        rxGrid = cat(2, rxGrid, zeros(K, carrier.SymbolsPerSlot - L, R));
+                    end
+
+                    if (perfectChannelEstimator)
+                        % Perfect channel estimation, use the value of the path gains
+                        % provided by the channel.
+                        estChannelGrid = nrPerfectChannelEstimate(carrier, pathGains, pathFilters, offset, sampleTimes);
+
+                        % Get perfect noise estimate (from the noise realization).
+                        noiseGrid = nrOFDMDemodulate(carrier, noise(1+offset:end, :));
+                        noiseEst = var(noiseGrid(:));
+
+                        % Apply MIMO deprecoding to estChannelGrid to give an estimate
+                        % per transmission layer.
+                        K = size(estChannelGrid, 1);
+                        estChannelGrid = reshape(estChannelGrid, K*carrier.SymbolsPerSlot*nRxAnts, nTxAnts);
+                        estChannelGrid = estChannelGrid * F.';
+                        if (strcmpi(pusch.TransmissionScheme, 'codebook'))
+                            W = nrPUSCHCodebook(pusch.NumLayers, pusch.NumAntennaPorts, pusch.TPMI, pusch.TransformPrecoding);
+                            estChannelGrid = estChannelGrid * W.';
+                        end
+                        estChannelGrid = reshape(estChannelGrid, K, carrier.SymbolsPerSlot, nRxAnts, []);
+                    else
+                        % Practical channel estimation between the received grid and
+                        % each transmission layer, using the PUSCH DM-RS for each layer
+                        % which are created by specifying the non-codebook transmission
+                        % scheme.
+                        dmrsLayerSymbols = nrPUSCHDMRS(carrier, puschNonCodebook);
+                        dmrsLayerIndices = nrPUSCHDMRSIndices(carrier, puschNonCodebook);
+                        [estChannelGrid, noiseEst] = nrChannelEstimate(carrier, rxGrid, ...
+                            dmrsLayerIndices, dmrsLayerSymbols, 'CDMLengths', pusch.DMRS.CDMLengths);
+                    end
+
+                    % Get PUSCH resource elements from the received grid.
+                    [puschRx, puschHest] = nrExtractResources(puschIndices, rxGrid, estChannelGrid);
+
+                    % Equalization.
+                    [puschEq, csi] = nrEqualizeMMSE(puschRx, puschHest, noiseEst);
+
+                    % Decode PUSCH physical channel.
+                    [ulschLLRs, rxSymbols] = nrPUSCHDecode(carrier, puschNonCodebook, puschEq, noiseEst);
+
+                    % Display EVM per layer, per slot and per RB. Reference symbols for
+                    % each layer are created by specifying the non-codebook
+                    % transmission scheme.
+                    if (displayDiagnostics)
+                        refSymbols = nrPUSCH(carrier, puschNonCodebook, codedTrBlock);
+                        plotLayerEVM(NSlots, nslot, puschNonCodebook, size(puschGrid), puschIndices, refSymbols, puschEq);
+                    end
+
+                    % Apply channel state information (CSI) produced by the equalizer,
+                    % including the effect of transform precoding if enabled.
+                    if (pusch.TransformPrecoding)
+                        MSC = MRB * 12;
+                        csi = nrTransformDeprecode(csi, MRB) / sqrt(MSC);
+                        csi = repmat(csi((1:MSC:end).'), 1, MSC).';
+                        csi = reshape(csi, size(rxSymbols));
+                    end
+                    csi = nrLayerDemap(csi);
+                    Qm = length(ulschLLRs) / length(rxSymbols);
+                    csi = reshape(repmat(csi{1}.', Qm, 1), [], 1);
+                    ulschLLRs = ulschLLRs .* csi;
+
+                    % Store values to calculate BLER.
+                    isLastRetransmission = (harqEntity.RedundancyVersion == rvSeq(end));
+
+                    blkerrBoth = false;
+
+                    if useMATLABDecoder
+                        % Decode the UL-SCH transport channel.
+                        obj.DecodeULSCH.TransportBlockLength = trBlkSize;
+                        [decbits, blkerr] = obj.DecodeULSCH(ulschLLRs, pusch.Modulation, ...
+                            pusch.NumLayers, harqEntity.RedundancyVersion, harqEntity.HARQProcessID);
+
+                        % Store values to calculate throughput and BLER.
+                        simThroughput(snrIdx) = simThroughput(snrIdx) + (~blkerr * trBlkSize);
+                        simBLER(snrIdx) = simBLER(snrIdx) + (isLastRetransmission && any(decbits ~= trBlk));
+
+                        blkerrBoth = blkerr;
+                    end
+
+                    if useSRSDecoder
+                        % Decode the UL-SCH transport channel with the SRS decoder.
+                        %
+                        % First, quantize the LLRs.
+                        ulschLLRsInt8 = quantize(ulschLLRs, pusch.Modulation);
+
+                        % Set the RV.
+                        segmentCfg.rv = harqEntity.RedundancyVersion;
+
+                        [decbitsSRS, statsSRS] = obj.DecodeULSCHsrs(ulschLLRsInt8, harqEntity.NewData, segmentCfg, harqBufID);
+
+                        % Store values to calculate throughput and BLER.
+                        simThroughputSRS(snrIdx) = simThroughputSRS(snrIdx) + (statsSRS.crc_ok * trBlkSize);
+                        simBLERSRS(snrIdx) = simBLERSRS(snrIdx) + (isLastRetransmission && any(decbitsSRS ~= srsTest.helpers.bitPack(trBlk)));
+
+                        blkerrBoth = blkerrBoth || (~statsSRS.crc_ok);
+                    end
+
+                    % Increase total number of transmitted information bits.
+                    maxThroughput(snrIdx) = maxThroughput(snrIdx) + trBlkSize;
+
+                    % Update current process with CRC error and advance to next process
+                    procstatus = updateAndAdvance(harqEntity, blkerrBoth, trBlkSize, puschBitCapacity);
+                    if (displaySimulationInformation)
+                        fprintf('\n(%3.2f%%) NSlot=%d, %s', 100*(nslot+1)/NSlots, nslot, procstatus);
+                    end
+
+                    % To speed the simulation up, we stop after 100 missed transport blocks.
+                    if quickSim && (~useMATLABDecoder || (simBLER(snrIdx) >= 100)) && (~useSRSDecoder || (simBLERSRS(snrIdx) >= 100))
+                        break;
+                    end
                 end
 
-                % Increase total number of transmitted information bits.
-                maxThroughput(snrIdx) = maxThroughput(snrIdx) + trBlkSize;
-
-                % Update current process with CRC error and advance to next process
-                procstatus = updateAndAdvance(harqEntity, blkerrBoth, trBlkSize, puschBitCapacity);
+                % Display the results dynamically in the command window.
                 if (displaySimulationInformation)
-                    fprintf('\n(%3.2f%%) NSlot=%d, %s', 100*(nslot+1)/NSlots, nslot, procstatus);
+                    fprintf('\n');
+                end
+                usedFrames = (nslot + 1) / carrier.SlotsPerFrame;
+                if useMATLABDecoder
+                    fprintf('\nThroughput(Mbps) after %.0f frame(s) = %.4f (max %.4f)\n', usedFrames, ...
+                        1e-6*[simThroughput(snrIdx) maxThroughput(snrIdx)]/(usedFrames*10e-3));
+                    fprintf('Throughput(%%) after %.0f frame(s) = %.4f\n', usedFrames, simThroughput(snrIdx)*100/maxThroughput(snrIdx));
+                    fprintf('BLER after %.0f frame(s) = %.4f\n', usedFrames, simBLER(snrIdx)/totalBlocks(snrIdx));
+                end
+                if useSRSDecoder
+                    fprintf('\nSRS');
+                    fprintf('\nThroughput(Mbps) after %.0f frame(s) = %.4f (max %.4f)\n', usedFrames, ...
+                        1e-6*[simThroughputSRS(snrIdx) maxThroughput(snrIdx)]/(usedFrames*10e-3));
+                    fprintf('Throughput(%%) after %.0f frame(s) = %.4f\n', usedFrames, simThroughputSRS(snrIdx)*100/maxThroughput(snrIdx));
+                    fprintf('BLER after %.0f frame(s) = %.4f\n', usedFrames, simBLERSRS(snrIdx)/totalBlocks(snrIdx));
                 end
 
-                % To speed the simulation up, we stop after 100 missed transport blocks.
-                if quickSim && (~useMATLABDecoder || (simBLER(snrIdx) >= 100)) && (~useSRSDecoder || (simBLERSRS(snrIdx) >= 100))
-                    break;
-                end
             end
 
-            % Display the results dynamically in the command window.
-            if (displaySimulationInformation)
-                fprintf('\n');
+            % Export results.
+            [~, repeatedIdx] = intersect(obj.SNRrange, SNRIn);
+            obj.SNRrange(repeatedIdx) = [];
+            [obj.SNRrange, sortedIdx] = sort([obj.SNRrange SNRIn]);
+
+            obj.MaxThroughputCtr = joinArrays(obj.MaxThroughputCtr, maxThroughput, repeatedIdx, sortedIdx);
+            obj.ThroughputMATLABCtr = joinArrays(obj.ThroughputMATLABCtr, simThroughput, repeatedIdx, sortedIdx);
+            obj.ThroughputSRSCtr = joinArrays(obj.ThroughputSRSCtr, simThroughputSRS, repeatedIdx, sortedIdx);
+            obj.TotalBlocksCtr = joinArrays(obj.TotalBlocksCtr, totalBlocks, repeatedIdx, sortedIdx);
+            obj.MissedBlocksMATLABCtr = joinArrays(obj.MissedBlocksMATLABCtr, simBLER, repeatedIdx, sortedIdx);
+            obj.MissedBlocksSRSCtr = joinArrays(obj.MissedBlocksSRSCtr, simBLERSRS, repeatedIdx, sortedIdx);
+        end % of function stepImpl()
+
+        function resetImpl(obj)
+            % Reset internal system objects.
+            reset(obj.Channel);
+            reset(obj.EncodeULSCH);
+            reset(obj.DecodeULSCH);
+            reset(obj.DecodeULSCHsrs);
+
+            % Reset simulation results.
+            obj.SNRrange = [];
+            obj.MaxThroughputCtr = [];
+            obj.ThroughputMATLABCtr = [];
+            obj.ThroughputSRSCtr = [];
+            obj.TotalBlocksCtr = [];
+            obj.MissedBlocksMATLABCtr = [];
+            obj.MissedBlocksSRSCtr = [];
+        end
+
+        function releaseImpl(obj)
+            % Release internal system objects.
+            release(obj.Channel);
+            release(obj.EncodeULSCH);
+            release(obj.DecodeULSCH);
+            release(obj.DecodeULSCHsrs);
+        end
+
+        function flag = isInactivePropertyImpl(obj, property)
+            switch property
+                case 'DMRSTypeAPosition'
+                    flag = (obj.MappingType == 'B');
+                case {'DelaySpread', 'MaximumDopplerShift'}
+                    flag = strcmp(obj.DelayProfile, 'AWGN');
+                case {'ThroughputMATLABCtr', 'MissedBlocksMATLABCtr'}
+                    flag = isempty(obj.SNRrange) || strcmp(obj.DecoderType, 'srs');
+                case {'ThroughputSRSCtr', 'MissedBlocksSRSCtr'}
+                    flag = isempty(obj.SNRrange) || strcmp(obj.DecoderType, 'matlab');
+                case {'SNRrange', 'MaxThroughputCtr', 'TotalBlocksCtr'}
+                    flag = isempty(obj.SNRrange);
+                case {'Modulation', 'TargetCodeRate'}
+                    flag = ~strcmp(obj.MCSTable, 'custom') && ~obj.isLocked;
+                case 'MCSIndex'
+                    flag = strcmp(obj.MCSTable, 'custom');
+                case {'TBS', 'MaxThroughput'}
+                    flag = isempty(obj.TBS) || ~obj.isLocked;
+                case {'ThroughputMATLAB', 'BlockErrorRateMATLAB'}
+                    flag = isempty(obj.ThroughputMATLABCtr) || strcmp(obj.DecoderType, 'srs');
+                case {'ThroughputSRS', 'BlockErrorRateSRS'}
+                    flag = isempty(obj.ThroughputSRSCtr) || strcmp(obj.DecoderType, 'matlab');
+                otherwise
+                    flag = false;
             end
-            usedFrames = (nslot + 1) / carrier.SlotsPerFrame;
-            if useMATLABDecoder
-                fprintf('\nThroughput(Mbps) after %.0f frame(s) = %.4f (max %.4f)\n', usedFrames, ...
-                    1e-6*[simThroughput(snrIdx) maxThroughput(snrIdx)]/(usedFrames*10e-3));
-                fprintf('Throughput(%%) after %.0f frame(s) = %.4f\n', usedFrames, simThroughput(snrIdx)*100/maxThroughput(snrIdx));
-                fprintf('BLER after %.0f frame(s) = %.4f\n', usedFrames, simBLER(snrIdx)/totalBlocks(snrIdx));
+        end
+
+        function s = saveObjectImpl(obj)
+            % Save all public properties.
+            s = saveObjectImpl@matlab.System(obj);
+
+            if isLocked(obj)
+                % Save child objects.
+                s.Carrier = matlab.System.saveObject(obj.Carrier);
+                s.PUSCH = matlab.System.saveObject(obj.PUSCH);
+                s.PUSCHExtension = matlab.System.saveObject(obj.PUSCHExtension);
+                s.PUSCHIndices = matlab.System.saveObject(obj.PUSCHIndices);
+                s.PUSCHIndicesInfo = matlab.System.saveObject(obj.PUSCHIndicesInfo);
+                s.Channel = matlab.System.saveObject(obj.Channel);
+                s.EncodeULSCH = matlab.System.saveObject(obj.EncodeULSCH);
+                s.DecodeULSCH = matlab.System.saveObject(obj.DecodeULSCH);
+                s.DecodeULSCHsrs = matlab.System.saveObject(obj.DecodeULSCHsrs);
+                s.SegmentCfg = matlab.System.saveObject(obj.SegmentCfg);
+
+                % Save FFT size.
+                s.Nfft = obj.Nfft;
+
+                % Save counters.
+                s.SNRrange = obj.SNRrange;
+                s.MaxThroughputCtr = obj.MaxThroughputCtr;
+                s.ThroughputMATLABCtr = obj.ThroughputMATLABCtr;
+                s.ThroughputSRSCtr = obj.ThroughputSRSCtr;
+                s.TotalBlocksCtr = obj.TotalBlocksCtr;
+                s.MissedBlocksMATLABCtr = obj.MissedBlocksMATLABCtr;
+                s.MissedBlocksSRSCtr = obj.MissedBlocksSRSCtr;
+                s.TBS = obj.TBS;
             end
-            if useSRSDecoder
-                fprintf('\nSRS');
-                fprintf('\nThroughput(Mbps) after %.0f frame(s) = %.4f (max %.4f)\n', usedFrames, ...
-                    1e-6*[simThroughputSRS(snrIdx) maxThroughput(snrIdx)]/(usedFrames*10e-3));
-                fprintf('Throughput(%%) after %.0f frame(s) = %.4f\n', usedFrames, simThroughputSRS(snrIdx)*100/maxThroughput(snrIdx));
-                fprintf('BLER after %.0f frame(s) = %.4f\n', usedFrames, simBLERSRS(snrIdx)/totalBlocks(snrIdx));
+        end % of function s = saveObjectImpl(obj)
+
+        function loadObjectImpl(obj, s, wasInUse)
+            if wasInUse
+                % Save child objects.
+                obj.Carrier = matlab.System.loadObject(s.Carrier);
+                obj.PUSCH = matlab.System.loadObject(s.PUSCH);
+                obj.PUSCHExtension = matlab.System.loadObject(s.PUSCHExtension);
+                obj.PUSCHIndices = matlab.System.loadObject(s.PUSCHIndices);
+                obj.PUSCHIndicesInfo = matlab.System.loadObject(s.PUSCHIndicesInfo);
+                obj.Channel = matlab.System.loadObject(s.Channel);
+                obj.EncodeULSCH = matlab.System.loadObject(s.EncodeULSCH);
+                obj.DecodeULSCH = matlab.System.loadObject(s.DecodeULSCH);
+                obj.DecodeULSCHsrs = matlab.System.loadObject(s.DecodeULSCHsrs);
+                obj.SegmentCfg = matlab.System.loadObject(s.SegmentCfg);
+
+                % Save FFT size.
+                obj.Nfft = s.Nfft;
+
+                % Save counters.
+                obj.SNRrange = s.SNRrange;
+                obj.MaxThroughputCtr = s.MaxThroughputCtr;
+                obj.ThroughputMATLABCtr = s.ThroughputMATLABCtr;
+                obj.ThroughputSRSCtr = s.ThroughputSRSCtr;
+                obj.TotalBlocksCtr = s.TotalBlocksCtr;
+                obj.MissedBlocksMATLABCtr = s.MissedBlocksMATLABCtr;
+                obj.MissedBlocksSRSCtr = s.MissedBlocksSRSCtr;
+                obj.TBS = s.TBS;
             end
 
-        end
+            % Load all public properties.
+            loadObjectImpl@matlab.System(obj, s, wasInUse);
+        end % of function s = saveObjectImpl(obj)
 
-        % Export results.
-        [~, repeatedIdx] = intersect(obj.SNRrange, SNRIn);
-        obj.SNRrange(repeatedIdx) = [];
-        [obj.SNRrange, sortedIdx] = sort([obj.SNRrange SNRIn]);
-
-        obj.MaxThroughputCtr = joinArrays(obj.MaxThroughputCtr, maxThroughput, repeatedIdx, sortedIdx);
-        obj.ThroughputMATLABCtr = joinArrays(obj.ThroughputMATLABCtr, simThroughput, repeatedIdx, sortedIdx);
-        obj.ThroughputSRSCtr = joinArrays(obj.ThroughputSRSCtr, simThroughputSRS, repeatedIdx, sortedIdx);
-        obj.TotalBlocksCtr = joinArrays(obj.TotalBlocksCtr, totalBlocks, repeatedIdx, sortedIdx);
-        obj.MissedBlocksMATLABCtr = joinArrays(obj.MissedBlocksMATLABCtr, simBLER, repeatedIdx, sortedIdx);
-        obj.MissedBlocksSRSCtr = joinArrays(obj.MissedBlocksSRSCtr, simBLERSRS, repeatedIdx, sortedIdx);
-    end % of function run()
-
-    function resetImpl(obj)
-        % Reset internal system objects.
-        reset(obj.Channel);
-        reset(obj.EncodeULSCH);
-        reset(obj.DecodeULSCH);
-        reset(obj.DecodeULSCHsrs);
-
-        % Reset simulation results.
-        obj.SNRrange = [];
-        obj.MaxThroughputCtr = [];
-        obj.ThroughputMATLABCtr = [];
-        obj.ThroughputSRSCtr = [];
-        obj.TotalBlocksCtr = [];
-        obj.MissedBlocksMATLABCtr = [];
-        obj.MissedBlocksSRSCtr = [];
-    end
-
-    function releaseImpl(obj)
-        % Release internal system objects.
-        release(obj.Channel);
-        release(obj.EncodeULSCH);
-        release(obj.DecodeULSCH);
-        release(obj.DecodeULSCHsrs);
-    end
-
-    function flag = isInactivePropertyImpl(obj, property)
-        switch property
-            case 'DMRSTypeAPosition'
-                flag = (obj.MappingType == 'B');
-            case {'DelaySpread', 'MaximumDopplerShift'}
-                flag = strcmp(obj.DelayProfile, 'AWGN');
-            case {'ThroughputMATLABCtr', 'MissedBlocksMATLABCtr'}
-                flag = isempty(obj.SNRrange) || strcmp(obj.DecoderType, 'srs');
-            case {'ThroughputSRSCtr', 'MissedBlocksSRSCtr'}
-                flag = isempty(obj.SNRrange) || strcmp(obj.DecoderType, 'matlab');
-            case {'SNRrange', 'MaxThroughputCtr', 'TotalBlocksCtr'}
-                flag = isempty(obj.SNRrange);
-            case {'Modulation', 'TargetCodeRate'}
-                flag = ~strcmp(obj.MCSTable, 'custom') && ~obj.isLocked;
-            case 'MCSIndex'
-                flag = strcmp(obj.MCSTable, 'custom');
-            case {'TBS', 'MaxThroughput'}
-                flag = isempty(obj.TBS) || ~obj.isLocked;
-            case {'ThroughputMATLAB', 'BlockErrorRateMATLAB'}
-                flag = isempty(obj.ThroughputMATLABCtr) || strcmp(obj.DecoderType, 'srs');
-            case {'ThroughputSRS', 'BlockErrorRateSRS'}
-                flag = isempty(obj.ThroughputSRSCtr) || strcmp(obj.DecoderType, 'matlab');
-            otherwise
-                flag = false;
-        end
-    end
-
-    function s = saveObjectImpl(obj)
-        % Save all public properties.
-        s = saveObjectImpl@matlab.System(obj);
-
-        if isLocked(obj)
-            % Save child objects.
-            s.Carrier = matlab.System.saveObject(obj.Carrier);
-            s.PUSCH = matlab.System.saveObject(obj.PUSCH);
-            s.PUSCHExtension = matlab.System.saveObject(obj.PUSCHExtension);
-            s.PUSCHIndices = matlab.System.saveObject(obj.PUSCHIndices);
-            s.PUSCHIndicesInfo = matlab.System.saveObject(obj.PUSCHIndicesInfo);
-            s.Channel = matlab.System.saveObject(obj.Channel);
-            s.EncodeULSCH = matlab.System.saveObject(obj.EncodeULSCH);
-            s.DecodeULSCH = matlab.System.saveObject(obj.DecodeULSCH);
-            s.DecodeULSCHsrs = matlab.System.saveObject(obj.DecodeULSCHsrs);
-            s.SegmentCfg = matlab.System.saveObject(obj.SegmentCfg);
-
-            % Save FFT size.
-            s.Nfft = obj.Nfft;
-
-            % Save counters.
-            s.SNRrange = obj.SNRrange;
-            s.MaxThroughputCtr = obj.MaxThroughputCtr;
-            s.ThroughputMATLABCtr = obj.ThroughputMATLABCtr;
-            s.ThroughputSRSCtr = obj.ThroughputSRSCtr;
-            s.TotalBlocksCtr = obj.TotalBlocksCtr;
-            s.MissedBlocksMATLABCtr = obj.MissedBlocksMATLABCtr;
-            s.MissedBlocksSRSCtr = obj.MissedBlocksSRSCtr;
-            s.TBS = obj.TBS;
-        end
-    end % of function s = saveObjectImpl(obj)
-
-    function loadObjectImpl(obj, s, wasInUse)
-        if wasInUse
-            % Save child objects.
-            obj.Carrier = matlab.System.loadObject(s.Carrier);
-            obj.PUSCH = matlab.System.loadObject(s.PUSCH);
-            obj.PUSCHExtension = matlab.System.loadObject(s.PUSCHExtension);
-            obj.PUSCHIndices = matlab.System.loadObject(s.PUSCHIndices);
-            obj.PUSCHIndicesInfo = matlab.System.loadObject(s.PUSCHIndicesInfo);
-            obj.Channel = matlab.System.loadObject(s.Channel);
-            obj.EncodeULSCH = matlab.System.loadObject(s.EncodeULSCH);
-            obj.DecodeULSCH = matlab.System.loadObject(s.DecodeULSCH);
-            obj.DecodeULSCHsrs = matlab.System.loadObject(s.DecodeULSCHsrs);
-            obj.SegmentCfg = matlab.System.loadObject(s.SegmentCfg);
-
-            % Save FFT size.
-            obj.Nfft = s.Nfft;
-
-            % Save counters.
-            obj.SNRrange = s.SNRrange;
-            obj.MaxThroughputCtr = s.MaxThroughputCtr;
-            obj.ThroughputMATLABCtr = s.ThroughputMATLABCtr;
-            obj.ThroughputSRSCtr = s.ThroughputSRSCtr;
-            obj.TotalBlocksCtr = s.TotalBlocksCtr;
-            obj.MissedBlocksMATLABCtr = s.MissedBlocksMATLABCtr;
-            obj.MissedBlocksSRSCtr = s.MissedBlocksSRSCtr;
-            obj.TBS = s.TBS;
-        end
-
-        % Load all public properties.
-        loadObjectImpl@matlab.System(obj, s, wasInUse);
-    end % of function s = saveObjectImpl(obj)
-
-end % of methods (Access = protected)
+    end % of methods (Access = protected)
 end % of classdef PUSCHBLER
 
 
