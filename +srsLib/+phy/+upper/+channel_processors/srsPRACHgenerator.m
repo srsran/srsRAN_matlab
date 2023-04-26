@@ -8,7 +8,7 @@
 %
 %   ResourceGrid        - PRACH resource grid
 %   Info                - Structure with information corresponding to the
-%                         PRACH OFDM modulation. If the PRACH is configured 
+%                         PRACH OFDM modulation. If the PRACH is configured
 %                         for FR2 or the PRACH slot for the current
 %                         configuration spans more than one subframe, some
 %                         of the OFDM-related information may be different
@@ -19,9 +19,9 @@
 %   INFO is a structure containing the following fields:
 %
 %   NPRACHSlot          - PRACH slot number of the allocated PRACH
-%                         preamble. 
+%                         preamble.
 %   PRACHSymbols        - PRACH symbols.
-%   PRACHSymbolsInfo    - Additional information associated with the 
+%   PRACHSymbolsInfo    - Additional information associated with the
 %                         symbols.
 %   PRACHIndices        - PRACH indices.
 %   PRACHIndicesInfo    - Additional information associated with indices.
@@ -49,18 +49,18 @@
 %   PreambleIndex       - Scalar preamble index within cell.
 %   RestrictedSet       - Type of restricted set.
 %   ZeroCorrelationZone - Cyclic shift configuration index.
-%   RBOffset            - Starting resource block (RB) index of the initial 
+%   RBOffset            - Starting resource block (RB) index of the initial
 %                         uplink bandwidth part (BWP) relative to carrier
 %                         resource grid.
 %   FrequencyStart      - Frequency offset of lowest PRACH transmission
-%                         occasion in the frequency domain with respect to 
+%                         occasion in the frequency domain with respect to
 %                         PRB 0 of the initial uplink BWP.
 %   FrequencyIndex      - Index of the PRACH transmission occasions in
 %                         frequency domain.
 %   TimeIndex           - Index of the PRACH transmission occasions in time
-%                         domain. 
+%                         domain.
 %   ActivePRACHSlot     - Active PRACH slot number within a subframe or a
-%                         60 kHz slot. 
+%                         60 kHz slot.
 %   NPRACHSlot          - PRACH slot number.
 %
 %   Example:
@@ -93,10 +93,10 @@
 %   file in the top-level directory of this distribution.
 
 function [waveform,gridset,winfo] = srsPRACHgenerator(carrier, prach)
-% Generate an empty PRACH resource grid
+% Generate an empty PRACH resource grid.
 prachGrid = nrPRACHGrid(carrier, prach);
 
-% Create the PRACH symbols
+% Create the PRACH symbols.
 prachSymbols = [];
 while(isempty(prachSymbols))
     [prachSymbols, prachInfoSym] = nrPRACH(carrier, prach);
@@ -104,13 +104,13 @@ while(isempty(prachSymbols))
 end
 prach.NPRACHSlot = prach.NPRACHSlot - 1;
 
-% Create the PRACH indices and retrieve PRACH information
+% Create the PRACH indices and retrieve PRACH information.
 [prachIndices, prachInfoInd] = nrPRACHIndices(carrier, prach);
 
-% Map the PRACH symbols into the grid
+% Map the PRACH symbols into the grid.
 prachGrid(prachIndices) = prachSymbols;
 
-% Capture resource info for this PRACH instance
+% Capture resource info for this PRACH instance.
 winfo = struct();
 winfo.NPRACHSlot = prach.NPRACHSlot;
 winfo.PRACHSymbols = prachSymbols;
@@ -118,9 +118,14 @@ winfo.PRACHSymbolsInfo = prachInfoSym;
 winfo.PRACHIndices = prachIndices;
 winfo.PRACHIndicesInfo = prachInfoInd;
 
-% Generate the PRACH waveform for this slot and append it to the
-% existing waveform
+% Generate the PRACH waveform for this slot.
 [waveform, prachOFDMInfo] = nrPRACHOFDMModulate(carrier, prach, prachGrid, 'Windowing', 0);
+
+% We are only interested in the PRACH waveform itself, not in a possible offset.
+if prachOFDMInfo.OffsetLength > 0
+    waveform = waveform(prachOFDMInfo.OffsetLength+1:end);
+    prachOFDMInfo.OffsetLength = 0;
+end
 
 % Capture the OFDM modulation info
 gridset.Info = prachOFDMInfo;

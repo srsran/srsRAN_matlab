@@ -133,7 +133,7 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
 
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet, ZeroCorrelationZone, RBOffset)
-        %testvectorGenerationCases Generates a test vector for the given 
+        %testvectorGenerationCases Generates a test vector for the given
         %   DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet,
         %   ZeroCorrelationZone and RBOffset. The parameters SequenceIndex
         %   and PreambleIndex are generated randomly.
@@ -144,16 +144,16 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
 
             % Generate a unique test ID
             TestID = testCase.generateTestID;
-            
+
             % Generate carrier configuration
             carrier = nrCarrierConfig;
             carrier.CyclicPrefix = 'normal';
             carrier.NSizeGrid = CarrierBandwidth;
-            
+
             % Generate PRACH configuration.
             SequenceIndex = randi([0, 1023], 1, 1);
             prach = srsConfigurePRACH(DuplexMode, SequenceIndex, RestrictedSet, ZeroCorrelationZone, RBOffset, PreambleFormat);
-            
+
             % Select a symbolic number of frequency-domain occasions.
             NumFreqOccasions = 2;
 
@@ -188,12 +188,7 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
 
                     % Generate waveform for each occasion.
                     [occasion, gridset, info] = srsPRACHgenerator(carrier, prach);
-        
-                    % Remove time offset.
-                    if gridset.Info.OffsetLength
-                        occasion = occasion(gridset.Info.OffsetLength+1:end);
-                    end
-    
+
                     % Combine the waveform of each occasion.
                     waveform = occasion + waveform;
 

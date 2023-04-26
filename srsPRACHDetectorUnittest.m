@@ -22,7 +22,7 @@
 %   PreambleFormat      - Generated preamble format.
 %   RestrictedSet       - Restricted set type.
 %   ZeroCorrelationZone - Cyclic shift configuration index {0, 15}.
-%   RBOffset            - Frequency-domain sequence mapping. 
+%   RBOffset            - Frequency-domain sequence mapping.
 %
 %   srsPRACHDetectorUnittest Methods (TestTags = {'testvector'}):
 %
@@ -58,7 +58,7 @@
 
 classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
     properties (Constant)
-        %Name of the tested block. 
+        %Name of the tested block.
         srsBlock = 'prach_detector'
 
         %Type of the tested block.
@@ -158,7 +158,7 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
             obj.carrier = nrCarrierConfig;
             obj.carrier.CyclicPrefix = 'normal';
             obj.carrier.NSizeGrid = CarrierBandwidth;
-    
+
             % Generate PRACH configuration.
             SequenceIndex = randi([0, 1023], 1, 1);
             PreambleIndex = randi([0, 63], 1, 1);
@@ -178,7 +178,7 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
 
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(obj, DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet, ZeroCorrelationZone, RBOffset)
-        %testvectorGenerationCases Generates a test vector for the given 
+        %testvectorGenerationCases Generates a test vector for the given
         %   DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet,
         %   ZeroCorrelationZone and RBOffset. The parameters SequenceIndex
         %   and PreambleIndex are generated randomly.
@@ -189,17 +189,12 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
             
             % Generate a unique test ID.
             TestID = obj.generateTestID;
-            
+
             % Configure the test.
             setupsimulation(obj, DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet, ZeroCorrelationZone, RBOffset);
 
             % Generate waveform.
             [waveform, gridset, info] = srsPRACHgenerator(obj.carrier, obj.prach);
-
-            % Remove the time offset.
-            if gridset.Info.OffsetLength
-                waveform = waveform(gridset.Info.OffsetLength+1:end);
-            end
 
             % Demodulate the PRACH signal.
             PRACHSymbols = srsPRACHdemodulator(obj.carrier, obj.prach, gridset.Info, waveform, info);
@@ -264,33 +259,28 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
     methods (Test, TestTags = {'testmex'})
         function mexTest(obj, DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet, ZeroCorrelationZone, RBOffset, DelaySamples)
             %mexTest  Tests the mex wrapper of the SRSRAN PRACH detector.
-            %   mexTest(OBJ, DUPLEXMODE, CARRIERBANDWIDTH, PREAMBLEFORMAT, 
-            %   RESTRICTEDSET, ZEROCORRELATIONZONE, RBOFFSET) runs a short 
+            %   mexTest(OBJ, DUPLEXMODE, CARRIERBANDWIDTH, PREAMBLEFORMAT,
+            %   RESTRICTEDSET, ZEROCORRELATIONZONE, RBOFFSET) runs a short
             %   simulation with a UL transmission using a carrier with duplex
             %   mode DUPLEXMODE and a bandiwth of CARRIERBANDWITH PRBs. This
-            %   transmision comprises a PRACH signal using preamble format 
-            %   PREAMBLEFORMAT, restricted set configuration RESTRICTEDSET, 
+            %   transmision comprises a PRACH signal using preamble format
+            %   PREAMBLEFORMAT, restricted set configuration RESTRICTEDSET,
             %   cyclic shift index configuration ZEROCORRELATIONINDEX and a RB
-            %   offset RBOFFSET. The PRACH transmission is demodulated in 
-            %   MATLAB and PRACH detection is then performed using the mex 
+            %   offset RBOFFSET. The PRACH transmission is demodulated in
+            %   MATLAB and PRACH detection is then performed using the mex
             %   wrapper of the SRSRAN C++ component. The test is considered
             %   as passed if the detected PRACH is equal to the transmitted one.
     
             import srsLib.phy.upper.channel_processors.srsPRACHgenerator
             import srsLib.phy.lower.modulation.srsPRACHdemodulator
             import srsMEX.phy.srsPRACHDetector
-    
+
             % Configure the test.
             setupsimulation(obj, DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet, ZeroCorrelationZone, RBOffset);
-    
+
             % Generate waveform.
             [waveform, gridset, info] = srsPRACHgenerator(obj.carrier, obj.prach);
-    
-            % Remove the time offset.
-            if gridset.Info.OffsetLength
-                waveform = waveform(gridset.Info.OffsetLength+1:end);
-            end
-    
+
             % Nominal SNR value to add some noise.
             snr = 30; % dB
             noiseStdDev = 10 ^ (-snr / 20);
@@ -299,7 +289,7 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
             waveformLength = length(waveform);
             normNoise = (randn(waveformLength, 1) + 1i * randn(waveformLength, 1)) / sqrt(2);
             waveform = waveform + (noiseStdDev * normNoise);
-    
+
             % Demodulate the PRACH signal.
             PRACHSymbols = srsPRACHdemodulator(obj.carrier, obj.prach, gridset.Info, waveform, info);
 
@@ -308,7 +298,7 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
 
             % Fill the PRACH configuration for the detector.
             PRACHCfg = srsPRACHDetector.configurePRACH(obj.prach);
-            
+
             % Run the PRACH detector.
             PRACHdetectionResult = PRACHDetector(PRACHSymbols, PRACHCfg);
 
