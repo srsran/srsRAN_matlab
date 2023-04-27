@@ -10,73 +10,55 @@
 %   demodulation. The TXSCALING scaling factor is the transmit symbol gain
 %   relative to the reference signals used for channel estimation.
 %
-%   RXSYMBOLS is a three-dimensional array. The first dimension corresponds
-%   to the OFDM subcarriers, the second one to the OFDM symbols and the
-%   third one to the receive antenna ports.
+%   RXSYMBOLS is a two-dimensional array. The first dimension corresponds
+%   to the Resource Elements and the second one to the receive antenna 
+%   ports.
 %
-%   CHESTS is a four-dimensional array. The first dimension corresponds to
-%   the OFDM subcarriers, the second one to the OFDM symbols, the third one
-%   to the receive antenna ports and the fourth one to the transmit layers.
+%   CHESTS is a three-dimensional array. The first dimension corresponds to
+%   the resource elements, the second one to the receive antenna ports and
+%   the third one to the transmit layers.
 %
-%   EQSYMBOLS and EQNOISEVARS are three-dimensional arrays. The first
-%   dimension corresponds to the OFDM subcarriers, the second one to the 
-%   OFDM symbols and the third one to the transmit layers.
+%   EQSYMBOLS and EQNOISEVARS are two-dimensional arrays. The first
+%   dimension corresponds to the Resource Elements and the second one to
+%   the transmit layers.
 %   
 %   See also nrEqualizeMMSE.
 
 function [eqSymbols, eqNoiseVars] = srsChannelEqualizer(rxSymbols, chEsts, eqType, noiseVar, txScaling)
 
-% Extract the number of subcarriers, OFDM symbols, Rx ports and Tx layers
-% from the channel estimates.
-[nSC, nSym, nRx, nTx] = size(chEsts);
+% Extract the number of RE and Rx ports from the channel estimates.
+[nRE, nRx, ~] = size(chEsts);
 
 % Scale the channel estimates to prevent carrying the scaling factor
 % around.
 chEsts = txScaling * chEsts;
 
 % Check that the sizes match.
-if (size(rxSymbols, 1) ~= nSC)
-    error('number of channel estimate (%d) and Rx signal subcarriers (%d) do not match.', ...
-        nSC, size(rxSymbols, 1));
+if (size(rxSymbols, 1) ~= nRE)
+    error('Number of channel estimate RE (%d) and Rx signal RE (%d) do not match.', ...
+        nRE, size(rxSymbols, 1));
 end
 
-if (size(rxSymbols, 2) ~= nSym)
-    error('number of channel estimate (%d) and Rx signal OFDM symbols (%d) do not match.', ...
-        nSym, size(rxSymbols, 2));
+if (size(rxSymbols, 2) ~= nRx)
+    error('Number of channel estimate receive ports (%d) and Rx signal receive ports (%d) do not match.', ...
+        nRx, size(rxSymbols, 2));
 end
 
-if (size(rxSymbols, 3) ~= nRx)
-    error('number of channel estimate (%d) and Rx signal receive ports (%d) do not match.', ...
-        nRx, size(rxSymbols, 3));
-end
+if strcmp(eqType, 'MMSE')
 
-eqSymbols = nan(nSC, nSym, nTx);
-eqNoiseVars = nan(size(eqSymbols));
+    % CSI contains the MMSE estimated channel gain for each
+    % transmit layer.
+    [eqSymbols, csi] = nrEqualizeMMSE(rxSymbols, chEsts, noiseVar);
 
-for iSym = 1:nSym
-
-    % Get a single OFDM symbol from the Rx signal.
-    rxSym = squeeze(rxSymbols(:, iSym, :));
-
-    % Get a single OFDM symbol from the channel estimates.   
-    chTensor = squeeze(chEsts(:, iSym, :, :));
-
-    if strcmp(eqType, 'MMSE')
-
-        % CSI contains the MMSE estimated channel gain for each
-        % transmit layer.
-        [eqSymbols(:, iSym, :), csi] = nrEqualizeMMSE(rxSym, chTensor, noiseVar);
-   
-    elseif strcmp(eqType, 'ZF')
-        
-        % Zero Forcing equalization is equivalent to MMSE when the noise
-        % variance is 0, that is, in the absense of additive noise.
-        [eqSymbols(:, iSym, :), csi] = nrEqualizeMMSE(rxSym, chTensor, 0);
+elseif strcmp(eqType, 'ZF')
     
-    else
-        error('Unknown equalizer %s.', eqType);
-    end
- 
-    % Calculate the equivalent, post-equalization noise variance.
-    eqNoiseVars(:, iSym, :) = noiseVar ./ csi;  
+    % Zero Forcing equalization is equivalent to MMSE when the noise
+    % variance is 0, that is, in the absense of additive noise.
+    [eqSymbols, csi] = nrEqualizeMMSE(rxSymbols, chEsts, 0);
+
+else
+    error('Unknown equalizer %s.', eqType);
 end
+
+% Calculate the equivalent, post-equalization noise variance.
+eqNoiseVars = noiseVar ./ csi;  
