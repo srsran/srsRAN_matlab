@@ -85,6 +85,8 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
 
         function addTestDefinitionToHeaderFile(obj, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
+            fprintf(fileID, 'static const precoding_configuration default_precoding = precoding_configuration::make_siso_wideband();\n');
+            fprintf(fileID, '\n');
             addTestDefinitionToHeaderFilePHYchproc(obj, fileID);
         end
     end % of methods (Access = protected)
@@ -120,9 +122,6 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
                 InterleaverSize = 2;
                 REGBundleSize = 6;
             end
-            % currently fixed to 1 port of random number from [0, 7]
-            PDCCHports = randi([0, 7]);
-            PDCCHportsStr = ['{', array2str(PDCCHports), '}'];
 
             % current fixed parameter values (e.g., maximum grid size with current interleaving
             %   configuration, CORESET will use all available frequency resources)
@@ -168,7 +167,6 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
 
                 % call the PDCCH modulator MATLAB functions
                 [PDCCHsymbols, symbolIndices] = srsPDCCHmodulator(codeWord, carrier, pdcch, DMRSScramblingID, RNTI);
-                symbolIndices(:, 3) = int32(PDCCHports);
 
                 % write each complex symbol into a binary file, and the associated indices to another
                 testCase.saveDataFile('_test_output', testID, ...
@@ -177,9 +175,18 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
                 % generate a RB allocation mask string
                 rbAllocationMaskStr = RBallocationMask2string(symbolIndices);
 
+                configCell = {...
+                    rbAllocationMaskStr, ... % rb_mask
+                    startSymbolIndex, ...    % start_symbol_index
+                    Duration, ...            % duration
+                    DMRSScramblingID, ...    % n_id
+                    RNTI, ...                % n_rnti
+                    1.0, ...                 % scaling
+                    'default_precoding'      % precoding
+                    };
+
                 % generate the test case entry
-                testCaseString = testCase.testCaseToString(testID, {rbAllocationMaskStr, ...
-                                   startSymbolIndex, Duration, DMRSScramblingID, RNTI, 1.0, PDCCHportsStr}, ...
+                testCaseString = testCase.testCaseToString(testID, configCell, ...
                                    true, '_test_input', '_test_output');
 
                 % add the test to the file header

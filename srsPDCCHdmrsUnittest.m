@@ -88,6 +88,8 @@ classdef srsPDCCHdmrsUnittest < srsTest.srsBlockUnittest
 
         function addTestDefinitionToHeaderFile(obj, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
+            fprintf(fileID, 'static const precoding_configuration default_precoding = precoding_configuration::make_siso_wideband();\n');
+            fprintf(fileID, '\n');
             addTestDefinitionToHeaderFilePHYsigproc(obj, fileID);
         end
     end % of methods (Access = protected)
@@ -136,13 +138,10 @@ classdef srsPDCCHdmrsUnittest < srsTest.srsBlockUnittest
             NStartBWP = 0;
             NSizeBWP = NSizeGrid;
             AllocatedCandidate = 1;
-            numPorts = 1;
             referencePointKrb = 0;
             startSymbolIndex = 0;
             DMRSScramblingID = NCellIDLoc;
             DMRSamplitude = 1.0;
-            PDCCHports = zeros(numPorts, 1);
-            PDCCHportsStr = cellarray2str({PDCCHports}, true);
 
             % only encode the PDCCH when it fits
             isAggregationOK = (sum(FrequencyResources) * Duration >= AggregationLevel);
@@ -177,18 +176,32 @@ classdef srsPDCCHdmrsUnittest < srsTest.srsBlockUnittest
                     DMRSsymbolsVector, symbolIndicesVector);
 
                 % generate a 'slot_point' configuration string
-                slotPointConfig = cellarray2str({numerology, NFrame, ...
+                slotPointConfig = {numerology, NFrame, ...
                     floor(NSlotLoc / carrier.SlotsPerSubframe), ...
-                    rem(NSlotLoc, carrier.SlotsPerSubframe)}, true);
+                    rem(NSlotLoc, carrier.SlotsPerSubframe)};
 
                 % generate a RB allocation mask string
                 rbAllocationMask = RBallocationMask2string(symbolIndicesVector);
 
+
+                % Convert cyclic prefix to string.
+                cpString = ['cyclic_prefix::', upper(CyclicPrefix)];
+
+                configCell = {...
+                    slotPointConfig, ...    % slot
+                    cpString, ...           % cp
+                    referencePointKrb,...   % reference_point_k_rb
+                    rbAllocationMask, ...   % rb_mask
+                    startSymbolIndex, ...   % start_symbol_index
+                    Duration, ...           % duration
+                    DMRSScramblingID, ...   % n_id
+                    DMRSamplitude, ...      % amplitude
+                    'default_precoding',... % precoding
+                    };
+
                 % generate the test case entry
                 testCaseString = testCase.testCaseToString(testID, ...
-                    {slotPointConfig, ['cyclic_prefix::', upper(CyclicPrefix)], ...
-                        referencePointKrb, rbAllocationMask, startSymbolIndex, ...
-                        Duration, DMRSScramblingID, DMRSamplitude, PDCCHportsStr}, ...
+                    configCell, ...
                         true, '_test_output');
 
                 % add the test to the file header

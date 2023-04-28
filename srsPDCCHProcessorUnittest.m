@@ -79,6 +79,8 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
 
         function addTestDefinitionToHeaderFile(~, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
+            fprintf(fileID, 'static const precoding_configuration default_precoding = precoding_configuration::make_siso_wideband();\n');
+            fprintf(fileID, '\n');
             fprintf(fileID, 'struct test_case_t {\n');
             fprintf(fileID, 'pdcch_processor::pdu_t config;\n');
             fprintf(fileID, ...
@@ -233,7 +235,7 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
             0.0, ...                    % dmrs_power_offset_dB
             0.0, ...                    % data_power_offset_dB
             message, ...                % payload
-            {0}, ...                    % ports
+            'default_precoding', ...    % precoding
             };
 
         configCell = {
