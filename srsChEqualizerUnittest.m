@@ -234,8 +234,19 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
             
             % Equalize the Rx symbols and compute the equivalent noise
             % variances.
-            [eqSymbols, eqNoiseVars] = srsChannelEqualizer(rxSymbols, obj.channelTensor, eqType, noiseVar, txScaling);
+            eqSymbols = nan(nSC, nSym, nTx);
+            eqNoiseVars = nan(nSC, nSym, nTx);
 
+            for iSymbol = 1 : nSym
+                % Get the Rx and channel RE for a single OFDM symbol.
+                rxRE = squeeze(rxSymbols(:, iSymbol, :));
+                chRE = squeeze(obj.channelTensor(:, iSymbol, :, :));
+
+                % Equalize.
+                [eqSymbols(:, iSymbol, :), eqNoiseVars(:, iSymbol, :)] = ...
+                    srsChannelEqualizer(rxRE, chRE, eqType, noiseVar, txScaling);
+            end
+            
         end % of function runCase()
 
         function [mseN, snrN] = computeREnominals(obj, eqType)
