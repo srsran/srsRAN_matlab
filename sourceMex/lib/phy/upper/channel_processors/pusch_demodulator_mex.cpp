@@ -118,8 +118,15 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
   // Write zeros in grid.
   grid->set_all_zero();
 
-  // Setup resource grid symbols.
+  unsigned nof_rx_ports = demodulator_config.rx_ports.size();
+
+  // Total number of received RE.
   unsigned nof_resources = rx_symbols.size();
+
+  // Number of received symbols per antenna port.
+  unsigned nof_rx_symbols_port = nof_resources / nof_rx_ports;
+
+  // Setup resource grid symbols.
   for (unsigned i_port = 0, i_port_end = demodulator_config.rx_ports.size(); i_port != i_port_end; ++i_port) {
     // Create vector of coordinates and values for the port.
     std::vector<resource_grid_coordinate> coordinates(0);
@@ -152,18 +159,28 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
   channel_estimate::channel_estimate_dimensions ce_dims;
   ce_dims.nof_prb       = demodulator_config.rb_mask.size();
   ce_dims.nof_symbols   = MAX_NSYMB_PER_SLOT;
-  ce_dims.nof_rx_ports  = demodulator_config.rx_ports.size();
+  ce_dims.nof_rx_ports  = nof_rx_ports;
   ce_dims.nof_tx_layers = demodulator_config.nof_tx_layers;
   channel_estimate chan_estimates(ce_dims);
-
-  // Set estimated channel.
-  srsvec::copy(chan_estimates.get_path_ch_estimate(0, 0), ce);
 
   // Get the noise variance.
   float noise_var = (float)inputs[5][0];
 
-  // Set noise variance.
-  chan_estimates.set_noise_variance(noise_var, 0, 0);
+  // Number of channel Resource Elements per receive port.
+  unsigned nof_ch_re_port = ce.size() / ce_dims.nof_rx_ports;
+
+  // Set estimated channel.
+  span<const cf_t> ce_port_view(ce);
+  for (unsigned i_rx_port = 0; i_rx_port != ce_dims.nof_rx_ports; ++i_rx_port) {
+    // Copy channel estimates for a single receive port.
+    srsvec::copy(chan_estimates.get_path_ch_estimate(i_rx_port, 0), ce_port_view.first(nof_ch_re_port));
+
+    // Advance buffer.
+    ce_port_view = ce_port_view.last(ce_port_view.size() - nof_ch_re_port);
+
+    // Set noise variance.
+    chan_estimates.set_noise_variance(noise_var, i_rx_port, 0);
+  }
 
   // Compute expected soft output bit number.
   unsigned bits_per_symbol;
@@ -183,7 +200,8 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
     default:
       bits_per_symbol = 8;
   }
-  unsigned                          nof_expected_soft_output_bits = nof_resources * bits_per_symbol;
+
+  unsigned                          nof_expected_soft_output_bits = nof_rx_symbols_port * bits_per_symbol;
   std::vector<log_likelihood_ratio> sch_data(nof_expected_soft_output_bits);
 
   // Demodulate the PUSCH transmission.

@@ -213,7 +213,6 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             % Number of RE per port.
             nofREPort = size(puschPortIndices, 1);
 
-
             % Set the receive port indices.
             obj.rxPorts = 0 : (nofRxPorts - 1);
 
@@ -266,7 +265,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             % Generate channel estimates.
             obj.ce = nrPerfectChannelEstimate(obj.carrier,pathGains,pathFilters);
 
-        end % of function setupsimulation(obj, DMRSConfigurationType, Modulation, probPlaceholder)
+        end % of function setupsimulation(obj, DMRSConfigurationType, Modulation, probPlaceholder, nofRxPorts)
     end % of methods (Access = Private)
 
     methods (Test, TestTags = {'testvector'})
@@ -389,13 +388,17 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
                 puschCellConfig, ... % config
 		        };
 
-            %ceTensorstring = cellarray2str({'_test_input_estimates', {size(obj.ce, 1), ...
-            %    size(obj.ce, 2), size(obj.ce, 3), size(obj.ce, 4)}}, false);
+            % Channel estimate dimensions.
+            estimatesDims = {...
+                size(obj.ce, 1), ... % subcarrier
+                size(obj.ce, 2), ... % symbol
+                size(obj.ce, 3), ... % receive port
+                size(obj.ce, 4), ... % transmit layer
+                };
 
             testCaseString = obj.testCaseToString(testID, ...
                 testCaseContext, true, '_test_input_symbols', ...
-                {'_test_input_estimates', {size(obj.ce, 1), size(obj.ce, 2), ...
-                size(obj.ce, 3), size(obj.ce, 4)}}, '_test_output');
+                {'_test_input_estimates', estimatesDims}, '_test_output');
 
             % Add the test to the file header.
             obj.addTestToHeaderFile(obj.headerFileID, testCaseString);
@@ -463,10 +466,10 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             if iscell(placeholderIndicesLoc)
                 placeholderIndicesLoc = cell2mat(placeholderIndicesLoc);
             end
-            PUSCHDemCfg = srsPUSCHDemodulator.configurePUSCHDem(obj.pusch, obj.carrier.NSizeGrid, obj.puschDmrsIndices, placeholderIndicesLoc, rxPorts);
+            PUSCHDemCfg = srsPUSCHDemodulator.configurePUSCHDem(obj.pusch, obj.carrier.NSizeGrid, obj.puschDmrsIndices, placeholderIndicesLoc, obj.rxPorts);
 
             % Run the PUSCH demodulator.
-            schSoftBits = PUSCHDemodulator(rxSymbols, obj.puschRxIndices, obj.ce(:), PUSCHDemCfg, noiseVar);
+            schSoftBits = PUSCHDemodulator(rxSymbols(:), obj.puschRxIndices, obj.ce(:), PUSCHDemCfg, noiseVar);
 
             % Verify the correct demodulation (expected, since the SNR is very high).
             % i) Soft demapping.

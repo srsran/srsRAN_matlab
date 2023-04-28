@@ -235,13 +235,18 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
 
         function testCaseString = testCaseToString(obj, testID, testCaseParams, isStruct, varargin)
         %testCaseToString Generates a test entry for the header file.
-        %   testCaseToString(OBJ, TESTID, TESTCASEPARAMS, ISSTRUCT) generates a data
-        %   string for test number TESTID. The data string is generated from the
-        %   parameters in the cell array TESTCASEPARAMS. The flag ISSTRUCT instructs
-        %   the method to surround the output string with curly brackets (TRUE) or not (FALSE).
-        %   testCaseToString2(..., SUFFIX1, SUFFIX2, ...) adds a reference to data files
-        %   with suffixes SUFFIX1, SUFFIX2, and so on, to the test entry.
-
+        %   TESTCASESTRING = TESTCASETOSTRING(OBJ, TESTID, TESTCASEPARAMS, ISSTRUCT) 
+        %   generates a data string TESTCASESTRING for test number TESTID.
+        %   The data string is generated from the parameters in the cell
+        %   array TESTCASEPARAMS. The flag ISSTRUCT instructs the method to
+        %   surround the output string with curly brackets (TRUE) or not (FALSE).
+        %   TESTCASESTRING = TESTCASETOSTRING(..., FILE1, FILE2, ...) adds
+        %   a reference to data files described by FILE1, FILE2 and so on
+        %   to the data string. FILE can either be a string with the
+        %   filename suffix, or a two-element cell array, where the first 
+        %   element is the filename suffix and the second element is a cell
+        %   array containing numeric parameters related to the file data
+        %   format.
             import srsTest.helpers.cellarray2str;
             configStr = cellarray2str(testCaseParams, isStruct);
             testCaseString = ['  {', configStr];
