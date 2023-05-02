@@ -73,7 +73,9 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
         pusch
         % PUSCH transmission resource-element indices.
         puschTxIndices
-        % PUSCH reception resource-element indices (subscript form).
+        % PUSCH reception resource-element indices (subscript form). They
+        % differ from the transmission indices in the receive port
+        % dimension.
         puschRxIndices
         % Indices of PUSCH DM-RS in the frequency grid.
         puschDmrsIndices
@@ -299,7 +301,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             rxGrid = obj.txGrid .* obj.ce + noise;
 
             % Extract PUSCH Rx symbols.
-            rxSymbols = zeros(size(obj.puschTxIndices, 1), NumRxPorts);
+            rxSymbols = complex(zeros(size(obj.puschTxIndices, 1), NumRxPorts));
 
             for iPort = 1:NumRxPorts
                 iRxGrid = rxGrid(:, :, iPort);
@@ -307,7 +309,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             end
             
             % Extract CE for PUSCH.
-            cePusch = zeros(size(obj.puschTxIndices, 1), NumRxPorts);    
+            cePusch = complex(zeros(size(obj.puschTxIndices, 1), NumRxPorts));    
             for iPort = 1:NumRxPorts
                 iCePusch = obj.ce(:, :, iPort);
                 cePusch(:, iPort) = iCePusch(obj.puschTxIndices);
@@ -437,7 +439,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             rxGrid = obj.txGrid .* obj.ce + noise;
 
             % Extract PUSCH symbols.
-            rxSymbols = zeros(size(obj.puschTxIndices, 1), NumRxPorts);
+            rxSymbols = complex(zeros(size(obj.puschTxIndices, 1), NumRxPorts));
 
             for iPort = 1:NumRxPorts
                 iRxGrid = rxGrid(:, :, iPort);
@@ -445,7 +447,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             end
             
             % Extract CE for PUSCH.
-            cePusch = zeros(size(obj.puschTxIndices, 1), NumRxPorts); 
+            cePusch = complex(zeros(size(obj.puschTxIndices, 1), NumRxPorts)); 
 
             for iPort = 1:NumRxPorts
                 iCePusch = obj.ce(:, :, iPort);
