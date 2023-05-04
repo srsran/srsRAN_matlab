@@ -18,13 +18,13 @@
 %
 %   srsPUSCHProcessorUnittest Properties (TestParameter):
 %
-%   BWPConfig        - BWP configuration to use.
 %   Modulation       - Modulation scheme.
 %   SymbolAllocation - PUSCH start symbol index and number of symbols.
 %   targetCodeRate   - UL-SCH rate matching Target code rate.
 %   nofHarqAck       - Number of HARQ-ACK feedback bits multiplexed.
 %   nofCsiPart1      - Number of CSI-Part1 report bits multiplexed.
 %   nofCsiPart2      - Number of CSI-Part2 report bits multiplexed.
+%   NumRxPorts       - Number of receive antenna ports for PUSCH.
 %
 %   srsPUSCHProcessorUnittest Methods (TestTags = {'testvector'}):
 %
@@ -54,12 +54,6 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
     end
 
     properties (TestParameter)
-        %BWP configuration.
-        %   The bandwidth part is described by a two-element array with the starting
-        %   PRB and the total number of PRBs (1...14).
-        %   Example: [0, 25].
-        BWPConfig = {[0, 25], [0, 52], [0, 106]}
-
         %Modulation {pi/2-BPSK, QPSK, 16-QAM, 64-QAM, 256-QAM}.
         Modulation = {'pi/2-BPSK', 'QPSK', '16QAM', '64QAM', '256QAM'}
 
@@ -80,6 +74,9 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
 
         %Number of CSI-Part2 bits multiplexed with the message.
         nofCsiPart2= {0};
+
+        %Number of receive antenna ports for PUSCH.
+        NumRxPorts = {1, 2, 4};
     end
 
     methods (Access = protected)
@@ -120,14 +117,15 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
     end
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(testCase, BWPConfig, Modulation, SymbolAllocation, targetCodeRate, nofHarqAck, nofCsiPart1, nofCsiPart2)
+        function testvectorGenerationCases(testCase, Modulation, ...
+                SymbolAllocation, targetCodeRate, nofHarqAck, nofCsiPart1, nofCsiPart2, NumRxPorts)
         %testvectorGenerationCases Generates test vectors with permutations
-        %   of the BWP configuration, modulation, symbol allocation, target
-        %   code rate, number of HARQ-ACK, CSI-Part1 and CSI-Part2
-        %   information bits. Other parameters such as physical cell
-        %   identifier, slot number, RNTI, scrambling identifiers,
-        %   frequency allocation and DM-RS additional positions are
-        %   selected randomly.
+        %   of the modulation, symbol allocation, target code rate, number
+        %   of HARQ-ACK, CSI-Part1 and CSI-Part2 information bits, and
+        %   number of receive ports. Other parameters such as physical cell 
+        %   identifier, BWP dimensions, slot number, RNTI, scrambling
+        %   identifiers, frequency allocation and DM-RS additional
+        %   positions are randomly selected.
             import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
             import srsMatlabWrappers.phy.helpers.srsConfigurePUSCH
             import srsTest.helpers.rbAllocationIndexes2String
@@ -135,20 +133,40 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             import srsTest.helpers.bitPack
             import srsTest.helpers.mcsDescription2Cell
             import srsTest.helpers.writeUint8File
-            import srsTest.helpers.writeResourceGridEntryFile
+            import srsTest.helpers.writeResourceGridEntryFile            
+            import srsTest.helpers.cellarray2str
 
-            % Minimum number of PRB is one if two or less UCI bits are 
-            % multiplexed. Otherwise, 10 PRB.
-            MinNumPrb = 2;
-            if nofHarqAck + nofCsiPart1 + nofCsiPart2 > 2
-                MinNumPrb = 20;
-            end
-
-            % Select carrier configuration.
+            % Generate a unique test ID.
+            testID = testCase.generateTestID;
+     
+            % Select a random cell ID.
             NCellID = randi([0, 1007]);
-            NSizeGrid = BWPConfig(2);
-            NStartGrid = BWPConfig(1);
 
+            % Minimum number of PRB. It increases when UCI needs to be
+            % multiplexed on the PUSCH resources.
+            MinNumPrb = 1 + (nofHarqAck + nofCsiPart1 + nofCsiPart2);
+            
+            % Maximum number of PRB of a 5G NR resource grid.
+            MaxGridBW = 274;
+
+            % Randomly select BWP start and size values that satisfy the
+            % size constraints. 
+            BWPStart = randi([0, MaxGridBW - MinNumPrb]);
+            BWPSize = randi([MinNumPrb, MaxGridBW - BWPStart]);
+
+            NSizeGrid = BWPStart + BWPSize;
+            NStartGrid = 0;
+          
+            % PUSCH PRB start within the BWP.
+            PrbStart = randi([0, BWPSize - MinNumPrb]);
+          
+            % Fix a maximum number of PRB allocated to PUSCH to limit the
+            % size of the test vectors.
+            MaxNumPrb = min(25, BWPSize - PrbStart);
+
+            % Number of PRB allocated to PUSCH.
+            NumPrb = randi([MinNumPrb, MaxNumPrb]);
+            
             % Generate carrier configuration.
             carrier = srsConfigureCarrier(NCellID, NSizeGrid, NStartGrid);
 
@@ -156,8 +174,6 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             NSlot = randi([0, carrier.SlotsPerFrame]);
             RNTI = randi([1, 65535]);
             NID = randi([0, 1023]);
-            PrbStart = randi([0, NSizeGrid - MinNumPrb]);
-            NumPrb = randi([MinNumPrb, NSizeGrid - PrbStart]);
             DMRSAdditionalPosition = randi([0, 3]);
             NIDNSCID = randi([0, 65535]);
             NSCID = randi([0, 1]);
@@ -165,14 +181,13 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             % Fix parameters.
             rv = 0;
 
-            % Generate a unique test ID.
-            testID = testCase.generateTestID;
-
             % Generate PUSCH configuration.
             pusch = srsConfigurePUSCH(Modulation, SymbolAllocation, RNTI, NID);
 
             % Set parameters.
             carrier.NSlot = NSlot;
+            pusch.NStartBWP = BWPStart;
+            pusch.NSizeBWP = BWPSize;
             pusch.PRBSet = PrbStart + (0:NumPrb - 1);
             pusch.DMRS.DMRSAdditionalPosition = DMRSAdditionalPosition;
             pusch.DMRS.NIDNSCID = NIDNSCID;
@@ -213,33 +228,72 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             % Create resource grid.
             grid = nrResourceGrid(carrier);
 
-            % Modulate data.
+            % Modulate and map data.
             grid(puschResourceIndices) = nrPUSCH(carrier, pusch, codeword);
 
             % Insert DM-RS.
             betaDMRS = 10 ^ (3 / 20);
             grid(puschDmrsIndices) = nrPUSCHDMRS(carrier, pusch) * betaDMRS;
 
-            % Generate channel estimates. As a phase rotation in frequency
-            % domain.
-            gridDims = size(grid);
-            ce = transpose(ones(gridDims(2), 1) * exp(1i * linspace(0, 2 * pi, gridDims(1))));
-
             % Noise variance.
             snrdB = 30;
             noiseStdDev = 10 ^ (-snrdB / 20);
 
-            % Emulate channel.
-            rxGrid = ce .* grid + noiseStdDev * (randn(gridDims) + 1i * randn(gridDims)) / sqrt(2);
+            % Add the number of receive ports to the receive grid
+            % dimensions.
+            rxGridDims = [size(grid) NumRxPorts];
+           
+            ce = complex(nan(rxGridDims));
+            rxGrid = complex(nan(rxGridDims));
 
-            % Extract the elements of interest from the grid.
-            rxGridSymbols = [rxGrid(puschResourceIndices); rxGrid(puschDmrsIndices)];
-            rxGridIndexes = [nrPUSCHIndices(carrier, pusch, 'IndexStyle','subscript', 'IndexBase','0based'); ...
+            for iPort = 1 : NumRxPorts
+                % Add a random phase offset to each Rx port.    
+                startPhase = 2 * pi * rand();
+    
+                % Phase of the last subcarrier in the grid.
+                endPhase = startPhase + (2 * pi);
+    
+                % Generate channel estimates as a phase rotation in frequency
+                % domain.
+                ce(:, :, iPort) = transpose(ones(rxGridDims(2), 1) * ...
+                    exp(1i * linspace(startPhase, endPhase, rxGridDims(1))));
+
+                % Emulate channel frequency response.
+                rxGrid(:, :, iPort) = ce(:, :, iPort) .* grid;
+            end
+
+            % Add channel noise to all receive ports.
+            rxGrid = rxGrid + noiseStdDev * (randn(rxGridDims) + 1i * randn(rxGridDims)) / sqrt(2 * NumRxPorts);
+
+            % Grid indices for a single receive port in subscript form.
+            rxGridPortIndexes = [nrPUSCHIndices(carrier, pusch, 'IndexStyle','subscript', 'IndexBase','0based'); ...
                 nrPUSCHDMRSIndices(carrier, pusch, 'IndexStyle','subscript', 'IndexBase','0based')];
 
-            % Write the entire resource grid in a file.
+            % Number of PUSCH Resource Elements per port, including DM-RS.
+            nofREPort = size(rxGridPortIndexes, 1);
+
+            % Generate the Rx resource grid indices for all receive ports.
+            rxGridIndices = zeros(nofREPort * NumRxPorts, 3);
+            for iPort = 0 : (NumRxPorts - 1)
+                % Copy the subcarrier and OFDM symbol index coordinates.
+                rxGridIndices(((nofREPort * iPort) + 1) : (nofREPort * (iPort + 1)), :) = ...
+                    rxGridPortIndexes;
+
+                % Generate the receive port index coordinates.
+                rxGridIndices(((nofREPort * iPort) + 1) : (nofREPort * (iPort + 1)), 3) = ...
+                 iPort * ones(nofREPort, 1);
+            end
+
+            % Convert the subscript indices to one-based linear form.
+            rxGridLinIndices = sub2ind(rxGridDims, rxGridIndices(:, 1) + 1, ...
+                rxGridIndices(:, 2) + 1, rxGridIndices(:, 3) + 1);
+
+            % Extract the elements of interest from the grid.
+            rxGridSymbols = rxGrid(rxGridLinIndices);
+            
+            % Write the entire resource grid to a file.
             testCase.saveDataFile('_test_input_grid', testID, ...
-                @writeResourceGridEntryFile, rxGridSymbols, rxGridIndexes);
+                @writeResourceGridEntryFile, rxGridSymbols, rxGridIndices);
 
             % Write the SCH data.
             testCase.saveDataFile('_test_tb', testID, ...
@@ -269,7 +323,7 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
                 'subscript', 'IndexBase', '0based'));
 
             % Reception port list.
-            portsString = '{0}';
+            portsString = cellarray2str(num2cell(0 : (NumRxPorts - 1)), true);
 
             % Generate Resource Block allocation string.
             RBAllocationString = rbAllocationIndexes2String(pusch.PRBSet);
@@ -298,8 +352,8 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
                 'nullopt', ...                                % context
                 slotConfig, ...                               % slot
                 pusch.RNTI, ...                               % rnti
-                carrier.NSizeGrid, ...                        % bwp_size_rb
-                carrier.NStartGrid, ...                       % bwp_start_rb
+                pusch.NSizeBWP, ...                           % bwp_size_rb
+                pusch.NStartBWP, ...                          % bwp_start_rb
                 cyclicPrefixStr, ...                          % cp
                 mcsDescr, ...                                 % mcs_descr
                 {codewordDescription}, ...                    % codeword
