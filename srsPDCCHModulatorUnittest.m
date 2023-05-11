@@ -81,11 +81,12 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
         function addTestIncludesToHeaderFile(obj, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
             addTestIncludesToHeaderFilePHYchproc(obj, fileID);
+            fprintf(fileID, '#include "srsran/ran/precoding/precoding_codebooks.h"\n');
         end
 
         function addTestDefinitionToHeaderFile(obj, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
-            fprintf(fileID, 'static const precoding_configuration default_precoding = precoding_configuration::make_siso_wideband();\n');
+            fprintf(fileID, 'static const precoding_configuration default_precoding = make_single_port();\n');
             fprintf(fileID, '\n');
             addTestDefinitionToHeaderFilePHYchproc(obj, fileID);
         end
