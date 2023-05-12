@@ -932,22 +932,44 @@ classdef PUSCHBLER < matlab.System
             end
         end
 
+        function groups = getPropertyGroups(obj)
+            props = properties(obj);
+            results = {'SNRrange', 'MaxThroughputCtr', 'ThroughputMATLABCtr', 'ThroughputSRSCtr', ...
+                'TotalBlocksCtr', 'MissedBlocksMATLABCtr', 'MissedBlocksSRSCtr', 'TBS', ...
+                'MaxThroughput', 'ThroughputMATLAB', 'ThroughputSRS', 'BlockErrorRateMATLAB', ...
+                'BlockErrorRateSRS'};
+
+            confProps = setdiff(props, results);
+            groups = matlab.mixin.util.PropertyGroup(confProps, 'Configuration');
+
+            resProps = {};
+            for i = 1:numel(results)
+                tt = results{i};
+                if ~isInactivePropertyImpl(obj, tt)
+                    resProps = [resProps, tt]; %#ok<AGROW>
+                end
+            end
+            if ~isempty(resProps)
+                groups = [groups, matlab.mixin.util.PropertyGroup(resProps, 'Simulation Results')];
+            end
+        end
+
         function s = saveObjectImpl(obj)
             % Save all public properties.
             s = saveObjectImpl@matlab.System(obj);
 
             if isLocked(obj)
                 % Save child objects.
-                s.Carrier = matlab.System.saveObject(obj.Carrier);
-                s.PUSCH = matlab.System.saveObject(obj.PUSCH);
-                s.PUSCHExtension = matlab.System.saveObject(obj.PUSCHExtension);
-                s.PUSCHIndices = matlab.System.saveObject(obj.PUSCHIndices);
-                s.PUSCHIndicesInfo = matlab.System.saveObject(obj.PUSCHIndicesInfo);
+                s.Carrier = obj.Carrier;
+                s.PUSCH = obj.PUSCH;
+                s.PUSCHExtension = obj.PUSCHExtension;
+                s.PUSCHIndices = obj.PUSCHIndices;
+                s.PUSCHIndicesInfo = obj.PUSCHIndicesInfo;
                 s.Channel = matlab.System.saveObject(obj.Channel);
                 s.EncodeULSCH = matlab.System.saveObject(obj.EncodeULSCH);
                 s.DecodeULSCH = matlab.System.saveObject(obj.DecodeULSCH);
                 s.DecodeULSCHsrs = matlab.System.saveObject(obj.DecodeULSCHsrs);
-                s.SegmentCfg = matlab.System.saveObject(obj.SegmentCfg);
+                s.SegmentCfg = obj.SegmentCfg;
 
                 % Save FFT size.
                 s.Nfft = obj.Nfft;
@@ -966,22 +988,22 @@ classdef PUSCHBLER < matlab.System
 
         function loadObjectImpl(obj, s, wasInUse)
             if wasInUse
-                % Save child objects.
-                obj.Carrier = matlab.System.loadObject(s.Carrier);
-                obj.PUSCH = matlab.System.loadObject(s.PUSCH);
-                obj.PUSCHExtension = matlab.System.loadObject(s.PUSCHExtension);
-                obj.PUSCHIndices = matlab.System.loadObject(s.PUSCHIndices);
-                obj.PUSCHIndicesInfo = matlab.System.loadObject(s.PUSCHIndicesInfo);
+                % Load child objects.
+                obj.Carrier = s.Carrier;
+                obj.PUSCH = s.PUSCH;
+                obj.PUSCHExtension = s.PUSCHExtension;
+                obj.PUSCHIndices = s.PUSCHIndices;
+                obj.PUSCHIndicesInfo = s.PUSCHIndicesInfo;
                 obj.Channel = matlab.System.loadObject(s.Channel);
                 obj.EncodeULSCH = matlab.System.loadObject(s.EncodeULSCH);
                 obj.DecodeULSCH = matlab.System.loadObject(s.DecodeULSCH);
                 obj.DecodeULSCHsrs = matlab.System.loadObject(s.DecodeULSCHsrs);
-                obj.SegmentCfg = matlab.System.loadObject(s.SegmentCfg);
+                obj.SegmentCfg = s.SegmentCfg;
 
-                % Save FFT size.
+                % Load FFT size.
                 obj.Nfft = s.Nfft;
 
-                % Save counters.
+                % Load counters.
                 obj.SNRrange = s.SNRrange;
                 obj.MaxThroughputCtr = s.MaxThroughputCtr;
                 obj.ThroughputMATLABCtr = s.ThroughputMATLABCtr;
@@ -994,7 +1016,7 @@ classdef PUSCHBLER < matlab.System
 
             % Load all public properties.
             loadObjectImpl@matlab.System(obj, s, wasInUse);
-        end % of function s = saveObjectImpl(obj)
+        end % function loadObjectImpl(obj, s, wasInUse)
 
     end % of methods (Access = protected)
 end % of classdef PUSCHBLER
