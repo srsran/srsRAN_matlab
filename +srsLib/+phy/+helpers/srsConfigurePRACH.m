@@ -1,5 +1,5 @@
-%srsConfigurePRACH Generates a physical random access channel (PRACH) object.
-%   PRACH = srsConfigurePRACH(VARARGIN) returns a PRACH object with the requested configuration.
+%srsConfigurePRACH Generates a physical random access channel (PRACH) configuration object.
+%   PRACH = srsConfigurePRACH(VARARGIN) returns a PRACH configuration object with the requested configuration.
 %   The names of the input parameters are assumed to coincide with those of the properties of
 %   nrPRACHConfig, with the exception of the suffix 'Loc' which is accepted. Moreover, the
 %   'PreambleFormat' parameter is also accepted and used to configure the subcarrier spacing and

@@ -1,18 +1,16 @@
 %srsPRACHdetector Detects the 5G NR PRACH preamble in a PRACH occasion.
-%   [INDICES, OFFSETS, DETECTINFO] = srsPRACHdetector(CARRIER, PRACH, GRID)
+%   [INDICES, OFFSETS, DETECTINFO] = srsPRACHdetector(CARRIER, PRACH, GRID, IGNORECFO)
 %   detects the 5G NR PRACH preambles in GRID. GRID is a matrix (one column per
 %   RX antenna port) with the baseband symbols corresponding to one PRACH occasion,
 %   that is it may contain a number of copies of the preamble depending on the
 %   format. CARRIER is an nrCarrierConfig object with the carrier configuration.
 %   PRACH is an nrPRACHConfig object with the PRACH configuration (the
-%   PreambleIndex field is ignored).
+%   PreambleIndex field is ignored). The boolean flag IGNORECFO tells the detector
+%   whether to assume that the signal is affected by CFO (false) or not (true).
 %
 %   The function returns INDICES and OFFSETS, that is a 64-entry boolean mask of
 %   the detected Preamble indices and the corresponding offsets in microseconds,
 %   respectively.
-%   DETECTINFO is a structure with extra information inferred by the detector. It
-%   contains the following fields.
-%   CFO   - The estimated carrier frequency offset in hertz.
 
 %   Copyright 2021-2023 Software Radio Systems Limited
 %
@@ -29,7 +27,7 @@
 %   A copy of the BSD 2-Clause License can be found in the LICENSE
 %   file in the top-level directory of this distribution.
 
-function [indices, offsets, detectInfo] = srsPRACHdetector(carrier, prachConf, grid)
+function [indices, offsets] = srsPRACHdetector(carrier, prachConf, grid, ignoreCFO)
     assert(prachConf.RestrictedSet == "UnrestrictedSet", "srsran_matlab:srsPRACHdetector",...
         "Only unrestricted sets are supported.");
 
@@ -48,13 +46,11 @@ function [indices, offsets, detectInfo] = srsPRACHdetector(carrier, prachConf, g
     LRA = prach.LRA;
     halfLRA = (LRA - 1) / 2;
 
-    % Estimate and compensate the CFO, and, for each antenna, combine all the
-    % replicas. "preamble" thus contain only one preamble per antenna.
-    [preamble, cfo] = preprocess(grid, LRA);
-    detectInfo = struct();
-    detectInfo.CFO = cfo / 2 / pi * prach.SubcarrierSpacing * 1000;
+    % Rearrange signal to have a single replica per column. If "ignoreCFO", the
+    % replicas from the same antennas are combined together.
+    preambles = preprocess(grid, LRA, ignoreCFO);
 
-    nAntennas = size(preamble, 2);
+    nAntennas = size(preambles, 2);
 
     %[sincEx, M] = getsinc(LRA);
     % Set the margin around the detection window (useful for computing reference
@@ -62,11 +58,11 @@ function [indices, offsets, detectInfo] = srsPRACHdetector(carrier, prachConf, g
     % Detection threshold. The detector is inspired by the GLRT test, but it's
     % not exactly that one - threshold must be tuned by simulation.
     if LRA == 839
-        marg = 5;
-        threshold = 7;
+        winMargin = 5;
+        threshold = 0.7;
     else
-        marg = 12;
-        threshold = 13;
+        winMargin = 12;
+        threshold = 0.54;
     end
     Nfft = fftsize();
 
@@ -83,7 +79,7 @@ function [indices, offsets, detectInfo] = srsPRACHdetector(carrier, prachConf, g
 
         % Multiply the preamble by the complex conjugate of the root sequence and
         % take the ifft - same as correlation.
-        noRoot = conj(root) .* preamble / LRA;
+        noRoot = conj(root) .* preambles / LRA;
         % We want a symmetric FFT.
         noRootLarge = [noRoot(halfLRA + 1:end, :); zeros(Nfft - LRA, nAntennas); noRoot(1:halfLRA, :)];
 
@@ -99,7 +95,7 @@ function [indices, offsets, detectInfo] = srsPRACHdetector(carrier, prachConf, g
             winWidth = floor(info.WinWidths(iWindow) * Nfft / LRA);
             winStart = mod(Nfft - round(info.WinStart(iWindow) * Nfft / LRA), Nfft);
 
-            ix = (winStart - marg):(winStart + winWidth + marg - 1);
+            ix = (winStart - winMargin):(winStart + winWidth + winMargin - 1);
 
             winScalar = abs(noRootTimeSinc(winStart + (1:winWidth), :)).^2;
 
@@ -109,7 +105,7 @@ function [indices, offsets, detectInfo] = srsPRACHdetector(carrier, prachConf, g
             % The absolute value at the denominator shouldn't be necessary.
             % Nevertheless, because of the approximations, it may happen that
             % the difference at the denominator takes very small negative values.
-            metricGlobal = 2 * marg * sum(winScalar, 2) ./ abs(sum(reference - winScalar, 2));
+            metricGlobal = sum(winScalar, 2) ./ abs(sum(reference - winScalar, 2));
 
             if false
                 figure(1) %#ok<UNRCH>
@@ -119,7 +115,7 @@ function [indices, offsets, detectInfo] = srsPRACHdetector(carrier, prachConf, g
                 hold off
                 title(sprintf('%d', (iSequence-1) * info.nShifts + iWindow-1));
 
-                metric = 2 * marg * winScalar ./ abs(reference - winScalar);
+                metric = winScalar ./ abs(reference - winScalar);
                 figure(2)
                 hold off
                 plot(winStart + (0:winWidth-1), [metric metricGlobal]);
@@ -131,9 +127,11 @@ function [indices, offsets, detectInfo] = srsPRACHdetector(carrier, prachConf, g
 
             % We don't want peaks at the very end of the window because they
             % are most probably side effects of a peak at the beginning of
-            % the adjacent window.
+            % the adjacent window. We discard peaks that are closer than "guard"
+            % to the boundary.
+            guard = 5;
             [m, delay] = max(metricGlobal);
-            if (m > threshold) && (delay < length(metricGlobal) - 5)
+            if (m > threshold) && (delay < length(metricGlobal) - guard)
                 pos = (iSequence - 1) * nWindows + iWindow;
                 indices(pos) = true;
                 d = delay + winStart;
@@ -225,59 +223,22 @@ function info = getWindowInfo(prach, mu)
     info.nShifts = nShifts;
 end
 
-function [preamble, cfo] = preprocess(grid, LRA)
+function preambles = preprocess(grid, LRA, ignoreCFO)
 % If the grid contains multiple replicas of the preamble (that is, for all formats
-% but Format 0 and Format C0), combine them together after estimating and
-% compensating the CFO.
+% but Format 0 and Format C0), reorganize samples so that we have one replica per
+% column. If "ignoreCFO" replicas from the same antenna are averaged together.
 
     assert(mod(size(grid, 1), LRA) == 0, 'srsran_matlab:srsPRACHdetector', ...
         'The number of symbols does not match with the preamble length.');
 
     nAntennas = size(grid, 2);
-    %preamble = squeeze(mean(reshape(grid, LRA, [], nAntennas), 2));
-
-    tmp = reshape(grid, LRA, [], nAntennas);
-
-    nPreambles = size(tmp, 2);
-    cfo = nan;
-
-    if nPreambles > 1
-        prods = complex(nan(LRA, floor(nPreambles / 2), nAntennas));
-
-        % We assume that all replicas undergo the same channel and they only
-        % differ for the rotation (constant throughout the replica) due to the CFO.
-        for n = 1:2:nPreambles-1
-            prods(:, n, :) = conj(tmp(:, 2*n-1, :)) .* tmp(:, 2*n, :);
-        end
-
-        cfo = angle(sum(prods, 'all'));
-        correctionMatrix = diag(exp(-1j * cfo * (0:nPreambles-1)));
-
-        for iAntenna = 1:nAntennas
-            tmp(:, :, iAntenna) = tmp(:, :, iAntenna) * correctionMatrix;
-        end
+    if ignoreCFO
+        preambles = squeeze(mean(reshape(grid, LRA, [], nAntennas), 2));
+        return;
     end
 
-    % Take the mean over the replicas (second dimension) and return one preamble
-    % per antenna.
-    preamble = squeeze(mean(tmp, 2));
+    preambles = reshape(grid, LRA, []);
 end
-
-% function [s, M] = getsinc(LRA)
-%     N = fftsize();
-%     st = diric(2*pi*(0:N-1)/N, LRA);
-%     if LRA == 839
-%         M = 5;
-%     else
-%         M = 12;
-%     end
-% 
-%     %st((M + 2):(end-M)) = 0;
-% 
-%     st = st / norm(st);
-% 
-%     s = fft(st', N) / sqrt(N);
-% end
 
 function x = fftsize
 % FFT size used by the detector - it defines the offset granularity.
