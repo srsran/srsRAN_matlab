@@ -126,6 +126,7 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
             import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
             import srsMatlabWrappers.phy.helpers.srsCSIRSValidateConfig
             import srsMatlabWrappers.phy.helpers.srsCSIRS2ReservedCell
+            import srsMatlabWrappers.phy.helpers.srsModulationFromMatlab
             import srsTest.helpers.writeUint8File
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.rbAllocationIndexes2String
@@ -307,20 +308,7 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
             cyclicPrefixStr = ['cyclic_prefix::', upper(carrier.CyclicPrefix)];
 
             % Convert modulation type to string.
-            if iscell(pdsch.Modulation)
-                error('Unsupported');
-            else
-                switch pdsch.Modulation
-                    case 'QPSK'
-                        modString1 = 'modulation_scheme::QPSK';
-                    case '16QAM'
-                        modString1 = 'modulation_scheme::QAM16';
-                    case '64QAM'
-                        modString1 = 'modulation_scheme::QAM64';
-                    case '256QAM'
-                        modString1 = 'modulation_scheme::QAM256';
-                end
-            end
+            modString1 = srsModulationFromMatlab(pdsch.Modulation, 'full');
 
             % Prepare PDSCH configuration.
             pduDescription = {...

@@ -76,6 +76,8 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
 
             import srsMatlabWrappers.phy.helpers.srsConfigurePDSCHdmrs
             import srsMatlabWrappers.phy.helpers.srsConfigurePDSCH
+            import srsMatlabWrappers.phy.helpers.srsGetBitsSymbol
+            import srsMatlabWrappers.phy.helpers.srsModulationFromMatlab
             import srsMatlabWrappers.phy.upper.channel_processors.srsPDSCHmodulator
             import srsMatlabWrappers.phy.upper.signal_processors.srsPDSCHdmrs
             import srsTest.helpers.array2str
@@ -84,60 +86,44 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.writeUint8File
 
-            % Generate a unique test ID
+            % Generate a unique test ID.
             testID = testCase.generateTestID;
 
-            % Generate default carrier configuration
+            % Generate default carrier configuration.
             carrier = nrCarrierConfig;
 
-            % configure the PDSCH according to the test parameters
+            % Configure the PDSCH according to the test parameters.
             pdsch = srsConfigurePDSCH(SymbolAllocation, Modulation);
 
-            % Set randomized values
+            % Set randomized values.
             pdsch.NID = randi([1, 1023]);
             pdsch.RNTI = randi([1, 65535]);
 
-            if iscell(pdsch.Modulation)
-                error('Unsupported');
-            else
-                switch pdsch.Modulation
-                    case 'QPSK'
-                        modOrder1 = 2;
-                        modString1 = 'modulation_scheme::QPSK';
-                    case '16QAM'
-                        modOrder1 = 4;
-                        modString1 = 'modulation_scheme::QAM16';
-                    case '64QAM'
-                        modOrder1 = 6;
-                        modString1 = 'modulation_scheme::QAM64';
-                    case '256QAM'
-                        modOrder1 = 8;
-                        modString1 = 'modulation_scheme::QAM256';
-                end
-            end
+            modOrder1 = srsGetBitsSymbol(pdsch.Modulation);
+            modString1 = srsModulationFromMatlab(pdsch.Modulation, 'full');
 
 
-            % Calculate number of encoded bits
+            % Calculate number of encoded bits.
             nBits = length(nrPDSCHIndices(carrier, pdsch)) * modOrder1;
 
-            % Generate codewords
+            % Generate codewords.
             cws = randi([0,1], nBits, 1);
 
-            % write the DLSCH cw to a binary file
+            % Write the DLSCH cw to a binary file.
             testCase.saveDataFile('_test_input', testID, @writeUint8File, cws);
 
-            % call the PDSCH symbol modulation Matlab functions
+            % Call the PDSCH symbol modulation Matlab functions.
             [modulatedSymbols, symbolIndices] = srsPDSCHmodulator(carrier, pdsch, cws);
 
-            % write each complex symbol into a binary file, and the associated indices to another
+            % Write each complex symbol into a binary file, and the associated indices to another.
             testCase.saveDataFile('_test_output', testID, ...
                 @writeResourceGridEntryFile, modulatedSymbols, symbolIndices);
 
-            % Generate DMRS symbol mask
+            % Generate DMRS symbol mask.
             [~, symbolIndices] = srsPDSCHdmrs(carrier, pdsch);
             dmrsSymbolMask = symbolAllocationMask2string(symbolIndices);
 
-            % generate the test case entry
+            % Generate the test case entry.
             reservedString = '{}';
 
             portsString = '{0}';
@@ -154,7 +140,7 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
             testCaseString = testCase.testCaseToString(testID, config, true, ...
                 '_test_input', '_test_output');
 
-            % add the test to the file header
+            % Add the test to the file header.
             testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);
 
         end % of function testvectorGenerationCases

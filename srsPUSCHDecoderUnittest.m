@@ -163,8 +163,8 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
             % to the current modulation and scheme configuration.
             [R, Qm] = srsExpandMCS(mcs, obj.mcsTable);
             obj.TargetCodeRate = R/1024;
-            obj.Modulation = srsGetModulation(Qm);
-            ModulationLoc = obj.Modulation{1};
+            ModulationLoc = srsGetModulation(Qm);
+            obj.Modulation = ModulationLoc;
 
             % Configure the PUSCH according to the test parameters.
             NStartBWPLoc = obj.NStartBWP;
@@ -195,6 +195,7 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
 
             import srsMatlabWrappers.phy.helpers.srsConfigureULSCHEncoder
             import srsMatlabWrappers.phy.helpers.srsConfigureULSCHDecoder
+            import srsMatlabWrappers.phy.helpers.srsModulationFromMatlab
             import srsTest.helpers.bitPack
             import srsTest.helpers.writeUint8File
             import srsTest.helpers.writeInt8File
@@ -227,7 +228,7 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
                 RV = obj.RVsequence(iRV);
 
                 % Call the PUSCH encoding MATLAB functions.
-                cw(:, iRV) = ULSCHEncoder(obj.Modulation{1}, obj.NumLayers, ...
+                cw(:, iRV) = ULSCHEncoder(obj.Modulation, obj.NumLayers, ...
                     obj.encodedTBLength, RV, obj.HARQProcessID);
 
                 % Even though we could have different modulations, for the purposes of this
@@ -240,7 +241,7 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
             end
             % Decode the first transmission (it doesn't make sense to decode all
             % of them since MATLAB flushes the decoder buffer if the CRC is OK).
-            rxTB = ULSCHDecoder(cwLLRs(:, 1), obj.Modulation{1}, obj.NumLayers, ...
+            rxTB = ULSCHDecoder(cwLLRs(:, 1), obj.Modulation, obj.NumLayers, ...
                 obj.RVsequence(1), obj.HARQProcessID);
             % Check that there were no errors (expected, since the SNR is very high).
             assert(all(rxTB == TB), 'Decoding errors.');
@@ -264,7 +265,7 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
             end
             testCaseString = obj.testCaseToString(testID, ...
                 {{['ldpc_base_graph_type::BG', num2str(obj.ulschInfo.BGN)], 0, ...
-                    ['modulation_scheme::', obj.Modulation{2}], Nref, ...
+                    srsModulationFromMatlab(obj.Modulation, 'full'), Nref, ...
                     obj.NumLayers, obj.nofREs}, obj.RVsequence}, false, '_test_input', '_test_output');
 
             % Add the test to the file header.
@@ -312,7 +313,7 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
 
             % Fill segment configuration for the decoder.
             segmentCfg = srsPUSCHDecoder.configureSegment(obj.NumLayers, obj.nofREs, ...
-                TransportBlockLength, TargetCodeRateLoc, obj.Modulation{1}, 0, Nref);
+                TransportBlockLength, TargetCodeRateLoc, obj.Modulation, 0, Nref);
 
             % Fill the HARQ buffer ID.
             HARQBufID.rnti = 1;
@@ -330,7 +331,7 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
                 RV = obj.RVsequence(iRV);
 
                 % Call the PUSCH encoding MATLAB functions.
-                cw = ULSCHEncoder(obj.Modulation{1}, obj.NumLayers, ...
+                cw = ULSCHEncoder(obj.Modulation, obj.NumLayers, ...
                     obj.encodedTBLength, RV, obj.HARQProcessID);
 
                 % Even though we could have different modulations, for the purposes of this

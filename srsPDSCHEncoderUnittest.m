@@ -134,8 +134,7 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
             % get the target code rate (R) and modulation order (Qm) corresponding to the current modulation and scheme configuration
             [R, Qm] = srsExpandMCS(mcs, mcsTable);
             TargetCodeRate = R/1024;
-            Modulation = srsGetModulation(Qm);
-            ModulationLoc = Modulation{1};
+            [ModulationLoc, ModulationSRS] = srsGetModulation(Qm);
 
             % configure the PDSCH according to the test parameters
             pdsch = srsConfigurePDSCH(NStartBWP, NSizeBWP, ModulationLoc, NumLayersLoc, SymbolAllocation, PRBSet);
@@ -176,7 +175,7 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
             end
             testCaseString = testCase.testCaseToString(testID, ...
                 {['ldpc_base_graph_type::BG', num2str(info.BGN)], RV, ...
-                    ['modulation_scheme::', Modulation{2}], Nref, ...
+                    ['modulation_scheme::', ModulationSRS], Nref, ...
                     NumLayersLoc, nofREs}, true, '_test_input', '_test_output');
 
             % add the test to the file header

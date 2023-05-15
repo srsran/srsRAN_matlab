@@ -89,6 +89,7 @@ classdef srsShortBlockDetectorUnittest < srsTest.srsBlockUnittest
             import srsTest.helpers.writeUint8File
             import srsTest.helpers.writeInt8File
             import srsMatlabWrappers.phy.helpers.srsGetModulation
+            import srsMatlabWrappers.phy.helpers.srsModulationFromMatlab
 
             % When encoding more than 2 bits, the output doesn't depend on the
             % modulation. So we execute the test only for modOrder == 1.
@@ -114,13 +115,13 @@ classdef srsShortBlockDetectorUnittest < srsTest.srsBlockUnittest
             nMessages = 10;
             messages = randi([0, 1], msgLength, nMessages);
 
-            modSchemeLabels = srsGetModulation(modOrder);
+            [modScheme, modSRS] = srsGetModulation(modOrder);
 
             codeblocks = nan(blkLength, nMessages);
             for iMessage = 1:nMessages
                 % recall modScheme is ignored if msgLength > 2
                 codeblocks(:, iMessage) = nrUCIEncode(messages(:, iMessage), ...
-                    blkLength, modSchemeLabels{1});
+                    blkLength, modScheme);
             end
 
             % Replace placeholders.
@@ -142,7 +143,7 @@ classdef srsShortBlockDetectorUnittest < srsTest.srsBlockUnittest
             for iMessage = 1:nMessages
                 % recall modScheme is ignored if msgLength > 2
                 messages(:, iMessage) = nrUCIDecode(codeblocks(:, iMessage), ...
-                    msgLength, modSchemeLabels{1});
+                    msgLength, modScheme);
             end
 
             % write codeblocks
@@ -151,7 +152,7 @@ classdef srsShortBlockDetectorUnittest < srsTest.srsBlockUnittest
             % write messages
             obj.saveDataFile('_test_output', testID, @writeUint8File, messages(:));
 
-            modScheme = ['modulation_scheme::', modSchemeLabels{2}];
+            modScheme = srsModulationFromMatlab(modScheme, 'full');
 
             % generate the test case entry
             testCaseString = obj.testCaseToString(testID, {nMessages, ...

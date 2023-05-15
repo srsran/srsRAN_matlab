@@ -18,7 +18,7 @@
 %   srsUCIDecoderUnittest Properties (TestParameter):
 %
 %   A                       - Length in bits of the UCI message.
-%   modScheme               - Modulation scheme.
+%   Modulation               - Modulation scheme.
 %
 %   srsUCIDecoderUnittest Methods (TestTags = {'testvector'}):
 %
@@ -52,12 +52,8 @@ classdef srsUCIDecoderUnittest < srsTest.srsBlockUnittest
         %   and length between 12 and 1706 UCI bits (12-1706).
         A = [num2cell(1:12) {19, 20, 200, 500, 1000, 1706}]
 
-        %Modulation scheme, described as a three-entry cell array. The first
-        %entry is the modulation order, the second and the third are the
-        %corresponding labels for MATLAB and SRSRAN, respectively.
-        %Example: modScheme = {4, '16QAM', 'QAM16'}
-        modScheme = {{1, 'pi/2-BPSK', 'BPSK'}, {2, 'QPSK', 'QPSK'}, {4, '16QAM', 'QAM16'}, ...
-            {6, '64QAM', 'QAM64'}, {8, '256QAM', 'QAM256'}}
+        %Modulation scheme.
+        Modulation = {'pi/2-BPSK', 'QPSK', '16QAM', '64QAM', '256QAM'}
     end
 
     methods (Access = protected)
@@ -84,10 +80,12 @@ classdef srsUCIDecoderUnittest < srsTest.srsBlockUnittest
     end % of methods (Access = protected)
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(testCase, A, modScheme)
+        function testvectorGenerationCases(testCase, A, Modulation)
         %testvectorGenerationCases Generates a test vector for the given A and
-        %   modScheme. Other parameters (e.g., E) are generated randomly.
+        %   Modulation. Other parameters (e.g., E) are generated randomly.
 
+            import srsMatlabWrappers.phy.helpers.srsGetBitsSymbol
+            import srsMatlabWrappers.phy.helpers.srsModulationFromMatlab
             import srsTest.helpers.writeUint8File
             import srsTest.helpers.writeInt8File
 
@@ -110,26 +108,27 @@ classdef srsUCIDecoderUnittest < srsTest.srsBlockUnittest
             if A >= 12
                 minE = A + 11;
             end
-            maxE = max([floor(8192 / modScheme{1}), minE]);
-            E = modScheme{1} * randi([minE maxE], 1, 1);
+            bitsSymbol = srsGetBitsSymbol(Modulation);
+            maxE = max([floor(8192 / bitsSymbol), minE]);
+            E = bitsSymbol * randi([minE maxE], 1, 1);
 
             % Current fixed parameter values (e.g., SNR).
             snrdB = 20;
 
             % Encode the UCI bits.
-            UCICodeWord = nrUCIEncode(UCIbits, E, modScheme{2});
+            UCICodeWord = nrUCIEncode(UCIbits, E, Modulation);
 
             % Replace placeholders -1 (x) and -2 (y) as part of the descrambling.
             UCICodeWord(UCICodeWord == -1) = 1;
             UCICodeWord(UCICodeWord == -2) = UCICodeWord(find(UCICodeWord == -2) - 1);
 
             % Estimate the LLR soft bits.
-            modulatedUCI = nrSymbolModulate(UCICodeWord, modScheme{2});
+            modulatedUCI = nrSymbolModulate(UCICodeWord, Modulation);
             rxSignal = awgn(modulatedUCI, snrdB);
-            LLRSoftBits = nrSymbolDemodulate(rxSignal, modScheme{2});
+            LLRSoftBits = nrSymbolDemodulate(rxSignal, Modulation);
 
             % Decode the received UCI LLR soft bits.
-            decodedUCIBits = nrUCIDecode(LLRSoftBits, A, modScheme{2});
+            decodedUCIBits = nrUCIDecode(LLRSoftBits, A, Modulation);
 
             % Clip and quantize the LLRs.
             LLRSoftBits(LLRSoftBits > 20) = 20;
@@ -143,7 +142,7 @@ classdef srsUCIDecoderUnittest < srsTest.srsBlockUnittest
 
             % Generate the test case entry.
             testCaseString = testCase.testCaseToString(testID, ...
-                {A, E, {['modulation_scheme::', modScheme{3}]}}, ...
+                {A, E, {srsModulationFromMatlab(Modulation, 'full')}}, ...
                 false, '_test_output', '_test_input');
 
             % Add the test to the file header.

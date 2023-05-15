@@ -17,7 +17,7 @@
 %
 %   srsTBSCalculatorUnittest Properties (TestParameter):
 %
-%   modulation - Modulation order.
+%   modOrder   - Modulation order.
 %   nlayers    - Number of transmission layers (1...4 for one codeword,
 %                5...8 for two codewords).
 %   nprb       - Number of physical resource blocks (PRBs) allocated for
@@ -60,7 +60,7 @@ classdef srsTBSCalculatorUnittest < srsTest.srsBlockUnittest
     properties (TestParameter)
         %It must be specified as one of (2, 4, 6, 8). They refer to QPSK,
         %16-QAM, 64-QAM and 256-QAM respectively. 
-        modulation = {2, 4, 6, 8};
+        modOrder = {2, 4, 6, 8};
 
         %The value must be a scalar nonnegative integer. The nominal value
         %of NLAYERS is in the range of (1...8).
@@ -120,9 +120,9 @@ classdef srsTBSCalculatorUnittest < srsTest.srsBlockUnittest
     end % of methods (Access = protected)
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(testCase, modulation, nlayers, nprb, nsymb, ndmrsprb, tcr, xoh, tbscaling)
+        function testvectorGenerationCases(testCase, modOrder, nlayers, nprb, nsymb, ndmrsprb, tcr, xoh, tbscaling)
         %testvectorGenerationCases Generates a test vector for the
-        %   modulation, nlayers, nprb, ndmrsprb, tcr, xoh and tbscaling.
+        %   modOrder, nlayers, nprb, ndmrsprb, tcr, xoh and tbscaling.
 
         import srsMatlabWrappers.phy.helpers.srsGetModulation
         import srsTest.helpers.cellarray2str
@@ -130,15 +130,15 @@ classdef srsTBSCalculatorUnittest < srsTest.srsBlockUnittest
 
         NREPerPRB = nsymb * 12 - ndmrsprb;
 
-        modulations = srsGetModulation(modulation);
+        modulation = srsGetModulation(modOrder);
 
-        tbs = nrTBS(modulations{1}, nlayers, nprb, NREPerPRB, tcr, xoh, tbscaling);
+        tbs = nrTBS(modulation, nlayers, nprb, NREPerPRB, tcr, xoh, tbscaling);
         tbs = tbs(1);
 
         % generate a unique test ID
         testID = testCase.generateTestID;
 
-        mcsDescrCell = mcsDescription2Cell(modulations{1}, tcr);
+        mcsDescrCell = mcsDescription2Cell(modulation, tcr);
 
 
 

@@ -23,7 +23,7 @@
 %   baseGraph  - LDPC base graph.
 %   rv         - Redundancy version.
 %   rmLength   - The rate-matched length (relative to the full codeblock length).
-%   modScheme  - Modulation scheme.
+%   Modulation  - Modulation scheme.
 %   isLBRM     - Limited buffer rate matching flag.
 %
 %   srsLDPCRateMatcherUnittest Methods (TestTags = {'testvector'}):
@@ -68,12 +68,8 @@ classdef srsLDPCRateMatcherUnittest < srsTest.srsBlockUnittest
         %Rate-matched length (relative to codeblock length).
         rmLength = {0.3, 0.6, 1, 5, 10}
 
-        %Modulation scheme, described as a three-entry cell array. The first
-        %entry is the modulation order, the second and the third are the
-        %corresponding labels for MATLAB and SRSRAN, respectively.
-        %Example: modScheme = {4, '16QAM', 'QAM16'}
-        modScheme = {{1, 'BPSK', 'BPSK'}, {2, 'QPSK', 'QPSK'}, {4, '16QAM', 'QAM16'}, ...
-            {6, '64QAM', 'QAM64'}, {8, '256QAM', 'QAM256'}}
+        %Modulation scheme.
+        Modulation = {'BPSK', 'QPSK', '16QAM', '64QAM', '256QAM'}
 
         %Limited buffer rate matching indicator.
         isLBRM = {false, true}
@@ -108,14 +104,16 @@ classdef srsLDPCRateMatcherUnittest < srsTest.srsBlockUnittest
 
     methods (Test, TestTags = {'testvector'}, ParameterCombination = 'pairwise')
         function testvectorGenerationCases(obj, baseGraph, rmLength, rv, ...
-                modScheme, isLBRM)
+                Modulation, isLBRM)
         %testvectorGenerationCases Generates a test vector for the given base graph,
         %   rate-matched length, redundancy version, modulation scheme and LBRM flag.
 
+            import srsMatlabWrappers.phy.helpers.srsGetBitsSymbol
+            import srsMatlabWrappers.phy.helpers.srsModulationFromMatlab
             import srsTest.helpers.writeUint8File
             import srsTest.helpers.logical2str
 
-            % generate a unique test ID
+            % Generate a unique test ID.
             testID = obj.generateTestID;
 
             % Here, baseMsgLength does NOT include the shortened bits.
@@ -129,7 +127,7 @@ classdef srsLDPCRateMatcherUnittest < srsTest.srsBlockUnittest
             msgLength = baseMsgLength * obj.liftSize;
             CBlckLength = baseCBlckLength * obj.liftSize;
 
-            % Fraction of filler bits
+            % Fraction of filler bits.
             fracFillers = 0.1;
             nFiller = ceil(msgLength * fracFillers);
             fillerIdx = msgLength - (nFiller - 1:-1:0);
@@ -143,33 +141,34 @@ classdef srsLDPCRateMatcherUnittest < srsTest.srsBlockUnittest
             % to the number of transmission layers, which is therefore fixed
             % to 1 in these simulations.
             nTxLayers = 1;
-            % Rate matching
-            outLength = floor(CBlckLength * rmLength / modScheme{1}) * modScheme{1};
+            % Rate matching.
+            bitsSymbol = srsGetBitsSymbol(Modulation);
+            outLength = floor(CBlckLength * rmLength / bitsSymbol) * bitsSymbol;
             if isLBRM
                 rmCodeblock = nrRateMatchLDPC(codeblock, outLength, rv, ...
-                    modScheme{2}, nTxLayers, obj.Nref);
+                    Modulation, nTxLayers, obj.Nref);
             else
                 rmCodeblock = nrRateMatchLDPC(codeblock, outLength, rv, ...
-                    modScheme{2}, nTxLayers);
+                    Modulation, nTxLayers);
             end
 
 
-            % use SRS convention for filler bits
+            % Use SRS convention for filler bits.
             codeblock(codeblock == -1) = 254;
 
-            % write full codeblock
+            % Write full codeblock.
             obj.saveDataFile('_test_input', testID, @writeUint8File, codeblock);
 
-            % write rate_matched codeblock
+            % Write rate_matched codeblock.
             obj.saveDataFile('_test_output', testID, @writeUint8File, rmCodeblock);
 
-            % generate the test case entry
-            modSchemeString = ['modulation_scheme::', modScheme{3}];
+            % Generate the test case entry.
+            modSchemeString = srsModulationFromMatlab(Modulation, 'full');
             testCaseString = obj.testCaseToString(testID, ...
                 {outLength, rv, modSchemeString, obj.Nref, ...
                     logical2str(isLBRM), nFiller}, false, '_test_input', '_test_output');
 
-            % add the test to the file header
+            % Add the test to the file header.
             obj.addTestToHeaderFile(obj.headerFileID, testCaseString);
 
         end % of function addTestIncludesToHeaderFile

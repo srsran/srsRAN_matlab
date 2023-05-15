@@ -17,7 +17,7 @@
 %
 %   srsModulationMapperUnittest Properties (TestParameter):
 %
-%   modScheme - Modulation scheme (see extended documentation for details).
+%   Modulation - Modulation scheme (see extended documentation for details).
 %   nSymbols  - Number of modulated output symbols (257, 997).
 %
 %   srsModulationMapperUnittest Methods (TestTags = {'testvector'}):
@@ -51,12 +51,8 @@ classdef srsModulationMapperUnittest < srsTest.srsBlockUnittest
         %Number of modulated output symbols (257, 997).
         nSymbols = {257, 997}
 
-        %Modulation scheme, described as a three-entry cell array. The first
-        %entry is the modulation order, the second and the third are the
-        %corresponding labels for MATLAB and SRSRAN, respectively.
-        %Example: modScheme = {4, '16QAM', 'QAM16'}
-        modScheme = {{1, 'BPSK', 'BPSK'}, {2, 'QPSK', 'QPSK'}, {4, '16QAM', 'QAM16'}, ...
-            {6, '64QAM', 'QAM64'}, {8, '256QAM', 'QAM256'}}
+        %Modulation scheme.
+        Modulation = {'BPSK', 'QPSK', '16QAM', '64QAM', '256QAM'}
     end % of properties (TestParameter)
 
     methods (Access = protected)
@@ -72,37 +68,40 @@ classdef srsModulationMapperUnittest < srsTest.srsBlockUnittest
     end % of methods (Access = protected)
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(testCase, nSymbols, modScheme)
+        function testvectorGenerationCases(testCase, nSymbols, Modulation)
         %testvectorGenerationCases(TESTCASE, NSYMBOLS, MODSCHEME) Generates a test vector
         %   for the given number of symbols NSYMBOLS and modulation scheme and MODSCHEME.
 
-            import srsTest.helpers.writeUint8File
             import srsMatlabWrappers.phy.upper.channel_modulation.srsModulator
+            import srsMatlabWrappers.phy.helpers.srsModulationFromMatlab
+            import srsMatlabWrappers.phy.helpers.srsGetBitsSymbol
+            import srsTest.helpers.writeUint8File
             import srsTest.helpers.writeComplexFloatFile
 
-            % generate a unique test ID by looking at the number of files generated so far
+            % Generate a unique test ID by looking at the number of files generated so far.
             testID = testCase.generateTestID;
 
-            % generate random test input as a bit sequence
-            codeword = randi([0 1], nSymbols * modScheme{1}, 1);
+            % Generate random test input as a bit sequence.
+            bitsSymbol = srsGetBitsSymbol(Modulation);
+            codeword = randi([0 1], nSymbols * bitsSymbol, 1);
 
-            % write the codeword to a binary file
+            % Write the codeword to a binary file.
             testCase.saveDataFile('_test_input', testID, @writeUint8File, codeword);
 
-            % call the symbol modulation MATLAB functions
-            modulatedSymbols = srsModulator(codeword, modScheme{2});
+            % Call the symbol modulation MATLAB functions.
+            modulatedSymbols = srsModulator(codeword, Modulation);
 
-            % write complex symbols into a binary file
+            % Write complex symbols into a binary file.
             testCase.saveDataFile('_test_output', testID, ...
                 @writeComplexFloatFile, modulatedSymbols);
 
-            % generate the test case entry
-            modSchemeString = ['modulation_scheme::', modScheme{3}];
+            % Generate the test case entry.
+            modSchemeString = srsModulationFromMatlab(Modulation, 'full');
             testCaseString = testCase.testCaseToString(testID, ...
                 {nSymbols, modSchemeString}, false, '_test_input', ...
                 '_test_output');
 
-            % add the test to the file header
+            % Add the test to the file header.
             testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);
         end % of function testvectorGenerationCases
     end % of methods (Test, TestTags = {'testvector'})

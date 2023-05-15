@@ -17,7 +17,7 @@
 %
 %   srsDemodulationMapperUnittest Properties (TestParameter):
 %
-%   modScheme - Modulation scheme (see extended documentation for details).
+%   Modulation - Modulation scheme (see extended documentation for details).
 %   nSymbols  - Number of modulated output symbols (257, 997).
 %
 %   srsDemodulationMapperUnittest Methods (TestTags = {'testvector'}):
@@ -51,12 +51,8 @@ classdef srsDemodulationMapperUnittest < srsTest.srsBlockUnittest
         %Number of modulated output symbols (257, 997).
         nSymbols = {257, 997}
 
-        %Modulation scheme, described as a three-entry cell array. The first
-        %entry is the modulation order, the second and the third are the
-        %corresponding labels for MATLAB and SRSRAN, respectively.
-        %Example: modScheme = {4, '16QAM', 'QAM16'}
-        modScheme = {{1, 'BPSK', 'BPSK'}, {1, 'pi/2-BPSK', 'PI_2_BPSK'}, {2, 'QPSK', 'QPSK'}, ...
-            {4, '16QAM', 'QAM16'}, {6, '64QAM', 'QAM64'}, {8, '256QAM', 'QAM256'}}
+        %Modulation scheme.
+        Modulation = {'BPSK', 'pi/2-BPSK', 'QPSK', '16QAM', '64QAM', '256QAM'}
     end % of properties (TestParameter)
 
     methods (Access = protected)
@@ -80,7 +76,7 @@ classdef srsDemodulationMapperUnittest < srsTest.srsBlockUnittest
     end % of methods (Access = protected)
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(testCase, nSymbols, modScheme)
+        function testvectorGenerationCases(testCase, nSymbols, Modulation)
         %testvectorGenerationCases(TESTCASE, NSYMBOLS, MODSCHEME) Generates a test vector
         %   for the given number of symbols NSYMBOLS and modulation scheme and MODSCHEME.
 
@@ -88,51 +84,54 @@ classdef srsDemodulationMapperUnittest < srsTest.srsBlockUnittest
             import srsTest.helpers.writeUint8File
             import srsTest.helpers.writeFloatFile
             import srsTest.helpers.writeComplexFloatFile
+            import srsMatlabWrappers.phy.helpers.srsGetBitsSymbol
+            import srsMatlabWrappers.phy.helpers.srsModulationFromMatlab
             import srsMatlabWrappers.phy.upper.channel_modulation.srsDemodulator
             import srsMatlabWrappers.phy.upper.channel_modulation.srsModulator
 
-            % generate a unique test ID by looking at the number of files generated so far
+            % Generate a unique test ID by looking at the number of files generated so far.
             testID = testCase.generateTestID;
 
-            % generate random test input as a bit sequence
-            codeword = randi([0 1], nSymbols * modScheme{1}, 1);
+            % Generate random test input as a bit sequence.
+            bitsSymbol = srsGetBitsSymbol(Modulation);
+            codeword = randi([0 1], nSymbols * bitsSymbol, 1);
 
-            % call the symbol modulation MATLAB functions
-            modulatedSymbols = srsModulator(codeword, modScheme{2});
+            % Call the symbol modulation MATLAB functions.
+            modulatedSymbols = srsModulator(codeword, Modulation);
 
-            % create some noise samples with different variances (SNR in the range 0 -- 20 dB).
+            % Create some noise samples with different variances (SNR in the range 0 -- 20 dB).
             normNoise = randn(nSymbols, 2) * [1; 1i] / sqrt(2);
             noiseStd = 0.1 + 0.9 * rand(nSymbols, 1);
             noiseVar = noiseStd.^2;
 
-            % create noisy modulated symbols
+            % Create noisy modulated symbols.
             noisySymbols = modulatedSymbols + noiseStd .* normNoise;
 
-            % write noise variances to a binary file
+            % Write noise variances to a binary file.
             testCase.saveDataFile('_test_noisevar', testID, @writeFloatFile, noiseVar);
 
-            % write noisy symbols to a binary file
+            % Write noisy symbols to a binary file.
             testCase.saveDataFile('_test_input', testID, @writeComplexFloatFile, noisySymbols);
 
-            % demodulate (note that srsDemodulator returns integer values
-            % that can be directly assigned to int8_t variables)
-            softBits = srsDemodulator(noisySymbols, modScheme{2}, noiseVar);
+            % Demodulate (note that srsDemodulator returns integer values
+            % that can be directly assigned to int8_t variables).
+            softBits = srsDemodulator(noisySymbols, Modulation, noiseVar);
 
-            % write soft bits to a binary file
+            % Write soft bits to a binary file.
             testCase.saveDataFile('_test_soft_bits', testID, @writeInt8File, softBits);
 
-            % hard decision
+            % Hard decision.
             hardBits = (1 - (softBits > 0));
 
-            % write hard bits into a binary file
+            % Write hard bits into a binary file.
             testCase.saveDataFile('_test_hard_bits', testID, @writeUint8File, hardBits);
 
-            % generate the test case entry
-            modSchemeString = ['modulation_scheme::', modScheme{3}];
+            % Generate the test case entry.
+            modSchemeString = srsModulationFromMatlab(Modulation, 'full');
             testCaseString = testCase.testCaseToString(testID, {nSymbols, modSchemeString}, false, ...
                 '_test_input', '_test_noisevar', '_test_soft_bits', '_test_hard_bits');
 
-            % add the test to the file header
+            % Add the test to the file header.
             testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);
         end % of function testvectorGenerationCases
     end % of methods (Test, TestTags = {'testvector'})

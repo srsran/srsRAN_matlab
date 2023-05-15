@@ -112,14 +112,14 @@ classdef srsShortBlockEncoderUnittest < srsTest.srsBlockUnittest
             % Block length after rate-matching: at least as long as the basic block length.
             blkLength = round(blkLength * (1 + randi([0, 8]) / 4));
 
-            modSchemeLabels = srsGetModulation(modOrder);
+            [modScheme, modSchemeSRS] = srsGetModulation(modOrder);
 
             % encode
             codeblocks = nan(blkLength, nMessages);
             for iMessage = 1:nMessages
                 % recall modScheme is ignored if msgLength > 2
                 codeblocks(:, iMessage) = nrUCIEncode(messages(:, iMessage), ...
-                    blkLength, modSchemeLabels{1});
+                    blkLength, modScheme);
             end
 
             % use SRS convention for placeholders
@@ -132,7 +132,7 @@ classdef srsShortBlockEncoderUnittest < srsTest.srsBlockUnittest
             % write codeblocks
             obj.saveDataFile('_test_output', testID, @writeUint8File, codeblocks(:));
 
-            modScheme = ['modulation_scheme::', modSchemeLabels{2}];
+            modScheme = ['modulation_scheme::', modSchemeSRS];
 
             % generate the test case entry
             testCaseString = obj.testCaseToString(testID, {nMessages, ...

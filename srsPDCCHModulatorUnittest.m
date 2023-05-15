@@ -107,10 +107,10 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
             import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
             import srsTest.helpers.RBallocationMask2string
 
-            % generate a unique test ID
+            % Generate a unique test ID.
             testID = testCase.generateTestID;
 
-            % use a unique nCellID, nSlot and RNTI for each test
+            % Use a unique nCellID, nSlot and RNTI for each test.
             testCellID = testCase.randomizeTestvector(testID + 1) - 1;
             NSlot = testCase.randomizeSlot(testID + 1);
             RNTI = randi([0, 65535]);
@@ -124,8 +124,8 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
                 REGBundleSize = 6;
             end
 
-            % current fixed parameter values (e.g., maximum grid size with current interleaving
-            %   configuration, CORESET will use all available frequency resources)
+            % Current fixed parameter values (e.g., maximum grid size with current interleaving
+            % configuration, CORESET will use all available frequency resources).
             CyclicPrefix = 'normal';
             NSizeGrid = 52;
             NStartGrid = 0;
@@ -138,59 +138,59 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
             AllocatedCandidate = 1;
             DMRSScramblingID = testCellID;
 
-            % only encode the PDCCH when it fits
+            % Only encode the PDCCH when it fits.
             isAggregationOK = (sum(FrequencyResources) * Duration >= AggregationLevel);
             isREGbundleSizeOK = (mod(sum(FrequencyResources) * Duration, InterleaverSize * REGBundleSize) == 0);
             isCCEREGMappingOK = (strcmp(CCEREGMapping, 'noninterleaved') || ...
                 (strcmp(CCEREGMapping, 'interleaved') &&  isREGbundleSizeOK));
 
             if (isAggregationOK && isCCEREGMappingOK)
-                % configure the carrier according to the test parameters
+                % Configure the carrier according to the test parameters.
                 carrier = srsConfigureCarrier(NSizeGrid, NStartGrid, ...
                     NSlot, NFrame, CyclicPrefix);
 
-                % configure the CORESET according to the test parameters
+                % Configure the CORESET according to the test parameters.
                 CORESET = srsConfigureCORESET(FrequencyResources, Duration, ...
                     CCEREGMapping, REGBundleSize, InterleaverSize);
 
-                % configure the PDCCH according to the test parameters
+                % Configure the PDCCH according to the test parameters.
                 pdcch = srsConfigurePDCCH(CORESET, NStartBWP, NSizeBWP, RNTI, ...
                     AggregationLevel, SearchSpaceType, AllocatedCandidate, DMRSScramblingID);
 
-                % set startSymbol using random value generated above
+                % Set startSymbol using random value generated above.
                 pdcch.SearchSpace.StartSymbolWithinSlot = startSymbolIndex;
 
-                % generate random codeword, 54REs per CCE, 2 bits per QPSK symbol
+                % Generate random codeword, 54REs per CCE, 2 bits per QPSK symbol.
                 codeWord = randi([0 1], 54 * 2 * AggregationLevel, 1);
 
-                % write the codeWord to a binary file
+                % Write the codeWord to a binary file.
                 testCase.saveDataFile('_test_input', testID, @writeUint8File, codeWord);
 
-                % call the PDCCH modulator MATLAB functions
+                % Call the PDCCH modulator MATLAB functions.
                 [PDCCHsymbols, symbolIndices] = srsPDCCHmodulator(codeWord, carrier, pdcch, DMRSScramblingID, RNTI);
 
-                % write each complex symbol into a binary file, and the associated indices to another
+                % Write each complex symbol into a binary file, and the associated indices to another.
                 testCase.saveDataFile('_test_output', testID, ...
                     @writeResourceGridEntryFile, PDCCHsymbols, symbolIndices);
 
-                % generate a RB allocation mask string
+                % Generate a RB allocation mask string.
                 rbAllocationMaskStr = RBallocationMask2string(symbolIndices);
 
                 configCell = {...
-                    rbAllocationMaskStr, ... % rb_mask
-                    startSymbolIndex, ...    % start_symbol_index
-                    Duration, ...            % duration
-                    DMRSScramblingID, ...    % n_id
-                    RNTI, ...                % n_rnti
-                    1.0, ...                 % scaling
-                    'default_precoding'      % precoding
+                    rbAllocationMaskStr, ... rb_mask
+                    startSymbolIndex, ...    start_symbol_index
+                    Duration, ...            duration
+                    DMRSScramblingID, ...    n_id
+                    RNTI, ...                n_rnti
+                    1.0, ...                 scaling
+                    'default_precoding'...   precoding
                     };
 
-                % generate the test case entry
+                % Generate the test case entry.
                 testCaseString = testCase.testCaseToString(testID, configCell, ...
                                    true, '_test_input', '_test_output');
 
-                % add the test to the file header
+                % Add the test to the file header.
                 testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);
             end
         end % of function testvectorGenerationCases

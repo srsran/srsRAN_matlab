@@ -102,6 +102,7 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
 
             import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
             import srsMatlabWrappers.phy.helpers.srsConfigurePUSCH
+            import srsMatlabWrappers.phy.helpers.srsModulationFromMatlab
             import srsMatlabWrappers.phy.upper.signal_processors.srsPUSCHdmrs
             import srsMatlabWrappers.phy.upper.channel_processors.srsULSCHScramblingPlaceholders
             import srsTest.helpers.symbolAllocationMask2string
@@ -177,18 +178,7 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
             testCase.saveDataFile('_test_placeholders', testID, @writeUint16File, placeholders);
 
             % Generate modulation cheme type string.
-            switch pusch.Modulation
-                case 'pi/2-BPSK'
-                    modString = 'modulation_scheme::PI_2_BPSK';
-                case 'QPSK'
-                    modString = 'modulation_scheme::QPSK';
-                case '16QAM'
-                    modString = 'modulation_scheme::QAM16';
-                case '64QAM'
-                    modString = 'modulation_scheme::QAM64';
-                case '256QAM'
-                    modString = 'modulation_scheme::QAM256';
-            end
+            modString = srsModulationFromMatlab(pusch.Modulation, 'full');
 
             % Generate DM-RS indices.
             [~, puschDMRSIndices] = srsPUSCHdmrs(carrier, pusch);

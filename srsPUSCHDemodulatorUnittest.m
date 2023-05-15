@@ -277,6 +277,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
 
             import srsMatlabWrappers.phy.upper.channel_modulation.srsDemodulator
             import srsMatlabWrappers.phy.upper.equalization.srsChannelEqualizer
+            import srsMatlabWrappers.phy.helpers.srsModulationFromMatlab
             import srsTest.helpers.cellarray2str
             import srsTest.helpers.symbolAllocationMask2string
             import srsTest.helpers.writeResourceGridEntryFile
@@ -351,24 +352,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             dmrsTypeString = sprintf('dmrs_type::TYPE%d', obj.pusch.DMRS.DMRSConfigurationType);
 
             % Generate a QAM modulation string.
-            if iscell(obj.pusch.Modulation)
-                error('Unsupported');
-            else
-                switch obj.pusch.Modulation
-                    case 'pi/2-BPSK'
-                        modString = 'modulation_scheme::PI_2_BPSK';
-                    case 'BPSK'
-                        modString = 'modulation_scheme::BPSK';
-                    case 'QPSK'
-                        modString = 'modulation_scheme::QPSK';
-                    case '16QAM'
-                        modString = 'modulation_scheme::QAM16';
-                    case '64QAM'
-                        modString = 'modulation_scheme::QAM64';
-                    case '256QAM'
-                        modString = 'modulation_scheme::QAM256';
-                end
-            end
+            modString = srsModulationFromMatlab(obj.pusch.Modulation, 'full');
 
             puschCellConfig = {...
                 obj.pusch.RNTI, ...                         % rnti
@@ -383,12 +367,12 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
                 obj.pusch.NumAntennaPorts, ...              % nof_tx_layers
                 obj.placeholderReIndices, ...               % placeholders
                 portsString, ...                            % rx_ports
-		        };
+                };
 
             testCaseContext = { ...
                 noiseVar, ...        % noise_var
                 puschCellConfig, ... % config
-		        };
+                };
 
             % Channel estimate dimensions.
             estimatesDims = {...
