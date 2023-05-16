@@ -1,3 +1,43 @@
+%srsChEqualizerUnittest Unit tests for the channel equalizer.
+%   This class implements unit tests for the channel equalizer functions using
+%   the matlab.unittest framework. The simplest use consists in creating an object with
+%      testCase = srsChEqualizerUnittest
+%   and then running all the tests with
+%      testResults = testCase.run
+%
+%   srsChEqualizerUnittest Properties (Constant):
+%
+%   srsBlock      - The tested block (i.e., 'channel_equalizer').
+%   srsBlockType  - The type of the tested block, including layer
+%                   (i.e., 'phy/upper/equalization').
+%
+%   srsChEqualizerUnittest Properties (ClassSetupParameter):
+%
+%   outputPath  - Path to the folder where the test results are stored.
+%
+%   srsChEqualizerUnittest Properties (TestParameter):
+%
+%   channelSize - Channel dimensions, i.e., number of receive ports and
+%                 transmit layers.
+%   eqType      - Equalization algorithm, either MMSE or ZF.
+%
+%   srsChEqualizerUnittest Methods:
+%
+%   MSEsimulation - Computes the expected (nominal) and empirical SNR and
+%                   MSE achieved by the channel equalizer.
+%
+%   srsChEqualizerUnittest Methods (TestTags = {'testvector'}):
+%
+%   testvectorGenerationCases - Generates a test vector according to the provided
+%                               parameters.
+%
+%   srsChEqualizerUnittest Methods (Access = protected):
+%
+%   addTestIncludesToHeaderFile     - Adds include directives to the test header file.
+%   addTestDefinitionToHeaderFile   - Adds details (e.g., type/variable declarations)
+%                                     to the test header file.
+%
+%  See also matlab.unittest.
 classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
     properties (Constant)
         %Name of the tested block.
@@ -13,9 +53,9 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
     end
 
     properties (TestParameter)
-        %Channel matrix size.
-        %   The first entry is the number of Rx antennas, the second entry is the
-        %   number of Tx layers.
+        %Channel dimensions.
+        %   The first entry is the number of receive antenna ports, the
+        %   second entry is the number of transmit layers.
         channelSize = {[1, 1], [2, 1], [3, 1], [4, 1], [2, 2]}
 
         %Equalizer type.
@@ -80,6 +120,8 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
 
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(obj, channelSize, eqType)
+        %testvectorGenerationCases Generates a test vector for the given
+        %   channel size and equalizer type.
             import srsTest.helpers.writeComplexFloatFile
             import srsTest.helpers.writeFloatFile
             import srsTest.helpers.cellarray2str
@@ -160,11 +202,16 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
     end % methods (Test, TestTags = {'testvector'})
 
     methods
-        function [mse, mseNom, snrEmp, snrNom] = MSEsimulation(obj, channelSize, eqType)
+        function [mseEmp, mseNom, snrEmp, snrNom] = MSEsimulation(obj, channelSize, eqType)
+            %MSEsimulation Computes the expected (nominal) and empirical 
+            %   SNR and MSE achieved by the channel equalizer for the given
+            %   channel size, i.e., number of receive ports and transmit
+            %   layers, and equalizer type. The results are computed for
+            %   each of the generated REs.
             obj.createChTensor(channelSize);
 
             [nSC, nSym, ~, nTx] = size(obj.channelTensor);
-            mse = zeros(nSC, nSym, nTx);
+            mseEmp = zeros(nSC, nSym, nTx);
             nRuns = 1000;
 
             if nargout > 1
@@ -175,7 +222,7 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
 
             for iRun = 1:nRuns
                 [eqSymbols, txSymbols] = obj.runCase(eqType, 1);
-                mse = mse + abs(eqSymbols - txSymbols).^2 / nRuns;
+                mseEmp = mseEmp + abs(eqSymbols - txSymbols).^2 / nRuns;
 
                 if nargout > 1
                     [sigPwrTmp, noisePwrTmp] = obj.computePowers(eqSymbols, txSymbols, eqType);
