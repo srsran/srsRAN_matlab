@@ -3,14 +3,15 @@
 %   Random Access Channel transmission. PRACH is an object of type 
 %   nrPRACHConfig containing the paramaters necessary for the detection.
 %   FILENAME indicates the file that contains the IQ samples and OFFSET is
-%   the number of samples before the first symbol in the file.
+%   the number of samples before the first symbol in the file (this can be
+%   found in the log).
 %
 %   Example:
 %      prach = nrPRACHConfig;
 %      prach.SequenceIndex = 1;
 %      prach.PreambleIndex = 48;
 %
-%      srsTest.analizers.srsPRACHAnalizer(prach, '~/Downloads/ul_symbol_handler', 626733);
+%      srsPRACHAnalizer(prach, '~/Downloads/ul_symbol_handler', 626733);
 function srsPRACHAnalizer(prach, filename, offset)
     import srsTest.helpers.readComplexFloatFile
 

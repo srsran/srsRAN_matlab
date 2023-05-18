@@ -31,8 +31,7 @@
 %       '"tbs": 18432'...
 %       '}'];
 %   
-%   srsTest.analizers.srsPUSCHAnalizer(jsonConfig, '/tmp/ul_rg_0.bin');
-%   
+%   srsPUSCHAnalizer(jsonConfig, '/tmp/ul_rg_0.bin');
 
 function srsPUSCHAnalizer(jsonConfig, rgFilename, rgOffset, rgSize)
 %% Imprt dependencies.

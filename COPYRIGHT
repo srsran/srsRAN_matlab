@@ -1,3 +1,9 @@
 Files: *
 Copyright: 2021-2023, Software Radio Systems Limited.
 License:   See LICENSE file
+
+The following files are used within srsRAN-matlab:
+
+Files:     apps/simulators/PUSCHBLER/HARQEntity.m
+           apps/simulators/PUSCHBLER/hSkipWeakTimingOffset.m
+Copyright: 2019-2021 The MathWorks, Inc.
