@@ -5,6 +5,21 @@
 %   scheme index MCS (0-28) and associated table MCSTABLE ('qam64', 'qam256',
 %   'qam64LowSE'), as defined in TS 38.214 Section 5.1.3.1.
 
+%   Copyright 2021-2023 Software Radio Systems Limited
+%
+%   This file is part of srsRAN-matlab.
+%
+%   srsRAN-matlab is free software: you can redistribute it and/or
+%   modify it under the terms of the BSD 2-Clause License.
+%
+%   srsRAN-matlab is distributed in the hope that it will be useful,
+%   but WITHOUT ANY WARRANTY; without even the implied warranty of
+%   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+%   BSD 2-Clause License for more details.
+%
+%   A copy of the BSD 2-Clause License can be found in the LICENSE
+%   file in the top-level directory of this distribution.
+
 function [targetCodeRate, Qm] = srsExpandMCS(mcs, mcsTable)
 
     % TS 38.214, Table 5.1.3.1-1: MCS index table 1 for PDSCH
