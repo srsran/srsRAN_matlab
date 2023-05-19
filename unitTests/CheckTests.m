@@ -222,23 +222,23 @@ classdef CheckTests < matlab.unittest.TestCase
         %   the given name are correct.
 
             import matlab.unittest.TestSuite
+            import matlab.unittest.parameters.Parameter
 
             className = testName(1:end-2);
             classMeta = meta.class.fromName(className);
 
-            % Get the block name associated to the test.
-            props = {classMeta.PropertyList(:).Name};
-            [~, blockIdx] = ismember('srsBlock', props);
-            blockVal = classMeta.PropertyList(blockIdx).DefaultValue;
+            workDir = fullfile(obj.tmpOutputPath, className);
+            extParams = Parameter.fromData('outputPath', {workDir});
 
             % Check whether the class tests a mex wrapper.
-            taggedMEX = TestSuite.fromClass(classMeta, 'Tag', 'testmex');
+            taggedMEX = TestSuite.fromClass(classMeta, 'Tag', 'testmex', ...
+                'ExternalParameters', extParams);
             obj.assumeNotEmpty(taggedMEX);
 
             try
                 assertSuccess(taggedMEX(1).run());
             catch
-                msg = sprintf('The mex wrapper test for %s couldn''t run.', className);
+                msg = sprintf('The mex test for %s couldn''t run.', className);
                 obj.assertFail(msg);
             end
 
