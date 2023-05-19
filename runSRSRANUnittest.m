@@ -15,7 +15,7 @@
 function test = runSRSRANUnittest(blockName, testType)
     arguments
         blockName char {mustBeSRSBlock}
-        testType  char {mustBeMember(testType, {'testvector'})}
+        testType  char {mustBeMember(testType, {'testvector', 'testmex'})}
     end
 
     import matlab.unittest.TestSuite
@@ -29,6 +29,9 @@ function test = runSRSRANUnittest(blockName, testType)
         unittestClass = name2Class(blockName);
         nrPHYtestvectorTests = TestSuite.fromClass(unittestClass, ...
             'Tag', testType, 'ExternalParameters', extParams);
+        if isempty(nrPHYtestvectorTests)
+            warning('No ''%s'' tests for the ''%s'' block.', testType, blockName);
+        end
     else
         nrPHYtestvectorTests = TestSuite.fromFolder('.', 'Tag', testType, ...
             'ExternalParameters', extParams);
