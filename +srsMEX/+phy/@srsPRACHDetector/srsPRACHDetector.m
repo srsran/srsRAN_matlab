@@ -60,7 +60,7 @@ classdef srsPRACHDetector < matlab.System
 
         function PRACHdetectionResult = stepImpl(obj, PRACHSymbols, PRACHConfig)
             arguments
-                obj          (1, 1) srsTest.phy.srsPRACHDetector
+                obj          (1, 1) srsMEX.phy.srsPRACHDetector
                 PRACHSymbols (:, 1) double
                 PRACHConfig  (1, 1) struct
             end

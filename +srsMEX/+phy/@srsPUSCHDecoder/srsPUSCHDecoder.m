@@ -4,7 +4,7 @@
 %
 %   PUSCHDEC = srsPUSCHDecoder(SBPDESC) creates a PHY Uplink Shared Channel decoder
 %   object with a softbuffer pool defined by structure SBPDESC (whose fields are
-%   dumped into property <a href="matlab:help srsTest.phy.srsPUSCHDecoder/softbufferPoolDescription">softbufferPoolDescription</a>).
+%   dumped into property <a href="matlab:help srsMEX.phy.srsPUSCHDecoder/softbufferPoolDescription">softbufferPoolDescription</a>).
 %
 %   srsPUSCHDecoder Properties (Nontunable):
 %
@@ -78,7 +78,7 @@ classdef srsPUSCHDecoder < matlab.System
         %      nof_codeblocks - the number of codeblocks forming the codeword.
 
             arguments
-                obj       (1, 1) srsTest.phy.srsPUSCHDecoder
+                obj       (1, 1) srsMEX.phy.srsPUSCHDecoder
                 harqBufID (1, 1) struct
             end
 
@@ -111,7 +111,7 @@ classdef srsPUSCHDecoder < matlab.System
 
         function [transportBlock, stats] = stepImpl(obj, llrs, newData, segConfig, harqBufID)
             arguments
-                obj       (1, 1) srsTest.phy.srsPUSCHDecoder
+                obj       (1, 1) srsMEX.phy.srsPUSCHDecoder
                 llrs      (:, 1) int8
                 newData   (1, 1) logical
                 segConfig (1, 1) struct

@@ -406,7 +406,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
         %   srsRAN C++ component. The test is considered as passed if the 
         %   recovered soft bits are coinciding with those originally transmitted.
 
-            import srsTest.phy.srsPUSCHDemodulator
+            import srsMEX.phy.srsPUSCHDemodulator
             import srsMatlabWrappers.phy.upper.channel_modulation.srsDemodulator
             import srsMatlabWrappers.phy.upper.equalization.srsChannelEqualizer
 

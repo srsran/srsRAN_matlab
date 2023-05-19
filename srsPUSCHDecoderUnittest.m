@@ -284,7 +284,7 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
         %   as passed if the transmitted and received transport blocks are equal.
 
             import srsMatlabWrappers.phy.helpers.srsConfigureULSCHEncoder
-            import srsTest.phy.srsPUSCHDecoder
+            import srsMEX.phy.srsPUSCHDecoder
             import srsTest.helpers.bitPack
 
             setupsimulation(obj, SymbolAllocation, PRBAllocation, mcs);

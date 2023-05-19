@@ -363,7 +363,7 @@ classdef PUSCHBLER < matlab.System
                 [cc, mm] = srsMatlabWrappers.phy.helpers.srsExpandMCS(obj.MCSIndex, obj.MCSTable);
                 obj.TargetCodeRate = cc / 1024;
                 mString = srsMatlabWrappers.phy.helpers.srsGetModulation(mm);
-                obj.Modulation = mString{1};
+                obj.Modulation = mString;
             end
 
             % Carrier and PUSCH Configuration.
@@ -479,7 +479,7 @@ classdef PUSCHBLER < matlab.System
             obj.PUSCHIndicesInfo = puschIndicesInfo;
 
             [configSRS, obj.SegmentCfg] = srsPUSCHDecConfig(obj.Carrier, obj.PUSCH, obj.PUSCHExtension);
-            obj.DecodeULSCHsrs = srsTest.phy.srsPUSCHDecoder('maxCodeblockSize', configSRS.max_codeblock_size, ...
+            obj.DecodeULSCHsrs = srsMEX.phy.srsPUSCHDecoder('maxCodeblockSize', configSRS.max_codeblock_size, ...
                 'maxSoftbuffers', configSRS.max_softbuffers, 'maxCodeblocks', configSRS.max_nof_codeblocks);
 
         end % of setupImpl

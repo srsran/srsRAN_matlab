@@ -45,7 +45,7 @@ classdef srsPUSCHDemodulator < matlab.System
     methods (Access = protected)
         function schSoftBits = stepImpl(obj, rxSymbols, puschIndices, ce, PUSCHDemConfig, noiseVar)
             arguments
-                obj            (1, 1) srsTest.phy.srsPUSCHDemodulator
+                obj            (1, 1) srsMEX.phy.srsPUSCHDemodulator
                 rxSymbols      (:, 1) double
                 puschIndices   (:, 3) double
                 ce             (:, 1) double

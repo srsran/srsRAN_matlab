@@ -365,7 +365,7 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
 
                 % apply clang-format to header file
                 formatCmd = sprintf(['LD_LIBRARY_PATH=/usr/lib clang-format -i', ...
-                    ' -style=file:"sourceMex/.clang-format" %s/%s_test_data.h'], outputPath, obj.srsBlock);
+                    ' -style=file:"+srsMEX/source/.clang-format" %s/%s_test_data.h'], outputPath, obj.srsBlock);
                 system(formatCmd);
             end % of ~isempty(tmp_h)
         end % of copyTestVectors(obj, outputPath)

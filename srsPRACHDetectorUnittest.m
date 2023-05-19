@@ -262,7 +262,7 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
     
             import srsMatlabWrappers.phy.upper.channel_processors.srsPRACHgenerator
             import srsMatlabWrappers.phy.upper.channel_processors.srsPRACHdemodulator
-            import srsTest.phy.srsPRACHDetector
+            import srsMEX.phy.srsPRACHDetector
     
             % Configure the test.
             setupsimulation(obj, DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet, ZeroCorrelationZone, RBOffset);
