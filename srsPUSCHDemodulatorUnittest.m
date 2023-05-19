@@ -179,8 +179,8 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
     methods (Access = private)
         function setupsimulation(obj, DMRSConfigurationType, Modulation, nofRxPorts)
         % Sets secondary simulation variables.
-            import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
-            import srsMatlabWrappers.phy.helpers.srsConfigurePUSCH
+            import srsLib.phy.helpers.srsConfigureCarrier
+            import srsLib.phy.helpers.srsConfigurePUSCH
 
             % Configure carrier.
             NCellID = randi([0, 1007]);
@@ -275,9 +275,9 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
         %testvectorGenerationCases Generates a test vector for the given
         %   DMRSConfigurationType, Modulation, probPlaceholder and NumRxPorts.
 
-            import srsMatlabWrappers.phy.upper.channel_modulation.srsDemodulator
-            import srsMatlabWrappers.phy.upper.equalization.srsChannelEqualizer
-            import srsMatlabWrappers.phy.helpers.srsModulationFromMatlab
+            import srsLib.phy.upper.channel_modulation.srsDemodulator
+            import srsLib.phy.upper.equalization.srsChannelEqualizer
+            import srsLib.phy.helpers.srsModulationFromMatlab
             import srsTest.helpers.cellarray2str
             import srsTest.helpers.symbolAllocationMask2string
             import srsTest.helpers.writeResourceGridEntryFile
@@ -407,8 +407,8 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
         %   recovered soft bits are coinciding with those originally transmitted.
 
             import srsMEX.phy.srsPUSCHDemodulator
-            import srsMatlabWrappers.phy.upper.channel_modulation.srsDemodulator
-            import srsMatlabWrappers.phy.upper.equalization.srsChannelEqualizer
+            import srsLib.phy.upper.channel_modulation.srsDemodulator
+            import srsLib.phy.upper.equalization.srsChannelEqualizer
 
             % Configure the test.
             setupsimulation(obj, DMRSConfigurationType, Modulation, NumRxPorts);

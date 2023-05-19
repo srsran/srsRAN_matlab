@@ -102,11 +102,11 @@ classdef srsNZPCSIRSGeneratorUnittest < srsTest.srsBlockUnittest
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.matlab2srsCyclicPrefix
 
-            import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
-            import srsMatlabWrappers.phy.helpers.srsConfigureCSIRS
-            import srsMatlabWrappers.phy.upper.signal_processors.srsCSIRSnzp
-            import srsMatlabWrappers.phy.helpers.srsCSIRSGetNofFreqRefs
-            import srsMatlabWrappers.phy.helpers.srsCSIRSValidateConfig
+            import srsLib.phy.helpers.srsConfigureCarrier
+            import srsLib.phy.helpers.srsConfigureCSIRS
+            import srsLib.phy.upper.signal_processors.srsCSIRSnzp
+            import srsLib.phy.helpers.srsCSIRSGetNofFreqRefs
+            import srsLib.phy.helpers.srsCSIRSValidateConfig
 
             % Current fixed parameter values.
             NSizeGrid = 272;

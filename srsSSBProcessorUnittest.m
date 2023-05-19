@@ -105,15 +105,15 @@ classdef srsSSBProcessorUnittest < srsTest.srsBlockUnittest
         %   random NCellID and a random codeword.
 
             import srsTest.helpers.cellarray2str
-            import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
-            import srsMatlabWrappers.phy.helpers.srsSSBgetNumerology
-            import srsMatlabWrappers.phy.helpers.srsSSBgetFirstSymbolIndex
-            import srsMatlabWrappers.phy.helpers.srsSSBgetFirstSubcarrierIndex
-            import srsMatlabWrappers.phy.upper.signal_processors.srsPSS
-            import srsMatlabWrappers.phy.upper.signal_processors.srsSSS
-            import srsMatlabWrappers.phy.upper.signal_processors.srsPBCHdmrs
-            import srsMatlabWrappers.phy.upper.channel_processors.srsPBCHencoder
-            import srsMatlabWrappers.phy.upper.channel_processors.srsPBCHmodulator
+            import srsLib.phy.helpers.srsConfigureCarrier
+            import srsLib.phy.helpers.srsSSBgetNumerology
+            import srsLib.phy.helpers.srsSSBgetFirstSymbolIndex
+            import srsLib.phy.helpers.srsSSBgetFirstSubcarrierIndex
+            import srsLib.phy.upper.signal_processors.srsPSS
+            import srsLib.phy.upper.signal_processors.srsSSS
+            import srsLib.phy.upper.signal_processors.srsPBCHdmrs
+            import srsLib.phy.upper.channel_processors.srsPBCHencoder
+            import srsLib.phy.upper.channel_processors.srsPBCHmodulator
             import srsTest.helpers.writeResourceGridEntryFile
 
             % generate a unique test ID by looking at the number of files generated so far

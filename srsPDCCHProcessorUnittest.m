@@ -98,14 +98,14 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
 
         import srsTest.helpers.array2str
         import srsTest.helpers.writeResourceGridEntryFile
-        import srsMatlabWrappers.phy.upper.channel_processors.srsPDCCHmodulator
-        import srsMatlabWrappers.phy.upper.signal_processors.srsPDCCHdmrs
-        import srsMatlabWrappers.ran.pdcch.srsPDCCHCandidatesUE
+        import srsLib.phy.upper.channel_processors.srsPDCCHmodulator
+        import srsLib.phy.upper.signal_processors.srsPDCCHdmrs
+        import srsLib.ran.pdcch.srsPDCCHCandidatesUE
         import srsTest.helpers.writeUint8File
-        import srsMatlabWrappers.phy.helpers.srsConfigurePDCCH
-        import srsMatlabWrappers.phy.helpers.srsConfigureCORESET
-        import srsMatlabWrappers.phy.helpers.srsConfigureSearchSpace
-        import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
+        import srsLib.phy.helpers.srsConfigurePDCCH
+        import srsLib.phy.helpers.srsConfigureCORESET
+        import srsLib.phy.helpers.srsConfigureSearchSpace
+        import srsLib.phy.helpers.srsConfigureCarrier
         import srsTest.helpers.RBallocationMask2string
 
         % Generate a unique test ID.

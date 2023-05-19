@@ -84,8 +84,8 @@ classdef srsUCIDecoderUnittest < srsTest.srsBlockUnittest
         %testvectorGenerationCases Generates a test vector for the given A and
         %   Modulation. Other parameters (e.g., E) are generated randomly.
 
-            import srsMatlabWrappers.phy.helpers.srsGetBitsSymbol
-            import srsMatlabWrappers.phy.helpers.srsModulationFromMatlab
+            import srsLib.phy.helpers.srsGetBitsSymbol
+            import srsLib.phy.helpers.srsModulationFromMatlab
             import srsTest.helpers.writeUint8File
             import srsTest.helpers.writeInt8File
 

@@ -101,11 +101,11 @@ classdef srsPDCCHdmrsUnittest < srsTest.srsBlockUnittest
         %   CCEREGMapping and AggregationLevel, while using a random NCellID and a random NSlot.
 
             import srsTest.helpers.cellarray2str
-            import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
-            import srsMatlabWrappers.phy.helpers.srsConfigureCORESET
-            import srsMatlabWrappers.phy.helpers.srsConfigurePDCCH
-            import srsMatlabWrappers.phy.upper.signal_processors.srsPDCCHdmrs
-            import srsMatlabWrappers.phy.helpers.srsGetUniqueSymbolsIndices
+            import srsLib.phy.helpers.srsConfigureCarrier
+            import srsLib.phy.helpers.srsConfigureCORESET
+            import srsLib.phy.helpers.srsConfigurePDCCH
+            import srsLib.phy.upper.signal_processors.srsPDCCHdmrs
+            import srsLib.phy.helpers.srsGetUniqueSymbolsIndices
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.cellarray2str
             import srsTest.helpers.RBallocationMask2string

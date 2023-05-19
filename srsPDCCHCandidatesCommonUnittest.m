@@ -97,7 +97,7 @@ classdef srsPDCCHCandidatesCommonUnittest < srsTest.srsBlockUnittest
         end
 
         import srsTest.helpers.cellarray2str
-        import srsMatlabWrappers.ran.pdcch.srsPDCCHCandidatesCommon
+        import srsLib.ran.pdcch.srsPDCCHCandidatesCommon
 
         candidates = srsPDCCHCandidatesCommon(numCCEs, numCandidates, aggregationLevel);
 

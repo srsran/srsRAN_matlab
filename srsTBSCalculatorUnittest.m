@@ -124,7 +124,7 @@ classdef srsTBSCalculatorUnittest < srsTest.srsBlockUnittest
         %testvectorGenerationCases Generates a test vector for the
         %   modOrder, nlayers, nprb, ndmrsprb, tcr, xoh and tbscaling.
 
-        import srsMatlabWrappers.phy.helpers.srsGetModulation
+        import srsLib.phy.helpers.srsGetModulation
         import srsTest.helpers.cellarray2str
         import srsTest.helpers.mcsDescription2Cell
 

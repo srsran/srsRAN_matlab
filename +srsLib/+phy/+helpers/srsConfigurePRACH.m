@@ -27,7 +27,7 @@ end
 
 
 function prach = setPreambleFormat(prach, PreambleFormat)
-    import srsMatlabWrappers.phy.helpers.srsSelectPRACHConfigurationIndex
+    import srsLib.phy.helpers.srsSelectPRACHConfigurationIndex
     
     % Select configuration index according to the duplex mode and preamble
     % format.

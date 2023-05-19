@@ -103,7 +103,7 @@ classdef srsPDCCHCandidatesUeUnittest < srsTest.srsBlockUnittest
         slotNum = randi([0, 159]);
 
         import srsTest.helpers.cellarray2str
-        import srsMatlabWrappers.ran.pdcch.srsPDCCHCandidatesUE
+        import srsLib.ran.pdcch.srsPDCCHCandidatesUE
 
         candidates = srsPDCCHCandidatesUE(numCCEs, numCandidates, aggregationLevel, CoresetId, rnti, slotNum);
 

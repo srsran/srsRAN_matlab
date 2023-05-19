@@ -105,9 +105,9 @@ classdef srsULSCHInfoUnittest < srsTest.srsBlockUnittest
         %   Modulation, targetCodeRate, nofHarqAckBits, nofCsiPart1Bits and
         %   nofCsiPart2Bits.
 
-            import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
-            import srsMatlabWrappers.phy.helpers.srsConfigurePUSCH
-            import srsMatlabWrappers.phy.upper.signal_processors.srsPUSCHdmrs
+            import srsLib.phy.helpers.srsConfigureCarrier
+            import srsLib.phy.helpers.srsConfigurePUSCH
+            import srsLib.phy.upper.signal_processors.srsPUSCHdmrs
             import srsTest.helpers.cellarray2str
             import srsTest.helpers.symbolAllocationMask2string
             import srsTest.helpers.mcsDescription2Cell

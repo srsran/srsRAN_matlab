@@ -85,7 +85,7 @@ classdef srsPBCHdmrsUnittest < srsTest.srsBlockUnittest
         %   Lmax and nHF, while using a random NCellID.
 
             import srsTest.helpers.cellarray2str
-            import srsMatlabWrappers.phy.upper.signal_processors.srsPBCHdmrs
+            import srsLib.phy.upper.signal_processors.srsPBCHdmrs
             import srsTest.helpers.writeResourceGridEntryFile
 
             % generate a unique test ID by looking at the number of files generated so far

@@ -139,9 +139,9 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
         %testvectorGenerationCases Generates a test vector for the given numerology, format and frequency hopping,
         %  while using a random NCellID, random NSlot and random symbol and PRB length.
 
-            import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
-            import srsMatlabWrappers.phy.helpers.srsConfigurePUCCH
-            import srsMatlabWrappers.phy.upper.signal_processors.srsPUCCHdmrs
+            import srsLib.phy.helpers.srsConfigureCarrier
+            import srsLib.phy.helpers.srsConfigurePUCCH
+            import srsLib.phy.upper.signal_processors.srsPUCCHdmrs
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.cellarray2str
             import srsTest.helpers.logical2str;

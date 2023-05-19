@@ -86,7 +86,7 @@ classdef srsPBCHModulatorUnittest < srsTest.srsBlockUnittest
 
             import srsTest.helpers.cellarray2str
             import srsTest.helpers.writeUint8File
-            import srsMatlabWrappers.phy.upper.channel_processors.srsPBCHmodulator
+            import srsLib.phy.upper.channel_processors.srsPBCHmodulator
             import srsTest.helpers.writeResourceGridEntryFile
 
             % generate a unique test ID by looking at the number of files generated so far

@@ -46,9 +46,9 @@
 
 function srsPUSCHAnalizer(jsonConfig, rgFilename, rgOffset, rgSize)
 %% Imprt dependencies.
-import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
-import srsMatlabWrappers.phy.helpers.srsConfigurePUSCH
-import srsMatlabWrappers.phy.helpers.srsConfigureULSCHDecoder
+import srsLib.phy.helpers.srsConfigureCarrier
+import srsLib.phy.helpers.srsConfigurePUSCH
+import srsLib.phy.helpers.srsConfigureULSCHDecoder
 import srsTest.helpers.readComplexFloatFile
 
 %% Prepare configuration.

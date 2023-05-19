@@ -108,8 +108,8 @@ classdef srsLDPCRateMatcherUnittest < srsTest.srsBlockUnittest
         %testvectorGenerationCases Generates a test vector for the given base graph,
         %   rate-matched length, redundancy version, modulation scheme and LBRM flag.
 
-            import srsMatlabWrappers.phy.helpers.srsGetBitsSymbol
-            import srsMatlabWrappers.phy.helpers.srsModulationFromMatlab
+            import srsLib.phy.helpers.srsGetBitsSymbol
+            import srsLib.phy.helpers.srsModulationFromMatlab
             import srsTest.helpers.writeUint8File
             import srsTest.helpers.logical2str
 

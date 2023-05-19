@@ -126,8 +126,8 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
         %   identifier, BWP dimensions, slot number, RNTI, scrambling
         %   identifiers, frequency allocation and DM-RS additional
         %   positions are randomly selected.
-            import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
-            import srsMatlabWrappers.phy.helpers.srsConfigurePUSCH
+            import srsLib.phy.helpers.srsConfigureCarrier
+            import srsLib.phy.helpers.srsConfigurePUSCH
             import srsTest.helpers.rbAllocationIndexes2String
             import srsTest.helpers.symbolAllocationMask2string
             import srsTest.helpers.bitPack

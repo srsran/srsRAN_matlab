@@ -115,11 +115,11 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
         %   PRB is determined based on the UCI payload size and maximum code
         %   rate.
 
-            import srsMatlabWrappers.phy.upper.channel_modulation.srsDemodulator
-            import srsMatlabWrappers.phy.upper.equalization.srsChannelEqualizer
+            import srsLib.phy.upper.channel_modulation.srsDemodulator
+            import srsLib.phy.upper.equalization.srsChannelEqualizer
             import srsTest.helpers.writeUint8File
-            import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
-            import srsMatlabWrappers.phy.helpers.srsConfigurePUCCH
+            import srsLib.phy.helpers.srsConfigureCarrier
+            import srsLib.phy.helpers.srsConfigurePUCCH
             import srsTest.helpers.matlab2srsCyclicPrefix
             import srsTest.helpers.writeResourceGridEntryFile
 

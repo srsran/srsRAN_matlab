@@ -136,7 +136,7 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
         function setupsimulation(obj, DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet, ZeroCorrelationZone, RBOffset)
         % Sets secondary simulation variables.
 
-            import srsMatlabWrappers.phy.helpers.srsConfigurePRACH
+            import srsLib.phy.helpers.srsConfigurePRACH
         
             % Generate carrier configuration.
             obj.carrier = nrCarrierConfig;
@@ -168,8 +168,8 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
         %   and PreambleIndex are generated randomly.
 
             import srsTest.helpers.writeComplexFloatFile
-            import srsMatlabWrappers.phy.upper.channel_processors.srsPRACHgenerator
-            import srsMatlabWrappers.phy.upper.channel_processors.srsPRACHdemodulator
+            import srsLib.phy.upper.channel_processors.srsPRACHgenerator
+            import srsLib.phy.upper.channel_processors.srsPRACHdemodulator
             
             % Generate a unique test ID.
             TestID = obj.generateTestID;
@@ -260,8 +260,8 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
             %   wrapper of the SRSRAN C++ component. The test is considered
             %   as passed if the detected PRACH is equal to the transmitted one.
     
-            import srsMatlabWrappers.phy.upper.channel_processors.srsPRACHgenerator
-            import srsMatlabWrappers.phy.upper.channel_processors.srsPRACHdemodulator
+            import srsLib.phy.upper.channel_processors.srsPRACHgenerator
+            import srsLib.phy.upper.channel_processors.srsPRACHdemodulator
             import srsMEX.phy.srsPRACHDetector
     
             % Configure the test.

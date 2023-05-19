@@ -119,9 +119,9 @@ classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
         %testvectorGenerationCases generates a test vector for the given numerology,
         %   symbol allocation, frequency hopping, number of ACK and SR bits.
 
-            import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
-            import srsMatlabWrappers.phy.helpers.srsConfigurePUCCH
-            import srsMatlabWrappers.phy.upper.channel_processors.srsPUCCH1
+            import srsLib.phy.helpers.srsConfigureCarrier
+            import srsLib.phy.helpers.srsConfigurePUCCH
+            import srsLib.phy.upper.channel_processors.srsPUCCH1
             import srsTest.helpers.matlab2srsCyclicPrefix
             import srsTest.helpers.matlab2srsPUCCHGroupHopping
             import srsTest.helpers.writeResourceGridEntryFile

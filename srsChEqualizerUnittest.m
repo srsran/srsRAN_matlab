@@ -260,7 +260,7 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
         end % of function createChTensor(obj, channelSize)
 
         function [eqSymbols, txSymbols, rxSymbols, eqNoiseVars] = runCase(obj, eqType, txScaling)
-            import srsMatlabWrappers.phy.upper.equalization.srsChannelEqualizer
+            import srsLib.phy.upper.equalization.srsChannelEqualizer
             
             [nSC, nSym, nRx, nTx] = size(obj.channelTensor);
 

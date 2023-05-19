@@ -95,10 +95,10 @@ classdef srsPDSCHdmrsUnittest < srsTest.srsBlockUnittest
         %   DMRSConfigurationType. NCellID, NSlot and PRB are randomly generated.
 
             import srsTest.helpers.cellarray2str
-            import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
-            import srsMatlabWrappers.phy.helpers.srsConfigurePDSCHdmrs
-            import srsMatlabWrappers.phy.helpers.srsConfigurePDSCH
-            import srsMatlabWrappers.phy.upper.signal_processors.srsPDSCHdmrs
+            import srsLib.phy.helpers.srsConfigureCarrier
+            import srsLib.phy.helpers.srsConfigurePDSCHdmrs
+            import srsLib.phy.helpers.srsConfigurePDSCH
+            import srsLib.phy.upper.signal_processors.srsPDSCHdmrs
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.symbolAllocationMask2string
             import srsTest.helpers.RBallocationMask2string

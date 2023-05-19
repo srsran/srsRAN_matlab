@@ -72,9 +72,9 @@ classdef srsModulationMapperUnittest < srsTest.srsBlockUnittest
         %testvectorGenerationCases(TESTCASE, NSYMBOLS, MODSCHEME) Generates a test vector
         %   for the given number of symbols NSYMBOLS and modulation scheme and MODSCHEME.
 
-            import srsMatlabWrappers.phy.upper.channel_modulation.srsModulator
-            import srsMatlabWrappers.phy.helpers.srsModulationFromMatlab
-            import srsMatlabWrappers.phy.helpers.srsGetBitsSymbol
+            import srsLib.phy.upper.channel_modulation.srsModulator
+            import srsLib.phy.helpers.srsModulationFromMatlab
+            import srsLib.phy.helpers.srsGetBitsSymbol
             import srsTest.helpers.writeUint8File
             import srsTest.helpers.writeComplexFloatFile
 

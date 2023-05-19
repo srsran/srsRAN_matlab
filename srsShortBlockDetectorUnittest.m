@@ -88,8 +88,8 @@ classdef srsShortBlockDetectorUnittest < srsTest.srsBlockUnittest
 
             import srsTest.helpers.writeUint8File
             import srsTest.helpers.writeInt8File
-            import srsMatlabWrappers.phy.helpers.srsGetModulation
-            import srsMatlabWrappers.phy.helpers.srsModulationFromMatlab
+            import srsLib.phy.helpers.srsGetModulation
+            import srsLib.phy.helpers.srsModulationFromMatlab
 
             % When encoding more than 2 bits, the output doesn't depend on the
             % modulation. So we execute the test only for modOrder == 1.

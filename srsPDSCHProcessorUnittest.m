@@ -123,10 +123,10 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
         %   allocation, slot number, RNTI, scrambling identifiers and DM-RS 
         %   additional positions are randomly generated.
 
-            import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
-            import srsMatlabWrappers.phy.helpers.srsCSIRSValidateConfig
-            import srsMatlabWrappers.phy.helpers.srsCSIRS2ReservedCell
-            import srsMatlabWrappers.phy.helpers.srsModulationFromMatlab
+            import srsLib.phy.helpers.srsConfigureCarrier
+            import srsLib.phy.helpers.srsCSIRSValidateConfig
+            import srsLib.phy.helpers.srsCSIRS2ReservedCell
+            import srsLib.phy.helpers.srsModulationFromMatlab
             import srsTest.helpers.writeUint8File
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.rbAllocationIndexes2String

@@ -52,7 +52,7 @@ classdef srsLDPCEncoderUnittest < srsTest.srsBlockUnittest
         baseGraph = {1, 2}
 
         %Lifting size accepted by NR LDPC codes.
-        liftSize = num2cell(srsMatlabWrappers.phy.upper.channel_coding.ldpc.srsLDPCLiftingSizes)
+        liftSize = num2cell(srsLib.phy.upper.channel_coding.ldpc.srsLDPCLiftingSizes)
     end
 
     methods (Access = protected)

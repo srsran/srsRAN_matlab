@@ -123,8 +123,8 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
         %   and PreambleIndex are generated randomly.
 
             import srsTest.helpers.writeComplexFloatFile
-            import srsMatlabWrappers.phy.helpers.srsConfigurePRACH
-            import srsMatlabWrappers.phy.upper.channel_processors.srsPRACHgenerator
+            import srsLib.phy.helpers.srsConfigurePRACH
+            import srsLib.phy.upper.channel_processors.srsPRACHgenerator
 
             % Generate a unique test ID
             TestID = testCase.generateTestID;

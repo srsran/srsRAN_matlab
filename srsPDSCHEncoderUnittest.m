@@ -88,11 +88,11 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
         %   PRBAllocation and mcs. Other parameters (e.g., the HARQProcessID) are
         %   generated randomly.
 
-            import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
-            import srsMatlabWrappers.phy.helpers.srsConfigureDLSCHEncoder
-            import srsMatlabWrappers.phy.helpers.srsConfigurePDSCH
-            import srsMatlabWrappers.phy.helpers.srsExpandMCS
-            import srsMatlabWrappers.phy.helpers.srsGetModulation
+            import srsLib.phy.helpers.srsConfigureCarrier
+            import srsLib.phy.helpers.srsConfigureDLSCHEncoder
+            import srsLib.phy.helpers.srsConfigurePDSCH
+            import srsLib.phy.helpers.srsExpandMCS
+            import srsLib.phy.helpers.srsGetModulation
             import srsTest.helpers.bitPack
             import srsTest.helpers.writeUint8File
 

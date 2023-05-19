@@ -360,9 +360,9 @@ classdef PUSCHBLER < matlab.System
 
             % Expand modulation and coding scheme.
             if ~strcmp(obj.MCSTable, 'custom')
-                [cc, mm] = srsMatlabWrappers.phy.helpers.srsExpandMCS(obj.MCSIndex, obj.MCSTable);
+                [cc, mm] = srsLib.phy.helpers.srsExpandMCS(obj.MCSIndex, obj.MCSTable);
                 obj.TargetCodeRate = cc / 1024;
-                mString = srsMatlabWrappers.phy.helpers.srsGetModulation(mm);
+                mString = srsLib.phy.helpers.srsGetModulation(mm);
                 obj.Modulation = mString;
             end
 

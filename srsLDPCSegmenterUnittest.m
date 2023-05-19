@@ -90,7 +90,7 @@ classdef srsLDPCSegmenterUnittest < srsTest.srsBlockUnittest
         function testvectorGenerationCases(obj, cases)
         %testvectorGenerationCases Generates a test vector for the given configuration.
 
-            import srsMatlabWrappers.phy.upper.channel_coding.ldpc.srsLDPCsegmenter
+            import srsLib.phy.upper.channel_coding.ldpc.srsLDPCsegmenter
             import srsTest.helpers.bitPack
             import srsTest.helpers.writeUint8File
 

@@ -100,11 +100,11 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
 
             import srsTest.helpers.array2str
             import srsTest.helpers.writeResourceGridEntryFile
-            import srsMatlabWrappers.phy.upper.channel_processors.srsPDCCHmodulator
+            import srsLib.phy.upper.channel_processors.srsPDCCHmodulator
             import srsTest.helpers.writeUint8File
-            import srsMatlabWrappers.phy.helpers.srsConfigurePDCCH
-            import srsMatlabWrappers.phy.helpers.srsConfigureCORESET
-            import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
+            import srsLib.phy.helpers.srsConfigurePDCCH
+            import srsLib.phy.helpers.srsConfigureCORESET
+            import srsLib.phy.helpers.srsConfigureCarrier
             import srsTest.helpers.RBallocationMask2string
 
             % Generate a unique test ID.

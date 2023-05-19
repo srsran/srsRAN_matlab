@@ -82,7 +82,7 @@ classdef srsPBCHEncoderUnittest < srsTest.srsBlockUnittest
         %   HRF using a random NCellID, a random SFN, a random KSSB and a random payload.
 
             import srsTest.helpers.writeUint8File
-            import srsMatlabWrappers.phy.upper.channel_processors.srsPBCHencoder
+            import srsLib.phy.upper.channel_processors.srsPBCHencoder
 
             % generate a unique test ID by looking at the number of files generated so far
             testID = testCase.generateTestID;

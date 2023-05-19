@@ -100,11 +100,11 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
         %   combinations of Modulation, nofHarqAckBits,
         %   nofCsiPart1Bits and nofCsiPart2Bits. 
 
-            import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
-            import srsMatlabWrappers.phy.helpers.srsConfigurePUSCH
-            import srsMatlabWrappers.phy.helpers.srsModulationFromMatlab
-            import srsMatlabWrappers.phy.upper.signal_processors.srsPUSCHdmrs
-            import srsMatlabWrappers.phy.upper.channel_processors.srsULSCHScramblingPlaceholders
+            import srsLib.phy.helpers.srsConfigureCarrier
+            import srsLib.phy.helpers.srsConfigurePUSCH
+            import srsLib.phy.helpers.srsModulationFromMatlab
+            import srsLib.phy.upper.signal_processors.srsPUSCHdmrs
+            import srsLib.phy.upper.channel_processors.srsULSCHScramblingPlaceholders
             import srsTest.helpers.symbolAllocationMask2string
             import srsTest.helpers.writeInt8File
             import srsTest.helpers.writeUint16File

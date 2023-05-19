@@ -92,14 +92,14 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
         %testvectorGenerationCases Generates a test vector for the given 
         % Fixed Reference Channel.
 
-            import srsMatlabWrappers.phy.upper.channel_modulation.srsDemodulator
-            import srsMatlabWrappers.phy.upper.equalization.srsChannelEqualizer
+            import srsLib.phy.upper.channel_modulation.srsDemodulator
+            import srsLib.phy.upper.equalization.srsChannelEqualizer
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.writeInt8File
             import srsTest.helpers.writeComplexFloatFile
-            import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
-            import srsMatlabWrappers.phy.helpers.srsConfigurePUCCH
-            import srsMatlabWrappers.phy.upper.channel_processors.srsPUCCH2
+            import srsLib.phy.helpers.srsConfigureCarrier
+            import srsLib.phy.helpers.srsConfigurePUCCH
+            import srsLib.phy.upper.channel_processors.srsPUCCH2
 
             % Generate a unique test ID.
             testID = testCase.generateTestID;

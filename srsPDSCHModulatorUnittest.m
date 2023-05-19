@@ -74,12 +74,12 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
         %   Modulation scheme. Other parameters (e.g., the RNTI)
         %   are generated randomly.
 
-            import srsMatlabWrappers.phy.helpers.srsConfigurePDSCHdmrs
-            import srsMatlabWrappers.phy.helpers.srsConfigurePDSCH
-            import srsMatlabWrappers.phy.helpers.srsGetBitsSymbol
-            import srsMatlabWrappers.phy.helpers.srsModulationFromMatlab
-            import srsMatlabWrappers.phy.upper.channel_processors.srsPDSCHmodulator
-            import srsMatlabWrappers.phy.upper.signal_processors.srsPDSCHdmrs
+            import srsLib.phy.helpers.srsConfigurePDSCHdmrs
+            import srsLib.phy.helpers.srsConfigurePDSCH
+            import srsLib.phy.helpers.srsGetBitsSymbol
+            import srsLib.phy.helpers.srsModulationFromMatlab
+            import srsLib.phy.upper.channel_processors.srsPDSCHmodulator
+            import srsLib.phy.upper.signal_processors.srsPDSCHdmrs
             import srsTest.helpers.array2str
             import srsTest.helpers.rbAllocationIndexes2String
             import srsTest.helpers.symbolAllocationMask2string

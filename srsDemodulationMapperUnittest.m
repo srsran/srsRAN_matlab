@@ -84,10 +84,10 @@ classdef srsDemodulationMapperUnittest < srsTest.srsBlockUnittest
             import srsTest.helpers.writeUint8File
             import srsTest.helpers.writeFloatFile
             import srsTest.helpers.writeComplexFloatFile
-            import srsMatlabWrappers.phy.helpers.srsGetBitsSymbol
-            import srsMatlabWrappers.phy.helpers.srsModulationFromMatlab
-            import srsMatlabWrappers.phy.upper.channel_modulation.srsDemodulator
-            import srsMatlabWrappers.phy.upper.channel_modulation.srsModulator
+            import srsLib.phy.helpers.srsGetBitsSymbol
+            import srsLib.phy.helpers.srsModulationFromMatlab
+            import srsLib.phy.upper.channel_modulation.srsDemodulator
+            import srsLib.phy.upper.channel_modulation.srsModulator
 
             % Generate a unique test ID by looking at the number of files generated so far.
             testID = testCase.generateTestID;

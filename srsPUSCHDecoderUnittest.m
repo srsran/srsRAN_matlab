@@ -134,10 +134,10 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
         function setupsimulation(obj, SymbolAllocation, PRBAllocation, mcs)
         % Sets secondary simulation variables.
 
-            import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
-            import srsMatlabWrappers.phy.helpers.srsConfigurePUSCH
-            import srsMatlabWrappers.phy.helpers.srsExpandMCS
-            import srsMatlabWrappers.phy.helpers.srsGetModulation
+            import srsLib.phy.helpers.srsConfigureCarrier
+            import srsLib.phy.helpers.srsConfigurePUSCH
+            import srsLib.phy.helpers.srsExpandMCS
+            import srsLib.phy.helpers.srsGetModulation
 
             if PRBAllocation == 0
                 % Allocate the entire BWP.
@@ -193,9 +193,9 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
         %   PRBAllocation and mcs. Other parameters (e.g., the HARQProcessID) are
         %   generated randomly.
 
-            import srsMatlabWrappers.phy.helpers.srsConfigureULSCHEncoder
-            import srsMatlabWrappers.phy.helpers.srsConfigureULSCHDecoder
-            import srsMatlabWrappers.phy.helpers.srsModulationFromMatlab
+            import srsLib.phy.helpers.srsConfigureULSCHEncoder
+            import srsLib.phy.helpers.srsConfigureULSCHDecoder
+            import srsLib.phy.helpers.srsModulationFromMatlab
             import srsTest.helpers.bitPack
             import srsTest.helpers.writeUint8File
             import srsTest.helpers.writeInt8File
@@ -283,7 +283,7 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
         %   decoded using the mex wrapper of the SRSRAN C++ component. The test is considered
         %   as passed if the transmitted and received transport blocks are equal.
 
-            import srsMatlabWrappers.phy.helpers.srsConfigureULSCHEncoder
+            import srsLib.phy.helpers.srsConfigureULSCHEncoder
             import srsMEX.phy.srsPUSCHDecoder
             import srsTest.helpers.bitPack
 

@@ -98,8 +98,8 @@ classdef srsOFDMDemodulatorUnittest < srsTest.srsBlockUnittest
         %   DFTsize and CyclicPrefix. NSlot, port index, scale and center carrier 
         %   frequency are randomly generated.
 
-            import srsMatlabWrappers.phy.helpers.srsConfigureCarrier
-            import srsMatlabWrappers.phy.helpers.srsRandomGridEntry
+            import srsLib.phy.helpers.srsConfigureCarrier
+            import srsLib.phy.helpers.srsRandomGridEntry
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.writeComplexFloatFile
 

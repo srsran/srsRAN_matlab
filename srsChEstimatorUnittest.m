@@ -186,7 +186,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
         %testvectorGenerationCases - Generates a test vector according to the provided
         %   CONFIGURATION and FREQUENCYHOPPING type.
 
-            import srsMatlabWrappers.phy.upper.signal_processors.srsChannelEstimator
+            import srsLib.phy.upper.signal_processors.srsChannelEstimator
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.writeComplexFloatFile
 
