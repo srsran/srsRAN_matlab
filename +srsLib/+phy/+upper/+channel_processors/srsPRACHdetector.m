@@ -41,7 +41,6 @@ function [indices, offsets] = srsPRACHdetector(carrier, prachConf, grid, ignoreC
 
     % Get useful information about the PRACH preambles.
     info = getWindowInfo(prach, mu);
-    remainingShifts = 64;
 
     LRA = prach.LRA;
     halfLRA = (LRA - 1) / 2;
@@ -50,20 +49,15 @@ function [indices, offsets] = srsPRACHdetector(carrier, prachConf, grid, ignoreC
     % replicas from the same antennas are combined together.
     preambles = preprocess(grid, LRA, ignoreCFO);
 
-    nAntennas = size(preambles, 2);
+    nAntennas = size(grid, 2);
+    nReplicas = size(preambles, 2);
 
-    %[sincEx, M] = getsinc(LRA);
     % Set the margin around the detection window (useful for computing reference
     % power).
     % Detection threshold. The detector is inspired by the GLRT test, but it's
     % not exactly that one - threshold must be tuned by simulation.
-    if LRA == 839
-        winMargin = 5;
-        threshold = 0.7;
-    else
-        winMargin = 12;
-        threshold = 0.54;
-    end
+    [winMargin, threshold] = getThreshold(prach.Format, nAntennas);
+
     Nfft = fftsize();
 
     % Initialize output.
@@ -71,7 +65,11 @@ function [indices, offsets] = srsPRACHdetector(carrier, prachConf, grid, ignoreC
     offsets = nan(64, 1);
 
     nSequences = info.nSequences;
+    remainingShifts = 64;
     for iSequence = 1:nSequences
+        % Preamble index corresponding to the current sequence index.
+        prach.PreambleIndex = (iSequence - 1) * info.nShifts;
+
         % Get the root sequence: note that MATLAB can return multiple copies
         % depending on the format.
         rootLong = nrPRACH(carrier, prach);
@@ -81,7 +79,7 @@ function [indices, offsets] = srsPRACHdetector(carrier, prachConf, grid, ignoreC
         % take the ifft - same as correlation.
         noRoot = conj(root) .* preambles / LRA;
         % We want a symmetric FFT.
-        noRootLarge = [noRoot(halfLRA + 1:end, :); zeros(Nfft - LRA, nAntennas); noRoot(1:halfLRA, :)];
+        noRootLarge = [noRoot(halfLRA + 1:end, :); zeros(Nfft - LRA, nReplicas); noRoot(1:halfLRA, :)];
 
         noRootTimeSimple = ifft(noRootLarge) * sqrt(Nfft);
         modSquare = abs(noRootTimeSimple).^2;
@@ -89,6 +87,8 @@ function [indices, offsets] = srsPRACHdetector(carrier, prachConf, grid, ignoreC
         noRootTimeSinc = noRootTimeSimple * sqrt(Nfft / LRA);
 
         nWindows = min(info.nShifts, remainingShifts);
+        remainingShifts = remainingShifts - info.nShifts;
+        assert((remainingShifts > 0) || (iSequence == nSequences));
 
         for iWindow = 1:nWindows
             % Scale the detection window according to the FFT size.
@@ -134,17 +134,9 @@ function [indices, offsets] = srsPRACHdetector(carrier, prachConf, grid, ignoreC
             if (m > threshold) && (delay < length(metricGlobal) - guard)
                 pos = (iSequence - 1) * nWindows + iWindow;
                 indices(pos) = true;
-                d = delay + winStart;
-                offsets(pos) = (d / Nfft - mod(LRA - info.WinStart(iWindow), LRA) / LRA) * 800;
+                d = delay + winStart - 1;
+                offsets(pos) = (d / Nfft - mod(LRA - info.WinStart(iWindow), LRA) / LRA) / prach.SubcarrierSpacing * 1000;
             end
-        end
-
-        % Compute the next root sequence index and the number of preambles still
-        % to detect.
-        prach.SequenceIndex = mod(prach.SequenceIndex + 1, LRA - 1);
-        remainingShifts = remainingShifts - info.nShifts;
-        if remainingShifts < 0
-            break;
         end
     end
 
@@ -202,12 +194,19 @@ function info = getWindowInfo(prach, mu)
         nSequences = ceil(64 / nShifts);
     end
 
+    muLoc = mu;
+    if prach.LRA == 839
+        muLoc = 0;
+    end
+
     % Get the length of the cyclic prefix, as given in the standard.
     CP = getCP(prach);
 
-    % Express the CP in terms of the PRACH sampling time.
-    CPprach = floor(CP * prach.LRA * 64  * prach.SubcarrierSpacing ...
-        / (2^mu * 480 * fftsize()));
+    % CP is in units of kappa * 2^(-muLoc), convert it to ms.
+    CPms = CP * 64 / (2^muLoc * 480 * 4096);
+
+    % Express the CP as a number of samples at sampling frequency equal to LRA * SCS.
+    CPprach = floor(CPms * prach.LRA * prach.SubcarrierSpacing);
 
     % Each preamble correspond to a detection window whose width is the miniumum
     % between the CP length and the NCS.
@@ -243,4 +242,36 @@ end
 function x = fftsize
 % FFT size used by the detector - it defines the offset granularity.
     x = 4096;
+end
+
+% Returns the window margin and the detection threshold for the given PRACH format
+% and number of antennas.
+function [winMargin, threshold] = getThreshold(format, nAntennas)
+    assert(nAntennas <= 2, 'srsran_matlab:srsPRACHdetector', 'Only 2 antennas supported at the moment.');
+
+    if (nAntennas == 1)
+        switch format
+            case '0'
+                winMargin = 5;
+                threshold = 2;
+            case 'B4'
+                winMargin = 12;
+                threshold = 0.15;
+            otherwise
+                error('srsran_matlab:srsPRACHdetector', ...
+                    'Currently, only Formats 0 and B4 are supported for 1 antenna.');
+        end
+    elseif (nAntennas == 2)
+        switch format
+            case '0'
+                winMargin = 5;
+                threshold = 0.88;
+            case 'A1'
+                winMargin = 12;
+                threshold = 0.37;
+            otherwise
+                error('srsran_matlab:srsPRACHdetector', ...
+                    'Currently, only Formats 0 and A1 are supported for 2 antennas.');
+        end
+    end
 end
