@@ -65,13 +65,17 @@
 %                             after 100 failed transport blocks (tunable).
 %
 %   When the simulation is over, the object allows access to the following
-%   results properties.
+%   results properties (depending on TestType).
 %
-%   SNRrange              - Simulated SNR range in dB.
-%   Occasions             - Counter of the generated PRACH occasions (per SNR value).
-%   Detected              - Counter of detected occasions (per SNR value).
-%   ProbabilityDetection  - Detection probability.
-%   ProbabilityFalseAlarm - False-alarm probability.
+%   SNRrange                     - Simulated SNR range in dB.
+%   Occasions                    - Counter of the generated PRACH occasions (per SNR value).
+%   Detected                     - Counter of detected occasions (per SNR value).
+%   DetectedPerfect              - Counter of detected occasions (per SNR value).
+%   ProbabilityDetection         - Detection probability (per SNR value).
+%   ProbabilityDetectionPerfect  - Detection probability (per SNR value).
+%   ProbabilityFalseAlarm        - False-alarm probability (per SNR value).
+%   OffsetError                  - Mean and standard deviation of the estimation
+%                                  error of the timing offset (microseconds).
 %
 %   Remark: The simulation loop is heavily based on the <a href="https://www.mathworks.com/help/5g/ug/5g-nr-prach-detection-test.html">NR PRACH Detection and False Alarm Test</a> MATLAB example by MathWorks.
 
@@ -137,6 +141,11 @@ classdef PRACHPERF < matlab.System
         PRACH
         %Channel system object.
         Channel
+
+        %Counter for the mean time offset estimation error.
+        TimingAvg;
+        %Counter for the variance of the time offset estimation error.
+        TimingVar;
     end % of properties (Access = private, Hidden)
 
     properties (Access = private, Dependent, Hidden)
@@ -150,14 +159,22 @@ classdef PRACHPERF < matlab.System
         %Counter of the generated PRACH occasions (per SNR value).
         Occasions = []
         %Counter of detected occasions (per SNR value).
+        %   Number of preambles detected correctly, regardless of the estimated offset.
         Detected = []
+        %Counter of perfectly detected occasions (per SNR value).
+        %   Number of preambles detected correctly, with the estimated offset within range.
+        DetectedPerfect = []
     end % properties (SetAccess = private)
 
     properties (Dependent)
-        %Detection probability.
+        %Detection probability (regardless of offset estimation).
         ProbabilityDetection
+        %Detection probability (including of offset estimation within range).
+        ProbabilityDetectionPerfect
         %False-alarm probability.
         ProbabilityFalseAlarm
+        %Mean and standard deviation of the estimation error of the timing offset (microseconds).
+        OffsetError
     end % of properties (Dependent)
 
     properties % Tunable
@@ -254,7 +271,9 @@ classdef PRACHPERF < matlab.System
                 obj.Channel.NumReceiveAntennas = obj.NumReceiveAntennas;
                                                                   % Number of receive antennas
                 obj.Channel.NormalizePathGains = true;            % Normalize delay profile power
-                obj.Channel.Seed = 42;                            % Channel seed. Change this for different channel realizations
+                % Global stream for a block fading model (each transmission undergoes
+                % a different channel IR).
+                obj.Channel.RandomStream = 'Global stream';
                 obj.Channel.NormalizeChannelOutputs = true;       % Normalize for receive antennas
             end
 
@@ -283,7 +302,10 @@ classdef PRACHPERF < matlab.System
 
             % Initialize variables storing detection probability at each SNR.
             detectedCount = zeros(length(SNRdB), 1);
+            detectedPerfCount = zeros(length(SNRdB), 1);
             occasionCount = nan(length(SNRdB), 1);
+            meanOffsetError = zeros(length(SNRdB), 1);
+            varOffsetError = zeros(length(SNRdB), 1);
 
             % Copy heavily-used nontunable objects.
             prach = obj.PRACH;
@@ -303,11 +325,9 @@ classdef PRACHPERF < matlab.System
                 fprintf([timeNow ': Simulating SNR = %+5.1f dB... '], SNRdB(snrIdx));
 
                 % Set the random number generator settings to default values.
+                % This ensures the randomly generated elements will be the same
+                % for all SNR points.
                 rng('default');
-
-                % Reset the channel so that each SNR point will experience the same
-                % channel realization.
-                reset(channel);
 
                 % Normalize noise power to account for the sampling rate, which is a
                 % function of the IFFT size used in OFDM modulation. The SNR is defined
@@ -317,6 +337,10 @@ classdef PRACHPERF < matlab.System
 
                 % For each PRACH occasions...
                 for iOccasion = 1:nPRACHOccasions
+
+                    % Reset the channel before each transmission, to obtain a
+                    % different realization (since we don't use an internal generator).
+                    reset(channel);
 
                     % Generate PRACH waveform for the current occasion.
                     prach.NPRACHSlot = 0;
@@ -379,23 +403,25 @@ classdef PRACHPERF < matlab.System
                         prachDemodulated, ignoreCFO);
 
                     % Test for preamble detection.
-                    if (sum(indicesMask)==1)
-                        if isDetectTest
+                    if any(indicesMask)
+                        if ~isDetectTest
                             % For the false alarm test, any preamble detected is wrong.
                             detectedCount(snrIdx) = detectedCount(snrIdx) + 1;
                         else
-                            detected = 0:63;
                             % Test for correct preamble detection.
-                            if (detected(indicesMask)==prach.PreambleIndex)
+                            if indicesMask(prach.PreambleIndex + 1)
+                                detectedCount(snrIdx) = detectedCount(snrIdx) + 1; % Detected preamble
 
                                 % Calculate timing estimation error.
-                                trueOffset = timingOffset; % (us)
-                                measuredOffset = offsets(indicesMask);
-                                timingerror = abs(measuredOffset-trueOffset);
+                                measuredOffset = offsets(prach.PreambleIndex + 1);
+                                timingerror = abs(measuredOffset-timingOffset);
+                                meanOffsetError(snrIdx) = meanOffsetError(snrIdx) + timingerror;
+                                varOffsetError(snrIdx) = varOffsetError(snrIdx) + timingerror^2;
 
                                 % Test for acceptable timing error
                                 if (timingerror <= timeErrorTolerance)
-                                    detectedCount(snrIdx) = detectedCount(snrIdx) + 1; % Detected preamble
+                                    % Detected preamble with timing error within tollerance.
+                                    detectedPerfCount(snrIdx) = detectedPerfCount(snrIdx) + 1;
                                 end
                             end
                         end
@@ -413,7 +439,16 @@ classdef PRACHPERF < matlab.System
 
                 if isDetectTest
                     % Display the detection probability for this SNR.
-                    fprintf('Detection probability: %.2f%%\n', detectedCount(snrIdx)/iOccasion*100);
+                    fprintf('Detection probability (ignoring time error):        %.2f%%\n', ...
+                        detectedCount(snrIdx)/iOccasion*100);
+                    fprintf('                                       ');
+                    fprintf('Detection probability (time error below tolerance): %.2f%%\n', ...
+                        detectedPerfCount(snrIdx)/iOccasion*100);
+                    meanErr = meanOffsetError(snrIdx) / iOccasion;
+                    stdErr = sqrt((varOffsetError(snrIdx) - meanErr^2) / max(1, iOccasion-1));
+                    fprintf('                                       ');
+                    fprintf('Time error:                                         %.2g +/- %.2g\n', ...
+                        meanErr, stdErr);
                 else
                     % Display the false alarm probability for this SNR.
                     fprintf('False-alarm probability: %.2f%%\n', detectedCount(snrIdx)/iOccasion*100);
@@ -428,16 +463,24 @@ classdef PRACHPERF < matlab.System
 
             obj.Occasions = joinArrays(obj.Occasions, occasionCount, repeatedIdx, sortedIdx);
             obj.Detected = joinArrays(obj.Detected, detectedCount, repeatedIdx, sortedIdx);
+            obj.DetectedPerfect = joinArrays(obj.DetectedPerfect, detectedPerfCount, ...
+                repeatedIdx, sortedIdx);
+            obj.TimingAvg = joinArrays(obj.TimingAvg, meanOffsetError, repeatedIdx, sortedIdx);
+            obj.TimingVar = joinArrays(obj.TimingVar, varOffsetError, repeatedIdx, sortedIdx);
         end % of function setupImpl(obj)
 
         function flag = isInactivePropertyImpl(obj, property)
             switch property
                 case {'SNRrange', 'Occasions', 'Detected'}
-                    flag = isempty(obj.SNRrange);
+                    flag = isempty(obj.SNRrange) || ~obj.isLocked;
                 case 'ProbabilityDetection'
-                    flag = isempty(obj.Detected) || ~obj.isDetectionTest;
+                    flag = isempty(obj.Detected) || ~obj.isDetectionTest || ~obj.isLocked;
+                case {'DetectedPerfect', 'ProbabilityDetectionPerfect'}
+                    flag = isempty(obj.DetectedPerfect) || ~obj.isDetectionTest || ~obj.isLocked;
                 case 'ProbabilityFalseAlarm'
-                    flag = isempty(obj.Detected) || obj.isDetectionTest;
+                    flag = isempty(obj.Detected) || obj.isDetectionTest || ~obj.isLocked;
+                case 'OffsetError'
+                    flag = isempty(obj.TimingAvg) || ~obj.isDetectionTest || ~obj.isLocked;
                 otherwise
                     flag = false;
             end
@@ -445,8 +488,9 @@ classdef PRACHPERF < matlab.System
 
         function groups = getPropertyGroups(obj)
             props = properties(obj);
-            results = {'SNRrange', 'Occasions', 'Detected', 'ProbabilityDetection', ...
-                'ProbabilityFalseAlarm'};
+            results = {'SNRrange', 'Occasions', 'Detected', 'DetectedPerfect', ...
+                'ProbabilityDetection', 'ProbabilityDetectionPerfect', ...
+                'ProbabilityFalseAlarm', 'OffsetError'};
             confProps = setdiff(props, results);
             groups = matlab.mixin.util.PropertyGroup(confProps, 'Configuration');
 
@@ -470,6 +514,9 @@ classdef PRACHPERF < matlab.System
             obj.SNRrange = [];
             obj.Occasions = [];
             obj.Detected = [];
+            obj.DetectedPerfect = [];
+            obj.TimingAvg = [];
+            obj.TimingVar = [];
         end
 
         function releaseImpl(obj)
@@ -492,6 +539,9 @@ classdef PRACHPERF < matlab.System
                 s.SNRrange = obj.SNRrange;
                 s.Occasions = obj.Occasions;
                 s.Detected = obj.Detected;
+                s.DetectedPerfect = obj.DetectedPerfect;
+                s.TimingAvg = obj.TimingAvg;
+                s.TimingVar = obj.TimingVar;
             end
         end % of function s= saveObjectImpl(obj)
 
@@ -507,6 +557,9 @@ classdef PRACHPERF < matlab.System
                 obj.SNRrange = s.SNRrange;
                 obj.Occasions = s.Occasions;
                 obj.Detected = s.Detected;
+                obj.DetectedPerfect = s.DetectedPerfect;
+                obj.TimingAvg = s.TimingAvg;
+                obj.TimingVar = s.TimingVar;
             end
 
             % Load public properties.
@@ -538,6 +591,30 @@ classdef PRACHPERF < matlab.System
             pdet = obj.Detected ./ obj.Occasions;
         end
 
+        function pdet = get.ProbabilityDetectionPerfect(obj)
+            if strcmp(obj.TestType, 'False Alarm')
+                warning('off', 'backtrace');
+                warning('The ProababilityDetectionPerfect property is inactive when TestType == ''False Alarm''.');
+                warning('on', 'backtrace');
+                pdet = [];
+                return
+            end
+            pdet = obj.DetectedPerfect ./ obj.Occasions;
+        end
+
+        function offerr = get.OffsetError(obj)
+            if strcmp(obj.TestType, 'False Alarm')
+                warning('off', 'backtrace');
+                warning('The OffsetError property is inactive when TestType == ''False Alarm''.');
+                warning('on', 'backtrace');
+                pdet = [];
+                return
+            end
+            meanErr = obj.TimingAvg ./ obj.Occasions;
+            stdErr = sqrt((obj.TimingVar - meanErr.^2) ./ max(1, obj.Occasions-1));
+            offerr = [meanErr stdErr];
+        end
+
         function isDT = get.isDetectionTest(obj)
             isDT = strcmp(obj.TestType, 'Detection');
         end
@@ -551,7 +628,7 @@ classdef PRACHPERF < matlab.System
             end
 
             figure('Name', figName);
-            plot(obj.SNRrange, obj.Detected ./ obj.Occasions, 'o-.', 'LineWidth', 1);
+            plot(obj.SNRrange, obj.DetectedPerfect ./ obj.Occasions, 'o-.', 'LineWidth', 1);
             title([obj.DelayProfile ' - ' num2str(obj.NumReceiveAntennas) ' Rx ant - ' ...
                 num2str(max(obj.Occasions)) ' PRACH occasions - Fmt ' obj.Format] );
             xlabel('SNR (dB)'); ylabel(figName); grid on
