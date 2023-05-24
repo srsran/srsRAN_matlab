@@ -20,5 +20,17 @@
 /*!
 \mainpage
 
-\todo Write a nice introduction to srsran_matlab! And change the logo!
+\e srsRAN-matlab, developed by [SRS](https://www.srs.io), provides a number of
+MATLAB-based tools for testing and benchmarking the [srsRAN
+Project](https://www.srsran.com) software.
+
+The project includes utilities for generating the test vectors used for testing
+in the srsRAN Project, MEX wrappers of a number of srsRAN PHY components,
+end-to-end simulators, and analysis tools for the baseband captures obtained
+with the srsRAN gNB.
+
+This is the API documentation for the srsRAN-matlab MEX files, generated from
+the source code by [Doxygen](https://www.doxygen.nl/). For all information
+about the srsRAN-matlab project, please visit the [srsRAN-matlab main page](https://github.com/srsran/srsRAN_matlab).
+
 */
