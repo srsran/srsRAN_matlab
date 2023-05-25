@@ -20,11 +20,13 @@
 %
 %   srsLDPCRateMatcherUnittest Properties (TestParameter):
 %
-%   baseGraph  - LDPC base graph.
-%   rv         - Redundancy version.
-%   rmLength   - The rate-matched length (relative to the full codeblock length).
-%   Modulation  - Modulation scheme.
-%   isLBRM     - Limited buffer rate matching flag.
+%   baseGraph      - LDPC base graph.
+%   rv             - Redundancy version.
+%   rmLength       - The rate-matched length (relative to the full codeblock length).
+%   Modulation     - Modulation scheme.
+%   isLBRM         - Limited buffer rate matching flag.
+%   includeFillers - Filler-bit flag: if true, 10% of the message bits are filler bits.
+%                    If false, all message bits are information bits.
 %
 %   srsLDPCRateMatcherUnittest Methods (TestTags = {'testvector'}):
 %
@@ -88,6 +90,9 @@ classdef srsLDPCRateMatcherUnittest < srsTest.srsBlockUnittest
 
         %Limited buffer rate matching indicator.
         isLBRM = {false, true}
+
+        %Filler-bit flag: if true, 10% of the message bits are filler bits.
+        includeFillers = {false, true};
     end
 
     methods (Access = protected)
@@ -119,7 +124,7 @@ classdef srsLDPCRateMatcherUnittest < srsTest.srsBlockUnittest
 
     methods (Test, TestTags = {'testvector'}, ParameterCombination = 'pairwise')
         function testvectorGenerationCases(obj, baseGraph, rmLength, rv, ...
-                Modulation, isLBRM)
+                Modulation, isLBRM, includeFillers)
         %testvectorGenerationCases Generates a test vector for the given base graph,
         %   rate-matched length, redundancy version, modulation scheme and LBRM flag.
 
@@ -142,15 +147,18 @@ classdef srsLDPCRateMatcherUnittest < srsTest.srsBlockUnittest
             msgLength = baseMsgLength * obj.liftSize;
             CBlckLength = baseCBlckLength * obj.liftSize;
 
-            % Fraction of filler bits.
-            fracFillers = 0.1;
-            nFiller = ceil(msgLength * fracFillers);
-            fillerIdx = msgLength - (nFiller - 1:-1:0);
-
             % Generate a random "codeblock" (for this simulation, the codeblock
             % doesn't need to be a true codeblock).
             codeblock = randi([0, 1], CBlckLength, 1);
-            codeblock(fillerIdx) = -1;
+
+            nFiller = 0;
+            if includeFillers
+                % Fraction of filler bits.
+                fracFillers = 0.1;
+                nFiller = ceil(msgLength * fracFillers);
+                fillerIdx = msgLength - ((nFiller-1):-1:0);
+                codeblock(fillerIdx) = -1;
+            end
 
             % SRSRAN rate matcher works on a codeblock basis and its transparent
             % to the number of transmission layers, which is therefore fixed
