@@ -100,9 +100,6 @@ TargetCodeRate = config.target_code_rate;
 RV = config.rv;
 TransportBlockLength = config.tbs;
 
-% Create segmentation information.
-ulschInfo = nrULSCHInfo(TransportBlockLength, TargetCodeRate);
-
 %% Load resource grid.
 % Read file containing the resource grid.
 rgSamples = readComplexFloatFile(rgFilename, rgOffset, rgSize);
@@ -122,7 +119,7 @@ clear rgSamples;
 dmrsInd = nrPUSCHDMRSIndices(carrier, pusch);
 dmrsSym = nrPUSCHDMRS(carrier, pusch);
 
-[H, nVar, estInfo] = nrChannelEstimate(carrier, rxGrid, dmrsInd, dmrsSym);
+[H, nVar, ~] = nrChannelEstimate(carrier, rxGrid, dmrsInd, dmrsSym);
 
 if pusch.DMRS.NumCDMGroupsWithoutData
     H = H * sqrt(1 / 2);
@@ -134,7 +131,7 @@ end
 rxSym = rxGrid(dataInd);
 Hest = H(dataInd);
 
-[equalized, csi] = nrEqualizeMMSE(rxSym, Hest, nVar);
+[equalized, ~] = nrEqualizeMMSE(rxSym, Hest, nVar);
 
 %% Decode.
 % Make sure the TBS is consistent.
@@ -144,13 +141,13 @@ if TransportBlockLength ~= TransportBlockLength2
 end
 
 % Demodulate codeword.
-[rxcw, symb] = nrPUSCHDecode(carrier, pusch, equalized, nVar);
+[rxcw, ~] = nrPUSCHDecode(carrier, pusch, equalized, nVar);
 
 % Prepare UL-SCH decoder.
 ULSCHDecoder = srsConfigureULSCHDecoder(MultipleHARQProcesses, TargetCodeRate, TransportBlockLength);
 
 % Decode.
-[rxBits, blkCRCErr] = ULSCHDecoder(rxcw, pusch.Modulation, pusch.NumLayers, RV);
+[~, blkCRCErr] = ULSCHDecoder(rxcw, pusch.Modulation, pusch.NumLayers, RV);
 
 fprintf('The block CRC error is %d. (1 is KO)\n', blkCRCErr);
 

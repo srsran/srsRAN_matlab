@@ -185,7 +185,7 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
 
             import srsTest.helpers.writeComplexFloatFile
             import srsLib.phy.upper.channel_processors.srsPRACHgenerator
-            import srsLib.phy.upper.channel_processors.srsPRACHdemodulator
+            import srsLib.phy.lower.modulation.srsPRACHdemodulator
             
             % Generate a unique test ID.
             TestID = obj.generateTestID;
@@ -277,7 +277,7 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
             %   as passed if the detected PRACH is equal to the transmitted one.
     
             import srsLib.phy.upper.channel_processors.srsPRACHgenerator
-            import srsLib.phy.upper.channel_processors.srsPRACHdemodulator
+            import srsLib.phy.lower.modulation.srsPRACHdemodulator
             import srsMEX.phy.srsPRACHDetector
     
             % Configure the test.

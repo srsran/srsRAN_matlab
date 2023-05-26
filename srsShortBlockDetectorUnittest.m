@@ -130,7 +130,7 @@ classdef srsShortBlockDetectorUnittest < srsTest.srsBlockUnittest
             nMessages = 10;
             messages = randi([0, 1], msgLength, nMessages);
 
-            [modScheme, modSRS] = srsGetModulation(modOrder);
+            modScheme = srsGetModulation(modOrder);
 
             codeblocks = nan(blkLength, nMessages);
             for iMessage = 1:nMessages
