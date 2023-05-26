@@ -97,6 +97,8 @@ function unittestClass = name2Class(name)
             unittestClass = ?srsOFDMModulatorUnittest;
         case 'ofdm_prach_demodulator'
             unittestClass = ? srsPRACHDemodulatorUnittest;
+        case 'ofh_compression'
+            unittestClass = ?srsOFHCompressionUnittest;
         case 'pbch_encoder'
             unittestClass = ?srsPBCHEncoderUnittest;
         case 'pbch_modulator'

@@ -1,0 +1,26 @@
+%srsCompressor Generation of compressed IQ data from a complex input array.
+%   [CIQDATA, CPARAM] = srsCompressor(IQDATA, METHOD, CIQWIDTH)
+%   compresses the input IQ samples accordig to the requested METHOD and
+%   output bit width CIQWIDTH and returns the compressed IQ samples 
+%   in CIQDATA and compression parameters for each PRB in CPARAM.
+%
+%   See also nrORANBlockCompress.
+
+%   Copyright 2021-2023 Software Radio Systems Limited
+%
+%   This file is part of srsRAN-matlab.
+%
+%   srsRAN-matlab is free software: you can redistribute it and/or
+%   modify it under the terms of the BSD 2-Clause License.
+%
+%   srsRAN-matlab is distributed in the hope that it will be useful,
+%   but WITHOUT ANY WARRANTY; without even the implied warranty of
+%   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+%   BSD 2-Clause License for more details.
+%
+%   A copy of the BSD 2-Clause License can be found in the LICENSE
+%   file in the top-level directory of this distribution.
+
+function [cIQData, cParam] = srsCompressor(iqData, method, cIQwidth)
+    [cIQData, cParam] = nrORANBlockCompress(iqData, method, cIQwidth, 16);
+end
