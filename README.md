@@ -119,7 +119,7 @@ runSRSRANUnittest('all', 'testmex')
 The folder `apps` contains a number of applications and examples that use tools of the *srsRAN-matlab* project. Before running them, remember to add the main *srsRAN-matlab* folder to the MATLAB search path.
 
 ### apps/simulators/PUSCHBLER
-An instance of the *PUSCHBLER* class provides a simulator object for PUSCH BLER and throughput evaluation. The following example shows how to evaluate BLER and throughput at `SNR = -6:0.2:-4` for the default configuration. For more information, enter `help PUSCHBLER` at the MATLAB command line.
+An instance of the *PUSCHBLER* class provides a simulator object for PUSCH BLER and throughput evaluation. The following example shows how to evaluate BLER and throughput at `SNR = -6:0.2:-4` dB for the default configuration. For more information, enter `help PUSCHBLER` at the MATLAB command line.
 ```matlab
 >> sim = PUSCHBLER       % Create a PUSCHBLER object.
 >> sim(-6:0.2:-4)        % Run the simulation.
@@ -134,6 +134,15 @@ Function `combinePUSCHSims` can be used to obtain a summary of several simulatio
 ```
 See `help combinePUSCHSims` for more details.
 
+### apps/simulators/PRACHPERF
+An instance of the *PRACHPERF* class provides a simulator object for the evaluation of the PRACH probability of detection and of false alarm. The following example show how to evaluate the probability of PRACH detection at `SNR = -6:0.2:-4` dB for the default configuration. For more information, enter `help PRACHPERF` at the MATLAB command line.
+```matlab
+>> sim = PRACHPERF           % Create a PRACHPERF object.
+>> sim(-6:0.2:-4)            % Run the simulation.
+>> sim.ProbabilityDetection  % Display the evaluated detection probability.
+>> save my_sim.mat sim       % Save the PRACHPERF object, including the simulation results,
+                             % to file my_sim.mat.
+```
 ### apps/analyzers/srsPUSCHAnalizer
 
 This app analyzes a PUSCH transmission from the baseband complex-valued samples corresponding to one slot, as received by the gNB. See the [Configuration Parameters Section](https://docs.srsran.com/projects/project/en/latest/user_manuals/source/config_ref.html#configuration-parameters) of the srsRAN Project documentation for information on how to configure the logging level of the SRS gNB to record the received samples.
