@@ -45,20 +45,6 @@ void MexFunction::check_step_outputs_inputs(ArgumentList outputs, ArgumentList i
   }
 }
 
-// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-void MexFunction::method_set_delay(ArgumentList& outputs, ArgumentList& inputs)
-{
-  if (outputs.size() > 0) {
-    mex_abort("No output is expected.");
-  }
-
-  if ((inputs[1].getType() != ArrayType::DOUBLE) || (inputs[1].getNumberOfElements() > 1)) {
-    mex_abort("Second input must be a scalar double.");
-  }
-
-  delay_samples = (int)inputs[1][0];
-}
-
 void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
 {
   check_step_outputs_inputs(outputs, inputs);
@@ -79,25 +65,42 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
     detector_config.start_preamble_index  = 0;
     detector_config.nof_preamble_indices  = 64;
 
+    // Get frequency domain data.
+    const TypedArray<std::complex<double>> in_cft_array = inputs[1];
+
+    // Get dimensions.
+    ArrayDimensions buffer_dimensions = inputs[1].getDimensions();
+    if (buffer_dimensions.size() != 2) {
+      mex_abort("Invalid number of dimensions (i.e., {}).", buffer_dimensions.size());
+    }
+    fmt::print("-- Dimensions=[{}].\n", span<const std::size_t>(buffer_dimensions));
+
+    unsigned nof_samples = buffer_dimensions[0];
+    unsigned nof_symbols = buffer_dimensions[1];
+
     // Create buffer.
-    std::unique_ptr<prach_buffer> buffer = create_prach_buffer_long(1);
+    std::unique_ptr<prach_buffer> buffer;
+    if (nof_samples == prach_constants::LONG_SEQUENCE_LENGTH) {
+      buffer = create_prach_buffer_long(nof_symbols);
+    } else if (nof_samples == prach_constants::SHORT_SEQUENCE_LENGTH) {
+      buffer = create_prach_buffer_short(1, 1);
+    } else {
+      mex_abort("Invalid number of samples. Dimensions=[{}].", span<const std::size_t>(buffer_dimensions));
+    }
     if (!buffer) {
       mex_abort("Cannot create srsran PRACH buffer long.");
     }
 
-    // Get frequency domain data.
-    const TypedArray<std::complex<double>> in_cft_array = inputs[1];
-    std::vector<cf_t>                      frequency_data(in_cft_array.cbegin(), in_cft_array.cend());
-    std::transform(
-        frequency_data.begin(), frequency_data.end(), frequency_data.begin(), [&, n = 0](cf_t sample) mutable {
-          return sample * std::exp(-COMPLEX_J * TWOPI * static_cast<float>(n++) * static_cast<float>(delay_samples) /
-                                   static_cast<float>(DFT_SIZE_DETECTOR));
-        });
-
     // Fill buffer with time frequency-domain data.
-    srsvec::copy(buffer->get_symbol(0, 0, 0, 0), span<cf_t>(frequency_data).first(839));
+    for (unsigned i_symbol = 0; i_symbol != nof_symbols; ++i_symbol) {
+      fmt::print("-- i_symbol={}.\n", i_symbol);
+      span<cf_t> symbol_view = buffer->get_symbol(0, 0, 0, i_symbol);
+      for (unsigned i_sample = 0; i_sample != nof_samples; ++i_sample) {
+        symbol_view[i_sample] = cf_t(in_cft_array[i_symbol][i_sample]);
+      }
+    }
 
-    // Run generator.
+    // Run detector.
     prach_detection_result result = detector->detect(*buffer, detector_config);
 
     // Number of detected PRACH preambles.
@@ -108,7 +111,7 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
       // Detected PRACH preamble parameters.
       prach_detection_result::preamble_indication& preamble_indication          = result.preambles.back();
       StructArray                                  detected_preamble_indication = factory.createStructArray({1, 1},
-                                                                           {"nof_detected_preambles",
+                                                                                                            {"nof_detected_preambles",
                                                                                                              "preamble_index",
                                                                                                              "time_advance",
                                                                                                              "power_dB",

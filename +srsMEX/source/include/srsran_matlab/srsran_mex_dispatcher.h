@@ -22,8 +22,13 @@
 
 #pragma once
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsuggest-override"
 #include "mex.hpp"
+#pragma GCC diagnostic pop
+
 #include "mexAdapter.hpp"
+#include <fmt/format.h>
 
 #include <map>
 
@@ -86,6 +91,16 @@ protected:
     // clang-format off
     matlabPtr->feval(u"error", 0, std::vector<Array>({factory.createScalar(msg)}));
     // clang-format on
+  }
+
+  /// \brief Calls MATLAB \c error function.
+  /// \param[in] fmtstr  Format string.
+  template <typename... Args>
+  void mex_abort(const char* fmtstr, Args&&... args)
+  {
+    fmt::memory_buffer buffer;
+    fmt::format_to(buffer, fmtstr, std::forward<Args>(args)...);
+    mex_abort(to_string(buffer));
   }
 
   /// A MATLAB array factory for array creation.

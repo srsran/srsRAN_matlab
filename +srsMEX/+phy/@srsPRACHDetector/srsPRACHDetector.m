@@ -70,8 +70,7 @@ classdef srsPRACHDetector < matlab.System
 
     methods (Access = protected)
         function setupImpl(obj)
-        %Sets the 'delay_samples' variable of the PRACH mex object.
-            obj.prach_detector_mex('set_delay', obj.DelaySamples);
+            % No setup.
         end % of setupImpl
 
         function PRACHdetectionResult = stepImpl(obj, PRACHSymbols, PRACHConfig)

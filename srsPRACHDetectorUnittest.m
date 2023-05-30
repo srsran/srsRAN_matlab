@@ -71,39 +71,35 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
     end
 
     properties (TestParameter)
-        %Carrier duplexing mode, set to
-        %   - FDD for paired spectrum with 15kHz subcarrier spacing, or
-        %   - TDD for unpaired spectrum with 30kHz subcarrier spacing.
-        DuplexMode = {'FDD', 'TDD'}
-
-        %Carrier bandwidth in PRB.
-        CarrierBandwidth = {52, 79, 106}
-
         %Preamble formats.
-        PreambleFormat = {'0', '1', '2', '3'}
-
-        %Restricted set type.
-        %   Possible values are {'UnrestrictedSet', 'RestrictedSetTypeA', 'RestrictedSetTypeB'}.
-        RestrictedSet = {'UnrestrictedSet'}
+        PreambleFormat = {'0', '1', '2', '3', 'A1', 'B4'}
 
         %Zero correlation zone, cyclic shift configuration index.
-        ZeroCorrelationZone = {0}
+        ZeroCorrelationZone = {0, 1}
 
-        %Frequency-domain sequence mapping.
-        %   Starting resource block (RB) index of the initial uplink bandwidth
-        %   part (BWP) relative to carrier resource grid.
-        RBOffset = {0, 13, 28}
-
-        % Currently fixed parameter values (e.g., sample delay).
-        DelaySamples = {-8, 0, 1, 3}
+        %Number of receive antennas.
+        nAntennas = {1, 2, 4};
     end
 
     properties (Constant, Hidden)
-        % DFT size of the PRACH detector.
+        %Restricted set type.
+        %   Possible values are {'UnrestrictedSet', 'RestrictedSetTypeA', 'RestrictedSetTypeB'}.
+        RestrictedSet = 'UnrestrictedSet'
+        %Frequency-domain sequence mapping.
+        %   Starting resource block (RB) index of the initial uplink bandwidth
+        %   part (BWP) relative to carrier resource grid.
+        RBOffset = 0
+        %Carrier bandwidth in PRB.
+        CarrierBandwidth = 52
+        %Carrier duplexing mode, set to
+        %   - FDD for paired spectrum with 15kHz subcarrier spacing, or
+        %   - TDD for unpaired spectrum with 30kHz subcarrier spacing.
+        DuplexMode = 'FDD'
+        %DFT size of the PRACH detector.
         DFTsizeDetector = 1536
-        % Start preamble index to monitor.
+        %Start preamble index to monitor.
         StartPreambleIndex = 0
-        % Number of preamble indices to monitor.
+        %Number of preamble indices to monitor.
         NofPreamblesIndices = 64
     end % of properties (Constant, Hidden)
 
@@ -121,6 +117,7 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
             fprintf(fileID, [...
                 '#include "srsran/phy/upper/channel_processors/prach_detector.h"\n'...
                 '#include "srsran/support/file_vector.h"\n'...
+                '#include "../../support/prach_buffer_test_doubles.h"\n'...
                 ]);
         end
 
@@ -128,13 +125,15 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
 
             fprintf(fileID, [...
+                'using {\n'...
+                '\n'...
                 'struct context_t {\n'...
                 '  prach_detector::configuration config;\n'...
                 '  prach_detection_result        result;\n'...
                 '};\n'...
                 'struct test_case_t {\n'...
                 '  context_t context;\n'...
-                '  file_vector<cf_t> symbols;\n'...
+                '  file_tensor<static_cast<unsigned>(prach_buffer_tensor::dims::nof_dims), cf_t, prach_buffer_tensor::dims> symbols;\n'...
                 '};\n'...
                 ]);
         end
@@ -149,59 +148,86 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
     end % of methods (TestClassSetup)
 
     methods (Access = private)
-        function setupsimulation(obj, DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet, ZeroCorrelationZone, RBOffset)
+        function setupsimulation(obj, PreambleFormat, ZeroCorrelationZone)
         % Sets secondary simulation variables.
 
             import srsLib.phy.helpers.srsConfigurePRACH
         
+            % Select constant PRACH prarameters.
+            DuplexMode = obj.DuplexMode;
+            RestrictedSet = obj.RestrictedSet;
+            RBOffset = obj.RBOffset;
+
+            % Select PRACH random parameters.
+            SequenceIndex = randi([0, 1023], 1, 1);
+            PreambleIndex = randi([0, 63], 1, 1);
+
             % Generate carrier configuration.
             obj.carrier = nrCarrierConfig;
             obj.carrier.CyclicPrefix = 'normal';
-            obj.carrier.NSizeGrid = CarrierBandwidth;
+            obj.carrier.NSizeGrid = obj.CarrierBandwidth;
 
             % Generate PRACH configuration.
-            SequenceIndex = randi([0, 1023], 1, 1);
-            PreambleIndex = randi([0, 63], 1, 1);
-            obj.prach = srsConfigurePRACH(DuplexMode, SequenceIndex, PreambleIndex, RestrictedSet, ZeroCorrelationZone, RBOffset, PreambleFormat);
+            obj.prach = srsConfigurePRACH(DuplexMode,  SequenceIndex, ...
+                PreambleIndex, RestrictedSet, ZeroCorrelationZone, ...
+                RBOffset, PreambleFormat);
 
             % Set parameters that depend on the duplex mode.
-            switch DuplexMode
+            switch obj.DuplexMode
                 case 'FDD'
                     obj.carrier.SubcarrierSpacing = 15;
                 case 'TDD'
                     obj.carrier.SubcarrierSpacing = 30;
                 otherwise
-                    error('Invalid duplex mode %s', DuplexMode);
+                    error('Invalid duplex mode %s', obj.DuplexMode);
             end
-        end % of function setupsimulation(obj, SymbolAllocation, PRBAllocation, mcs)
+        end % of function setupsimulation(obj, PreambleFormat, ZeroCorrelationZone)
+
+        function grid = generatePRACH(obj, nAntennas) 
+            import srsLib.phy.upper.channel_processors.srsPRACHgenerator
+            import srsLib.phy.lower.modulation.srsPRACHdemodulator
+
+            % Generate waveform.
+            [waveform, gridset, info] = srsPRACHgenerator(obj.carrier, obj.prach);
+
+            channelMatrix = ones(1, nAntennas);
+            rxWaveform = waveform * channelMatrix;
+
+            % Nominal SNR value to add some noise.
+            snr = 30; % dB
+            noiseStdDev = 10 ^ (-snr / 20);
+
+            % Add some (very little) noise.
+            waveformSize = size(rxWaveform);
+            normNoise = (randn(waveformSize) + 1i * randn(waveformSize)) / sqrt(2);
+            rxWaveform = rxWaveform + (noiseStdDev * normNoise);
+
+            % Demodulate the PRACH signal.
+            grid = srsPRACHdemodulator(obj.carrier, obj.prach, gridset.Info, rxWaveform, info);
+        end % of function grid = generatePRACH(nAntennas) 
     end % of methods (Access = Private)
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(obj, DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet, ZeroCorrelationZone, RBOffset)
+        function testvectorGenerationCases(obj, PreambleFormat, ZeroCorrelationZone, nAntennas)
         %testvectorGenerationCases Generates a test vector for the given
         %   DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet,
         %   ZeroCorrelationZone and RBOffset. The parameters SequenceIndex
         %   and PreambleIndex are generated randomly.
 
             import srsTest.helpers.writeComplexFloatFile
-            import srsLib.phy.upper.channel_processors.srsPRACHgenerator
-            import srsLib.phy.lower.modulation.srsPRACHdemodulator
             
             % Generate a unique test ID.
             TestID = obj.generateTestID;
 
             % Configure the test.
-            setupsimulation(obj, DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet, ZeroCorrelationZone, RBOffset);
+            obj.setupsimulation(PreambleFormat, ZeroCorrelationZone);
 
-            % Generate waveform.
-            [waveform, gridset, info] = srsPRACHgenerator(obj.carrier, obj.prach);
-
-            % Demodulate the PRACH signal.
-            PRACHSymbols = srsPRACHdemodulator(obj.carrier, obj.prach, gridset.Info, waveform, info);
+            % Generate PRACH grid.
+            grid = obj.generatePRACH(nAntennas);
 
             % Write the generated PRACH sequence into a binary file.
             obj.saveDataFile('_test_output', TestID, ...
-                @writeComplexFloatFile, PRACHSymbols);
+                @writeComplexFloatFile, grid);
 
             % Prepare the test header file.
             srsPRACHFormat = sprintf('to_prach_format_type("%s")', obj.prach.Format);
@@ -217,6 +243,9 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
                     error('Invalid restricted set %s', ojb.prach.RestrictedSet);
             end
 
+            prachSCSString = sprintf('to_ra_subcarrier_spacing("%fkHz")', ...
+                obj.prach.SubcarrierSpacing);
+
             % PRACH detector configuration.
             srsPRACHDetectorConfig = {...
                 obj.prach.SequenceIndex, ...        % root_sequence_index
@@ -225,6 +254,8 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
                 obj.prach.ZeroCorrelationZone, ...  % zero_correlation_zone
                 obj.StartPreambleIndex, ...         % start_preamble_index
                 obj.NofPreamblesIndices, ...        % nof_preamble_indices
+                prachSCSString, ...                 % ra_scs
+                nAntennas, ...                      % nof_rx_ports
                 };
 
             srsPreambleIndication = {...
@@ -248,7 +279,7 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
 
             % Generate the test case entry.
             testCaseString = obj.testCaseToString(TestID, ...
-                srsContext, true, '_test_output');
+                srsContext, true, {'_test_output', {1,1,1,1}});
 
             % Add the test to the file header.
             obj.addTestToHeaderFile(obj.headerFileID, testCaseString);
@@ -257,7 +288,7 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
     end % of methods (Test, TestTags = {'testvector'})
 
     methods (Test, TestTags = {'testmex'})
-        function mexTest(obj, DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet, ZeroCorrelationZone, RBOffset, DelaySamples)
+        function mexTest(obj, PreambleFormat, ZeroCorrelationZone, nAntennas)
             %mexTest  Tests the mex wrapper of the SRSRAN PRACH detector.
             %   mexTest(OBJ, DUPLEXMODE, CARRIERBANDWIDTH, PREAMBLEFORMAT,
             %   RESTRICTEDSET, ZEROCORRELATIONZONE, RBOFFSET) runs a short
@@ -271,36 +302,22 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
             %   wrapper of the SRSRAN C++ component. The test is considered
             %   as passed if the detected PRACH is equal to the transmitted one.
     
-            import srsLib.phy.upper.channel_processors.srsPRACHgenerator
-            import srsLib.phy.lower.modulation.srsPRACHdemodulator
             import srsMEX.phy.srsPRACHDetector
 
             % Configure the test.
-            setupsimulation(obj, DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet, ZeroCorrelationZone, RBOffset);
+            obj.setupsimulation(PreambleFormat, ZeroCorrelationZone);
 
-            % Generate waveform.
-            [waveform, gridset, info] = srsPRACHgenerator(obj.carrier, obj.prach);
-
-            % Nominal SNR value to add some noise.
-            snr = 30; % dB
-            noiseStdDev = 10 ^ (-snr / 20);
-
-            % Add some (very little) noise.
-            waveformLength = length(waveform);
-            normNoise = (randn(waveformLength, 1) + 1i * randn(waveformLength, 1)) / sqrt(2);
-            waveform = waveform + (noiseStdDev * normNoise);
-
-            % Demodulate the PRACH signal.
-            PRACHSymbols = srsPRACHdemodulator(obj.carrier, obj.prach, gridset.Info, waveform, info);
+            % Generate PRACH grid.
+            PRACHGrid = obj.generatePRACH(nAntennas);
 
             % Configure the SRS PRACH detector mex.
-            PRACHDetector = srsPRACHDetector('DelaySamples', DelaySamples);
+            PRACHDetector = srsPRACHDetector();
 
             % Fill the PRACH configuration for the detector.
             PRACHCfg = srsPRACHDetector.configurePRACH(obj.prach);
 
             % Run the PRACH detector.
-            PRACHdetectionResult = PRACHDetector(PRACHSymbols, PRACHCfg);
+            PRACHdetectionResult = PRACHDetector(PRACHGrid, PRACHCfg);
 
             % Verify the correct detection (expected, since the SNR is very high).
             obj.assertEqual(double(PRACHdetectionResult.nof_detected_preambles), 1, 'More than one PRACH preamble detected.');

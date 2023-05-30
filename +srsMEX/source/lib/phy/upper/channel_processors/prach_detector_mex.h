@@ -34,9 +34,6 @@
 /// PRACH detector.
 static std::unique_ptr<srsran::prach_detector> create_prach_detector();
 
-/// Fixed DFT size of the PRACH detecter.
-static constexpr unsigned DFT_SIZE_DETECTOR = 1536;
-
 /// Implements a PRACH detector following the srsran_mex_dispatcher template.
 class MexFunction : public srsran_mex_dispatcher
 {
@@ -51,15 +48,10 @@ public:
       mex_abort("Cannot create srsran PRACH detector.");
     }
 
-    create_callback("set_delay",
-                    [this](ArgumentList& out, ArgumentList& in) { return this->method_set_delay(out, in); });
     create_callback("step", [this](ArgumentList& out, ArgumentList& in) { return this->method_step(out, in); });
   }
 
 private:
-  /// Delay in samples to be tested.
-  int delay_samples;
-
   /// Checks that outputs/inputs arguments match the requirements of method_step().
   void check_step_outputs_inputs(matlab::mex::ArgumentList outputs, matlab::mex::ArgumentList inputs);
 
@@ -111,7 +103,7 @@ std::unique_ptr<srsran::prach_detector> create_prach_detector()
   std::shared_ptr<prach_generator_factory> generator_factory = create_prach_generator_factory_sw();
 
   std::shared_ptr<prach_detector_factory> detector_factory =
-      create_prach_detector_factory_simple(dft_factory, generator_factory, DFT_SIZE_DETECTOR);
+      create_prach_detector_factory_sw(dft_factory, generator_factory);
 
   return detector_factory->create();
 }
