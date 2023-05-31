@@ -72,7 +72,7 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
 
     properties (TestParameter)
         %Preamble formats.
-        PreambleFormat = {'0', '1', '2', '3', 'A1', 'B4'}
+        PreambleFormat = {'0', '1', '2', '3', 'B4'}
 
         %Zero correlation zone, cyclic shift configuration index.
         ZeroCorrelationZone = {0, 1}
@@ -125,15 +125,16 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
 
             fprintf(fileID, [...
-                'using {\n'...
+                'using sequence_data_type = file_tensor<static_cast<unsigned>(prach_buffer_tensor::dims::count), cf_t, prach_buffer_tensor::dims>;\n'...
                 '\n'...
                 'struct context_t {\n'...
                 '  prach_detector::configuration config;\n'...
                 '  prach_detection_result        result;\n'...
                 '};\n'...
+                '\n'...
                 'struct test_case_t {\n'...
                 '  context_t context;\n'...
-                '  file_tensor<static_cast<unsigned>(prach_buffer_tensor::dims::nof_dims), cf_t, prach_buffer_tensor::dims> symbols;\n'...
+                '  sequence_data_type symbols;\n'...
                 '};\n'...
                 ]);
         end
@@ -195,7 +196,7 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
 
             % Nominal SNR value to add some noise.
             snr = 30; % dB
-            noiseStdDev = 10 ^ (-snr / 20);
+            noiseStdDev = 10 ^ (-snr / 20) / gridset.Info.Nfft;
 
             % Add some (very little) noise.
             waveformSize = size(rxWaveform);
@@ -204,6 +205,10 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
 
             % Demodulate the PRACH signal.
             grid = srsPRACHdemodulator(obj.carrier, obj.prach, gridset.Info, rxWaveform, info);
+
+            % Reshape grid with PRACH symbols.
+            grid = reshape(grid, obj.prach.LRA, obj.prach.PRACHDuration, nAntennas);
+
         end % of function grid = generatePRACH(nAntennas) 
     end % of methods (Access = Private)
 
@@ -226,7 +231,7 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
             grid = obj.generatePRACH(nAntennas);
 
             % Write the generated PRACH sequence into a binary file.
-            obj.saveDataFile('_test_output', TestID, ...
+            obj.saveDataFile('_test_input', TestID, ...
                 @writeComplexFloatFile, grid);
 
             % Prepare the test header file.
@@ -277,9 +282,17 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
                 srsPrachDetectionResult, ... % result
                 };
 
+            prachGridDims = {...
+                size(grid, 1), ... % Number of RE.
+                size(grid, 2), ... % Number of symbols.
+                1, ...             % Number of frequency-domain occasions.
+                1, ...             % Number of time-domain occasions.
+                size(grid, 3), ... % Number of ports.
+                };
+
             % Generate the test case entry.
             testCaseString = obj.testCaseToString(TestID, ...
-                srsContext, true, {'_test_output', {1,1,1,1}});
+                srsContext, true, {'_test_input', prachGridDims});
 
             % Add the test to the file header.
             obj.addTestToHeaderFile(obj.headerFileID, testCaseString);

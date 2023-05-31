@@ -25,7 +25,7 @@
 
 function prach = srsConfigurePRACH(varargin)
     prach = nrPRACHConfig;
-%     try
+    try
         nofInputParams = length(varargin);
         for index = 1:nofInputParams
             paramName = erase(inputname(index), 'Loc');
@@ -35,9 +35,9 @@ function prach = srsConfigurePRACH(varargin)
                 prach.(paramName) = varargin{index};
             end
         end
-%     catch
-%         prach = [];
-%     end
+    catch
+        prach = [];
+    end
 end
 
 
