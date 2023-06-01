@@ -8,7 +8,7 @@ The project includes utilities for generating the test vectors used for testing 
 
 For a better user experience, it is warmly suggested to add the root directory of *srsRAN-matlab* to the MATLAB search path
 ```matlab
->> addpath path/to/srsran_matlab
+addpath path/to/srsran_matlab
 ```
 
 ### License
@@ -89,7 +89,7 @@ The following steps are needed to compile MEX binaries.
     cd build
     cmake ..
     ```
-    If the path to your `srsran.cmake` file matches the patterns `~/srsgnb*/{build,build*,cmake-build-*}/srsran.cmake` or `~/*/srsgnb*/{build,build*,cmake-build-*}/srsran.cmake`, running CMake should find the exported libraries automatically. If this doesn't happen or if you have multiple copies of SRSRAN on your machine, you should specify the path when running CMake.
+    If the path to your `srsran.cmake` file matches the patterns `~/srsRAN_Project/{build,build*,cmake-build-*}/srsran.cmake`, `~/*/srsRAN_Project/{build,build*,cmake-build-*}/srsran.cmake` or `~/*/*/srsRAN_Project/{build,build*,cmake-build-*}/srsran.cmake`, running CMake should find the exported libraries automatically. If this doesn't happen or if you have multiple copies of srsRAN on your machine, you should specify the path when running CMake.
     ```bash
     cmake -DSRSRAN_BINARY_DIR="~/new_srsran/new_build" ..
     ```
@@ -121,27 +121,27 @@ The folder `apps` contains a number of applications and examples that use tools 
 ### apps/simulators/PUSCHBLER
 An instance of the *PUSCHBLER* class provides a simulator object for PUSCH BLER and throughput evaluation. The following example shows how to evaluate BLER and throughput at `SNR = -6:0.2:-4` dB for the default configuration. For more information, enter `help PUSCHBLER` at the MATLAB command line.
 ```matlab
->> sim = PUSCHBLER       % Create a PUSCHBLER object.
->> sim(-6:0.2:-4)        % Run the simulation.
->> sim.ThroughputMATLAB  % Display the evaluated throughput.
->> sim.plot              % Plot the evaluated throughput and BLER vs SNR.
->> save my_sim.mat sim   % Save the PUSCHBLER object, including the simulation results,
-                         % to file my_sim.mat.
+sim = PUSCHBLER       % Create a PUSCHBLER object.
+sim(-6:0.2:-4)        % Run the simulation.
+sim.ThroughputMATLAB  % Display the evaluated throughput.
+sim.plot              % Plot the evaluated throughput and BLER vs SNR.
+save my_sim.mat sim   % Save the PUSCHBLER object, including the simulation results,
+                      % to file my_sim.mat.
 ```
 Function `combinePUSCHSims` can be used to obtain a summary of several simulation results in graphic and table formats. For instance, the following command will draw the BLER and throughput curves from the PUSCHBLER objects saved in files `my_sim1.mat` and `my_sim2.mat`, as well as creating two tables, namely `tableS` and `tableM`, with the main simulation results using the SRS and MATLAB PUSCH decoder, respectively.
 ```matlab
->> [tableS, tableM] = combinePUSCHSims(["my_sim1.mat", "my_sim2.mat"])
+[tableS, tableM] = combinePUSCHSims(["my_sim1.mat", "my_sim2.mat"])
 ```
 See `help combinePUSCHSims` for more details.
 
 ### apps/simulators/PRACHPERF
 An instance of the *PRACHPERF* class provides a simulator object for the evaluation of the PRACH probability of detection and of false alarm. The following example show how to evaluate the probability of PRACH detection at `SNR = -6:0.2:-4` dB for the default configuration. For more information, enter `help PRACHPERF` at the MATLAB command line.
 ```matlab
->> sim = PRACHPERF           % Create a PRACHPERF object.
->> sim(-6:0.2:-4)            % Run the simulation.
->> sim.ProbabilityDetection  % Display the evaluated detection probability.
->> save my_sim.mat sim       % Save the PRACHPERF object, including the simulation results,
-                             % to file my_sim.mat.
+sim = PRACHPERF           % Create a PRACHPERF object.
+sim(-6:0.2:-4)            % Run the simulation.
+sim.ProbabilityDetection  % Display the evaluated detection probability.
+save my_sim.mat sim       % Save the PRACHPERF object, including the simulation results,
+                          % to file my_sim.mat.
 ```
 ### apps/analyzers/srsPUSCHAnalizer
 
