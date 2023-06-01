@@ -52,8 +52,7 @@ The following cache variables may also be set:
 
 #]=======================================================================]
 
-# We keep the default paths based on "srsgnb" until we change the name of the repo.
-file(GLOB SRSRAN_PATH LIST_DIRECTORIES true "$ENV{HOME}/srsgnb*" "$ENV{HOME}/*/srsgnb*" "$ENV{HOME}/*/*/srsgnb*")
+file(GLOB SRSRAN_PATH LIST_DIRECTORIES true "$ENV{HOME}/srsRAN_Project" "$ENV{HOME}/*/srsRAN_Project" "$ENV{HOME}/*/*/srsRAN_Project")
 message(STATUS "srsran possible paths: ${SRSRAN_PATH}.")
 
 set(SRSRAN_PATH_BUILD ${SRSRAN_PATH})
