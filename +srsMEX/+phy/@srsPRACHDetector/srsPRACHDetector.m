@@ -76,7 +76,7 @@ classdef srsPRACHDetector < matlab.System
         function PRACHdetectionResult = stepImpl(obj, PRACHSymbols, PRACHConfig)
             arguments
                 obj          (1, 1) srsMEX.phy.srsPRACHDetector
-                PRACHSymbols (:, 1) double
+                PRACHSymbols (:, :, :) double
                 PRACHConfig  (1, 1) struct
             end
 
@@ -118,6 +118,7 @@ classdef srsPRACHDetector < matlab.System
             PRACHCfg.restricted_set = prach.RestrictedSet;
             PRACHCfg.zero_correlation_zone = prach.ZeroCorrelationZone;
             PRACHCfg.preamble_index = prach.PreambleIndex;
+            PRACHCfg.scs = prach.SubcarrierSpacing;
         end % of function configurePRACH = configurePRACH(...)
    end % of methods (Static)
 end % of classdef srsPRACHDetector < matlab.System
