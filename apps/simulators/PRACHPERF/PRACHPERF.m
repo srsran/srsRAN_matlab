@@ -189,10 +189,10 @@ classdef PRACHPERF < matlab.System
             % Checks that Sequence Index is compatible with Format.
             switch obj.Format
                 case {'0', '1', '2', '3'}
-                    assert(obj.SequenceIndex < 838, 'srsgnb_matlab:PRACHPERF', ...
+                    assert(obj.SequenceIndex < 838, 'srsran_matlab:PRACHPERF', ...
                         'For long formats, the sequence index must be between 0 and 837');
                 case {'A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'B4', 'C0', 'C2'}
-                    assert(obj.SequenceIndex < 138, 'srsgnb_matlab:PRACHPERF', ...
+                    assert(obj.SequenceIndex < 138, 'srsran_matlab:PRACHPERF', ...
                         'For long formats, the sequence index must be between 0 and 137');
             end
         end
@@ -607,7 +607,7 @@ classdef PRACHPERF < matlab.System
                 warning('off', 'backtrace');
                 warning('The OffsetError property is inactive when TestType == ''False Alarm''.');
                 warning('on', 'backtrace');
-                pdet = [];
+                offerr = [];
                 return
             end
             meanErr = obj.TimingAvg ./ obj.Occasions;
