@@ -76,10 +76,13 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
         function addTestIncludesToHeaderFile(obj, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
             addTestIncludesToHeaderFilePHYchproc(obj, fileID);
+            fprintf(fileID, '#include "srsran/ran/precoding/precoding_codebooks.h"\n');
         end
 
         function addTestDefinitionToHeaderFile(obj, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
+            fprintf(fileID, 'static const precoding_configuration default_precoding = make_single_port();\n');
+            fprintf(fileID, '\n');
             addTestDefinitionToHeaderFilePHYchproc(obj, fileID);
         end
     end % of methods (Access = protected)
@@ -142,18 +145,30 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
             % Generate the test case entry.
             reservedString = '{}';
 
-            portsString = '{0}';
 
             RBAllocationString = rbAllocationIndexes2String(pdsch.PRBSet);
 
             DMRSTypeString = sprintf('dmrs_type::TYPE%d', pdsch.DMRS.DMRSConfigurationType);
 
-            config = [ {pdsch.RNTI}, {carrier.NSizeGrid}, {carrier.NStartGrid}, ...
-                {modString1}, {modString1}, {RBAllocationString}, {pdsch.SymbolAllocation(1)}, ...
-                {pdsch.SymbolAllocation(2)}, {dmrsSymbolMask}, {DMRSTypeString}, ...
-                {pdsch.DMRS.NumCDMGroupsWithoutData}, {pdsch.NID}, {1}, {reservedString}, {0}, {portsString}];
+            configCell = {...
+                pdsch.RNTI,...                          % rnti
+                carrier.NSizeGrid, ...                  % bwp_size_rb
+                carrier.NStartGrid, ...                 % bwp_start_rb
+                modString1, ...                         % modulation1
+                modString1, ...                         % modulation2
+                RBAllocationString, ...                 % freq_allocation
+                pdsch.SymbolAllocation(1), ...          % start_symbol_index
+                pdsch.SymbolAllocation(2), ...          % nof_symbols
+                dmrsSymbolMask, ...                     % dmrs_symb_pos
+                DMRSTypeString, ...                     % dmrs_config_type
+                pdsch.DMRS.NumCDMGroupsWithoutData, ... % nof_cmd_groups_without_data 
+                pdsch.NID, ...                          % n_id
+                1.0, ...                                % scaling
+                reservedString, ...                     % reserved
+                'default_precoding'...
+                };
 
-            testCaseString = testCase.testCaseToString(testID, config, true, ...
+            testCaseString = testCase.testCaseToString(testID, configCell, true, ...
                 '_test_input', '_test_output');
 
             % Add the test to the file header.

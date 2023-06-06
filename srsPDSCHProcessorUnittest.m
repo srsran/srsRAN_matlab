@@ -103,6 +103,7 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
             fprintf(fileID, [...
                 '#include "../../support/resource_grid_test_doubles.h"\n'...
                 '#include "srsran/phy/upper/channel_processors/pdsch_processor.h"\n'...
+                '#include "srsran/ran/precoding/precoding_codebooks.h"\n'...
                 '#include "srsran/support/file_vector.h"\n'...
                 ]);
         end
@@ -124,7 +125,8 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
                 '  test_case_context     context;\n'...
                 '  file_vector<uint8_t>  sch_data;\n'...
                 '  file_vector<rg_entry> grid_expected;\n'...
-                '};\n'...
+                '};\n\n'...
+                'static const precoding_configuration default_precoding = make_single_port();\n\n'...
                 ]);
         end
     end % of methods (Access = protected)
@@ -309,7 +311,6 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
 
             % Generate the test case entry.
             slotConfig = {log2(carrier.SubcarrierSpacing/15), carrier.NSlot};
-            portsString = '{0}';
             dmrsTypeString = sprintf('dmrs_type::TYPE%d', pdsch.DMRS.DMRSConfigurationType);
             refPointStr = ['pdsch_processor::pdu_t::', pdsch.DMRS.DMRSReferencePoint];
             numCDMGroupsWithoutData = pdsch.DMRS.NumCDMGroupsWithoutData;
@@ -336,7 +337,6 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
                 cyclicPrefixStr, ...           % cp
                 {{modString1, rv}}, ...        % codewords
                 pdsch.NID, ...                 % n_id
-                portsString, ...               % ports
                 refPointStr, ...               % ref_point
                 dmrsSymbolMask, ...            % dmrs_symbol_mask
                 dmrsTypeString, ...            % dmrs
@@ -351,6 +351,7 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
                 rvdREPatternList, ...          % reserved
                 betaDMRSdB, ...                % ratio_pdsch_dmrs_to_sss_dB
                 betaDatadB, ...                % ratio_pdsch_data_to_sss_dB
+                'default_precoding'            % precoding
                 };
 
             contextDescription = {...
