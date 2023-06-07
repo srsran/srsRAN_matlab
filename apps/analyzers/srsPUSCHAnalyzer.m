@@ -1,5 +1,5 @@
-%srsPUSCHAnalizer Analyzes a PUSCH transmission from a resource grid.
-%   srsPUSCHAnalizer(JSONCONFIG, RGFILENAME, RGOFFSET, RGSIZE) Analyzes a NR
+%srsPUSCHAnalyzer Analyzes a PUSCH transmission from a resource grid.
+%   srsPUSCHAnalyzer(JSONCONFIG, RGFILENAME, RGOFFSET, RGSIZE) Analyzes a NR
 %   Physical Uplink Shared Channel transmission described JSONCONFIG and a
 %   resource grid stored in a binary file with the name RGFILENAME. RGOFFSET
 %   and RGSIZE are the offset and size, in bytes, of the slot containing the
@@ -42,7 +42,7 @@
 %       '"tbs": 18432'...
 %       '}'];
 %
-%   srsPUSCHAnalizer(jsonConfig, '/tmp/ul_rg_0.bin', 1141879, 17808);
+%   srsPUSCHAnalyzer(jsonConfig, '/tmp/ul_rg_0.bin', 1141879, 17808);
 
 %   Copyright 2021-2023 Software Radio Systems Limited
 %
@@ -59,7 +59,7 @@
 %   A copy of the BSD 2-Clause License can be found in the LICENSE
 %   file in the top-level directory of this distribution.
 
-function srsPUSCHAnalizer(jsonConfig, rgFilename, rgOffset, rgSize)
+function srsPUSCHAnalyzer(jsonConfig, rgFilename, rgOffset, rgSize)
 %% Imprt dependencies.
 import srsLib.phy.helpers.srsConfigureCarrier
 import srsLib.phy.helpers.srsConfigurePUSCH
@@ -124,7 +124,7 @@ dmrsSym = nrPUSCHDMRS(carrier, pusch);
 if pusch.DMRS.NumCDMGroupsWithoutData
     H = H * sqrt(1 / 2);
 end
-    
+
 
 %% Equalize.
 [dataInd, puschInfo] = nrPUSCHIndices(carrier, pusch);
@@ -155,7 +155,7 @@ fprintf('The block CRC error is %d. (1 is KO)\n', blkCRCErr);
 NumXPlots = 3;
 NumYPlots = 2;
 
-figure("Name", "srsPUSCHAnalizer");
+figure("Name", "srsPUSCHAnalyzer");
 clf;
 
 % Plot resource grid power.
@@ -219,4 +219,4 @@ xlabel('Soft bits');
 ylabel('Soft bit count');
 title('Received soft bit distribution');
 
-end % srsPUSCHAnalizer
+end % srsPUSCHAnalyzer

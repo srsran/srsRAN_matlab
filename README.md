@@ -143,17 +143,17 @@ sim.ProbabilityDetection  % Display the evaluated detection probability.
 save my_sim.mat sim       % Save the PRACHPERF object, including the simulation results,
                           % to file my_sim.mat.
 ```
-### apps/analyzers/srsPUSCHAnalizer
+### apps/analyzers/srsPUSCHAnalyzer
 
 This app analyzes a PUSCH transmission from the baseband complex-valued samples corresponding to one slot, as received by the gNB. See the [Configuration Parameters Section](https://docs.srsran.com/projects/project/en/latest/user_manuals/source/config_ref.html#configuration-parameters) of the srsRAN Project documentation for information on how to configure the logging level of the SRS gNB to record the received samples.
 
-See `help srsPUSCHAnalizer` for more details.
+See `help srsPUSCHAnalyzer` for more details.
 
-### apps/analyzers/srsPRACHAnalizer
+### apps/analyzers/srsPRACHAnalyzer
 
 This app analyzes a PRACH transmission from the baseband complex-valued samples corresponding to one PRACH occasion, as received by the gNB. See the [Configuration Parameters Section](https://docs.srsran.com/projects/project/en/latest/user_manuals/source/config_ref.html#configuration-parameters) of the srsRAN Project documentation for information on how to configure the logging level of the SRS gNB to record the received samples.
 
-See `help srsPRACHAnalizer` for more details.
+See `help srsPRACHAnalyzer` for more details.
 
 
 ## Repository CI/CD
