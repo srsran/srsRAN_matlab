@@ -1,6 +1,6 @@
-%srsPRACHAnalizer Analyzes a PRACH transmission from a PRACH resource grid.
-%   srsPRACHAnalizer(PRACH, FILENAME, OFFSET) analyzes an NR Preamble for 
-%   Random Access Channel transmission. PRACH is an object of type 
+%srsPRACHAnalyzer Analyzes a PRACH transmission from a PRACH resource grid.
+%   srsPRACHAnalyzer(PRACH, FILENAME, OFFSET) analyzes an NR Preamble for
+%   Random Access Channel transmission. PRACH is an object of type
 %   nrPRACHConfig containing the paramaters necessary for the detection.
 %   FILENAME indicates the file that contains the IQ samples and OFFSET is
 %   the offset of the desired PRACH occasion inside the file.
@@ -13,7 +13,7 @@
 %      prach.SequenceIndex = 1;
 %      prach.PreambleIndex = 48;
 %
-%      srsPRACHAnalizer(prach, '~/Downloads/ul_symbol_handler', 1391191);
+%      srsPRACHAnalyzer(prach, '~/Downloads/ul_symbol_handler', 1391191);
 
 %   Copyright 2021-2023 Software Radio Systems Limited
 %
@@ -30,7 +30,7 @@
 %   A copy of the BSD 2-Clause License can be found in the LICENSE
 %   file in the top-level directory of this distribution.
 
-function srsPRACHAnalizer(prach, filename, offset)
+function srsPRACHAnalyzer(prach, filename, offset)
     import srsTest.helpers.readComplexFloatFile
 
     samples = readComplexFloatFile(filename, offset, prach.LRA);
@@ -93,8 +93,7 @@ function srsPRACHAnalizer(prach, filename, offset)
     cursorMode = datacursormode(h);
     hDatatip = cursorMode.createDatatip(hPlot);
     pos = [timeAxisMicros(MaxCorrTimeIndex) AbsCorrTime(MaxCorrTimeIndex) 0];
-    set(hDatatip, 'Position', pos)         
+    set(hDatatip, 'Position', pos)
     updateDataCursors(cursorMode)
 
 end
-
