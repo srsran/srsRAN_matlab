@@ -6,7 +6,7 @@
 
 The project includes utilities for generating the test vectors used for testing in the srsRAN Project, MEX wrappers of a number of srsRAN PHY components, end-to-end simulators, and analysis tools for the baseband captures obtained with the srsRAN gNB (see [`phy_rx_symbols_filename`](https://docs.srsran.com/projects/project/en/latest/user_manuals/source/config_ref.html#log) for how to obtain them).
 
-For a better user experience, it is warmly suggested to add the root directory of *srsRAN-matlab* to the MATLAB search path
+For a better user experience, we suggest adding the root directory of *srsRAN-matlab* to the MATLAB search path
 ```matlab
 addpath path/to/srsran_matlab
 ```
@@ -19,7 +19,7 @@ For license details, see the [LICENSE](LICENSE) file.
 
 *srsRAN-matlab* runs on MATLAB and builds upon the [5G Toolbox](https://www.mathworks.com/products/5g.html) (tested on MATLAB R2022a, R2022b and R2023a under Linux, but other recent releases should also work).
 
-To build the MEX wrappers and to run the applications that include them, a working copy of srsRAN Project and its dependency are also needed (see the [MEX](#mex) section for further details).
+The srsRAN Project is required to build the MEX wrappers and to run the applications that include them (see the [MEX](#mex) section for further details).
 
 ### Contents
 
@@ -59,9 +59,9 @@ All generated files will be automatically placed in a directory named *testvecto
 srsTest.copySRStestvectors('testvector_outputs', 'path/to/srsRAN_Project')
 ```
 
-### Personalizing Tests
+### Customizing Tests
 
-The classes in the root directory define the tests following the [MATLAB class-based testing framework](https://www.mathworks.com/help/matlab/class-based-unit-tests.html). As a results, all the tools from the framework can be used to run and personalize the tests. For instance, the following code will run the `pdcch_candidates_common` tests only for a subset of values of the `numCCEs` parameter.
+The classes in the root directory define the tests following the [MATLAB class-based testing framework](https://www.mathworks.com/help/matlab/class-based-unit-tests.html). As a result, all the tools from the framework can be used to run and customize the tests. For instance, the following code will run the `pdcch_candidates_common` tests only for a subset of values of the `numCCEs` parameter.
 ```matlab
 % Select the block to test.
 testedBlock = ?srsPDCCHCandidatesCommonUnittest;
@@ -75,7 +75,7 @@ results = vecTest.run;
 
 ## MEX
 
-The directory `+srsMEX` contains a MEX version of a number of classes and functions from the srsRAN Project. Typically, MEX can be accessed as class methods for a better user experience: for instance, the class `srsMEX.phy.srsPUSCHDecoder` provides access to the MEX version of the srsRAN `pusch_decoder`.
+The directory `+srsMEX` contains MEX versions of a number of classes and functions from the srsRAN Project. Typically, MEX can be accessed as class methods for a better user experience: for instance, the class `srsMEX.phy.srsPUSCHDecoder` provides access to the MEX version of the srsRAN `pusch_decoder`.
 
 ### Building the MEX
 
