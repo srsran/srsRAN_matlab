@@ -24,6 +24,7 @@
 %   targetCodeRate     - DL-SCH target code rate.
 %   DMRSReferencePoint - PDSCH DM-RS subcarrier reference point.
 %   RvdElements        - Sets reserved resource elements within the grid.
+%   NumLayers          - Number of transmission layers.
 %
 %   srsPDSCHProcessorUnittest Methods (TestTags = {'testvector'}):
 %
@@ -94,6 +95,9 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
         %   Adds reserved Resource Elements to the grid, where PDSCH allocation is not allowed.
         %   The reserved elements correpond with ZP-CSI-RS resources. 
         RvdElements = {false, true};
+
+        %Number of transmission layers (1, 2).
+        NumLayers = {1, 2}
     end
 
     methods (Access = protected)
@@ -133,13 +137,13 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
 
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, BWPConfig, Modulation, ...
-                SymbolAllocation, targetCodeRate, DMRSReferencePoint, RvdElements)
+                SymbolAllocation, targetCodeRate, DMRSReferencePoint, RvdElements, NumLayers)
         %testvectorGenerationCases Generates a test vector for the given
         %   BWP, modulation scheme, symbol allocation, target code rate, 
-        %   DM-RS reference point and reserved element settings. Other 
-        %   parameters, such as subcarrier spacing, PDSCH frequency  
-        %   allocation, slot number, RNTI, scrambling identifiers and DM-RS 
-        %   additional positions are randomly generated.
+        %   DM-RS reference point, reserved element and number of layers
+        %   settings. Other parameters, such as subcarrier spacing, PDSCH 
+        %   frequency allocation, slot number, RNTI, scrambling identifiers 
+        %   and DM-RS additional positions are randomly generated.
 
             import srsLib.phy.helpers.srsConfigureCarrier
             import srsLib.phy.helpers.srsCSIRSValidateConfig
@@ -212,6 +216,7 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
             pdsch.DMRS.NIDNSCID = NIDNSCID;
             pdsch.DMRS.NSCID = NSCID;
             pdsch.DMRS.DMRSReferencePoint = DMRSReferencePoint;
+            pdsch.NumLayers = NumLayers;
 
             % Create reserved RE Pattern list.
             rvdREPatternList = {};
@@ -236,24 +241,39 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
                 csirs2.CSIRSPeriod = 'on';
                 csirs2.RowNumber = 2;
                 csirs2.Density = 'dot5odd';
-                csirs2.SymbolLocations = {randi([1, 13])};
+                csirs2.SymbolLocations = {randi([1, 11])};
                 csirs2.SubcarrierLocations = {randi([0, 11])};
                 csirs2.NumRB = NSizeBWP;
                 csirs2.RBOffset = NStartBWP;
                 csirs2.NID = NID;
+
+                % Create a thirs ZP-CSI-RS resource spanning two antenna
+                % ports.
+                csirs3 = nrCSIRSConfig;
+                csirs3.CSIRSType = 'zp';
+                csirs3.CSIRSPeriod = 'on';
+                csirs3.RowNumber = 3;
+                csirs3.Density = 'dot5even';
+                csirs3.SymbolLocations = {randi([1, 11])};
+                csirs3.SubcarrierLocations = {randi([0, 10])};
+                csirs3.NumRB = NSizeBWP;
+                csirs3.RBOffset = NStartBWP;
+                csirs3.NID = NID;
               
                 % Validate the CSI-RS resources.
-                if (~srsCSIRSValidateConfig(carrier, csirs1) || ...
-                        (~srsCSIRSValidateConfig(carrier, csirs2)))
+                if ((~srsCSIRSValidateConfig(carrier, csirs1)) || ...
+                        (~srsCSIRSValidateConfig(carrier, csirs2)) || ...
+                        (~srsCSIRSValidateConfig(carrier, csirs3)))
                     error('invalid CSIRS configuration');
                 end
     
                 % Generate RE patterns from the CSI-RS resources.
-                rvdREPatternList = srsCSIRS2ReservedCell(carrier, {csirs1, csirs2});
+                rvdREPatternList = srsCSIRS2ReservedCell(carrier, {csirs1, csirs2, csirs3});
                 
                 % Add the CSI-RS indices to the PDSCH reserved RE list.
                 CSIRSIndices = [nrCSIRSIndices(carrier, csirs1, 'IndexStyle','subscript', 'IndexBase', '0based'); ...
-                   nrCSIRSIndices(carrier, csirs2, 'IndexStyle','subscript', 'IndexBase', '0based')];
+                   nrCSIRSIndices(carrier, csirs2, 'IndexStyle','subscript', 'IndexBase', '0based'); ...
+                   nrCSIRSIndices(carrier, csirs3, 'IndexStyle','subscript', 'IndexBase', '0based')];
 
                 % Flatten the index format.
                 CSIRSIndices = CSIRSIndices(:, 1) + 12 * NSizeBWP * CSIRSIndices(:, 2);
@@ -282,7 +302,7 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
             encDL.TargetCodeRate = targetCodeRate;
             setTransportBlock(encDL, schTransportBlock);
             schCodeword = encDL(Modulation, pdsch.NumLayers, pdschInfo.G, rv);
-            
+
             % Generate DL-SCH symbols.
             betaDatadB = 0;
             schSymbols = nrPDSCH(carrier, pdsch, schCodeword) * 10 ^ (betaDatadB / 20);
@@ -299,7 +319,7 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
 
             % Concatenate data and DM-RS symbols.
             allIndices = [pdschDataIndices; pdschDMRSIndices];
-            allSymbols = [schSymbols; DMRSSymbols];
+            allSymbols = [schSymbols(:); DMRSSymbols(:)];
 
             % Write PDSCH Data complex symbols and indices into a binary file as resource grid entries.
             testCase.saveDataFile(pdschGridFileName, testID, @writeResourceGridEntryFile, allSymbols, allIndices);
@@ -327,6 +347,8 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
             % Convert modulation type to string.
             modString1 = srsModulationFromMatlab(pdsch.Modulation, 'full');
 
+            precodingString = ['make_wideband_identity(' num2str(NumLayers) ')'];
+
             % Prepare PDSCH configuration.
             pduDescription = {...
                 'nullopt', ...                 % context
@@ -351,7 +373,7 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
                 rvdREPatternList, ...          % reserved
                 betaDMRSdB, ...                % ratio_pdsch_dmrs_to_sss_dB
                 betaDatadB, ...                % ratio_pdsch_data_to_sss_dB
-                'default_precoding'            % precoding
+                precodingString                % precoding
                 };
 
             contextDescription = {...

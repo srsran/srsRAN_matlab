@@ -19,6 +19,7 @@
 %
 %   SymbolAllocation  - Symbols allocated to the PDSCH transmission.
 %   Modulation        - Modulation scheme.
+%   NumLayers         - Number of transmission layers.
 %
 %   srsPDSCHModulatorUnittest Methods (TestTags = {'testvector'}):
 %
@@ -70,6 +71,9 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
 
         %Modulation scheme ('QPSK', '16QAM', '64QAM', '256QAM').
         Modulation = {'QPSK', '16QAM', '64QAM', '256QAM'}
+
+        %Number of transmission layers (1, 2, 4).
+        NumLayers = {1, 2, 4}
     end
 
     methods (Access = protected)
@@ -88,10 +92,10 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
     end % of methods (Access = protected)
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(testCase, SymbolAllocation, Modulation)
+        function testvectorGenerationCases(testCase, SymbolAllocation, Modulation, NumLayers)
         %testvectorGenerationCases Generates a test vector for the given SymbolAllocation,
-        %   Modulation scheme. Other parameters (e.g., the RNTI)
-        %   are generated randomly.
+        %   Modulation scheme and number of layers. Other parameters (e.g.,
+        %   the RNTI) are generated randomly.
 
             import srsLib.phy.helpers.srsConfigurePDSCHdmrs
             import srsLib.phy.helpers.srsConfigurePDSCH
@@ -112,7 +116,7 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
             carrier = nrCarrierConfig;
 
             % Configure the PDSCH according to the test parameters.
-            pdsch = srsConfigurePDSCH(SymbolAllocation, Modulation);
+            pdsch = srsConfigurePDSCH(SymbolAllocation, Modulation, NumLayers);
 
             % Set randomized values.
             pdsch.NID = randi([1, 1023]);
@@ -123,7 +127,7 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
 
 
             % Calculate number of encoded bits.
-            nBits = length(nrPDSCHIndices(carrier, pdsch)) * modOrder1;
+            nBits = length(nrPDSCHIndices(carrier, pdsch, "IndexStyle", "subscript")) * modOrder1;
 
             % Generate codewords.
             cws = randi([0,1], nBits, 1);
@@ -145,10 +149,11 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
             % Generate the test case entry.
             reservedString = '{}';
 
-
             RBAllocationString = rbAllocationIndexes2String(pdsch.PRBSet);
 
             DMRSTypeString = sprintf('dmrs_type::TYPE%d', pdsch.DMRS.DMRSConfigurationType);
+
+            precodingString = ['make_wideband_identity(' num2str(NumLayers) ')'];
 
             configCell = {...
                 pdsch.RNTI,...                          % rnti
@@ -165,7 +170,7 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
                 pdsch.NID, ...                          % n_id
                 1.0, ...                                % scaling
                 reservedString, ...                     % reserved
-                'default_precoding'...
+                precodingString...                      % precoding
                 };
 
             testCaseString = testCase.testCaseToString(testID, configCell, true, ...
