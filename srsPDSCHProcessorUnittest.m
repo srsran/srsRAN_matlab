@@ -21,9 +21,7 @@
 %   BWPConfig          - BWP configuration.
 %   Modulation         - Modulation scheme.
 %   SymbolAllocation   - PDSCH start symbol index and number of symbols.
-%   targetCodeRate     - DL-SCH target code rate.
 %   DMRSReferencePoint - PDSCH DM-RS subcarrier reference point.
-%   RvdElements        - Sets reserved resource elements within the grid.
 %   NumLayers          - Number of transmission layers.
 %
 %   srsPDSCHProcessorUnittest Methods (TestTags = {'testvector'}):
@@ -84,20 +82,12 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
         %   Example: [0, 14].
         SymbolAllocation = {[0, 14], [1, 9]}
 
-        %Target code rate.
-        targetCodeRate = {0.1, 0.5, 0.8}
-
         %PDSCH DM-RS subcarrier reference point.
         %    It can be either CRB 0 or PRB 0 within the BWP.
         DMRSReferencePoint = {'CRB0', 'PRB0'};
 
-        %Reserved Elements.
-        %   Adds reserved Resource Elements to the grid, where PDSCH allocation is not allowed.
-        %   The reserved elements correpond with ZP-CSI-RS resources. 
-        RvdElements = {false, true};
-
-        %Number of transmission layers (1, 2).
-        NumLayers = {1, 2}
+        %Number of transmission layers (1, 2, 3, 4).
+        NumLayers = {1, 2, 3, 4}
     end
 
     methods (Access = protected)
@@ -137,13 +127,13 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
 
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, BWPConfig, Modulation, ...
-                SymbolAllocation, targetCodeRate, DMRSReferencePoint, RvdElements, NumLayers)
+                SymbolAllocation, DMRSReferencePoint, NumLayers)
         %testvectorGenerationCases Generates a test vector for the given
-        %   BWP, modulation scheme, symbol allocation, target code rate, 
-        %   DM-RS reference point, reserved element and number of layers
-        %   settings. Other parameters, such as subcarrier spacing, PDSCH 
-        %   frequency allocation, slot number, RNTI, scrambling identifiers 
-        %   and DM-RS additional positions are randomly generated.
+        %   BWP, modulation scheme, symbol allocation, DM-RS reference 
+        %   point and number of layers settings. Other parameters, such as
+        %   subcarrier spacing, PDSCH frequency allocation, slot number, 
+        %   RNTI, scrambling identifiers, target code rate and DM-RS 
+        %   additional positions are randomly generated.
 
             import srsLib.phy.helpers.srsConfigureCarrier
             import srsLib.phy.helpers.srsCSIRSValidateConfig
@@ -176,6 +166,9 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
 
             % Redundancy Version 0.
             rv = 0;
+
+            % Target code rate, between 0.1 and 0.9;
+            targetCodeRate = 0.1 + rand() * 0.8;
 
             % Minimum number of PRB.
             MinNumPrb = 1;
@@ -218,69 +211,64 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
             pdsch.DMRS.DMRSReferencePoint = DMRSReferencePoint;
             pdsch.NumLayers = NumLayers;
 
-            % Create reserved RE Pattern list.
-            rvdREPatternList = {};
+            % Create a ZP-CSI-RS resource, occupying the first symbol.
+            csirs1 = nrCSIRSConfig;
+            csirs1.CSIRSType = 'zp';
+            csirs1.CSIRSPeriod = 'on';
+            csirs1.RowNumber = 1;
+            csirs1.Density = 'three';
+            csirs1.SymbolLocations = {0};
+            csirs1.SubcarrierLocations = {0};
+            csirs1.NumRB = NSizeBWP;
+            csirs1.RBOffset = NStartBWP;
+            csirs1.NID = NID;
+        
+            % Create a second ZP-CSI-RS resource with differnt RE
+            % allocations.
+            csirs2 = nrCSIRSConfig;
+            csirs2.CSIRSType = 'zp';
+            csirs2.CSIRSPeriod = 'on';
+            csirs2.RowNumber = 2;
+            csirs2.Density = 'dot5odd';
+            csirs2.SymbolLocations = {randi([1, 11])};
+            csirs2.SubcarrierLocations = {randi([0, 11])};
+            csirs2.NumRB = NSizeBWP;
+            csirs2.RBOffset = NStartBWP;
+            csirs2.NID = NID;
 
-            if (RvdElements)
-                % Create a ZP-CSI-RS resource, occupying the first symbol.
-                csirs1 = nrCSIRSConfig;
-                csirs1.CSIRSType = 'zp';
-                csirs1.CSIRSPeriod = 'on';
-                csirs1.RowNumber = 1;
-                csirs1.Density = 'three';
-                csirs1.SymbolLocations = {0};
-                csirs1.SubcarrierLocations = {0};
-                csirs1.NumRB = NSizeBWP;
-                csirs1.RBOffset = NStartBWP;
-                csirs1.NID = NID;
-            
-                % Create a second ZP-CSI-RS resource with differnt RE
-                % allocations.
-                csirs2 = nrCSIRSConfig;
-                csirs2.CSIRSType = 'zp';
-                csirs2.CSIRSPeriod = 'on';
-                csirs2.RowNumber = 2;
-                csirs2.Density = 'dot5odd';
-                csirs2.SymbolLocations = {randi([1, 11])};
-                csirs2.SubcarrierLocations = {randi([0, 11])};
-                csirs2.NumRB = NSizeBWP;
-                csirs2.RBOffset = NStartBWP;
-                csirs2.NID = NID;
-
-                % Create a thirs ZP-CSI-RS resource spanning two antenna
-                % ports.
-                csirs3 = nrCSIRSConfig;
-                csirs3.CSIRSType = 'zp';
-                csirs3.CSIRSPeriod = 'on';
-                csirs3.RowNumber = 3;
-                csirs3.Density = 'dot5even';
-                csirs3.SymbolLocations = {randi([1, 11])};
-                csirs3.SubcarrierLocations = {randi([0, 10])};
-                csirs3.NumRB = NSizeBWP;
-                csirs3.RBOffset = NStartBWP;
-                csirs3.NID = NID;
-              
-                % Validate the CSI-RS resources.
-                if ((~srsCSIRSValidateConfig(carrier, csirs1)) || ...
-                        (~srsCSIRSValidateConfig(carrier, csirs2)) || ...
-                        (~srsCSIRSValidateConfig(carrier, csirs3)))
-                    error('invalid CSIRS configuration');
-                end
-    
-                % Generate RE patterns from the CSI-RS resources.
-                rvdREPatternList = srsCSIRS2ReservedCell(carrier, {csirs1, csirs2, csirs3});
-                
-                % Add the CSI-RS indices to the PDSCH reserved RE list.
-                CSIRSIndices = [nrCSIRSIndices(carrier, csirs1, 'IndexStyle','subscript', 'IndexBase', '0based'); ...
-                   nrCSIRSIndices(carrier, csirs2, 'IndexStyle','subscript', 'IndexBase', '0based'); ...
-                   nrCSIRSIndices(carrier, csirs3, 'IndexStyle','subscript', 'IndexBase', '0based')];
-
-                % Flatten the index format.
-                CSIRSIndices = CSIRSIndices(:, 1) + 12 * NSizeBWP * CSIRSIndices(:, 2);
-
-                % Change the RE reference point from CRB0 to the BWP Start.
-                pdsch.ReservedRE = CSIRSIndices - 12 * NStartBWP;
+            % Create a third ZP-CSI-RS resource spanning two antenna
+            % ports.
+            csirs3 = nrCSIRSConfig;
+            csirs3.CSIRSType = 'zp';
+            csirs3.CSIRSPeriod = 'on';
+            csirs3.RowNumber = 3;
+            csirs3.Density = 'dot5even';
+            csirs3.SymbolLocations = {randi([1, 11])};
+            csirs3.SubcarrierLocations = {randi([0, 10])};
+            csirs3.NumRB = NSizeBWP;
+            csirs3.RBOffset = NStartBWP;
+            csirs3.NID = NID;
+          
+            % Validate the CSI-RS resources.
+            if ((~srsCSIRSValidateConfig(carrier, csirs1)) || ...
+                    (~srsCSIRSValidateConfig(carrier, csirs2)) || ...
+                    (~srsCSIRSValidateConfig(carrier, csirs3)))
+                error('invalid CSIRS configuration');
             end
+
+            % Generate RE patterns from the CSI-RS resources.
+            rvdREPatternList = srsCSIRS2ReservedCell(carrier, {csirs1, csirs2, csirs3});
+            
+            % Add the CSI-RS indices to the PDSCH reserved RE list.
+            CSIRSIndices = [nrCSIRSIndices(carrier, csirs1, 'IndexStyle','subscript', 'IndexBase', '0based'); ...
+               nrCSIRSIndices(carrier, csirs2, 'IndexStyle','subscript', 'IndexBase', '0based'); ...
+               nrCSIRSIndices(carrier, csirs3, 'IndexStyle','subscript', 'IndexBase', '0based')];
+
+            % Flatten the index format.
+            CSIRSIndices = CSIRSIndices(:, 1) + 12 * NSizeBWP * CSIRSIndices(:, 2);
+
+            % Change the RE reference point from CRB0 to the BWP Start.
+            pdsch.ReservedRE = CSIRSIndices - 12 * NStartBWP;
 
             % Generate PDSCH resource grid indices.
             [pdschDataIndices, pdschInfo] = nrPDSCHIndices(carrier, pdsch, 'IndexStyle','subscript', 'IndexBase','0based');
