@@ -75,8 +75,8 @@ classdef srsPDSCHdmrsUnittest < srsTest.srsBlockUnittest
         %Defines the subcarrier spacing (0, 1).
         numerology = {0, 1}
 
-        %Number of transmission layers (1, 2).
-        NumLayers = {1, 2}
+        %Number of transmission layers (1, 2, 3, 4).
+        NumLayers = {1, 2, 3, 4}
 
         %Position of the first DMRS OFDM symbol (2, 3).
         DMRSTypeAPosition = {2, 3}
