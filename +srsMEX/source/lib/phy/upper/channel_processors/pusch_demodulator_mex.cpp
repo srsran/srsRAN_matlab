@@ -19,6 +19,7 @@
 
 #include "pusch_demodulator_mex.h"
 #include "srsran_matlab/support/matlab_to_srs.h"
+#include "srsran/phy/support/resource_grid_writer.h"
 
 using matlab::mex::ArgumentList;
 using namespace matlab::data;
@@ -80,11 +81,11 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
 
   // Build the RB allocation bitmask (contiguous PRB allocation is assumed).
   const TypedArray<double> rb_mask_in          = in_dem_cfg["rbMask"];
-  int                      num_of_rb           = rb_mask_in.getNumberOfElements();
-  int                      start_prb_index     = 0;
-  int                      end_prb_index       = 0;
+  unsigned                 num_of_rb           = rb_mask_in.getNumberOfElements();
+  unsigned                 start_prb_index     = 0;
+  unsigned                 end_prb_index       = 0;
   bool                     start_prb_index_set = false;
-  for (int rb_index = 0; rb_index != num_of_rb; ++rb_index) {
+  for (unsigned rb_index = 0; rb_index != num_of_rb; ++rb_index) {
     if (rb_mask_in[rb_index] == 1) {
       if (!start_prb_index_set) {
         start_prb_index     = rb_index;
@@ -99,25 +100,25 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
   prb_mask.fill(start_prb_index, end_prb_index + 1);
 
   // Build the DM-RS symbol position bitmask.
-  const TypedArray<double>             dmrs_pos_in = in_dem_cfg["dmrsSymbPos"];
-  std::array<bool, MAX_NSYMB_PER_SLOT> dmrs_symb_pos;
-  for (int symb_index = 0; symb_index != MAX_NSYMB_PER_SLOT; ++symb_index) {
-    dmrs_symb_pos[symb_index] = (dmrs_pos_in[symb_index] == 1) ? true : false;
+  const TypedArray<double>             dmrs_pos_in   = in_dem_cfg["dmrsSymbPos"];
+  std::array<bool, MAX_NSYMB_PER_SLOT> dmrs_symb_pos = {};
+  for (unsigned symb_index = 0; symb_index != MAX_NSYMB_PER_SLOT; ++symb_index) {
+    dmrs_symb_pos[symb_index] = (dmrs_pos_in[symb_index] == 1);
   }
 
   // Build the placeholder RE indices list.
   const TypedArray<double> placeholders_in   = in_dem_cfg["placeholders"];
-  int                      num_of_re_indices = placeholders_in.getNumberOfElements();
+  unsigned                 num_of_re_indices = placeholders_in.getNumberOfElements();
   ulsch_placeholder_list   placeholders;
-  for (int re_index = 0; re_index != num_of_re_indices; ++re_index) {
-    placeholders.push_back(placeholders_in[re_index]);
+  for (unsigned re_index = 0; re_index != num_of_re_indices; ++re_index) {
+    placeholders.push_back(static_cast<unsigned>(placeholders_in[re_index]));
   }
 
   // Build the rx port list.
   const TypedArray<double>          rx_ports_in     = in_dem_cfg["rxPorts"];
-  int                               num_of_rx_ports = rx_ports_in.getNumberOfElements();
+  unsigned                          num_of_rx_ports = rx_ports_in.getNumberOfElements();
   static_vector<uint8_t, MAX_PORTS> rx_ports;
-  for (int rx_port = 0; rx_port != num_of_rx_ports; ++rx_port) {
+  for (unsigned rx_port = 0; rx_port != num_of_rx_ports; ++rx_port) {
     rx_ports.push_back(static_cast<uint8_t>(rx_ports_in[rx_port]));
   }
 
@@ -175,15 +176,15 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
     for (unsigned i_re = 0; i_re < nof_resources; ++i_re) {
       if (in_grid_indices_array[i_re][2] == i_port) {
         resource_grid_coordinate coordinate;
-        coordinate.subcarrier = in_grid_indices_array[i_re][0];
-        coordinate.symbol     = in_grid_indices_array[i_re][1];
+        coordinate.subcarrier = static_cast<uint16_t>(in_grid_indices_array[i_re][0]);
+        coordinate.symbol     = static_cast<uint16_t>(in_grid_indices_array[i_re][1]);
         coordinates.emplace_back(coordinate);
         values.emplace_back(rx_symbols[i_re]);
       }
     }
 
     // Put elements in the grid for the selected port.
-    grid->put(i_port, coordinates, values);
+    grid->get_writer().put(i_port, coordinates, values);
   }
 
   // Get the channel estimates.
@@ -218,7 +219,7 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
   }
 
   // Compute expected soft output bit number.
-  unsigned bits_per_symbol;
+  unsigned bits_per_symbol = 0;
   switch (demodulator_config.modulation) {
     case srsran::modulation_scheme::PI_2_BPSK:
       bits_per_symbol = 1;
@@ -240,7 +241,7 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
   std::vector<log_likelihood_ratio> sch_data(nof_expected_soft_output_bits);
 
   // Demodulate the PUSCH transmission.
-  demodulator->demodulate(sch_data, *grid, chan_estimates, demodulator_config);
+  demodulator->demodulate(sch_data, grid->get_reader(), chan_estimates, demodulator_config);
 
   // Return the results to MATLAB.
   std::vector<int8_t> sch_data_int8(sch_data.cbegin(), sch_data.cend());
