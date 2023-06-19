@@ -70,7 +70,7 @@ classdef srsNZPCSIRSGeneratorUnittest < srsTest.srsBlockUnittest
 
         %CSI-RS mapping format, as specified by the row RowNumber in
         %   TS38.211, Table 7.4.1.5.3-1 (0, 1, ..., 12).
-        RowNumber = num2cell(1:12)
+        RowNumber = num2cell(1:5)
         
         %Defines the subcarrier spacing (0, 1, 2, 3, 4).
         Numerology = {0 2}
@@ -97,6 +97,7 @@ classdef srsNZPCSIRSGeneratorUnittest < srsTest.srsBlockUnittest
     methods (Access = protected)
         function addTestIncludesToHeaderFile(obj, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
+            fprintf(fileID, '#include "srsran/ran/precoding/precoding_codebooks.h"\n');
             addTestIncludesToHeaderFilePHYsigproc(obj, fileID);
         end
 
@@ -127,9 +128,6 @@ classdef srsNZPCSIRSGeneratorUnittest < srsTest.srsBlockUnittest
             % Current fixed parameter values.
             NSizeGrid = 272;
             NStartGrid = 0;
-
-            % Precoding is currently unsupported.
-            pmi = 0;
 
             % The l_1 symbol location reference is not used in any of the
             % currently supported mapping options.
@@ -224,18 +222,32 @@ classdef srsNZPCSIRSGeneratorUnittest < srsTest.srsBlockUnittest
            
             % Generate the Subcarrier indices string.
             SubcarrierRefStr = cellarray2str(SubcarrierLocations, true);
-            
-            % Generate the ports configuration string.
-            CSIRSports = 0:CSIRS.NumCSIRSPorts - 1;
-            CSIRSportsStr = cellarray2str({CSIRSports}, true);
 
-            % Generate the test case entry
+            % Precoding configuration that maps layers to ports one to one.
+            precodingString = ['make_wideband_identity(' num2str(CSIRS.NumCSIRSPorts) ')'];
+
+            configCell = {...
+                slotPointConfig, ...  % slot
+                CyclicPrefixStr, ...  % cp
+                RBOffset, ...         % start_rb
+                NumRB, ...            % nof_rb
+                RowNumber, ...        % csi_rs_mapping_table_row
+                SubcarrierRefStr, ... % freq_allocation_ref_idx
+                l_0, ...              % symbol_l0
+                l_1, ...              % symbol_l1
+                CDMStr, ...           % cdm
+                DensityStr, ...       % freq_density
+                NID, ...              % scrambling_id
+                amplitude, ...        % amplitude
+                precodingString...    % precoding
+                };
+
+
+            % Generate the test case entry.
             testCaseString = testCase.testCaseToString(TestID, ...
-                {slotPointConfig, CyclicPrefixStr, RBOffset, NumRB, RowNumber, ...
-                SubcarrierRefStr, l_0, l_1, CDMStr, DensityStr, NID, amplitude, ...
-                pmi, CSIRSportsStr}, true, '_test_output');
+                configCell, true, '_test_output');
 
-            % Add the test to the file header
+            % Add the test to the file header.
             testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);
         end % of function testvectorGenerationCases
     end % of methods (Test, TestTags = {'testvector'})

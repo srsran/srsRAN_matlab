@@ -19,11 +19,11 @@ Checks: '*,-fuchsia-*,
          -modernize-use-using,-modernize-use-trailing-return-type,
          -modernize-use-auto,-hicpp-use-auto,
          -llvmlibc-callee-namespace,-llvmlibc-implementation-in-namespace,-llvmlibc-restrict-system-libc-headers,
-         -llvm-header-guard,
+         -llvm-header-guard, -llvm-include-order,
          -google-runtime-references,-google-readability-casting,-google-build-using-namespace,
          google-default-arguments,-cppcoreguidelines-pro-bounds-pointer-arithmetic,
          -cert-err58-cpp,
-         -altera-unroll-loops,
+         -altera-unroll-loops, -altera-id-dependent-backward-branch,
          -readability-function-cognitive-complexity,-readability-isolate-declaration,
          -misc-non-private-member-variables-in-classes,-altera-struct-pack-align,-readability-uppercase-literal-suffix,
          -cppcoreguidelines-non-private-member-variables-in-classes,
@@ -35,4 +35,4 @@ CheckOptions:
   - { key: readibility-identifier-naming.ClassCase,     value: lower_case }
   - { key: readibility-identifier-naming.StructCase,    value: lower_case }
   - { key: readibility-identifier-naming.VariableCase,  value: lower_case }
-
+  - { key: misc-const-correctness.AnalyzeValues,        value: false }

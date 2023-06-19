@@ -19,6 +19,7 @@
 %
 %   SymbolAllocation  - Symbols allocated to the PDSCH transmission.
 %   Modulation        - Modulation scheme.
+%   NumLayers         - Number of transmission layers.
 %
 %   srsPDSCHModulatorUnittest Methods (TestTags = {'testvector'}):
 %
@@ -70,25 +71,31 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
 
         %Modulation scheme ('QPSK', '16QAM', '64QAM', '256QAM').
         Modulation = {'QPSK', '16QAM', '64QAM', '256QAM'}
+
+        %Number of transmission layers (1, 2, 4).
+        NumLayers = {1, 2, 4}
     end
 
     methods (Access = protected)
         function addTestIncludesToHeaderFile(obj, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
             addTestIncludesToHeaderFilePHYchproc(obj, fileID);
+            fprintf(fileID, '#include "srsran/ran/precoding/precoding_codebooks.h"\n');
         end
 
         function addTestDefinitionToHeaderFile(obj, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
+            fprintf(fileID, 'static const precoding_configuration default_precoding = make_single_port();\n');
+            fprintf(fileID, '\n');
             addTestDefinitionToHeaderFilePHYchproc(obj, fileID);
         end
     end % of methods (Access = protected)
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(testCase, SymbolAllocation, Modulation)
+        function testvectorGenerationCases(testCase, SymbolAllocation, Modulation, NumLayers)
         %testvectorGenerationCases Generates a test vector for the given SymbolAllocation,
-        %   Modulation scheme. Other parameters (e.g., the RNTI)
-        %   are generated randomly.
+        %   Modulation scheme and number of layers. Other parameters (e.g.,
+        %   the RNTI) are generated randomly.
 
             import srsLib.phy.helpers.srsConfigurePDSCHdmrs
             import srsLib.phy.helpers.srsConfigurePDSCH
@@ -109,7 +116,7 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
             carrier = nrCarrierConfig;
 
             % Configure the PDSCH according to the test parameters.
-            pdsch = srsConfigurePDSCH(SymbolAllocation, Modulation);
+            pdsch = srsConfigurePDSCH(SymbolAllocation, Modulation, NumLayers);
 
             % Set randomized values.
             pdsch.NID = randi([1, 1023]);
@@ -120,7 +127,7 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
 
 
             % Calculate number of encoded bits.
-            nBits = length(nrPDSCHIndices(carrier, pdsch)) * modOrder1;
+            nBits = length(nrPDSCHIndices(carrier, pdsch, "IndexStyle", "subscript")) * modOrder1;
 
             % Generate codewords.
             cws = randi([0,1], nBits, 1);
@@ -142,18 +149,31 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
             % Generate the test case entry.
             reservedString = '{}';
 
-            portsString = '{0}';
-
             RBAllocationString = rbAllocationIndexes2String(pdsch.PRBSet);
 
             DMRSTypeString = sprintf('dmrs_type::TYPE%d', pdsch.DMRS.DMRSConfigurationType);
 
-            config = [ {pdsch.RNTI}, {carrier.NSizeGrid}, {carrier.NStartGrid}, ...
-                {modString1}, {modString1}, {RBAllocationString}, {pdsch.SymbolAllocation(1)}, ...
-                {pdsch.SymbolAllocation(2)}, {dmrsSymbolMask}, {DMRSTypeString}, ...
-                {pdsch.DMRS.NumCDMGroupsWithoutData}, {pdsch.NID}, {1}, {reservedString}, {0}, {portsString}];
+            precodingString = ['make_wideband_identity(' num2str(NumLayers) ')'];
 
-            testCaseString = testCase.testCaseToString(testID, config, true, ...
+            configCell = {...
+                pdsch.RNTI,...                          % rnti
+                carrier.NSizeGrid, ...                  % bwp_size_rb
+                carrier.NStartGrid, ...                 % bwp_start_rb
+                modString1, ...                         % modulation1
+                modString1, ...                         % modulation2
+                RBAllocationString, ...                 % freq_allocation
+                pdsch.SymbolAllocation(1), ...          % start_symbol_index
+                pdsch.SymbolAllocation(2), ...          % nof_symbols
+                dmrsSymbolMask, ...                     % dmrs_symb_pos
+                DMRSTypeString, ...                     % dmrs_config_type
+                pdsch.DMRS.NumCDMGroupsWithoutData, ... % nof_cmd_groups_without_data 
+                pdsch.NID, ...                          % n_id
+                1.0, ...                                % scaling
+                reservedString, ...                     % reserved
+                precodingString...                      % precoding
+                };
+
+            testCaseString = testCase.testCaseToString(testID, configCell, true, ...
                 '_test_input', '_test_output');
 
             % Add the test to the file header.

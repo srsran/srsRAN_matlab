@@ -93,13 +93,28 @@ for CSIRSIndex = 1:length(CSIRSResources)
     RBMask = zeros(1,12);
     SymbolMask = zeros(1,14);
 
+    % CDM group RE frequency offsets.
+    KPrime = info.KPrime{1};
+
+    % CDM group RE time offsets.
+    LPrime = info.LPrime{1};
+   
     % Create RE and symbol masks from KBarLbar.
     for KBarLBarIndex = 1:length(info.KBarLBar)
         KBarLBar = info.KBarLBar{KBarLBarIndex};
         for KBarLBarIndex2 = 1:length(KBarLBar)
+
+            % Resource grid RE references for each CDM group.
             KBarLBar2 = KBarLBar{KBarLBarIndex2};
-            RBMask(KBarLBar2(1) + 1) = 1;
-            SymbolMask(KBarLBar2(2) + 1) = 1;
+
+            % Set the REs belonging to the CDM group.
+            for KPrimeIndex = 1:length(KPrime)
+                RBMask(KBarLBar2(1) + KPrime(KPrimeIndex) + 1) = 1;
+            end
+
+            for LPrimeIndex = 1:length(LPrime)
+                SymbolMask(KBarLBar2(2) + LPrime(LPrimeIndex) + 1) = 1;
+            end
         end
     end
 

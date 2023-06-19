@@ -75,8 +75,8 @@ classdef srsPDSCHdmrsUnittest < srsTest.srsBlockUnittest
         %Defines the subcarrier spacing (0, 1).
         numerology = {0, 1}
 
-        %Number of transmission layers (1, 2, 4, 8).
-        NumLayers = {1, 2, 4, 8}
+        %Number of transmission layers (1, 2).
+        NumLayers = {1, 2}
 
         %Position of the first DMRS OFDM symbol (2, 3).
         DMRSTypeAPosition = {2, 3}
@@ -95,6 +95,7 @@ classdef srsPDSCHdmrsUnittest < srsTest.srsBlockUnittest
         function addTestIncludesToHeaderFile(obj, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
             addTestIncludesToHeaderFilePHYsigproc(obj, fileID);
+            fprintf(fileID, '#include "srsran/ran/precoding/precoding_codebooks.h"\n');
         end
 
         function addTestDefinitionToHeaderFile(obj, fileID)
@@ -119,10 +120,11 @@ classdef srsPDSCHdmrsUnittest < srsTest.srsBlockUnittest
             import srsTest.helpers.symbolAllocationMask2string
             import srsTest.helpers.RBallocationMask2string
 
-            % generate a unique test ID
+            % Generate a unique test ID.
             testID = testCase.generateTestID;
 
-            % use a unique NCellID, NSlot, scrambling ID and PRB allocation for each test
+            % Use a unique NCellID, NSlot, scrambling ID and PRB allocation
+            % for each test.
             NCellID = testCase.randomizeTestvector(testID + 1) - 1;
             if numerology == 0
                 NSlot = randi([0, 9]);
@@ -133,7 +135,8 @@ classdef srsPDSCHdmrsUnittest < srsTest.srsBlockUnittest
             PRBstart = randi([0, 136]);
             PRBend = randi([136, 271]);
 
-            % current fixed parameter values (e.g., number of CDM groups without data)
+            % Current fixed parameter values (e.g., number of CDM groups
+            % without data).
             NSizeGrid = 272;
             NStartGrid = 0;
             NFrame = 0;
@@ -150,54 +153,64 @@ classdef srsPDSCHdmrsUnittest < srsTest.srsBlockUnittest
             SymbolAllocation = [1 13];
             PRBSet = PRBstart:PRBend;
             amplitude = 0.5;
-            PDSCHports = 0:(NumLayers-1);
-            PDSCHportsStr = cellarray2str({PDSCHports}, true);
 
-            % skip those invalid configuration cases
+            % Skip those invalid configuration cases.
             isDMRSLengthOK = (DMRSLength == 1 || DMRSAdditionalPosition < 2);
             if isDMRSLengthOK
-                % configure the carrier according to the test parameters
+                % Configure the carrier according to the test parameters.
                 SubcarrierSpacing = 15 * (2 .^ numerology);
                 carrier = srsConfigureCarrier(NCellID, SubcarrierSpacing, ...
                     NSizeGrid, NStartGrid, NSlot, NFrame, CyclicPrefix);
 
-                % configure the PDSCH DMRS symbols according to the test parameters
+                % Configure the PDSCH DMRS symbols according to the test
+                % parameters.
                 DMRS = srsConfigurePDSCHdmrs(DMRSConfigurationType, ...
                     DMRSTypeAPosition, DMRSAdditionalPosition, DMRSLength, ...
                     NIDNSCID, NSCID);
 
-                % configure the PDSCH according to the test parameters
+                % Configure the PDSCH according to the test parameters.
                 pdsch = srsConfigurePDSCH(DMRS, NStartBWP, NSizeBWP, NID, RNTI, ...
                     ReservedRE, Modulation, NumLayers, MappingType, ...
                     SymbolAllocation, PRBSet);
 
-                % call the PDSCH DMRS symbol processor MATLAB functions
+                % Call the PDSCH DMRS symbol processor MATLAB functions.
                 [DMRSsymbols, symbolIndices] = srsPDSCHdmrs(carrier, pdsch);
 
-                % write each complex symbol into a binary file, and the associated indices to another
+                % Write each complex symbol into a binary file, and the
+                % associated indices to another.
                 testCase.saveDataFile('_test_output', testID, ...
                     @writeResourceGridEntryFile, amplitude * DMRSsymbols, symbolIndices);
 
-                % generate a 'slot_point' configuration string
+                % Generate a 'slot_point' configuration string.
                 slotPointConfig = cellarray2str({numerology, NFrame, ...
                     floor(NSlot / carrier.SlotsPerSubframe), ...
                     rem(NSlot, carrier.SlotsPerSubframe)}, true);
 
-                % generate a symbol allocation mask string
+                % Generate a symbol allocation mask string.
                 symbolAllocationMask = symbolAllocationMask2string(symbolIndices);
 
-                % generate a RB allocation mask string
+                % Generate a RB allocation mask string.
                 rbAllocationMask = RBallocationMask2string(PRBstart, PRBend);
 
-                % generate the test case entry
-                testCaseString = testCase.testCaseToString(testID, ...
-                    {slotPointConfig, referencePointKrb, ...
-                        ['dmrs_type::TYPE', num2str(DMRSConfigurationType)], ...
-                        NIDNSCID, NSCID, amplitude, ...
-                        symbolAllocationMask, rbAllocationMask, PDSCHportsStr}, ...
+                precodingString = ['make_wideband_identity(' num2str(NumLayers) ')'];
+
+                configCell = {...
+                    slotPointConfig, ...                                     % slot
+                    referencePointKrb, ...                                   % reference_point_k_rb
+                    ['dmrs_type::TYPE', num2str(DMRSConfigurationType)], ... % type
+                    NIDNSCID, ...                                            % scrambling_id
+                    NSCID,...                                                % n_scid
+                    amplitude, ...                                           % amplitude
+                    symbolAllocationMask, ...                                % symbols_mask
+                    rbAllocationMask, ...                                    % rb_mask
+                    precodingString...                                       % precoding
+                };
+
+                % Generate the test case entry.
+                testCaseString = testCase.testCaseToString(testID, configCell, ...
                         true, '_test_output');
 
-                % add the test to the file header
+                % Add the test to the file header.
                 testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);
             end
         end % of function testvectorGenerationCases

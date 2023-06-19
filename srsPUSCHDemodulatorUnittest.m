@@ -120,6 +120,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             fprintf(fileID, 'enum class ch_dims : unsigned { subcarrier = 0, symbol = 1, rx_port = 2, tx_layer = 3, nof_dims = 4 };\n\n');
             fprintf(fileID, 'struct context_t {\n');
             fprintf(fileID, '  float noise_var;\n');
+            fprintf(fileID, '  float sinr_dB;\n');
             fprintf(fileID, '  pusch_demodulator::configuration                        config;\n');
             fprintf(fileID, '};\n\n');
             fprintf(fileID, 'struct test_case_t {\n');
@@ -308,8 +309,14 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             % Configure the test.
             setupsimulation(obj, DMRSConfigurationType, Modulation, NumRxPorts);
 
-            % Select noise variance between 0.0001 and 0.01.
-            noiseVar = rand() * 0.0099 + 0.0001;
+            % Estimate average energy per resource element (EPRE).
+            epredB = 10 * log10(mean(abs(obj.ce) .^ 2, 'all'));
+
+            % Select an SNR between 10 and 30dB.
+            snrdB = round(rand() * 20 + 10);
+
+            % Select noise variance from the EPRE and SNR.
+            noiseVar = 10 ^ ((epredB - snrdB) / 10);
 
             % Generate noise.
             noise = (randn(size(obj.txGrid)) + 1j * randn(size(obj.txGrid))) * sqrt(noiseVar / 2);
@@ -334,6 +341,9 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
 
             % Equalize.
             [eqSymbols, eqNoise] = srsChannelEqualizer(rxSymbols, cePusch, 'ZF', noiseVar, 1.0);
+
+            % Estimate SINR from the equalizer noise esimation.
+            estimatedSinrdB = -10 * log10(mean(eqNoise));
 
             % Soft demapping.
             softBits = srsDemodulator(eqSymbols, obj.pusch.Modulation, eqNoise);
@@ -387,6 +397,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
 
             testCaseContext = { ...
                 noiseVar, ...        % noise_var
+                estimatedSinrdB, ... % sinr_dB
                 puschCellConfig, ... % config
                 };
 
