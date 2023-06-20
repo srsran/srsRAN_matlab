@@ -104,7 +104,7 @@ classdef srsPDCCHdmrsUnittest < srsTest.srsBlockUnittest
 
         function addTestDefinitionToHeaderFile(obj, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
-            fprintf(fileID, 'static const precoding_configuration default_precoding = make_single_port();\n');
+            fprintf(fileID, 'static const precoding_configuration default_precoding = precoding_configuration::make_wideband(make_single_port());\n');
             fprintf(fileID, '\n');
             addTestDefinitionToHeaderFilePHYsigproc(obj, fileID);
         end

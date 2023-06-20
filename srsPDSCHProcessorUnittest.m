@@ -120,7 +120,6 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
                 '  file_vector<uint8_t>  sch_data;\n'...
                 '  file_vector<rg_entry> grid_expected;\n'...
                 '};\n\n'...
-                'static const precoding_configuration default_precoding = make_single_port();\n\n'...
                 ]);
         end
     end % of methods (Access = protected)
@@ -335,7 +334,7 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
             % Convert modulation type to string.
             modString1 = srsModulationFromMatlab(pdsch.Modulation, 'full');
 
-            precodingString = ['make_wideband_identity(' num2str(NumLayers) ')'];
+            precodingString = ['precoding_configuration::make_wideband(make_identity(' num2str(NumLayers) '))'];
 
             % Prepare PDSCH configuration.
             pduDescription = {...

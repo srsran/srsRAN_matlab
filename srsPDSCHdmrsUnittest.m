@@ -192,7 +192,7 @@ classdef srsPDSCHdmrsUnittest < srsTest.srsBlockUnittest
                 % Generate a RB allocation mask string.
                 rbAllocationMask = RBallocationMask2string(PRBstart, PRBend);
 
-                precodingString = ['make_wideband_identity(' num2str(NumLayers) ')'];
+                precodingString = ['precoding_configuration::make_wideband(make_identity(' num2str(NumLayers) '))'];
 
                 configCell = {...
                     slotPointConfig, ...                                     % slot

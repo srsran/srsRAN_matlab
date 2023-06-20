@@ -224,7 +224,7 @@ classdef srsNZPCSIRSGeneratorUnittest < srsTest.srsBlockUnittest
             SubcarrierRefStr = cellarray2str(SubcarrierLocations, true);
 
             % Precoding configuration that maps layers to ports one to one.
-            precodingString = ['make_wideband_identity(' num2str(CSIRS.NumCSIRSPorts) ')'];
+            precodingString = ['precoding_configuration::make_wideband(make_identity(' num2str(CSIRS.NumCSIRSPorts) '))'];
 
             configCell = {...
                 slotPointConfig, ...  % slot
