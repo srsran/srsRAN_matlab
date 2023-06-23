@@ -21,6 +21,15 @@ For license details, see the [LICENSE](LICENSE) file.
 
 The srsRAN Project is required to build the MEX wrappers and to run the applications that include them (see the [MEX](#mex) section for further details).
 
+### Compatibility Table
+
+The development of *srsRAN-matlab* closely follows all new features of the srsRAN Project. For this reason, it is important that you always use the latest version of both software: this is the only way to ensure that test vectors agree with the srsRAN API and that MEX binaries compile. The following compatibility table provides a list of reference commits on both repositories that are guaranteed to work together.
+
+| *srsRAN-matlab* | srsRAN Project |
+|      ------     |     ------     |
+|     0a235460    |     56a771df   |
+|     latest      |     0112729f   |
+
 ### Contents
 
 The repository is organized as follows.
@@ -37,6 +46,8 @@ The repository is organized as follows.
 Please read this file for a general overview of the project and its features.
 
 All classes and functions are documented and extensive information can be obtained by typing `help ClassName` at the MATLAB Command Window.
+
+For support requests and community announcements, please use the srsRAN Project [Discussion Board](https://www.github.com/srsran/srsran_project/discussions) with the category "srsRAN-matlab".
 
 ## Test Vectors
 
