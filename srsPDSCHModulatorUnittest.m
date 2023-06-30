@@ -85,8 +85,6 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
 
         function addTestDefinitionToHeaderFile(obj, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
-            fprintf(fileID, 'static const precoding_configuration default_precoding = make_single_port();\n');
-            fprintf(fileID, '\n');
             addTestDefinitionToHeaderFilePHYchproc(obj, fileID);
         end
     end % of methods (Access = protected)
@@ -153,7 +151,7 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
 
             DMRSTypeString = sprintf('dmrs_type::TYPE%d', pdsch.DMRS.DMRSConfigurationType);
 
-            precodingString = ['make_wideband_identity(' num2str(NumLayers) ')'];
+            precodingString = ['precoding_configuration::make_wideband(make_identity(' num2str(NumLayers) '))'];
 
             configCell = {...
                 pdsch.RNTI,...                          % rnti
