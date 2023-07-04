@@ -64,7 +64,6 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
   if ((buffer_dimensions.size() != 2) && (buffer_dimensions.size() != 3)) {
     mex_abort("Invalid number of dimensions (i.e., {}).", buffer_dimensions.size());
   }
-  fmt::print("-- Dimensions=[{}].\n", span<const std::size_t>(buffer_dimensions));
 
   // Extract dimensions.
   unsigned nof_re       = buffer_dimensions[0];

@@ -1,5 +1,5 @@
 %srsPRACHdetector Detects the 5G NR PRACH preamble in a PRACH occasion.
-%   [INDICES, OFFSETS, DETECTINFO] = srsPRACHdetector(CARRIER, PRACH, GRID, IGNORECFO)
+%   [INDICES, OFFSETS, SINR, RSSI] = srsPRACHdetector(CARRIER, PRACH, GRID, IGNORECFO)
 %   detects the 5G NR PRACH preambles in GRID. GRID is a matrix (one column per
 %   RX antenna port) with the baseband symbols corresponding to one PRACH occasion,
 %   that is it may contain a number of copies of the preamble depending on the
@@ -10,7 +10,8 @@
 %
 %   The function returns INDICES and OFFSETS, that is a 64-entry boolean mask of
 %   the detected Preamble indices and the corresponding offsets in microseconds,
-%   respectively.
+%   respectively. It also returns an estimation of the SINR (in dB, basically
+%   the detection metric) and of the signal RSSI (in dB).
 
 %   Copyright 2021-2023 Software Radio Systems Limited
 %
@@ -27,7 +28,7 @@
 %   A copy of the BSD 2-Clause License can be found in the LICENSE
 %   file in the top-level directory of this distribution.
 
-function [indices, offsets] = srsPRACHdetector(carrier, prachConf, grid, ignoreCFO)
+function [indices, offsets, sinr, rssi] = srsPRACHdetector(carrier, prachConf, grid, ignoreCFO)
     assert(prachConf.RestrictedSet == "UnrestrictedSet", "srsran_matlab:srsPRACHdetector",...
         "Only unrestricted sets are supported.");
 
@@ -63,6 +64,9 @@ function [indices, offsets] = srsPRACHdetector(carrier, prachConf, grid, ignoreC
     % Initialize output.
     indices = false(64, 1);
     offsets = nan(64, 1);
+    sinr = nan(64, 1);
+
+    rssi = 10 * log10(mean(abs(grid).^2, 'all') / LRA);
 
     nSequences = info.nSequences;
     remainingShifts = 64;
@@ -93,7 +97,7 @@ function [indices, offsets] = srsPRACHdetector(carrier, prachConf, grid, ignoreC
         for iWindow = 1:nWindows
             % Scale the detection window according to the FFT size.
             winWidth = floor(info.WinWidths(iWindow) * Nfft / LRA);
-            winStart = mod(Nfft - round(info.WinStart(iWindow) * Nfft / LRA), Nfft);
+            winStart = mod(Nfft - floor(info.WinStart(iWindow) * Nfft / LRA), Nfft);
 
             ix = (winStart - winMargin):(winStart + winWidth + winMargin - 1);
 
@@ -127,15 +131,15 @@ function [indices, offsets] = srsPRACHdetector(carrier, prachConf, grid, ignoreC
 
             % We don't want peaks at the very end of the window because they
             % are most probably side effects of a peak at the beginning of
-            % the adjacent window. We discard peaks that are closer than "guard"
-            % to the boundary.
-            guard = 5;
+            % the adjacent window. We discard peaks that fall in the last
+            % 1/5 of the detection window.
             [m, delay] = max(metricGlobal);
-            if (m > threshold) && (delay < length(metricGlobal) - guard)
+            if (m > threshold) && (delay < length(metricGlobal) * 0.8)
                 pos = (iSequence - 1) * nWindows + iWindow;
                 indices(pos) = true;
                 d = delay + winStart - 1;
                 offsets(pos) = (d / Nfft - mod(LRA - info.WinStart(iWindow), LRA) / LRA) / prach.SubcarrierSpacing * 1000;
+                sinr(pos) = 10 * log10(m);
             end
         end
     end
@@ -247,31 +251,39 @@ end
 % Returns the window margin and the detection threshold for the given PRACH format
 % and number of antennas.
 function [winMargin, threshold] = getThreshold(format, nAntennas)
-    assert(nAntennas <= 2, 'srsran_matlab:srsPRACHdetector', 'Only 2 antennas supported at the moment.');
+    % assert(nAntennas <= 2, 'srsran_matlab:srsPRACHdetector', 'Only 2 antennas supported at the moment.');
 
     if (nAntennas == 1)
         switch format
-            case '0'
+            case {'0', '1', '2', '3'}
+                % These values have been optimized for F0, ZCZ = 1 and one
+                % receive port.
                 winMargin = 5;
                 threshold = 2;
-            case 'B4'
+            case {'A1', 'B4'}
+                % These values have been optimized for B4, ZCZ = 11 and one
+                % receive port.
                 winMargin = 12;
                 threshold = 0.15;
             otherwise
                 error('srsran_matlab:srsPRACHdetector', ...
-                    'Currently, only Formats 0 and B4 are supported for 1 antenna.');
+                    'Currently, Format %s is not supported for 1 antenna.', format);
         end
-    elseif (nAntennas == 2)
+    else
         switch format
-            case '0'
+            case {'0', '1', '2', '3'}
+                % These values have been optimized for F0, ZCZ = 1 and two
+                % receive ports.
                 winMargin = 5;
                 threshold = 0.88;
-            case 'A1'
+            case {'A1', 'B4'}
+                % These values have been optimized for A1, ZCZ = 11 and two
+                % receive ports.
                 winMargin = 12;
                 threshold = 0.37;
             otherwise
                 error('srsran_matlab:srsPRACHdetector', ...
-                    'Currently, only Formats 0 and A1 are supported for 2 antennas.');
+                    'Currently, Format %s is not supported for 2+ antennas.', format);
         end
     end
 end

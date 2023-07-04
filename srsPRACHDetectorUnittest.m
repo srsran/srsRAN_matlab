@@ -21,7 +21,7 @@
 %   CarrierBandwidth    - Carrier bandwidth in PRB.
 %   PreambleFormat      - Generated preamble format.
 %   RestrictedSet       - Restricted set type.
-%   ZeroCorrelationZone - Cyclic shift configuration index {0, 15}.
+%   UseZCZ              - Boolean flag for larger-than-zero zero-correlation zone.
 %   RBOffset            - Frequency-domain sequence mapping.
 %
 %   srsPRACHDetectorUnittest Methods (TestTags = {'testvector'}):
@@ -79,12 +79,10 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
         %Preamble formats.
         PreambleFormat = {'0', '1', '2', '3', 'A1','B4'}
 
-        %Zero correlation zone, cyclic shift configuration index. Set to 0
-        %for no cyclic shift and other value for selecting a Zero 
-        % Correlation Zone configuration. For long preambles, the Zero 
-        % Correlation Zone is seleted randomly. For short premables it is 
-        % selected a value from TS38.104 Table A.6-1.
-        ZeroCorrelationZone = {0, 1}
+        %Zero-correlation zone boolean flag. Set to false for no cyclic shift
+        %   and set to true for cyclic shift. The final value of the zero-configuration
+        %   zone index is the one given in TS38.141 Table A.6-1.
+        UseZCZ = {'false', 'true'}
 
         %Number of receive antennas.
         nAntennas = {1, 2, 4};
@@ -107,10 +105,12 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
     end % of properties (Constant, Hidden)
 
     properties (Hidden)
-        % Carrier.
+        %Carrier.
         carrier
-        % PRACH sequence.
+        %PRACH sequence.
         prach
+        %Signal delay (in seconds).
+        TrueDelay
     end % of properties (Hidden)
 
     methods (Access = protected)
@@ -132,6 +132,7 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
                 '\n'...
                 'struct context_t {\n'...
                 '  prach_detector::configuration config;\n'...
+                '  phy_time_unit                 true_delay;\n' ...
                 '  prach_detection_result        result;\n'...
                 '};\n'...
                 '\n'...
@@ -152,13 +153,13 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
     end % of methods (TestClassSetup)
 
     methods (Access = private)
-        function setupsimulation(obj, DuplexMode, PreambleFormat, ZeroCorrelationZone)
+        function setupsimulation(obj, DuplexMode, PreambleFormat, UseZCZ)
         % Sets secondary simulation variables.
 
             import srsLib.phy.helpers.srsConfigurePRACH
         
-            RestrictedSet = obj.RestrictedSet;
-            RBOffset = obj.RBOffset;
+            RestrictedSetLoc = obj.RestrictedSet;
+            RBOffsetLoc = obj.RBOffset;
 
             % Select PRACH random parameters.
             SequenceIndex = randi([0, 1023], 1, 1);
@@ -170,9 +171,9 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
             obj.carrier.NSizeGrid = obj.CarrierBandwidth;
 
             % Select zero correlation zone according to TS38.104 Table A.6-1.
-            if ZeroCorrelationZone > 0
+            if UseZCZ
                 if strlength(PreambleFormat) == 1
-                    ZeroCorrelationZone = randi([1, 15]);
+                    ZeroCorrelationZone = 1;
                 else
                     if strcmp(DuplexMode, 'FDD') 
                         ZeroCorrelationZone = 11;
@@ -184,8 +185,8 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
 
             % Generate PRACH configuration.
             obj.prach = srsConfigurePRACH(DuplexMode,  SequenceIndex, ...
-                PreambleIndex, RestrictedSet, ZeroCorrelationZone, ...
-                RBOffset, PreambleFormat);
+                PreambleIndex, RestrictedSetLoc, ZeroCorrelationZone, ...
+                RBOffsetLoc, PreambleFormat);
 
             % Set parameters that depend on the duplex mode.
             switch DuplexMode
@@ -196,7 +197,7 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
                 otherwise
                     error('Invalid duplex mode %s', obj.DuplexMode);
             end
-        end % of function setupsimulation(obj, PreambleFormat, ZeroCorrelationZone)
+        end % of function setupsimulation(obj, PreambleFormat, UseZCZ)
 
         function grid = generatePRACH(obj, nAntennas) 
             import srsLib.phy.upper.channel_processors.srsPRACHgenerator
@@ -204,15 +205,22 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
 
             % Generate waveform.
             [waveform, gridset, info] = srsPRACHgenerator(obj.carrier, obj.prach);
+            obj.prach.NPRACHSlot = info.NPRACHSlot;
+
+            carrOFDMInfo = nrOFDMInfo(obj.carrier);
+
+            % The maximum delay is 1/128 of the PRACH duration (half of the
+            % smallest zero-correlation zone).
+            obj.TrueDelay = rand / obj.prach.SubcarrierSpacing / 1000 / 128;
+            delaySamples = floor(obj.TrueDelay * gridset.Info.SampleRate);
 
             channelMatrix = ones(1, nAntennas);
-            rxWaveform = waveform * channelMatrix;
+            rxWaveform = [zeros(delaySamples, 1); waveform] * channelMatrix;
 
-            % Nominal SNR value to add some noise.
-            snr = -10; % dB
-            noiseStdDev = 10 ^ (-snr / 20) / gridset.Info.Nfft;
+            % Add some noise.
+            snr = 0; % dB
+            noiseStdDev = 10 ^ (-snr / 20) / sqrt(nAntennas * carrOFDMInfo.Nfft);
 
-            % Add some (very little) noise.
             waveformSize = size(rxWaveform);
             normNoise = (randn(waveformSize) + 1i * randn(waveformSize)) / sqrt(2);
             rxWaveform = rxWaveform + (noiseStdDev * normNoise);
@@ -220,17 +228,14 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
             % Demodulate the PRACH signal.
             grid = srsPRACHdemodulator(obj.carrier, obj.prach, gridset.Info, rxWaveform, info);
 
-            % Reshape grid with PRACH symbols.
-            grid = reshape(grid, obj.prach.LRA, obj.prach.PRACHDuration, nAntennas);
-
         end % of function grid = generatePRACH(nAntennas) 
     end % of methods (Access = Private)
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(obj, DuplexMode, PreambleFormat, ZeroCorrelationZone, nAntennas)
+        function testvectorGenerationCases(obj, DuplexMode, PreambleFormat, UseZCZ, nAntennas)
         %testvectorGenerationCases Generates a test vector for the given
         %   DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet,
-        %   ZeroCorrelationZone and RBOffset. The parameters SequenceIndex
+        %   UseZCZ and RBOffset. The parameters SequenceIndex
         %   and PreambleIndex are generated randomly.
 
             import srsTest.helpers.writeComplexFloatFile
@@ -239,10 +244,17 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
             TestID = obj.generateTestID;
 
             % Configure the test.
-            obj.setupsimulation(DuplexMode, PreambleFormat, ZeroCorrelationZone);
+            obj.setupsimulation(DuplexMode, PreambleFormat, UseZCZ);
 
             % Generate PRACH grid.
             grid = obj.generatePRACH(nAntennas);
+
+            [ix, delays, sinr, rssi] = srsLib.phy.upper.channel_processors.srsPRACHdetector(obj.carrier, obj.prach, grid, false);
+            pp = obj.prach.PreambleIndex + 1;
+            assert(ix(pp), 'Detected preamble %d not detected.', pp - 1);
+
+            % Reshape grid with PRACH symbols.
+            grid = reshape(grid, obj.prach.LRA, obj.prach.PRACHDuration, nAntennas);
 
             % Write the generated PRACH sequence into a binary file.
             obj.saveDataFile('_test_input', TestID, ...
@@ -277,22 +289,25 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
                 nAntennas, ...                      % nof_rx_ports
                 };
 
+            delayString = sprintf('phy_time_unit::from_seconds(%g)', delays(pp) * 1e-6);
             srsPreambleIndication = {...
                 obj.prach.PreambleIndex, ...            % preamble_index
-                'phy_time_unit::from_seconds(0.0)', ... % time_advance
+                delayString, ...                        % time_advance
                 0.0, ...                                % power_dB
-                0.0, ...                                % snr_dB
+                sinr(pp), ...                           % snr_dB
                 };
 
             srsPrachDetectionResult = {...
-                0.0, ...                                % rssi_dB
+                rssi, ...                               % rssi_dB
                 'phy_time_unit::from_seconds(0.0)', ... % time_resolution
                 'phy_time_unit::from_seconds(0.0)', ... % time_advance_max
                 {srsPreambleIndication}, ...            % preambles
                 };
 
+            truedelayString = sprintf('phy_time_unit::from_seconds(%g)', obj.TrueDelay);
             srsContext = {
                 srsPRACHDetectorConfig, ...  % config
+                truedelayString, ...         % true PRACH delay
                 srsPrachDetectionResult, ... % result
                 };
 
@@ -315,7 +330,7 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
     end % of methods (Test, TestTags = {'testvector'})
 
     methods (Test, TestTags = {'testmex'})
-        function mexTest(obj, DuplexMode, PreambleFormat, ZeroCorrelationZone, nAntennas)
+        function mexTest(obj, DuplexMode, PreambleFormat, UseZCZ, nAntennas)
             %mexTest  Tests the mex wrapper of the SRSRAN PRACH detector.
             %   mexTest(OBJ, DUPLEXMODE, CARRIERBANDWIDTH, PREAMBLEFORMAT,
             %   RESTRICTEDSET, ZEROCORRELATIONZONE, RBOFFSET) runs a short
@@ -332,7 +347,7 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
             import srsMEX.phy.srsPRACHDetector
 
             % Configure the test.
-            obj.setupsimulation(DuplexMode, PreambleFormat, ZeroCorrelationZone);
+            obj.setupsimulation(DuplexMode, PreambleFormat, UseZCZ);
 
             % Generate PRACH grid.
             PRACHGrid = obj.generatePRACH(nAntennas);
@@ -343,13 +358,19 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
             % Fill the PRACH configuration for the detector.
             PRACHCfg = srsPRACHDetector.configurePRACH(obj.prach);
 
+            % Reshape grid with PRACH symbols.
+            PRACHGrid = reshape(PRACHGrid, obj.prach.LRA, obj.prach.PRACHDuration, nAntennas);
+
             % Run the PRACH detector.
             PRACHdetectionResult = PRACHDetector(PRACHGrid, PRACHCfg);
 
-            % Verify the correct detection (expected, since the SNR is very high).
-            obj.assertEqual(double(PRACHdetectionResult.nof_detected_preambles), 1, 'More than one PRACH preamble detected.');
-            obj.assertLessThan(PRACHdetectionResult.time_advance, 1.0e-6, 'Expected delay error.');
-            obj.assertEqual(double(PRACHdetectionResult.preamble_index), PRACHCfg.preamble_index, 'PRACH preamble index error.');
+            listIndices = [PRACHdetectionResult.preamble_index];
+            obj.assertTrue(any(listIndices == obj.prach.PreambleIndex), ...
+                'The transmitted preamble was not detected.');
+
+            goodPreamble = PRACHdetectionResult(listIndices == obj.prach.PreambleIndex);
+
+            obj.assertEqual(goodPreamble.time_advance, obj.TrueDelay, 'AbsTol', 1.0e-6, 'Expected delay error.');
         end % of function mextest
     end % of methods (Test, TestTags = {'testmex'})
 end % of classdef srsPUSCHDecoderUnittest
