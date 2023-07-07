@@ -328,13 +328,20 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
     end % of methods (Test, TestTags = {'testvector'})
 
     methods % public
-        function [mse, noiseEst, rsrpEst, epreEst] = characterize(obj, configuration, ...
+        function [mse, noiseEst, rsrpEst, epreEst, crlb] = characterize(obj, configuration, ...
                 FrequencyHopping, channelType, snrValues, nRuns)
         %characterize - Draw the empircical MSE performance curve of the estimator.
-        %   MSE = characterize(OBJ, CONFIGURATION, FREQUENCYHOPPING, SNRVALUES, NRUNS) returns
+        %   MSE = characterize(OBJ, CONFIGURATION, FREQUENCYHOPPING, CHANNELTYPE, SNRVALUES, NRUNS) returns
         %   the empirical mean squared error of the channel estimation after NRUNS simulations
         %   and for all SNRVALUES. CONFIGURATION and FREQUENCYHOPPING provide the physicaly
         %   channel configuration and CHANNELTYPE specifies the simulated channel model.
+        %
+        %   [MSE, NOISEEST, RSRPEST, EPREEST, CRLB] = characterize(...) also returns the
+        %   estimates of noise variance, RSRP and EPRE for all runs and all SNR values,
+        %   as well as the CRLB for the channel estimation. The CRLB is computed assuming
+        %   the entire band is available for estimation, with pilots positioned with
+        %   the same pattern as the DM-RS (first column) or with pilots in all REs
+        %   (second column).
         %
         %   For CONFIGURATION and FREQUENCYHOPPING, see <a href="matlab:help srsChEstimatorUnittest">the main class documantation</a>.
         %   SNRVALUES is an array of SNR values in decibel.
@@ -428,6 +435,9 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                     mse(iSNR) = mse(iSNR) + sum(abs(estErrors).^2) / length(estErrors) / nRuns;
                 end
             end
+
+            crlb = repmat(10.^(-snrValues(:)/10), 1, 2) / betaDMRS^2 / sum(hop1.DMRSsymbols);
+            crlb = (crlb' .* computeCRLB(hop1.maskPRBs, hop1.DMRSREmask))';
         end % of function testvectorGenerationCases(...)
     end % of methods % public
 
@@ -608,4 +618,53 @@ function mustBeConfiguration(a)
     end
     mustBeScalarOrEmpty(a.betaDMRS);
     mustBeMember(a.betaDMRS, [-3, 0]);
+end
+
+function crlb = computeCRLB(prbMask, reMask)
+%computeCRLB Cramer-Rao Lower Bound
+%   CRLB = computeCRLB(PRBMASK, REMASK) computes the Cramer-Rao Lower Bound (CRLB)
+%   for the channel estimation. The CRLB is computed assuming that the entire band
+%   can be used for the estimation, with pilots spaced according to REMASK (first
+%   entry) or with pilots in all REs (second entry). The assumption is needed to
+%   avoid a singular Fisher matrix.
+
+    Nprb = length(prbMask);
+    Nre = Nprb * 12;
+    assert(length(reMask) == 12);
+    E = diag(kron(ones(Nprb, 1), reMask));
+    Jbig = ifft(fft(E, Nre, 2), Nre, 1);
+    cp = floor(Nre / 10);
+    J = Jbig(1:cp, 1:cp);
+    s = warning('error', 'MATLAB:nearlySingularMatrix');
+    crlb = nan(2, 1);
+    chMask = (kron(prbMask, ones(12, 1)) == 1);
+    try
+        C = inv(J);
+        M = fft(ifft(C, Nre, 2), Nre, 1);
+
+        crlb(1) = real(trace(M(chMask, chMask))) / sum(chMask);
+    catch ME
+        if strcmp(ME.identifier, 'MATLAB:nearlySingularMatrix')
+            warning('Pattern CRLB can''t be computed.');
+        else
+            rethrow(ME);
+        end
+    end
+
+    E = diag(kron(ones(Nprb, 1), ones(12, 1)));
+    Jbig = ifft(fft(E, Nre, 2), Nre, 1);
+    J = Jbig(1:cp, 1:cp);
+    try
+        C = inv(J);
+        M = fft(ifft(C, Nre, 2), Nre, 1);
+
+        crlb(2) = real(trace(M(chMask, chMask))) / sum(chMask);
+    catch ME
+        if ~strcmp(ME.identifier, 'MATLAB:nearlySingularMatrix')
+            warning('Full CRLB can''t be computed.');
+        else
+            rethrow(ME);
+        end
+    end
+    warning(s);
 end
