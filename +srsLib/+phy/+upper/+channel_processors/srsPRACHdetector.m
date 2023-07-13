@@ -57,9 +57,9 @@ function [indices, offsets, sinr, rssi] = srsPRACHdetector(carrier, prachConf, g
     % power).
     % Detection threshold. The detector is inspired by the GLRT test, but it's
     % not exactly that one - threshold must be tuned by simulation.
-    [winMargin, threshold] = getThreshold(prach.Format, nAntennas);
+    [winMargin, threshold] = getThreshold(prach, nAntennas, ignoreCFO);
 
-    Nfft = fftsize();
+    Nfft = fftsize(prach.Format);
 
     % Initialize output.
     indices = false(64, 1);
@@ -243,47 +243,71 @@ function preambles = preprocess(grid, LRA, ignoreCFO)
     preambles = reshape(grid, LRA, []);
 end
 
-function x = fftsize
-% FFT size used by the detector - it defines the offset granularity.
-    x = 4096;
+function x = fftsize(format)
+% FFT size used by the detector - it defines the offset granularity depending on
+% the format.
+    switch format
+        case {'0', '1', '2', '3'}
+            x = 1024;
+        case {'A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'B4', 'C0', 'C2'}
+            x = 256;
+        otherwise
+            error('srsran_matlab:srsPRACHdetector', ...
+                'Currently, Format %s is not supported.', format);
+    end
 end
 
-% Returns the window margin and the detection threshold for the given PRACH format
-% and number of antennas.
-function [winMargin, threshold] = getThreshold(format, nAntennas)
+% Returns the window margin and the detection threshold for the given PRACH configuration,
+% number of antennas, and CFO flag.
+function [winMargin, threshold] = getThreshold(prach, nAntennas, ignoreCFO)
     % assert(nAntennas <= 2, 'srsran_matlab:srsPRACHdetector', 'Only 2 antennas supported at the moment.');
 
-    if (nAntennas == 1)
-        switch format
-            case {'0', '1', '2', '3'}
-                % These values have been optimized for F0, ZCZ = 1 and one
-                % receive port.
-                winMargin = 5;
-                threshold = 2;
-            case {'A1', 'B4'}
-                % These values have been optimized for B4, ZCZ = 11 and one
-                % receive port.
-                winMargin = 12;
-                threshold = 0.15;
-            otherwise
-                error('srsran_matlab:srsPRACHdetector', ...
-                    'Currently, Format %s is not supported for 1 antenna.', format);
-        end
-    else
-        switch format
-            case {'0', '1', '2', '3'}
-                % These values have been optimized for F0, ZCZ = 1 and two
-                % receive ports.
-                winMargin = 5;
-                threshold = 0.88;
-            case {'A1', 'B4'}
-                % These values have been optimized for A1, ZCZ = 11 and two
-                % receive ports.
-                winMargin = 12;
-                threshold = 0.37;
-            otherwise
-                error('srsran_matlab:srsPRACHdetector', ...
-                    'Currently, Format %s is not supported for 2+ antennas.', format);
-        end
-    end
+    Configurations = [ ...
+        "Ant1_F0_NCS0_noCFO1", ...
+        "Ant1_F0_NCS13_noCFO1", ...
+        "Ant1_FB4_NCS0_noCFO1", ...
+        "Ant1_FB4_NCS46_noCFO1", ...
+        "Ant2_F0_NCS0_noCFO1", ...
+        "Ant2_F0_NCS13_noCFO1", ...
+        "Ant2_FB4_NCS0_noCFO1", ...
+        "Ant2_FB4_NCS46_noCFO1", ...
+        "Ant4_F0_NCS0_noCFO1", ...
+        "Ant4_F0_NCS13_noCFO1", ...
+        "Ant4_FB4_NCS0_noCFO1", ...
+        "Ant4_FB4_NCS46_noCFO1", ...
+        ];
+    ThresholdsMargins = { ...
+        [0.15, 5],  ... % Ant1_F0_NCS0_noCFO1
+        [1, 5],     ... % Ant1_F0_NCS13_noCFO1
+        [0.39, 12], ... % Ant1_FB4_NCS0_noCFO1
+        [0.39, 12], ... % Ant1_FB4_NCS46_noCFO1
+        [0.09, 5],  ... % Ant2_F0_NCS0_noCFO1
+        [0.45, 5],  ... % Ant2_F0_NCS13_noCFO1
+        [0.14, 12], ... % Ant2_FB4_NCS0_noCFO1
+        [0.18, 12], ... % Ant2_FB4_NCS46_noCFO1
+        [0.06, 5],  ... % Ant4_F0_NCS0_noCFO1
+        [0.32, 5],  ... % Ant4_F0_NCS13_noCFO1
+        [0.09, 12], ... % Ant4_FB4_NCS0_noCFO1
+        [0.11, 12], ... % Ant4_FB4_NCS46_noCFO1
+        };
+     d = dictionary(Configurations, ThresholdsMargins);
+
+     NCS = getNCS(prach);
+     confString = sprintf("Ant%d_F%s_NCS%d_noCFO%d", nAntennas, prach.Format, NCS, ignoreCFO);
+
+     try
+         tt = cell2mat(d(confString));
+         winMargin = tt(2);
+         threshold = tt(1);
+     catch
+         warning('srsran_matlab:srsPRACHdetector', ...
+             'Using a non-calibrated configuration with a suboptimal detection threshold.');
+         if ismember(prach.Format, {'0', '1', '2', '3'})
+             winMargin = 5;
+             threshold = 0.1;
+         else
+             winMargin = 12;
+             threshold = 0.3;
+         end
+     end
 end

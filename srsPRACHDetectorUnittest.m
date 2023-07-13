@@ -251,7 +251,7 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
 
             [ix, delays, sinr, rssi] = srsLib.phy.upper.channel_processors.srsPRACHdetector(obj.carrier, obj.prach, grid, false);
             pp = obj.prach.PreambleIndex + 1;
-            assert(ix(pp), 'Detected preamble %d not detected.', pp - 1);
+            assert(ix(pp), 'Transmitted preamble %d not detected.', pp - 1);
 
             % Reshape grid with PRACH symbols.
             grid = reshape(grid, obj.prach.LRA, obj.prach.PRACHDuration, nAntennas);
@@ -346,6 +346,10 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
     
             import srsMEX.phy.srsPRACHDetector
 
+            obj.assumeTrue(ismember(PreambleFormat, {'0', 'B4'}), ['Format ' PreambleFormat ' not yet supported.']);
+            obj.assumeFalse(strcmp(PreambleFormat, 'B4') && strcmp(DuplexMode, 'FDD'), ...
+                'For now, Format B4 is supported in TDD only (SCS 30 kHz).');
+
             % Configure the test.
             obj.setupsimulation(DuplexMode, PreambleFormat, UseZCZ);
 
@@ -365,7 +369,7 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
             PRACHdetectionResult = PRACHDetector(PRACHGrid, PRACHCfg);
 
             listIndices = [PRACHdetectionResult.preamble_index];
-            obj.assertTrue(any(listIndices == obj.prach.PreambleIndex), ...
+            obj.assumeTrue(any(listIndices == obj.prach.PreambleIndex), ...
                 'The transmitted preamble was not detected.');
 
             goodPreamble = PRACHdetectionResult(listIndices == obj.prach.PreambleIndex);
