@@ -69,10 +69,6 @@ classdef srsPRACHDetector < matlab.System
     end % of methods
 
     methods (Access = protected)
-        function setupImpl(obj)
-            % No setup.
-        end % of setupImpl
-
         function PRACHdetectionResult = stepImpl(obj, PRACHSymbols, PRACHConfig)
             arguments
                 obj          (1, 1) srsMEX.phy.srsPRACHDetector

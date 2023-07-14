@@ -102,7 +102,7 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
   }
 
   if (!buffer) {
-    mex_abort("Cannot create srsran PRACH buffer long.");
+    mex_abort("Cannot create srsran PRACH buffer.");
   }
 
   // Fill buffer with time frequency-domain data.
