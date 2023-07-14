@@ -168,6 +168,11 @@ This app analyzes a PRACH transmission from the baseband complex-valued samples 
 
 See `help srsPRACHAnalyzer` for more details.
 
+### apps/analyzers/srsResourceGridAnalyzer
+
+This app displays the content of a resource grid (all subcarriers and one slot) as a heat map of the resource element amplitudes. See the [Configuration Parameters Section](https://docs.srsran.com/projects/project/en/latest/user_manuals/source/config_ref.html#configuration-parameters) of the srsRAN Project documentation for information on how to configure the logging level of the SRS gNB to record the received samples.
+
+See `help srsResourceGridAnalyzer` for more details.
 
 ## Repository CI/CD
 The class *unitTests/CheckTests* implements a series of checks to provide a basic level of quality assurance for the unit tests in the root folder.
