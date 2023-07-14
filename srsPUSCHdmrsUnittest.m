@@ -230,6 +230,7 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
                 cfg.DMRSREmask = hop.DMRSREmask;
                 cfg.nPilotsNoiseAvg = 2;
                 cfg.scs = SubcarrierSpacing * 1000;
+                cfg.useFilter = true;
                 [estChannel, estNoiseVar, estRSRP] = srsChannelEstimator(receivedRG, ...
                     pilots, amplitude, hop, hop2, cfg);
 
