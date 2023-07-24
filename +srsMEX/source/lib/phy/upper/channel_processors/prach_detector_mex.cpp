@@ -19,6 +19,7 @@
 
 #include "prach_detector_mex.h"
 #include "srsran_matlab/support/matlab_to_srs.h"
+#include "srsran/phy/upper/channel_processors/channel_processor_formatters.h"
 #include "srsran/srsvec/copy.h"
 
 using matlab::mex::ArgumentList;
@@ -45,20 +46,6 @@ void MexFunction::check_step_outputs_inputs(ArgumentList outputs, ArgumentList i
   }
 }
 
-// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-void MexFunction::method_set_delay(ArgumentList& outputs, ArgumentList& inputs)
-{
-  if (outputs.size() > 0) {
-    mex_abort("No output is expected.");
-  }
-
-  if ((inputs[1].getType() != ArrayType::DOUBLE) || (inputs[1].getNumberOfElements() > 1)) {
-    mex_abort("Second input must be a scalar double.");
-  }
-
-  delay_samples = (int)inputs[1][0];
-}
-
 void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
 {
   check_step_outputs_inputs(outputs, inputs);
@@ -66,68 +53,94 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
   StructArray in_struct_array = inputs[2];
   Struct      in_det_cfg      = in_struct_array[0];
 
-  prach_detector::configuration detector_config;
+  CharArray restricted_set_in = in_det_cfg["restricted_set"];
+  CharArray format_in         = in_det_cfg["format"];
+
+  // Get frequency domain data.
+  const TypedArray<std::complex<double>> in_cft_array = inputs[1];
+
+  // Get dimensions.
+  ArrayDimensions buffer_dimensions = inputs[1].getDimensions();
+  if ((buffer_dimensions.size() != 2) && (buffer_dimensions.size() != 3)) {
+    mex_abort("Invalid number of dimensions (i.e., {}).", buffer_dimensions.size());
+  }
+
+  // Extract dimensions.
+  unsigned nof_re       = buffer_dimensions[0];
+  unsigned nof_symbols  = buffer_dimensions[1];
+  unsigned nof_rx_ports = 1;
+  if (buffer_dimensions.size() == 3) {
+    // The number of ports is one except if there is a third dimension.
+    buffer_dimensions[2];
+  }
 
   // Restricted sets are not implemented. Skip.
-  CharArray restricted_set_in    = in_det_cfg["restricted_set"];
-  detector_config.restricted_set = matlab_to_srs_restricted_set(restricted_set_in.toAscii());
-  if (detector_config.restricted_set == restricted_set_config::UNRESTRICTED) {
-    detector_config.root_sequence_index   = in_det_cfg["root_sequence_index"][0];
-    CharArray format_in                   = in_det_cfg["format"];
-    detector_config.format                = matlab_to_srs_preamble_format(format_in.toAscii());
-    detector_config.zero_correlation_zone = in_det_cfg["zero_correlation_zone"][0];
-    detector_config.start_preamble_index  = 0;
-    detector_config.nof_preamble_indices  = 64;
+  prach_detector::configuration detector_config;
+  detector_config.restricted_set        = matlab_to_srs_restricted_set(restricted_set_in.toAscii());
+  detector_config.root_sequence_index   = in_det_cfg["root_sequence_index"][0];
+  detector_config.format                = matlab_to_srs_preamble_format(format_in.toAscii());
+  detector_config.zero_correlation_zone = in_det_cfg["zero_correlation_zone"][0];
+  detector_config.start_preamble_index  = 0;
+  detector_config.nof_preamble_indices  = 64;
+  detector_config.ra_scs =
+      to_ra_subcarrier_spacing(static_cast<unsigned>(1000.0 * static_cast<double>(in_det_cfg["scs"][0])));
+  detector_config.nof_rx_ports = nof_rx_ports;
 
-    // Create buffer.
-    std::unique_ptr<prach_buffer> buffer = create_prach_buffer_long(1);
-    if (!buffer) {
-      mex_abort("Cannot create srsran PRACH buffer long.");
-    }
-
-    // Get frequency domain data.
-    const TypedArray<std::complex<double>> in_cft_array = inputs[1];
-    std::vector<cf_t>                      frequency_data(in_cft_array.cbegin(), in_cft_array.cend());
-    std::transform(
-        frequency_data.begin(), frequency_data.end(), frequency_data.begin(), [&, n = 0](cf_t sample) mutable {
-          return sample * std::exp(-COMPLEX_J * TWOPI * static_cast<float>(n++) * static_cast<float>(delay_samples) /
-                                   static_cast<float>(DFT_SIZE_DETECTOR));
-        });
-
-    // Fill buffer with time frequency-domain data.
-    srsvec::copy(buffer->get_symbol(0, 0, 0, 0), span<cf_t>(frequency_data).first(839));
-
-    // Run generator.
-    prach_detection_result result = detector->detect(*buffer, detector_config);
-
-    // Number of detected PRACH preambles.
-    unsigned nof_detected_preambles = result.preambles.size();
-    if (nof_detected_preambles == 0) {
-      mex_abort("No PRACH preambles were detected.");
-    } else {
-      // Detected PRACH preamble parameters.
-      prach_detection_result::preamble_indication& preamble_indication          = result.preambles.back();
-      StructArray                                  detected_preamble_indication = factory.createStructArray({1, 1},
-                                                                           {"nof_detected_preambles",
-                                                                                                             "preamble_index",
-                                                                                                             "time_advance",
-                                                                                                             "power_dB",
-                                                                                                             "snr_dB",
-                                                                                                             "rssi_dB",
-                                                                                                             "time_resolution",
-                                                                                                             "time_advance_max"});
-      detected_preamble_indication[0]["nof_detected_preambles"] = factory.createScalar(result.preambles.size());
-      detected_preamble_indication[0]["preamble_index"] = factory.createScalar(preamble_indication.preamble_index);
-      detected_preamble_indication[0]["time_advance"] =
-          factory.createScalar(preamble_indication.time_advance.to_seconds());
-      detected_preamble_indication[0]["power_dB"]         = factory.createScalar(preamble_indication.power_dB);
-      detected_preamble_indication[0]["snr_dB"]           = factory.createScalar(preamble_indication.snr_dB);
-      detected_preamble_indication[0]["rssi_dB"]          = factory.createScalar(result.rssi_dB);
-      detected_preamble_indication[0]["time_resolution"]  = factory.createScalar(result.time_resolution.to_seconds());
-      detected_preamble_indication[0]["time_advance_max"] = factory.createScalar(result.time_advance_max.to_seconds());
-      outputs[0]                                          = detected_preamble_indication;
-    }
-  } else {
-    std::cout << "Skipping test case with 'RESTRICTED' set configuration.\n";
+  // Run validator
+  if (!validator->is_valid(detector_config)) {
+    mex_abort("Invalid configuration:\n {:n}.", detector_config);
   }
+
+  // Create buffer.
+  std::unique_ptr<prach_buffer> buffer;
+  if (nof_re == prach_constants::LONG_SEQUENCE_LENGTH) {
+    buffer = create_prach_buffer_long(nof_rx_ports, 1);
+  } else if (nof_re == prach_constants::SHORT_SEQUENCE_LENGTH) {
+    buffer = create_prach_buffer_short(nof_rx_ports, 1, 1);
+  } else {
+    mex_abort("Invalid number of samples. Dimensions=[{}].", span<const std::size_t>(buffer_dimensions));
+  }
+
+  if (!buffer) {
+    mex_abort("Cannot create srsran PRACH buffer.");
+  }
+
+  // Fill buffer with time frequency-domain data.
+  for (unsigned i_rx_port = 0; i_rx_port != nof_rx_ports; ++i_rx_port) {
+    for (unsigned i_symbol = 0; i_symbol != nof_symbols; ++i_symbol) {
+      span<cf_t> symbol_view = buffer->get_symbol(i_rx_port, 0, 0, i_symbol);
+      for (unsigned i_sample = 0; i_sample != nof_re; ++i_sample) {
+        symbol_view[i_sample] = cf_t(in_cft_array[i_sample][i_symbol][i_rx_port]);
+      }
+    }
+  }
+
+  // Run detector.
+  prach_detection_result result = detector->detect(*buffer, detector_config);
+
+  // Detected PRACH preamble parameters.
+  StructArray detected_preamble_indication = factory.createStructArray({result.preambles.size(), 1},
+                                                                       {"nof_detected_preambles",
+                                                                        "preamble_index",
+                                                                        "time_advance",
+                                                                        "power_dB",
+                                                                        "snr_dB",
+                                                                        "rssi_dB",
+                                                                        "time_resolution",
+                                                                        "time_advance_max"});
+  for (unsigned i_preamble = 0, i_preamble_end = result.preambles.size(); i_preamble != i_preamble_end; ++i_preamble) {
+    const prach_detection_result::preamble_indication& preamble = result.preambles[i_preamble];
+
+    detected_preamble_indication[i_preamble]["nof_detected_preambles"] = factory.createScalar(result.preambles.size());
+    detected_preamble_indication[i_preamble]["preamble_index"]         = factory.createScalar(preamble.preamble_index);
+    detected_preamble_indication[i_preamble]["time_advance"] = factory.createScalar(preamble.time_advance.to_seconds());
+    detected_preamble_indication[i_preamble]["power_dB"]     = factory.createScalar(preamble.power_dB);
+    detected_preamble_indication[i_preamble]["snr_dB"]       = factory.createScalar(preamble.snr_dB);
+    detected_preamble_indication[i_preamble]["rssi_dB"]      = factory.createScalar(result.rssi_dB);
+    detected_preamble_indication[i_preamble]["time_resolution"] =
+        factory.createScalar(result.time_resolution.to_seconds());
+    detected_preamble_indication[i_preamble]["time_advance_max"] =
+        factory.createScalar(result.time_advance_max.to_seconds());
+  }
+  outputs[0] = detected_preamble_indication;
 }

@@ -34,8 +34,11 @@
 /// PRACH detector.
 static std::unique_ptr<srsran::prach_detector> create_prach_detector();
 
-/// Fixed DFT size of the PRACH detecter.
-static constexpr unsigned DFT_SIZE_DETECTOR = 1536;
+/// \brief Factory method for a PRACH validator.
+///
+/// Creates and assemblies all the necessary components (DFT, PRACH generator, ...) for a fully-functional
+/// PRACH validator.
+static std::unique_ptr<srsran::prach_detector_validator> create_prach_validator();
 
 /// Implements a PRACH detector following the srsran_mex_dispatcher template.
 class MexFunction : public srsran_mex_dispatcher
@@ -51,26 +54,12 @@ public:
       mex_abort("Cannot create srsran PRACH detector.");
     }
 
-    create_callback("set_delay",
-                    [this](ArgumentList& out, ArgumentList& in) { return this->method_set_delay(out, in); });
     create_callback("step", [this](ArgumentList& out, ArgumentList& in) { return this->method_step(out, in); });
   }
 
 private:
-  /// Delay in samples to be tested.
-  int delay_samples;
-
   /// Checks that outputs/inputs arguments match the requirements of method_step().
   void check_step_outputs_inputs(matlab::mex::ArgumentList outputs, matlab::mex::ArgumentList inputs);
-
-  /// \brief Sets the delay parameter of the PRACH decoder MEX object under test.
-  ///
-  /// The method takes two inputs.
-  ///   - The string <tt>"set_delay"</tt>.
-  ///   - An \c int32_t array providing the sample delay value to be tested.
-  ///
-  /// The method has no outputs.
-  void method_set_delay(ArgumentList& outputs, ArgumentList& inputs);
 
   /// \brief Detects PRACH transmissions according to the given configuration.
   ///
@@ -98,8 +87,10 @@ private:
   ///      - \c time_advance_max, maximum time in advance of the PRACH detector;
   void method_step(ArgumentList& outputs, ArgumentList& inputs);
 
-  /// A pointer to the actual PUSCH decoder.
+  /// A pointer to the actual PRACH detector.
   std::unique_ptr<srsran::prach_detector> detector = create_prach_detector();
+  /// A pointer to the actual PRACH detector validator.
+  std::unique_ptr<srsran::prach_detector_validator> validator = create_prach_validator();
 };
 
 std::unique_ptr<srsran::prach_detector> create_prach_detector()
@@ -111,7 +102,21 @@ std::unique_ptr<srsran::prach_detector> create_prach_detector()
   std::shared_ptr<prach_generator_factory> generator_factory = create_prach_generator_factory_sw();
 
   std::shared_ptr<prach_detector_factory> detector_factory =
-      create_prach_detector_factory_simple(dft_factory, generator_factory, DFT_SIZE_DETECTOR);
+      create_prach_detector_factory_sw(dft_factory, generator_factory);
 
   return detector_factory->create();
+}
+
+std::unique_ptr<srsran::prach_detector_validator> create_prach_validator()
+{
+  using namespace srsran;
+
+  std::shared_ptr<dft_processor_factory> dft_factory = create_dft_processor_factory_generic();
+
+  std::shared_ptr<prach_generator_factory> generator_factory = create_prach_generator_factory_sw();
+
+  std::shared_ptr<prach_detector_factory> detector_factory =
+      create_prach_detector_factory_sw(dft_factory, generator_factory);
+
+  return detector_factory->create_validator();
 }

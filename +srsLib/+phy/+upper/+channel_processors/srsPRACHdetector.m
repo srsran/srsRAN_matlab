@@ -1,5 +1,5 @@
 %srsPRACHdetector Detects the 5G NR PRACH preamble in a PRACH occasion.
-%   [INDICES, OFFSETS, DETECTINFO] = srsPRACHdetector(CARRIER, PRACH, GRID, IGNORECFO)
+%   [INDICES, OFFSETS, SINR, RSSI] = srsPRACHdetector(CARRIER, PRACH, GRID, IGNORECFO)
 %   detects the 5G NR PRACH preambles in GRID. GRID is a matrix (one column per
 %   RX antenna port) with the baseband symbols corresponding to one PRACH occasion,
 %   that is it may contain a number of copies of the preamble depending on the
@@ -10,7 +10,8 @@
 %
 %   The function returns INDICES and OFFSETS, that is a 64-entry boolean mask of
 %   the detected Preamble indices and the corresponding offsets in microseconds,
-%   respectively.
+%   respectively. It also returns an estimation of the SINR (in dB, basically
+%   the detection metric) and of the signal RSSI (in dB).
 
 %   Copyright 2021-2023 Software Radio Systems Limited
 %
@@ -27,7 +28,7 @@
 %   A copy of the BSD 2-Clause License can be found in the LICENSE
 %   file in the top-level directory of this distribution.
 
-function [indices, offsets] = srsPRACHdetector(carrier, prachConf, grid, ignoreCFO)
+function [indices, offsets, sinr, rssi] = srsPRACHdetector(carrier, prachConf, grid, ignoreCFO)
     assert(prachConf.RestrictedSet == "UnrestrictedSet", "srsran_matlab:srsPRACHdetector",...
         "Only unrestricted sets are supported.");
 
@@ -56,13 +57,16 @@ function [indices, offsets] = srsPRACHdetector(carrier, prachConf, grid, ignoreC
     % power).
     % Detection threshold. The detector is inspired by the GLRT test, but it's
     % not exactly that one - threshold must be tuned by simulation.
-    [winMargin, threshold] = getThreshold(prach.Format, nAntennas);
+    [winMargin, threshold] = getThreshold(prach, nAntennas, ignoreCFO);
 
-    Nfft = fftsize();
+    Nfft = fftsize(prach.Format);
 
     % Initialize output.
     indices = false(64, 1);
     offsets = nan(64, 1);
+    sinr = nan(64, 1);
+
+    rssi = 10 * log10(mean(abs(grid).^2, 'all') / LRA);
 
     nSequences = info.nSequences;
     remainingShifts = 64;
@@ -93,7 +97,7 @@ function [indices, offsets] = srsPRACHdetector(carrier, prachConf, grid, ignoreC
         for iWindow = 1:nWindows
             % Scale the detection window according to the FFT size.
             winWidth = floor(info.WinWidths(iWindow) * Nfft / LRA);
-            winStart = mod(Nfft - round(info.WinStart(iWindow) * Nfft / LRA), Nfft);
+            winStart = mod(Nfft - floor(info.WinStart(iWindow) * Nfft / LRA), Nfft);
 
             ix = (winStart - winMargin):(winStart + winWidth + winMargin - 1);
 
@@ -127,15 +131,15 @@ function [indices, offsets] = srsPRACHdetector(carrier, prachConf, grid, ignoreC
 
             % We don't want peaks at the very end of the window because they
             % are most probably side effects of a peak at the beginning of
-            % the adjacent window. We discard peaks that are closer than "guard"
-            % to the boundary.
-            guard = 5;
+            % the adjacent window. We discard peaks that fall in the last
+            % 1/5 of the detection window.
             [m, delay] = max(metricGlobal);
-            if (m > threshold) && (delay < length(metricGlobal) - guard)
+            if (m > threshold) && (delay < length(metricGlobal) * 0.8)
                 pos = (iSequence - 1) * nWindows + iWindow;
                 indices(pos) = true;
                 d = delay + winStart - 1;
                 offsets(pos) = (d / Nfft - mod(LRA - info.WinStart(iWindow), LRA) / LRA) / prach.SubcarrierSpacing * 1000;
+                sinr(pos) = 10 * log10(m);
             end
         end
     end
@@ -239,39 +243,71 @@ function preambles = preprocess(grid, LRA, ignoreCFO)
     preambles = reshape(grid, LRA, []);
 end
 
-function x = fftsize
-% FFT size used by the detector - it defines the offset granularity.
-    x = 4096;
+function x = fftsize(format)
+% FFT size used by the detector - it defines the offset granularity depending on
+% the format.
+    switch format
+        case {'0', '1', '2', '3'}
+            x = 1024;
+        case {'A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'B4', 'C0', 'C2'}
+            x = 256;
+        otherwise
+            error('srsran_matlab:srsPRACHdetector', ...
+                'Currently, Format %s is not supported.', format);
+    end
 end
 
-% Returns the window margin and the detection threshold for the given PRACH format
-% and number of antennas.
-function [winMargin, threshold] = getThreshold(format, nAntennas)
-    assert(nAntennas <= 2, 'srsran_matlab:srsPRACHdetector', 'Only 2 antennas supported at the moment.');
+% Returns the window margin and the detection threshold for the given PRACH configuration,
+% number of antennas, and CFO flag.
+function [winMargin, threshold] = getThreshold(prach, nAntennas, ignoreCFO)
+    % assert(nAntennas <= 2, 'srsran_matlab:srsPRACHdetector', 'Only 2 antennas supported at the moment.');
 
-    if (nAntennas == 1)
-        switch format
-            case '0'
-                winMargin = 5;
-                threshold = 2;
-            case 'B4'
-                winMargin = 12;
-                threshold = 0.15;
-            otherwise
-                error('srsran_matlab:srsPRACHdetector', ...
-                    'Currently, only Formats 0 and B4 are supported for 1 antenna.');
-        end
-    elseif (nAntennas == 2)
-        switch format
-            case '0'
-                winMargin = 5;
-                threshold = 0.88;
-            case 'A1'
-                winMargin = 12;
-                threshold = 0.37;
-            otherwise
-                error('srsran_matlab:srsPRACHdetector', ...
-                    'Currently, only Formats 0 and A1 are supported for 2 antennas.');
-        end
-    end
+    Configurations = [ ...
+        "Ant1_F0_NCS0_noCFO1", ...
+        "Ant1_F0_NCS13_noCFO1", ...
+        "Ant1_FB4_NCS0_noCFO1", ...
+        "Ant1_FB4_NCS46_noCFO1", ...
+        "Ant2_F0_NCS0_noCFO1", ...
+        "Ant2_F0_NCS13_noCFO1", ...
+        "Ant2_FB4_NCS0_noCFO1", ...
+        "Ant2_FB4_NCS46_noCFO1", ...
+        "Ant4_F0_NCS0_noCFO1", ...
+        "Ant4_F0_NCS13_noCFO1", ...
+        "Ant4_FB4_NCS0_noCFO1", ...
+        "Ant4_FB4_NCS46_noCFO1", ...
+        ];
+    ThresholdsMargins = { ...
+        [0.15, 5],  ... % Ant1_F0_NCS0_noCFO1
+        [1, 5],     ... % Ant1_F0_NCS13_noCFO1
+        [0.39, 12], ... % Ant1_FB4_NCS0_noCFO1
+        [0.39, 12], ... % Ant1_FB4_NCS46_noCFO1
+        [0.09, 5],  ... % Ant2_F0_NCS0_noCFO1
+        [0.45, 5],  ... % Ant2_F0_NCS13_noCFO1
+        [0.14, 12], ... % Ant2_FB4_NCS0_noCFO1
+        [0.18, 12], ... % Ant2_FB4_NCS46_noCFO1
+        [0.06, 5],  ... % Ant4_F0_NCS0_noCFO1
+        [0.32, 5],  ... % Ant4_F0_NCS13_noCFO1
+        [0.09, 12], ... % Ant4_FB4_NCS0_noCFO1
+        [0.11, 12], ... % Ant4_FB4_NCS46_noCFO1
+        };
+     d = dictionary(Configurations, ThresholdsMargins);
+
+     NCS = getNCS(prach);
+     confString = sprintf("Ant%d_F%s_NCS%d_noCFO%d", nAntennas, prach.Format, NCS, ignoreCFO);
+
+     try
+         tt = cell2mat(d(confString));
+         winMargin = tt(2);
+         threshold = tt(1);
+     catch
+         warning('srsran_matlab:srsPRACHdetector', ...
+             'Using a non-calibrated configuration with a suboptimal detection threshold.');
+         if ismember(prach.Format, {'0', '1', '2', '3'})
+             winMargin = 5;
+             threshold = 0.1;
+         else
+             winMargin = 12;
+             threshold = 0.3;
+         end
+     end
 end

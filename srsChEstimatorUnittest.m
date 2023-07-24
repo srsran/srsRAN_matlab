@@ -20,6 +20,10 @@
 %   configuration     - Description of the allocated REs and DM-RS pattern.
 %   FrequencyHopping  - Frequency hopping type.
 %
+%   srsChEstimatorUnittest Methods:
+%
+%   characterize  - Draws the empircical MSE performance curve of the estimator.
+%
 %   srsChEstimatorUnittest Methods (TestTags = {'testvector'}):
 %
 %   testvectorGenerationCases - Generates a test vector according to the provided
@@ -83,11 +87,12 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
         %   dmrsOffset       - Number of non-DM-RS REs at the beginning of the RB (0, 1).
         %   dmrsStrideSCS    - DM-RS frequency domain stride (1, 2, 3), that is the distance
         %                      between two consecutive DM-RS REs (distance of 1 being back-to-back).
-        %   dmrsStrideTime   - Stride between OFDM symbols containing DM-RS (1...4).
+        %   dmrsStrideTime   - Stride between OFDM symbols containing DM-RS (1, 2, 4, 6, 20).
+        %                      Use 20 for a single DM-RS symbol.
         %   betaDMRS         - The gain of the DM-RS pilots with respect to the data
         %                      symbols in dB (0, 3).
         configuration = {...
-            struct(...        % PUSCH DM-RS configuration Type 1 (inspired to).
+            struct(...        % #1: PUSCH DM-RS configuration Type 1 (inspired to).
                'nPRBs', 3, ...
                'symbolAllocation', [0, 14], ...
                'dmrsOffset', 0, ...
@@ -95,7 +100,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                'dmrsStrideTime', 4, ...
                'betaDMRS', -3 ...
                ),...
-            struct(...        % PUSCH DM-RS configuration Type 1 (inspired to).
+            struct(...        % #2: PUSCH DM-RS configuration Type 1 (inspired to).
                'nPRBs', 20, ...
                'symbolAllocation', [0, 14], ...
                'dmrsOffset', 0, ...
@@ -103,7 +108,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                'dmrsStrideTime', 4, ...
                'betaDMRS', -3 ...
                ), ...
-            struct(...        % PUSCH DM-RS configuration Type 1 (inspired to).
+            struct(...        % #3: PUSCH DM-RS configuration Type 1 (inspired to).
                'nPRBs', 51, ...
                'symbolAllocation', [0, 14], ...
                'dmrsOffset', 0, ...
@@ -111,7 +116,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                'dmrsStrideTime', 4, ...
                'betaDMRS', -3 ...
                ), ...
-            struct(...        % PUCCH Format 1 (inspired to).
+            struct(...        % #4: PUCCH Format 1 (inspired to).
                'nPRBs', 1, ...
                'symbolAllocation', [8, 4], ...
                'dmrsOffset', 0, ...
@@ -119,7 +124,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                'dmrsStrideTime', 2, ...
                'betaDMRS', 0 ...
                ), ...
-            struct(...        % PUCCH Format 1 (inspired to).
+            struct(...        % #5: PUCCH Format 1 (inspired to).
                'nPRBs', 1, ...
                'symbolAllocation', [0, 14], ...
                'dmrsOffset', 0, ...
@@ -127,7 +132,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                'dmrsStrideTime', 2, ...
                'betaDMRS', 0 ...
                ), ...
-            struct(...        % PUCCH Format 2 (inspired to).
+            struct(...        % #6: PUCCH Format 2 (inspired to).
                'nPRBs', 1, ...
                'symbolAllocation', [0, 2], ...
                'dmrsOffset', 1, ...
@@ -135,7 +140,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                'dmrsStrideTime', 1, ...
                'betaDMRS', 0 ...
                ), ...
-            struct(...        % PUCCH Format 2 (inspired to).
+            struct(...        % #7: PUCCH Format 2 (inspired to).
                'nPRBs', 6, ...
                'symbolAllocation', [5, 1], ...
                'dmrsOffset', 1, ...
@@ -143,7 +148,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                'dmrsStrideTime', 1, ...
                'betaDMRS', 0 ...
                ), ...
-            struct(...        % PUCCH Format 2 (inspired to).
+            struct(...        % #8: PUCCH Format 2 (inspired to).
                'nPRBs', 16, ...
                'symbolAllocation', [5, 2], ...
                'dmrsOffset', 1, ...
@@ -255,6 +260,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             EstimatorConfig.DMRSREmask = obj.DMRSREmask;
             EstimatorConfig.nPilotsNoiseAvg = sum(obj.DMRSREmask);
             EstimatorConfig.scs = 15000;
+            EstimatorConfig.useFilter = true;
             [channelEst, noiseEst, rsrp, epre, timeAlignment] = srsChannelEstimator(receivedRG, ...
                 pilots, betaDMRS, hop1, hop2, EstimatorConfig);
 
@@ -320,6 +326,120 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
 
         end % of function testvectorGenerationCases(...)
     end % of methods (Test, TestTags = {'testvector'})
+
+    methods % public
+        function [mse, noiseEst, rsrpEst, epreEst, crlb] = characterize(obj, configuration, ...
+                FrequencyHopping, channelType, snrValues, nRuns)
+        %characterize - Draw the empircical MSE performance curve of the estimator.
+        %   MSE = characterize(OBJ, CONFIGURATION, FREQUENCYHOPPING, CHANNELTYPE, SNRVALUES, NRUNS) returns
+        %   the empirical mean squared error of the channel estimation after NRUNS simulations
+        %   and for all SNRVALUES. CONFIGURATION and FREQUENCYHOPPING provide the physicaly
+        %   channel configuration and CHANNELTYPE specifies the simulated channel model.
+        %
+        %   [MSE, NOISEEST, RSRPEST, EPREEST, CRLB] = characterize(...) also returns the
+        %   estimates of noise variance, RSRP and EPRE for all runs and all SNR values,
+        %   as well as the CRLB for the channel estimation. The CRLB is computed assuming
+        %   the entire band is available for estimation, with pilots positioned with
+        %   the same pattern as the DM-RS (first column) or with pilots in all REs
+        %   (second column).
+        %
+        %   For CONFIGURATION and FREQUENCYHOPPING, see <a href="matlab:help srsChEstimatorUnittest">the main class documantation</a>.
+        %   SNRVALUES is an array of SNR values in decibel.
+        %   NRUNS is an integer number of simulations.
+            arguments
+                obj (1, 1) srsChEstimatorUnittest
+                configuration (1, 1) struct {mustBeConfiguration}
+                FrequencyHopping (1, :) char {mustBeMember(FrequencyHopping, {'neither', 'intraSlot'})}
+                channelType (1, :) char {mustBeMember(channelType, {'pure-delay', 'TDL-A'})}
+                snrValues double {mustBeReal, mustBeVector}
+                nRuns (1, 1) double {mustBeNonnegative, mustBeInteger}
+            end
+
+            import srsLib.phy.upper.signal_processors.srsChannelEstimator
+
+            % Cannot do frequency hopping if the entire BWP is allocated or if using a single OFDM symbol.
+            assert(~(((configuration.nPRBs == obj.NSizeBWP) || (configuration.symbolAllocation(2) == 1)) ...
+                    && strcmp(FrequencyHopping, 'intraSlot')), 'srsgnb_matlab:srsChEstimatorUnittest', ...
+                    'Unfeasible configuration-frequency hopping combination.');
+
+            assert((sum(configuration.symbolAllocation) <= obj.nSymbolsSlot), ...
+                'srsgnb_matlab:srsChEstimatorUnittest', 'Time allocation exceeds slot length.');
+
+            % Configure carrier.
+            carrier = nrCarrierConfig;
+            carrier.CyclicPrefix = 'Normal';
+            carrier.SubcarrierSpacing = 15; % kHz
+            carrier.NSlot = 0;
+            carrier.NSizeGrid = obj.NSizeGrid;
+
+            waveformInfo = nrOFDMInfo(carrier);
+            channel = configureChannel(channelType, waveformInfo.SampleRate, ...
+                carrier.SubcarrierSpacing);
+
+            % Configure each hop.
+            [hop1, hop2] = obj.configureHops(configuration, FrequencyHopping);
+
+            % Build DM-RS-like pilots.
+            nDMRSsymbols = sum(obj.DMRSsymbols);
+            nPilots = configuration.nPRBs * sum(obj.DMRSREmask) * nDMRSsymbols;
+            pilots = (2 * randi([0 1], nPilots, 2) - 1) * [1; 1j] / sqrt(2);
+            pilots = reshape(pilots, [], nDMRSsymbols);
+
+            betaDMRS = 10^(-configuration.betaDMRS / 20);
+
+            % Place pilots on the resource grid.
+            transmittedRG = obj.transmitPilots(pilots, betaDMRS, hop1, hop2);
+
+            transmittedWF = nrOFDMModulate(carrier, transmittedRG);
+
+            mse = zeros(length(snrValues), 1);
+            noiseEst = zeros(length(snrValues), nRuns);
+            rsrpEst = zeros(length(snrValues), nRuns);
+            epreEst = zeros(length(snrValues), nRuns);
+
+            % Configure estimator.
+            EstimatorConfig.DMRSSymbolMask = obj.DMRSsymbols;
+            EstimatorConfig.DMRSREmask = obj.DMRSREmask;
+            EstimatorConfig.nPilotsNoiseAvg = sum(obj.DMRSREmask);
+            EstimatorConfig.scs = 15000;
+            EstimatorConfig.useFilter = true;
+
+            for iRun = 1:nRuns
+                reset(channel);
+                [receivedWF0, pathGains, sampleTimes] = channel(transmittedWF);
+
+                noise0 = randn(size(receivedWF0)) + 1j * randn(size(receivedWF0));
+
+                iSNR = 0;
+                for SNR = snrValues
+                    iSNR = iSNR + 1;
+                    noiseVar = 10^(-SNR/10) / waveformInfo.Nfft;
+                    noise = noise0 * sqrt(noiseVar / 2);
+
+                    receivedWF = receivedWF0 + noise;
+
+                    % Compute received resource grid.
+                    receivedRG = nrOFDMDemodulate(carrier, receivedWF);
+
+                    [channelEst, noiseEstL, rsrpEstL, epreEstL] = srsChannelEstimator(receivedRG, pilots, betaDMRS, hop1, hop2, EstimatorConfig);
+                    noiseEst(iSNR, iRun) = noiseEstL;
+                    rsrpEst(iSNR, iRun) = rsrpEstL;
+                    epreEst(iSNR, iRun) = epreEstL;
+
+                    % Get the true channel, for comparison.
+                    pathFilters = channel.getPathFilters();
+                    channelTrue = nrPerfectChannelEstimate(carrier, pathGains, pathFilters, 0, sampleTimes);
+
+                    estErrors = channelEst(channelEst ~= 0) - channelTrue(channelEst ~= 0);
+
+                    mse(iSNR) = mse(iSNR) + sum(abs(estErrors).^2) / length(estErrors) / nRuns;
+                end
+            end
+
+            crlb = repmat(10.^(-snrValues(:)/10), 1, 2) / betaDMRS^2 / sum(hop1.DMRSsymbols);
+            crlb = (crlb' .* computeCRLB(hop1.maskPRBs, hop1.DMRSREmask))';
+        end % of function testvectorGenerationCases(...)
+    end % of methods % public
 
     methods (Access = private)
         function [hop1, hop2] = configureHops(obj, configuration, FrequencyHopping)
@@ -414,3 +534,137 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
         end % of function transmittedRG = transmitPilots(pilots, hop1, hop2)
     end % of methods (Access = private)
 end % of classdef srsChEstimatorUnittest
+
+function channel = configureChannel(chModel, SampleRate, SubcarrierSpacing)
+    channel = nrTDLChannel;
+    channel.NumTransmitAntennas = 1;
+    channel.NumReceiveAntennas = 1;
+    channel.MaximumDopplerShift = 0;
+    channel.SampleRate = SampleRate;
+    channel.RandomStream = 'Global stream';
+    if strcmp(chModel, 'pure-delay')
+        channel.DelayProfile = 'Custom';
+        % Random delay, at most one fourth of the cyclic prefix length.
+        channel.PathDelays = rand() * 0.018 / SubcarrierSpacing / 1000;
+        channel.AveragePathGains = 0;
+        channel.FadingDistribution = 'Rayleigh';
+    elseif strcmp(chModel, 'TDL-A')
+        channel.DelayProfile = 'TDL-A';
+        channel.DelaySpread = 30e-9;
+    else
+        error('srsgnb_matlab:srsChEstimatorUnittest:configureChannel', ...
+            'Unknown channel model %s', chModel);
+    end
+end
+
+
+function mustBeConfiguration(a)
+    if ~isfield(a, 'nPRBs')
+        eidType = 'srsChEstimatorUnittest:characterize';
+        msgType = 'Missing configuration field "nPRBs."';
+        throwAsCaller(MException(eidType, msgType));
+    end
+    mustBeScalarOrEmpty(a.nPRBs);
+    mustBeInteger(a.nPRBs);
+    mustBeInRange(a.nPRBs, 1, 51);
+
+    if ~isfield(a, 'symbolAllocation')
+        eidType = 'srsChEstimatorUnittest:characterize';
+        msgType = 'Missing configuration field "symbolAllocation".';
+        throwAsCaller(MException(eidType, msgType));
+    end
+    mustBeVector(a.symbolAllocation)
+    if numel(a.symbolAllocation) ~= 2
+        eidType = 'srsChEstimatorUnittest:characterize';
+        msgType = 'Configuration field "symbolAllocation" should be an array of two elements.';
+        throwAsCaller(MException(eidType, msgType));
+    end
+    mustBeInteger(a.symbolAllocation);
+    mustBeNonnegative(a.symbolAllocation);
+    if (a.symbolAllocation(1) + a.symbolAllocation(2) > 14)
+        eidType = 'srsChEstimatorUnittest:characterize';
+        msgType = 'Inconsistent symbol allocation.';
+        throwAsCaller(MException(eidType, msgType));
+    end
+
+    if ~isfield(a, 'dmrsOffset')
+        eidType = 'srsChEstimatorUnittest:characterize';
+        msgType = 'Missing configuration field "dmrsOffset".';
+        throwAsCaller(MException(eidType, msgType));
+    end
+    mustBeScalarOrEmpty(a.dmrsOffset);
+    mustBeMember(a.dmrsOffset, [0, 1]);
+
+    if ~isfield(a, 'dmrsStrideSCS')
+        eidType = 'srsChEstimatorUnittest:characterize';
+        msgType = 'Missing configuration field "dmrsStrideSCS".';
+        throwAsCaller(MException(eidType, msgType));
+    end
+    mustBeScalarOrEmpty(a.dmrsStrideSCS);
+    mustBeMember(a.dmrsStrideSCS, [1, 2, 3]);
+
+    if ~isfield(a, 'dmrsStrideTime')
+        eidType = 'srsChEstimatorUnittest:characterize';
+        msgType = 'Missing configuration field "dmrsStrideTime".';
+        throwAsCaller(MException(eidType, msgType));
+    end
+    mustBeScalarOrEmpty(a.dmrsStrideTime);
+    mustBeMember(a.dmrsStrideTime, [1, 2, 4, 6, 20]);
+
+    if ~isfield(a, 'betaDMRS')
+        eidType = 'srsChEstimatorUnittest:characterize';
+        msgType = 'Missing configuration field "betaDMRS".';
+        throwAsCaller(MException(eidType, msgType));
+    end
+    mustBeScalarOrEmpty(a.betaDMRS);
+    mustBeMember(a.betaDMRS, [-3, 0]);
+end
+
+function crlb = computeCRLB(prbMask, reMask)
+%computeCRLB Cramer-Rao Lower Bound
+%   CRLB = computeCRLB(PRBMASK, REMASK) computes the Cramer-Rao Lower Bound (CRLB)
+%   for the channel estimation. The CRLB is computed assuming that the entire band
+%   can be used for the estimation, with pilots spaced according to REMASK (first
+%   entry) or with pilots in all REs (second entry). The assumption is needed to
+%   avoid a singular Fisher matrix.
+
+    Nprb = length(prbMask);
+    Nre = Nprb * 12;
+    assert(length(reMask) == 12);
+    E = diag(kron(ones(Nprb, 1), reMask));
+    Jbig = ifft(fft(E, Nre, 2), Nre, 1);
+    cp = floor(Nre / 10);
+    J = Jbig(1:cp, 1:cp);
+    s = warning('error', 'MATLAB:nearlySingularMatrix');
+    crlb = nan(2, 1);
+    chMask = (kron(prbMask, ones(12, 1)) == 1);
+    try
+        C = inv(J);
+        M = fft(ifft(C, Nre, 2), Nre, 1);
+
+        crlb(1) = real(trace(M(chMask, chMask))) / sum(chMask);
+    catch ME
+        if strcmp(ME.identifier, 'MATLAB:nearlySingularMatrix')
+            warning('Pattern CRLB can''t be computed.');
+        else
+            rethrow(ME);
+        end
+    end
+
+    E = diag(kron(ones(Nprb, 1), ones(12, 1)));
+    Jbig = ifft(fft(E, Nre, 2), Nre, 1);
+    J = Jbig(1:cp, 1:cp);
+    try
+        C = inv(J);
+        M = fft(ifft(C, Nre, 2), Nre, 1);
+
+        crlb(2) = real(trace(M(chMask, chMask))) / sum(chMask);
+    catch ME
+        if ~strcmp(ME.identifier, 'MATLAB:nearlySingularMatrix')
+            warning('Full CRLB can''t be computed.');
+        else
+            rethrow(ME);
+        end
+    end
+    warning(s);
+end

@@ -82,7 +82,12 @@ find_package(Matlab REQUIRED)
 find_package(SRSRAN MODULE REQUIRED)
 
 include(${SRSRAN_BINARY_DIR}/srsran.cmake)
-include_directories(${CMAKE_SOURCE_DIR}/include ${SRSRAN_INCLUDE_DIR} ${SRSRAN_SOURCE_DIR}/external/fmt/include)
+include_directories(
+    ${CMAKE_SOURCE_DIR}/include
+    ${SRSRAN_INCLUDE_DIR}
+    ${SRSRAN_SOURCE_DIR}/external/fmt/include
+    ${SRSRAN_SOURCE_DIR}/external
+)
 
 add_subdirectory(lib)
 add_subdirectory(unittests)
