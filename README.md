@@ -162,6 +162,12 @@ This app analyzes a PUSCH transmission from the baseband complex-valued samples 
 
 See `help srsPUSCHAnalyzer` for more details.
 
+### apps/analyzers/srsPUCCHAnalyzer
+
+This app analyzes a PUCCH (Formats 1 or 2) transmission from the baseband complex-valued samples corresponding to one slot, as received by the gNB. See the [Configuration Parameters Section](https://docs.srsran.com/projects/project/en/latest/user_manuals/source/config_ref.html#configuration-parameters) of the srsRAN Project documentation for information on how to configure the logging level of the SRS gNB to record the received samples.
+
+See `help srsPUCCHAnalyzer` for more details.
+
 ### apps/analyzers/srsPRACHAnalyzer
 
 This app analyzes a PRACH transmission from the baseband complex-valued samples corresponding to one PRACH occasion, as received by the gNB. See the [Configuration Parameters Section](https://docs.srsran.com/projects/project/en/latest/user_manuals/source/config_ref.html#configuration-parameters) of the srsRAN Project documentation for information on how to configure the logging level of the SRS gNB to record the received samples.

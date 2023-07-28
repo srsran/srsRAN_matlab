@@ -2,9 +2,10 @@
 %   srsResourceGridAnalyzer(NRBS, CYCLICPREFIX, RGFILENAME, RGOFFSET, RGSIZE)
 %   displays the content (amplitude) of a resource grid of NRBS resource blocks
 %   (frequency domain) and one slot (time domain).  The number of symbols in
-%   the slot is determined from the cyclic prefix type CYCLICPREFIX. The
-%   samples are read from RGSIZE bytes in file RGFILENAME, starting at byte
-%   RGOFFSET.
+%   the slot is determined from the cyclic prefix type CYCLICPREFIX. RGOFFSET
+%   and RGSIZE are the offset and size, as
+%   a number of single-precision complex floating point numbers, of the slot
+%   to be analyzed inside the binary file.
 %
 %   RG = srsResourceGridAnalyzer(...) also returns a matrix RG with the complex-
 %   valued samples of the resource grid (rows are subcarriers, columns are symbols).
@@ -43,6 +44,9 @@ function RG = srsResourceGridAnalyzer(nRBs, cyclicPrefix, rgFilename, rgOffset, 
     % Create resource grid.
     rxGrid = nrResourceGrid(carrier);
     gridDimensions = size(rxGrid);
+
+    assert(prod(gridDimensions) == rgSize, ['The dimensions of the resource grid ', ...
+        '(%d x %d) are not consistent with the buffer size %d.'], gridDimensions(1), gridDimensions(2), rgSize);
 
     % Read file containing the resource grid.
     rxGrid = reshape(srsTest.helpers.readComplexFloatFile(rgFilename, rgOffset, rgSize), ...
