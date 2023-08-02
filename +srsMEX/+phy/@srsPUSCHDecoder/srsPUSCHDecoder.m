@@ -2,20 +2,24 @@
 %   User-friendly interface to the SRSRAN PUSCH decoder class, which is wrapped
 %   by the MEX static method pusch_decoder_mex.
 %
-%   PUSCHDEC = srsPUSCHDecoder(SBPDESC) creates a PHY Uplink Shared Channel decoder
-%   object with a softbuffer pool defined by structure SBPDESC (whose fields are
-%   dumped into property <a href="matlab:help srsMEX.phy.srsPUSCHDecoder/softbufferPoolDescription">softbufferPoolDescription</a>).
+%   PUSCHDEC = srsPUSCHDecoder creates a PHY Uplink Shared Channel decoder
+%   object, PUSCHDEC, with the default configuration.
+%
+%   PUSCHDEC = srsPUSCHDecoder(Name, Value) creates a PUSCH decoder object,
+%   PUSCHDEC, with the specified property Name set to the specified Value.
+%   You can specify additional name-value pair arguments in any order as
+%   (Name1, Value1, Name2, Value2, ..., NameN, ValueN).
 %
 %   srsPUSCHDecoder Properties (Nontunable):
 %
-%   maxCodeblockSize - Maximum size of the codeblocks stored in the pool.
-%   maxSoftbuffers   - Maximum number of softbuffers managed by the pool.
-%   maxCodeblocks    - Maximum number of codeblocks managed by the pool
-%                      (shared by all softbuffers).
+%   MaxCodeblockSize - Maximum size of the codeblocks stored in the pool (default 1000).
+%   MaxSoftbuffers   - Maximum number of softbuffers managed by the pool (default 1).
+%   MaxCodeblocks    - Maximum number of codeblocks managed by the pool
+%                      (shared by all softbuffers, default 1).
 %
 %   srsPUSCHDecoder Properties (Access = private):
 %
-%   softbufferPoolID          - Identifier of the softbuffer pool.
+%   SoftbufferPoolID          - Identifier of the softbuffer pool.
 %
 %   srsPUSCHDecoder Methods:
 %
@@ -29,24 +33,28 @@
 %   Step method syntax
 %
 %   TBK = step(PUSCHDEC, LLRS, NEWDATA, SEGCONFIG, HARQBUFID) uses PUSCH decoder
-%   object PUSCHDEC to decode the codeword LLRS and returns the transport block
-%   TBK in packed format. LLRS is a column vector of int8 with (quantized) channel
+%   object PUSCHDEC to decode the codeword LLRS and returns the decoded transport
+%   block. LLRS is a column vector of int8 with (quantized) channel
 %   log-likelihood ratios. The logical flag NEWDATA tells the decoder whether
 %   the codeword corresponds to a new transport block (NEWDATA = true) or
 %   whether it corresponds to a retransmission of a previous transport block.
 %   Structure SEGCONFIG describes the transport block segmentation. The fields are
-%      base_graph      - the LDPC base graph;
-%      modulation      - modulation identifier;
-%      nof_ch_symbols  - the number of channel symbols corresponding to one codeword;
-%      nof_layers      - the number of transmission layers;
-%      rv              - the redundancy version;
-%      Nref            - limited buffer rate matching length (set to zero for
-%                        unlimited buffer);
-%      tbs             - the transport block size.
+%      BGN                   - the LDPC base graph;
+%      Modulation            - modulation identifier;
+%      NumChSymbols          - the number of channel symbols corresponding to one codeword;
+%      NumLayers             - the number of transmission layers;
+%      RV                    - the redundancy version;
+%      LimitedBufferSize     - limited buffer rate matching length (set to zero for
+%                              unlimited buffer);
+%      TransportBlockLength  - the transport block size.
 %   Structure HARQBUFID identifies the HARQ buffer. The fields are
-%      harq_ack_id    - the ID of the HARQ process;
-%      rnti           - the UE RNTI;
-%      nof_codeblocks - the number of codeblocks forming the codeword.
+%      HARQProcessID  - the ID of the HARQ process;
+%      RNTI           - the UE RNTI;
+%      NumCodeblocks  - the number of codeblocks forming the codeword.
+%   TBK is a vector of bytes of length equal to the transport block size.
+%
+%   TBK = step(..., FORMAT) allows specifing the format of the output transport
+%   block: 'packed' bytes (default) or 'unpacked' bits.
 
 %   Copyright 2021-2023 Software Radio Systems Limited
 %
@@ -66,16 +74,16 @@
 classdef srsPUSCHDecoder < matlab.System
     properties (Nontunable)
         %Maximum size of the codeblocks stored in the pool.
-        maxCodeblockSize (1, 1) double {mustBePositive, mustBeInteger} = 1000
+        MaxCodeblockSize (1, 1) double {mustBePositive, mustBeInteger} = 1000
         %Maximum number of softbuffers managed by the pool.
-        maxSoftbuffers   (1, 1) double {mustBePositive, mustBeInteger} = 1
+        MaxSoftbuffers   (1, 1) double {mustBePositive, mustBeInteger} = 1
         %Maximum number of codeblocks managed by the pool (shared by all softbuffers).
-        maxCodeblocks    (1, 1) double {mustBePositive, mustBeInteger} = 1
+        MaxCodeblocks    (1, 1) double {mustBePositive, mustBeInteger} = 1
     end % properties (Nontunable)
 
     properties (Access = private)
         %Unique identifier of the softbuffer pool used by the current PUSCH decoder.
-        softbufferPoolID (1, 1) uint64 = 0
+        SoftbufferPoolID (1, 1) uint64 = 0
     end % properties (Access = private)
 
     methods
@@ -89,9 +97,9 @@ classdef srsPUSCHDecoder < matlab.System
         %   resetCRCS(PUSCHDEC, HARQBUFID) tells the PUSCH decoder object PUSCHDEC to
         %   reset all the CRC indicators associated to the HARQ process corresponding
         %   to the buffer identified by HARQBUFID, a structure with fields
-        %      harq_ack_id    - the ID of the HARQ process;
-        %      rnti           - the UE RNTI;
-        %      nof_codeblocks - the number of codeblocks forming the codeword.
+        %      HARQProcessID  - the ID of the HARQ process;
+        %      RNTI           - the UE RNTI;
+        %      NumCodeblocks  - the number of codeblocks forming the codeword.
 
             arguments
                 obj       (1, 1) srsMEX.phy.srsPUSCHDecoder
@@ -104,15 +112,36 @@ classdef srsPUSCHDecoder < matlab.System
 
             fcnName = [class(obj) '/resetCRCS'];
 
-            validateattributes(harqBufID.harq_ack_id, {'double'}, {'scalar', 'integer', 'nonnegative'},...
-                fcnName, 'HARQ_ACK_ID');
-            validateattributes(harqBufID.rnti, {'double'}, {'scalar', 'integer', 'positive'}, ...
+            validateattributes(harqBufID.HARQProcessID, {'double'}, {'scalar', 'integer', 'nonnegative'},...
+                fcnName, 'HARQProcessID');
+            validateattributes(harqBufID.RNTI, {'double'}, {'scalar', 'integer', 'positive'}, ...
                 fcnName, 'RNTI');
-            validateattributes(harqBufID.nof_codeblocks, {'double'}, {'scalar', 'integer', 'positive'}, ...
-                fcnName, 'NOF_CODEBLOCKS');
+            validateattributes(harqBufID.NumCodeblocks, {'double'}, {'scalar', 'integer', 'positive'}, ...
+                fcnName, 'NumCodeblocks');
 
-            obj.pusch_decoder_mex('reset_crcs', obj.softbufferPoolID, harqBufID);
+            obj.pusch_decoder_mex('reset_crcs', obj.SoftbufferPoolID, harqBufID);
         end % of function transportBlock = step
+
+        function configure(obj, carrier, pusch, TargetCodeRate, NHARQProcesses, XOverhead)
+            arguments
+                obj            (1, 1) srsMEX.phy.srsPUSCHDecoder
+                carrier        (1, 1) nrCarrierConfig
+                pusch          (1, 1) nrPUSCHConfig
+                TargetCodeRate (1, 1) double {mustBeInRange(TargetCodeRate, 0, 1, 'exclusive')} = 0.5
+                NHARQProcesses (1, 1) double {mustBePositive, mustBeInteger} = 1
+                XOverhead      (1, 1) double {mustBeNonnegative, mustBeInteger} = 0
+            end
+
+            [~, puschIndicesInfo] = nrPUSCHIndices(carrier, pusch);
+            MRB = numel(pusch.PRBSet);
+            trBlkSize = nrTBS(pusch.Modulation, pusch.NumLayers, MRB, puschIndicesInfo.NREPerPRB, TargetCodeRate, XOverhead);
+
+            segmentInfo = nrULSCHInfo(trBlkSize, TargetCodeRate);
+
+            obj.MaxCodeblocks = segmentInfo.C * NHARQProcesses;
+            obj.MaxCodeblockSize = segmentInfo.N;
+            obj.MaxSoftbuffers = NHARQProcesses;
+        end % of function configure(obj, carrier, pusch, TargetCodeRate, NHARQProcesses, XOverhead)
     end % of methods
 
     methods (Access = protected)
@@ -122,60 +151,74 @@ classdef srsPUSCHDecoder < matlab.System
 
             id = obj.pusch_decoder_mex('new', sbpdesc);
 
-            obj.softbufferPoolID = id;
+            obj.SoftbufferPoolID = id;
         end % of setupImpl
 
-        function [transportBlock, stats] = stepImpl(obj, llrs, newData, segConfig, harqBufID)
+        function [transportBlock, stats] = stepImpl(obj, llrs, newData, segConfig, harqBufID, dataType)
             arguments
                 obj       (1, 1) srsMEX.phy.srsPUSCHDecoder
                 llrs      (:, 1) int8
                 newData   (1, 1) logical
                 segConfig (1, 1) struct
                 harqBufID (1, 1) struct
+                dataType  (1, :) char {mustBeMember(dataType, {'packed', 'unpacked'})} = 'packed'
             end
 
             fcnName = [class(obj) '/step'];
 
-            validateattributes(segConfig.nof_layers, {'double'}, {'scalar', 'integer', 'positive'}, ...
+            validateattributes(segConfig.NumLayers, {'double'}, {'scalar', 'integer', 'positive'}, ...
                 fcnName, 'NOF_LAYERS');
-            validateattributes(segConfig.rv, {'double'}, {'scalar', 'integer', 'nonnegative'}, ...
+            validateattributes(segConfig.RV, {'double'}, {'scalar', 'integer', 'nonnegative'}, ...
                 fcnName, 'RV');
-            validateattributes(segConfig.Nref, {'double'}, {'scalar', 'integer', 'nonnegative'}, ...
+            validateattributes(segConfig.LimitedBufferSize, {'double'}, {'scalar', 'integer', 'nonnegative'}, ...
                 fcnName, 'NREF');
+            validateattributes(segConfig.NumChSymbols, {'double'}, {'scalar', 'integer', 'positive'}, ...
+                fcnName, 'NOF_CH_SYMBOLS');
             modList = {'pi/2-BPSK', 'BPSK', 'QPSK', '16QAM', '64QAM', '256QAM'};
-            validatestring(segConfig.modulation, modList, fcnName, 'MODULATION');
+            validatestring(segConfig.Modulation, modList, fcnName, 'MODULATION');
 
-            validateattributes(harqBufID.harq_ack_id, {'double'}, {'scalar', 'integer', 'nonnegative'}, ...
+            validateattributes(harqBufID.HARQProcessID, {'double'}, {'scalar', 'integer', 'nonnegative'}, ...
                 fcnName, 'HARQ_ACK_ID');
-            validateattributes(harqBufID.rnti, {'double'}, {'scalar', 'integer', 'positive'}, ...
+            validateattributes(harqBufID.RNTI, {'double'}, {'scalar', 'integer', 'positive'}, ...
                 fcnName, 'RNTI');
-            validateattributes(harqBufID.nof_codeblocks, {'double'}, {'scalar', 'integer', 'positive'}, ...
+            validateattributes(harqBufID.NumCodeblocks, {'double'}, {'scalar', 'integer', 'positive'}, ...
                 fcnName, 'NOF_CODEBLOCKS');
 
-            validateattributes(llrs, {'int8'}, {}, fcnName, 'LLRS');
+            bpsList = [1, 1, 2, 4, 6, 8];
+            ind = strcmpi(modList, segConfig.Modulation);
+            tmp = bpsList(ind);
+            bps = tmp(1);
 
-            [transportBlock, stats] = obj.pusch_decoder_mex('step', obj.softbufferPoolID, ...
+            nLLRS = segConfig.NumChSymbols * segConfig.NumLayers * bps;
+
+            validateattributes(llrs, {'int8'}, {'numel', nLLRS}, fcnName, 'LLRS');
+
+            [transportBlock, stats] = obj.pusch_decoder_mex('step', obj.SoftbufferPoolID, ...
                llrs, newData, segConfig, harqBufID);
+
+           if strcmp(dataType, 'unpacked')
+               transportBlock = srsTest.helpers.bitUnpack(transportBlock);
+           end
         end % function step(...)
 
         function resetImpl(obj)
         % Releases the softbuffer pool and creates a new one.
-            if (obj.softbufferPoolID == 0)
+            if (obj.SoftbufferPoolID == 0)
                 return;
             end
 
-            obj.pusch_decoder_mex('release', obj.softbufferPoolID);
+            obj.pusch_decoder_mex('release', obj.SoftbufferPoolID);
             setupImpl(obj);
         end
 
         function releaseImpl(obj)
-        % Releases the softbuffer pool and sets softbufferPoolID to zero.
-            if (obj.softbufferPoolID == 0)
+        % Releases the softbuffer pool and sets SoftbufferPoolID to zero.
+            if (obj.SoftbufferPoolID == 0)
                 return;
             end
 
-            obj.pusch_decoder_mex('release', obj.softbufferPoolID);
-            obj.softbufferPoolID = 0;
+            obj.pusch_decoder_mex('release', obj.SoftbufferPoolID);
+            obj.SoftbufferPoolID = 0;
         end % function releaseImpl(obj)
 
         function s = saveObjectImpl(obj)
@@ -202,11 +245,11 @@ classdef srsPUSCHDecoder < matlab.System
     methods (Access = private)
         function softbufferDptn = createSoftBufferDptn(obj)
         %Creates a softbuffer configuration structure.
-            softbufferDptn.max_codeblock_size = obj.maxCodeblockSize;
-            softbufferDptn.max_softbuffers = obj.maxSoftbuffers;
-            softbufferDptn.max_nof_codeblocks = obj.maxCodeblocks;
+            softbufferDptn.MaxCodeblockSize = obj.MaxCodeblockSize;
+            softbufferDptn.MaxSoftbuffers = obj.MaxSoftbuffers;
+            softbufferDptn.MaxCodeblocks = obj.MaxCodeblocks;
             % Not used (for now), but we need to set it to a value larger than 0.
-            softbufferDptn.expire_timeout_slots = 10;
+            softbufferDptn.ExpireTimeoutSlots = 10;
         end
     end % of methods (Access = private)
 
@@ -216,31 +259,42 @@ classdef srsPUSCHDecoder < matlab.System
     end % of methods (Access = private)
 
     methods (Static)
-        function segmentCfg = configureSegment(NumLayers, TBSize, TargetCodeRate, Modulation, RV, Nref)
+        function [segmentCfg, decoderCfg] = configureSegment(carrier, pusch, TargetCodeRate, NHARQProcesses, XOverhead)
         %configureSegment Static helper method for filling the SEGCONFIG input of "step"
-        %   SEGMENTCFG = configureSegment(NUMLAYERS, TBSIZE, TARGETCODERATE, MODULATION, RV, NREF)
-        %   generates a segment configuration for NUMLAYERS transmission layers, NUMRES allocated REs per layer,
-        %   transport block size TBSIZE, target code rate TARGETCODERATE, modulation MODULATION and redundancy
-        %   version RV. NREF limits the rate-matcher buffer size (set to zero for unlimited buffer size).
+        %   [SEGMENTCFG, DECODERCFG] = configureSegment(CARRIER, PUSCH, TARGETCODERATE, NHARQPROCESS, XOH)
+        %   generates a segment configuration SEGMENTCFG and a decoder configuration DECODERCFG for
+        %   a given target code rate TARGETCODERATE, a number of HARQ processes equal to NHARQPROCESS
+        %   (default 1) and XOH bits of additional overhead (default 0). CARRIER and PUSCH are the nrCarrierConfig
+        %   and nrPUSCHConfig objects, respectively, describing the tranmsission.
             arguments
-                NumLayers      (1, 1) double {mustBeInteger, mustBeInRange(NumLayers, 1, 4)} = 1
-                TBSize         (1, 1) double {mustBeInteger, mustBePositive} = 100
-                TargetCodeRate (1, 1) double {mustBeInRange(TargetCodeRate, 0, 1, 'exclusive')} = 0.5
-                Modulation     (1, :) char   {mustBeMember(Modulation, ...
-                                                  {'pi/2-BPSK', 'QPSK', '16QAM', '64QAM', '256QAM'})} = 'QPSK'
-                RV             (1, 1) double {mustBeInteger, mustBeInRange(RV, 0, 3)} = 0
-                Nref           (1, 1) double {mustBeInteger, mustBeNonnegative} = 0
+                carrier        (1, 1) nrCarrierConfig
+                pusch          (1, 1) nrPUSCHConfig
+                TargetCodeRate (1, 1) double {mustBeInRange(TargetCodeRate, 0, 1, 'exclusive')}
+                NHARQProcesses (1, 1) double {mustBePositive, mustBeInteger} = 1
+                XOverhead      (1, 1) double {mustBeNonnegative, mustBeInteger} = 0
             end
 
-            segmentInfo = nrULSCHInfo(TBSize, TargetCodeRate);
+            [~, puschIndicesInfo] = nrPUSCHIndices(carrier, pusch);
+            MRB = numel(pusch.PRBSet);
+            trBlkSize = nrTBS(pusch.Modulation, pusch.NumLayers, MRB, puschIndicesInfo.NREPerPRB, TargetCodeRate, XOverhead);
+            segmentInfo = nrULSCHInfo(trBlkSize, TargetCodeRate);
 
-            segmentCfg.nof_layers = NumLayers;
-            segmentCfg.rv = RV;
-            segmentCfg.Nref = Nref;
-            segmentCfg.modulation = Modulation;
-            segmentCfg.base_graph = segmentInfo.BGN;
-            segmentCfg.tbs = TBSize;
-            segmentCfg.nof_codeblocks = segmentInfo.C;
-        end % of function segmentCfg = configureSegment(...)
+            segmentCfg = struct();
+            segmentCfg.NumLayers = pusch.NumLayers;
+            segmentCfg.RV = 0;
+            segmentCfg.LimitedBufferSize = 0;
+            segmentCfg.NumChSymbols = puschIndicesInfo.Gd;
+            segmentCfg.Modulation = pusch.Modulation;
+            segmentCfg.BGN = segmentInfo.BGN;
+            segmentCfg.TransportBlockLength = trBlkSize;
+            segmentCfg.NumCodeblocks = segmentInfo.C;
+
+            if (nargout == 2)
+                decoderCfg = struct();
+                decoderCfg.MaxCodeblocks = segmentInfo.C * NHARQProcesses;
+                decoderCfg.MaxCodeblockSize = segmentInfo.N;
+                decoderCfg.MaxSoftbuffers = NHARQProcesses;
+            end
+        end % of function configureSegment(...)
     end % of methods (Static)
 end % of classdef srsPUSCHDecoder < matlab.System

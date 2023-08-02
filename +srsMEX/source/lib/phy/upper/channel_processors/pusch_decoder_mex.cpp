@@ -66,19 +66,17 @@ MexFunction::retrieve_softbuffer(uint64_t key, const rx_softbuffer_identifier& i
 {
   std::shared_ptr<memento> mem = storage.get_memento(key);
   if (!mem) {
-    mex_abort(fmt::format("Cannot retrieve rx_softbuffer_pool with key {}.", key));
+    mex_abort("Cannot retrieve rx_softbuffer_pool with key {}.", key);
   }
 
   auto                 pusch_mem  = std::dynamic_pointer_cast<pusch_memento>(storage.get_memento(key));
   unique_rx_softbuffer softbuffer = pusch_mem->retrieve_softbuffer(id, nof_codeblocks);
   if (!softbuffer.is_valid()) {
-    std::string msg =
-        fmt::format("Cannot retrieve softbuffer with key {}, buffer ID ({}, {}) and nr. of codeblocks {}.",
-                    key,
-                    id.rnti,
-                    id.harq_ack_id,
-                    nof_codeblocks);
-    mex_abort(msg);
+    mex_abort("Cannot retrieve softbuffer with key {}, buffer ID ({}, {}) and nr. of codeblocks {}.",
+              key,
+              id.rnti,
+              id.harq_ack_id,
+              nof_codeblocks);
   }
   return softbuffer;
 }
@@ -128,10 +126,10 @@ void MexFunction::method_new(ArgumentList& outputs, ArgumentList& inputs)
 
   StructArray in_struct            = inputs[1];
   Struct      softbuffer_conf      = in_struct[0];
-  pool_config.max_codeblock_size   = softbuffer_conf["max_codeblock_size"][0];
-  pool_config.max_softbuffers      = softbuffer_conf["max_softbuffers"][0];
-  pool_config.max_nof_codeblocks   = softbuffer_conf["max_nof_codeblocks"][0];
-  pool_config.expire_timeout_slots = softbuffer_conf["expire_timeout_slots"][0];
+  pool_config.max_codeblock_size   = softbuffer_conf["MaxCodeblockSize"][0];
+  pool_config.max_softbuffers      = softbuffer_conf["MaxSoftbuffers"][0];
+  pool_config.max_nof_codeblocks   = softbuffer_conf["MaxCodeblocks"][0];
+  pool_config.expire_timeout_slots = softbuffer_conf["ExpireTimeoutSlots"][0];
 
   std::shared_ptr<memento> mem = std::make_shared<pusch_memento>(create_rx_softbuffer_pool(pool_config));
   if (!mem) {
@@ -149,22 +147,18 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
   const TypedArray<int8_t>                in_int8_array = inputs[2];
   const std::vector<log_likelihood_ratio> llrs(in_int8_array.cbegin(), in_int8_array.cend());
 
-  bool new_data = static_cast<TypedArray<bool>>(inputs[3])[0];
-
   StructArray                  in_struct_array = inputs[4];
   Struct                       in_seg_cfg      = in_struct_array[0];
-  CharArray                    in_mod_scheme   = in_seg_cfg["modulation"];
   pusch_decoder::configuration cfg             = {};
-  cfg.base_graph                               = matlab_to_srs_base_graph(in_seg_cfg["base_graph"][0]);
-  cfg.rv                                       = in_seg_cfg["rv"][0];
+  cfg.base_graph                               = matlab_to_srs_base_graph(in_seg_cfg["BGN"][0]);
+  CharArray in_mod_scheme                      = in_seg_cfg["Modulation"];
   cfg.mod                                      = matlab_to_srs_modulation(in_mod_scheme.toAscii());
-  cfg.Nref                                     = in_seg_cfg["Nref"][0];
-  cfg.nof_layers                               = in_seg_cfg["nof_layers"][0];
-  cfg.nof_ldpc_iterations                      = 6;
-  cfg.use_early_stop                           = true;
-  cfg.new_data                                 = new_data;
+  cfg.nof_layers                               = in_seg_cfg["NumLayers"][0];
+  cfg.rv                                       = in_seg_cfg["RV"][0];
+  cfg.Nref                                     = in_seg_cfg["LimitedBufferSize"][0];
+  cfg.new_data                                 = static_cast<TypedArray<bool>>(inputs[3])[0];
 
-  units::bits tbs(static_cast<unsigned>(in_seg_cfg["tbs"][0]));
+  units::bits tbs(static_cast<unsigned>(in_seg_cfg["TransportBlockLength"][0]));
   if (!tbs.is_byte_exact()) {
     mex_abort("The TBS is not an exact number of bytes.");
   }
@@ -173,19 +167,17 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
   in_struct_array                    = inputs[5];
   Struct                   in_buf_id = in_struct_array[0];
   rx_softbuffer_identifier buf_id    = {};
-  buf_id.harq_ack_id                 = in_buf_id["harq_ack_id"][0];
-  buf_id.rnti                        = in_buf_id["rnti"][0];
+  buf_id.harq_ack_id                 = in_buf_id["HARQProcessID"][0];
+  buf_id.rnti                        = in_buf_id["RNTI"][0];
 
-  unsigned nof_codeblocks       = in_buf_id["nof_codeblocks"][0];
+  unsigned nof_codeblocks       = in_buf_id["NumCodeblocks"][0];
   unsigned nof_codeblocks_check = ldpc::compute_nof_codeblocks(tbs, cfg.base_graph);
   if (nof_codeblocks != nof_codeblocks_check) {
-    std::string msg =
-        fmt::format("Softbuffer ({}, {}) requested with {} codeblocks, but the codeword has {} codeblocks.",
-                    buf_id.rnti,
-                    buf_id.harq_ack_id,
-                    nof_codeblocks,
-                    nof_codeblocks_check);
-    mex_abort(msg);
+    mex_abort("Softbuffer ({}, {}) requested with {} codeblocks, but the codeword has {} codeblocks.",
+              buf_id.rnti,
+              buf_id.harq_ack_id,
+              nof_codeblocks,
+              nof_codeblocks_check);
   }
 
   uint64_t key = static_cast<TypedArray<uint64_t>>(inputs[1])[0];
@@ -234,10 +226,10 @@ void MexFunction::method_reset_crcs(ArgumentList& outputs, ArgumentList& inputs)
   StructArray              in_struct_array = inputs[2];
   Struct                   in_buf_id       = in_struct_array[0];
   rx_softbuffer_identifier buf_id          = {};
-  buf_id.harq_ack_id                       = in_buf_id["harq_ack_id"][0];
-  buf_id.rnti                              = in_buf_id["rnti"][0];
+  buf_id.harq_ack_id                       = in_buf_id["HARQProcessID"][0];
+  buf_id.rnti                              = in_buf_id["RNTI"][0];
 
-  unsigned nof_codeblocks = in_buf_id["nof_codeblocks"][0];
+  unsigned nof_codeblocks = in_buf_id["NumCodeblocks"][0];
 
   uint64_t key = static_cast<TypedArray<uint64_t>>(inputs[1])[0];
 
@@ -262,7 +254,6 @@ void MexFunction::method_release(ArgumentList& outputs, ArgumentList& inputs)
   uint64_t key = static_cast<TypedArray<uint64_t>>(inputs[1])[0];
 
   if (storage.release_memento(key) == 0) {
-    std::string msg = fmt::format("Something wrong, there was no softbuffer pool with softbufferPoolID {}.", key);
-    mex_abort(msg);
+    mex_abort("Something wrong, there was no softbuffer pool with softbufferPoolID {}.", key);
   }
 }

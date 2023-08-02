@@ -95,11 +95,17 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
         mcsTable = 'qam64'
         % Multiple HARQ processes flag: true if active, false is only one process allowed.
         MultipleHARQProcesses = true
+        % Number of active HARQ processes.
+        NHARQProcesses = 8;
         % Redundancy version sequence.
         RVsequence = [0, 2, 3, 1]
     end % of properties (Constant, Hidden)
 
     properties (Hidden)
+        %Carrier configuration object.
+        Carrier
+        %PUSCH configuration object.
+        PUSCH
         %Transport block size.
         TransportBlockSize
         %Target code rate.
@@ -160,12 +166,13 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
             PRBSet = PRBstart:PRBend;
 
             % Random HARQ ID.
-            obj.HARQProcessID = randi([1, 8]);
+            obj.HARQProcessID = randi([1, obj.NHARQProcesses]);
 
             % Configure the carrier according to the test parameters.
             NSizeGridLoc = obj.NSizeGrid;
             NStartGridLoc = obj.NStartGrid;
             carrier = srsConfigureCarrier(NSizeGridLoc, NStartGridLoc);
+            obj.Carrier = carrier;
 
             % Get the target code rate (R) and modulation order (Qm) corresponding
             % to the current modulation and scheme configuration.
@@ -180,6 +187,7 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
             NumLayersLoc = obj.NumLayers;
             pusch = srsConfigurePUSCH(NStartBWPLoc, NSizeBWPLoc, ModulationLoc, ...
                 NumLayersLoc, SymbolAllocation, PRBSet);
+            obj.PUSCH = pusch;
 
             % Get the encoded TB length.
             [~, PUSCHInfo] = nrPUSCHIndices(carrier, pusch);
@@ -313,20 +321,20 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
             end
 
             % Configure the SRS PUSCH decoder mex.
-            ULSCHDecoder = srsPUSCHDecoder('maxCodeblockSize', obj.ulschInfo.N, ...
-                'maxSoftbuffers', 2, 'maxCodeblocks', obj.ulschInfo.C);
+            ULSCHDecoder = srsPUSCHDecoder('MaxCodeblockSize', obj.ulschInfo.N, ...
+                'MaxSoftbuffers', 2, 'MaxCodeblocks', obj.ulschInfo.C);
 
             % Add the generated TB to the encoder.
             setTransportBlock(ULSCHEncoder, TB, obj.HARQProcessID);
 
             % Fill segment configuration for the decoder.
-            segmentCfg = srsPUSCHDecoder.configureSegment(obj.NumLayers, ...
-                TransportBlockLength, TargetCodeRateLoc, obj.Modulation, 0, Nref);
+            segmentCfg = srsPUSCHDecoder.configureSegment(obj.Carrier, obj.PUSCH, ...
+                TargetCodeRateLoc, obj.NHARQProcesses);
 
             % Fill the HARQ buffer ID.
-            HARQBufID.rnti = 1;
-            HARQBufID.harq_ack_id = obj.HARQProcessID;
-            HARQBufID.nof_codeblocks = segmentCfg.nof_codeblocks;
+            HARQBufID.RNTI = 1;
+            HARQBufID.HARQProcessID = obj.HARQProcessID;
+            HARQBufID.NumCodeblocks = segmentCfg.NumCodeblocks;
 
             % Pack the transport block for comparison.
             TBpacked = uint8(bitPack(TB));

@@ -494,9 +494,10 @@ classdef PUSCHBLER < matlab.System
             obj.PUSCHIndices = puschIndices;
             obj.PUSCHIndicesInfo = puschIndicesInfo;
 
-            [configSRS, obj.SegmentCfg] = srsPUSCHDecConfig(obj.Carrier, obj.PUSCH, obj.PUSCHExtension);
-            obj.DecodeULSCHsrs = srsMEX.phy.srsPUSCHDecoder('maxCodeblockSize', configSRS.max_codeblock_size, ...
-                'maxSoftbuffers', configSRS.max_softbuffers, 'maxCodeblocks', configSRS.max_nof_codeblocks);
+            [obj.SegmentCfg, configSRS] = srsMEX.phy.srsPUSCHDecoder.configureSegment(obj.Carrier, ...
+                obj.PUSCH, obj.TargetCodeRate, obj.PUSCHExtension.NHARQProcesses, obj.PUSCHExtension.XOverhead);
+            obj.DecodeULSCHsrs = srsMEX.phy.srsPUSCHDecoder('MaxCodeblockSize', configSRS.MaxCodeblockSize, ...
+                'MaxSoftbuffers', configSRS.MaxSoftbuffers, 'MaxCodeblocks', configSRS.MaxCodeblocks);
 
         end % of setupImpl
 
@@ -625,9 +626,9 @@ classdef PUSCHBLER < matlab.System
                     %
                     % Create HARQ ID for the SRS decoder.
                     % Set the HARQ ID.
-                    harqBufID.rnti = pusch.RNTI;
-                    harqBufID.harq_ack_id = harqEntity.HARQProcessID;
-                    harqBufID.nof_codeblocks = segmentCfg.nof_codeblocks;
+                    harqBufID.RNTI = pusch.RNTI;
+                    harqBufID.HARQProcessID = harqEntity.HARQProcessID;
+                    harqBufID.NumCodeblocks = segmentCfg.NumCodeblocks;
 
                     % If new data for current process then create a new UL-SCH transport block.
                     if harqEntity.NewData
@@ -820,7 +821,7 @@ classdef PUSCHBLER < matlab.System
                         ulschLLRsInt8 = quantize(ulschLLRs, pusch.Modulation);
 
                         % Set the RV.
-                        segmentCfg.rv = harqEntity.RedundancyVersion;
+                        segmentCfg.RV = harqEntity.RedundancyVersion;
 
                         [decbitsSRS, statsSRS] = obj.DecodeULSCHsrs(ulschLLRsInt8, harqEntity.NewData, segmentCfg, harqBufID);
 
@@ -1027,29 +1028,6 @@ function mixedArray = joinArrays(arrayA, arrayB, removeFromA, outputOrder)
     arrayA(removeFromA) = [];
     mixedArray = [arrayA; arrayB];
     mixedArray = mixedArray(outputOrder);
-end
-
-function [cfg, segCfg] = srsPUSCHDecConfig(carrier, pusch, puschextra)
-%Creates the configuration structure for the srsPUSCHDecoder.
-    [~, puschIndicesInfo] = nrPUSCHIndices(carrier, pusch);
-    MRB = numel(pusch.PRBSet);
-    trBlkSize = nrTBS(pusch.Modulation, pusch.NumLayers, MRB, puschIndicesInfo.NREPerPRB, puschextra.TargetCodeRate, puschextra.XOverhead);
-
-    segmentInfo = nrULSCHInfo(trBlkSize, puschextra.TargetCodeRate);
-
-    cfg.max_nof_codeblocks = segmentInfo.C * puschextra.NHARQProcesses;
-    cfg.max_codeblock_size = segmentInfo.N;
-    cfg.max_softbuffers = puschextra.NHARQProcesses;
-    cfg.expire_timeout_slots = 10;
-
-    segCfg.nof_layers = pusch.NumLayers;
-    segCfg.rv = 0;
-    segCfg.Nref = 0;
-    segCfg.nof_ch_symbols = puschIndicesInfo.Gd;
-    segCfg.modulation = pusch.Modulation;
-    segCfg.base_graph = segmentInfo.BGN;
-    segCfg.tbs = trBlkSize;
-    segCfg.nof_codeblocks = segmentInfo.C;
 end
 
 function softBitsQuant = quantize(softBits, mod)
