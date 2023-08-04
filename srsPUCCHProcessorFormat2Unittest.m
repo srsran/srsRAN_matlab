@@ -75,13 +75,13 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
         SymbolAllocation = {[0, 1], [12, 2]};
 
         %Number of bits of the HARQ-ACK payload (1...7).
-        nofHarqAck = {3, 6};
+        nofHarqAck = {3, 7};
 
         %Number of bits of the SR payload (0...4).
         nofSR = {0, 1};
         
         %Number of bits of the CSI Part 1 payload.
-        nofCSIPart1 = {0, 4};
+        nofCSIPart1 = {0, 4, 6};
         
         %Number of bits of the CSI Part 2 payload.
         nofCSIPart2 = {0};
