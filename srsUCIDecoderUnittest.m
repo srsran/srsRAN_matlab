@@ -116,8 +116,8 @@ classdef srsUCIDecoderUnittest < srsTest.srsBlockUnittest
             minE = A + 1;
             maxE = 8192;
 
-            % For sequences sizes [12, 19] bits there will be 6 CRC bits 
-            % and 11 CRC bits for sequences longer than 19 bits.
+            % For sequence sizes in {12,..., 19} bits there will be 6 CRC
+            % bits, for longer sequences there will be 11 CRC bits.
             L = 0;
             if A > 19
                 L = 11;
@@ -142,7 +142,7 @@ classdef srsUCIDecoderUnittest < srsTest.srsBlockUnittest
             bitsSymbol = srsGetBitsSymbol(Modulation);
             E = floor(E / bitsSymbol) * bitsSymbol;
 
-            % Setup an SNR that can challenge the decoder.
+            % Set up an SNR that can challenge the decoder.
             snrdB = 25;
             nVar = 10 ^ (-snrdB / 10);
 
