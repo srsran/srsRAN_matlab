@@ -576,6 +576,10 @@ classdef PUSCHBLER < matlab.System
 
             quickSim = obj.QuickSimulation;
 
+            if useSRSDecoder
+                srsDemodulatePUSCH = srsMEX.phy.srsPUSCHDemodulator;
+            end
+
             % %%% Simulation loop.
 
             for snrIdx = 1:numel(SNRIn)    % comment out for parallel computing
@@ -736,6 +740,7 @@ classdef PUSCHBLER < matlab.System
                         rxGrid = cat(2, rxGrid, zeros(K, carrier.SymbolsPerSlot - L, R));
                     end
 
+                    dmrsLayerIndices = nrPUSCHDMRSIndices(carrier, puschNonCodebook);
                     if (perfectChannelEstimator)
                         % Perfect channel estimation, use the value of the path gains
                         % provided by the channel.
@@ -761,19 +766,9 @@ classdef PUSCHBLER < matlab.System
                         % which are created by specifying the non-codebook transmission
                         % scheme.
                         dmrsLayerSymbols = nrPUSCHDMRS(carrier, puschNonCodebook);
-                        dmrsLayerIndices = nrPUSCHDMRSIndices(carrier, puschNonCodebook);
                         [estChannelGrid, noiseEst] = nrChannelEstimate(carrier, rxGrid, ...
                             dmrsLayerIndices, dmrsLayerSymbols, 'CDMLengths', pusch.DMRS.CDMLengths);
                     end
-
-                    % Get PUSCH resource elements from the received grid.
-                    [puschRx, puschHest] = nrExtractResources(puschIndices, rxGrid, estChannelGrid);
-
-                    % Equalization.
-                    [puschEq, csi] = nrEqualizeMMSE(puschRx, puschHest, noiseEst);
-
-                    % Decode PUSCH physical channel.
-                    [ulschLLRs, rxSymbols] = nrPUSCHDecode(carrier, puschNonCodebook, puschEq, noiseEst);
 
                     % Display EVM per layer, per slot and per RB. Reference symbols for
                     % each layer are created by specifying the non-codebook
@@ -783,25 +778,34 @@ classdef PUSCHBLER < matlab.System
                         plotLayerEVM(NSlots, nslot, puschNonCodebook, size(puschGrid), puschIndices, refSymbols, puschEq);
                     end
 
-                    % Apply channel state information (CSI) produced by the equalizer,
-                    % including the effect of transform precoding if enabled.
-                    if (pusch.TransformPrecoding)
-                        MSC = MRB * 12;
-                        csi = nrTransformDeprecode(csi, MRB) / sqrt(MSC);
-                        csi = repmat(csi((1:MSC:end).'), 1, MSC).';
-                        csi = reshape(csi, size(rxSymbols));
-                    end
-                    csi = nrLayerDemap(csi);
-                    Qm = length(ulschLLRs) / length(rxSymbols);
-                    csi = reshape(repmat(csi{1}.', Qm, 1), [], 1);
-                    ulschLLRs = ulschLLRs .* csi;
-
                     % Store values to calculate BLER.
                     isLastRetransmission = (harqEntity.RedundancyVersion == rvSeq(end));
 
                     blkerrBoth = false;
 
                     if useMATLABDecoder
+                        % Get PUSCH resource elements from the received grid.
+                        [puschRx, puschHest] = nrExtractResources(puschIndices, rxGrid, estChannelGrid);
+
+                        % Equalization.
+                        [puschEq, csi] = nrEqualizeMMSE(puschRx, puschHest, noiseEst);
+
+                        % Decode PUSCH physical channel.
+                        [ulschLLRs, rxSymbols] = nrPUSCHDecode(carrier, puschNonCodebook, puschEq, noiseEst);
+
+                        % Apply channel state information (CSI) produced by the equalizer,
+                        % including the effect of transform precoding if enabled.
+                        if (pusch.TransformPrecoding)
+                            MSC = MRB * 12;
+                            csi = nrTransformDeprecode(csi, MRB) / sqrt(MSC);
+                            csi = repmat(csi((1:MSC:end).'), 1, MSC).';
+                            csi = reshape(csi, size(rxSymbols));
+                        end
+                        csi = nrLayerDemap(csi);
+                        Qm = length(ulschLLRs) / length(rxSymbols);
+                        csi = reshape(repmat(csi{1}.', Qm, 1), [], 1);
+                        ulschLLRs = ulschLLRs .* csi;
+
                         % Decode the UL-SCH transport channel.
                         obj.DecodeULSCH.TransportBlockLength = trBlkSize;
                         [decbits, blkerr] = obj.DecodeULSCH(ulschLLRs, pusch.Modulation, ...
@@ -815,10 +819,8 @@ classdef PUSCHBLER < matlab.System
                     end
 
                     if useSRSDecoder
-                        % Decode the UL-SCH transport channel with the SRS decoder.
-                        %
-                        % First, quantize the LLRs.
-                        ulschLLRsInt8 = quantize(ulschLLRs, pusch.Modulation);
+                        ulschLLRsInt8 = int8(srsDemodulatePUSCH(rxGrid, estChannelGrid, noiseEst, pusch, ...
+                            puschIndices, dmrsLayerIndices, 0:nRxAnts-1));
 
                         % Set the RV.
                         segmentCfg.RV = harqEntity.RedundancyVersion;

@@ -54,29 +54,29 @@ public:
 
 private:
   /// Checks that outputs/inputs arguments match the requirements of method_step().
-  void check_step_outputs_inputs(matlab::mex::ArgumentList outputs, matlab::mex::ArgumentList inputs);
+  void check_step_outputs_inputs(matlab::mex::ArgumentList& outputs, matlab::mex::ArgumentList& inputs);
 
   /// \brief Demodulates a PUSCH transmission according to the given configuration.
   ///
-  /// The method takes six inputs.
+  /// The method takes five inputs.
   ///   - The string <tt>"step"</tt>.
-  ///   - An array of \c cf_t containing the PUSCH resource elements.
-  ///   - A matrix of \c unsigned containing the PUSCH resource grid indices.
-  ///   - An array of \c cf_t containing the related channel estimates.
-  ///   - A one-dimesional structure that describes the PUSCH demodulator configuration. The fields are
-  ///      - \c rnti, radio network temporary identifier;
-  ///      - \c rbMask, allocation RB list;
-  ///      - \c modulation, modulation scheme used for transmission;
-  ///      - \c startSymbolIndex, start symbol index of the time domain allocation within a slot;
-  ///      - \c nofSymbols, number of symbols of the time domain allocation within a slot;
-  ///      - \c dmrsSymbPos, boolean mask flagging the OFDM symbols containing DMRS;
-  ///      - \c dmrsConfigType, DMRS configuration type;
-  ///      - \c nofCdmGroupsWithoutData, number of DMRS CDM groups without data;
-  ///      - \c nId, scrambling identifier;
-  ///      - \c nofTxLayers, number of transmit layers;
-  ///      - \c placeholders, ULSCH Scrambling placeholder list;
-  ///      - \c rxPorts, receive antenna port indices the PUSCH transmission is mapped to;
+  ///   - A three-dimensional array of \c cf_t containing the receiver-side resource grid.
+  ///   - A three-dimensional array of \c cf_t containing the estimated channel coefficients for all REs of all Rx ports
+  ///     (currently, only one transmission layer is supported).
   ///   - A \c float providing the noise variance.
+  ///   - A one-dimesional structure that describes the PUSCH demodulator configuration. The fields are
+  ///      - \c RNTI, radio network temporary identifier;
+  ///      - \c RBMask, allocation RB list (as a boolean mask);
+  ///      - \c Modulation, modulation scheme used for transmission;
+  ///      - \c StartSymbolIndex, start symbol index of the time domain allocation within a slot;
+  ///      - \c NumSymbols, number of symbols of the time domain allocation within a slot;
+  ///      - \c DMRSSymbPos, boolean mask flagging the OFDM symbols containing DMRS;
+  ///      - \c DMRSConfigType, DMRS configuration type;
+  ///      - \c NumCdmGroupsWithoutData, number of DMRS CDM groups without data;
+  ///      - \c NID, scrambling identifier;
+  ///      - \c NumLayers, number of transmit layers;
+  ///      - \c Placeholders, ULSCH Scrambling placeholder list;
+  ///      - \c RxPorts, receive antenna port indices the PUSCH transmission is mapped to;
   ///
   /// The method has one single output.
   ///   - An array of \c log_likelihood_ratio resulting from the PUSCH demodulation.

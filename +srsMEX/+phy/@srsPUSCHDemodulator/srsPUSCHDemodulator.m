@@ -2,38 +2,37 @@
 %   User-friendly interface to the srsRAN PUSCH demodulator class, which is wrapped
 %   by the MEX static method pusch_demodulator_mex.
 %
-%   PUSCHDEM = srsPUSCHDemodulator creates a PHY PUSCH Demodulator object which
-%   is meant to be tested with a frequency-domain PUSCH transmission signal.
-%
-%   srsPUSCHDemodulator Properties (Nontunable):
-%
-%   NOISEVAR - Noise variance.
+%   PUSCHDEM = srsPUSCHDemodulator creates a PHY PUSCH demodulator object.
 %
 %   srsPUSCHDemodulator Methods:
 %
 %   step               - Demodulates a PUSCH transmission.
-%   configurePUSCHDem  - Static helper method for filling the PRUSCHDEMCONFIG input of "step".
 %
 %   Step method syntax
 %
-%   SCHSOFTBITS = step(PUSCHDEMODULATOR, RXSYMBOLS, PUSCHINDICES, CE, PUSCHDEMCONFIG) uses the
-%   object PUSCHDEMODULATOR to demodulate a PUSCH transmissiong in the frequency-domain
-%   signal RXSYMBOLS and returns the recovered soft bits SCHSOFTBITS.
-%   RXSYMBOLS is a complex array which comprises the REs allocated to the PUSCH
-%   transmission, which use the RE indices PUSCHINDICES. A channel estimate CE for those
-%   REs is also provided to the demodulator. Structure PUSCHDEMCONFIG describes the basic
-%   configuration parameters to be utilized by the PUSCH demodulator. The fields are
-%      rnti                    - radio network temporary identifier;
-%      rbMask                  - allocation RB list;
-%      modulation              - modulation scheme used for transmission;
-%      startSymbolIndex        - start symbol index of the time domain allocation within a slot;
-%      nofSymbols              - number of symbols of the time domain allocation within a slot;
-%      dmrsSymbPos             - boolean mask flagging the OFDM symbols containing DM-RS;
-%      dmrsConfigType          - DMRS configuration type;
-%      nofCdmGroupsWithoutData - number of DMRS CDM groups without data;
-%      nId                     - scrambling identifier;
-%      nofTxLayers             - number of transmit layers;
-%      rxPorts                 - receive antenna port indices the PUSCH transmission is mapped to;
+%   SCHSOFTBITS = step(PUSCHDEMODULATOR, RXSYMBOLS, CE, NOISEVAR, PUSCH, PUSCHINDICES, ...
+%                      PUSCHDMRSINDICES, RXPORTS)
+%   uses the object PUSCHDEMODULATOR to demodulate an uplink shared channel transmission
+%   and returns the recovered soft bits SCHSOFTBITS.
+%
+%   RXSYMBOLS is a three-dimensional complex array with the received resource grid
+%   (dimensions are subcarriers, OFDM symbols and antenna ports).
+%
+%   CE is also a three-dimensional complex array with the estimated channel (dimensions
+%   are the same as before, currently only one transmission layer is supported). NOISEVAR
+%   is the estimated noise variance.
+%
+%   PUSCH is an nrPUSCHConfig object (the only relevant properties are PRBSet, RNTI,
+%   Modulation, SymbolAllocation, DMRS.DMRSConfigurationType, DMRS.NumCDMGroupsWithoutData,
+%   NID, and NumLayers).
+%
+%   PUSCHINDICES is an array of 1-based linear indices addressing the REs with UL-SCH
+%   data in RXSYMBOLS.
+%
+%   PUSCHDMRSINDICES is an array of 1-based linear indices addressing the REs with
+%   DM-RS symbols in RXSYMBOLS.
+%
+%   RXPORTS is an array of 0-based indices of the Rx-side antenna ports.
 
 %   Copyright 2021-2023 Software Radio Systems Limited
 %
@@ -51,91 +50,55 @@
 %   file in the top-level directory of this distribution.
 
 classdef srsPUSCHDemodulator < matlab.System
-    methods
-        function obj = srsPUSCHDemodulator(varargin)
-        %Constructor: sets nontunable properties.
-        end % constructor
-    end % of methods
-
     methods (Access = protected)
-        function schSoftBits = stepImpl(obj, rxSymbols, puschIndices, ce, PUSCHDemConfig, noiseVar)
+        function schSoftBits = stepImpl(obj, rxSymbols, cest, noiseVar, pusch, puschIndices, puschDMRSIndices, rxPorts)
             arguments
-                obj            (1, 1) srsMEX.phy.srsPUSCHDemodulator
-                rxSymbols      (:, 1) double
-                puschIndices   (:, 3) double
-                ce             (:, 1) double
-                PUSCHDemConfig (1, 1) struct
-                noiseVar       (1, 1) double
+                obj               (1, 1)     srsMEX.phy.srsPUSCHDemodulator
+                rxSymbols         (:, 14, :) double
+                cest              (:, 14, :) double
+                noiseVar          (1, 1)     double {mustBePositive}
+                pusch             (1, 1)     nrPUSCHConfig
+                puschIndices      (:, 1)     double {mustBeInteger, mustBePositive}
+                puschDMRSIndices  (:, 1)     double {mustBeInteger, mustBePositive}
+                rxPorts           (:, 1)     double {mustBeInteger, mustBeNonnegative}
             end
 
-            fcnName = [class(obj) '/step'];
+            gridSize = size(rxSymbols);
+            assert(all(gridSize == size(cest)), 'srsran_matlab:srsPUSCHDemodulator', ...
+                'Resource grid and channel estimates sizes do not match.');
 
-            validateattributes(PUSCHDemConfig.rnti, {'double'}, {'scalar', 'integer'}, fcnName, 'RNTI');
-            validateattributes(PUSCHDemConfig.rbMask, {'double'}, {'vector', 'integer', 'nonnegative'}, ...
-                  fcnName, 'RBMASK');
-            modulationList = {'pi/2-BPSK', 'QPSK', '16QAM', '64QAM', '256QAM'};
-            validatestring(PUSCHDemConfig.modulation, modulationList, fcnName, 'MODULATION');
-            validateattributes(PUSCHDemConfig.startSymbolIndex, {'double'}, {'scalar', 'integer', 'nonnegative'}, ...
-                  fcnName, 'STARTSYMBOLINDEX');
-            validateattributes(PUSCHDemConfig.nofSymbols, {'double'}, {'scalar', 'integer', 'nonnegative'}, ...
-                  fcnName, 'NOFSYMBOLS');
-            validateattributes(PUSCHDemConfig.dmrsSymbPos, {'double'}, {'vector', 'integer', 'nonnegative'}, ...
-                  fcnName, 'DMRSSYMBPOS');
-            validateattributes(PUSCHDemConfig.dmrsConfigType, {'double'}, {'scalar', 'integer', 'nonnegative'}, ...
-                  fcnName, 'DMRSCONFIGTYPE');
-            validateattributes(PUSCHDemConfig.nofCdmGroupsWithoutData, {'double'}, {'scalar', 'integer', 'nonnegative'}, ...
-                  fcnName, 'NOFCDMGROUPSWITHOUTDATA');
-            validateattributes(PUSCHDemConfig.nId, {'double'}, {'scalar', 'integer', 'nonnegative'}, fcnName, 'NID');
-            validateattributes(PUSCHDemConfig.nofTxLayers, {'double'}, {'vector', 'integer', 'nonnegative'}, ...
-                  fcnName, 'NOFTXLAYERS');
+            [~, puschDMRSIndicesSyms, ~] = ind2sub(gridSize, puschDMRSIndices);
 
-            schSoftBits = obj.pusch_demodulator_mex('step', rxSymbols, puschIndices, ce, PUSCHDemConfig, noiseVar);
+            % Generate a PUSCH RB allocation mask string.
+            rbAllocationMask = false(gridSize(1) / 12, 1);
+            rbAllocationMask(pusch.PRBSet + 1) = true;
+
+            % Generate a DM-RS symbol mask.
+            dmrsSymbolMask = false(14, 1);
+            dmrsSymbolMask(unique(puschDMRSIndicesSyms)) = true;
+
+            % Fill the configuration structure.
+            PUSCHDemConfig.RNTI = pusch.RNTI;
+            PUSCHDemConfig.RBMask = rbAllocationMask;
+            PUSCHDemConfig.Modulation = pusch.Modulation;
+            PUSCHDemConfig.StartSymbolIndex = pusch.SymbolAllocation(1);
+            PUSCHDemConfig.NumSymbols = pusch.SymbolAllocation(2);
+            PUSCHDemConfig.DMRSSymbPos = dmrsSymbolMask;
+            PUSCHDemConfig.DMRSConfigType = pusch.DMRS.DMRSConfigurationType;
+            PUSCHDemConfig.NumCDMGroupsWithoutData = pusch.DMRS.NumCDMGroupsWithoutData;
+            PUSCHDemConfig.NID = pusch.NID;
+            PUSCHDemConfig.NumLayers = pusch.NumLayers;
+            [I1, I2, I3] = ind2sub([gridSize(1:2) pusch.NumLayers], puschIndices);
+            PUSCHDemConfig.PUSCHIndices = [I1, I2, I3] - 1;
+            PUSCHDemConfig.RxPorts = rxPorts;
+
+            schSoftBits = obj.pusch_demodulator_mex('step', rxSymbols, cest, noiseVar, ...
+                PUSCHDemConfig);
         end % function step(...)
     end % of methods (Access = protected)
 
     methods (Access = private, Static)
         %MEX function doing the actual work. See the Doxygen documentation.
         varargout = pusch_demodulator_mex(varargin)
-    end % of methods (Access = private)
-
-   methods (Static)
-        function PUSCHDemCfg = configurePUSCHDem(pusch, NSizeGrid, puschDmrsIndices, rxPorts)
-        %configurePUSCHDem Static helper method for filling the PUSCHDEMCONFIG input of "step"
-        %   PUSCHDEMCONFIG = configurePUSCHDem(PUSCH, NSIZEGRID, PUSCHDMRSINDICES, RXPORTS)
-        %   generates a PUSCH demodulator configuration for the physical uplink
-        %   shared channel PUSCH using the DMRS indices PUSCHDMRSINDICES for a grid of
-        %   size NSIZEGRID and mapped to transmit antennas RXPORTS.
-            arguments
-                pusch                (1, 1) nrPUSCHConfig
-                NSizeGrid            (1, 1) double {mustBeInteger, mustBePositive} = 25
-                puschDmrsIndices     (:, 3) double {mustBeInteger, mustBeNonnegative} = [0, 0, 0]
-                rxPorts              (:, 1) double {mustBeInteger, mustBeNonnegative} = [0]
-            end
-
-            import srsTest.helpers.symbolAllocationMask2string
-
-            % Generate a PUSCH RB allocation mask string.
-            rbAllocationMask = zeros(NSizeGrid, 1);
-            rbAllocationMask(pusch.PRBSet + 1) = 1;
-
-            % Generate a DM-RS symbol mask.
-            dmrsSymbolMask = zeros(14, 1);
-            for symbolIndex = puschDmrsIndices(:, 2)
-                dmrsSymbolMask(symbolIndex + 1) = 1;
-            end
-
-            % Fill the configuration structure.
-            PUSCHDemCfg.rnti = pusch.RNTI;
-            PUSCHDemCfg.rbMask = rbAllocationMask;
-            PUSCHDemCfg.modulation = pusch.Modulation;
-            PUSCHDemCfg.startSymbolIndex = pusch.SymbolAllocation(1);
-            PUSCHDemCfg.nofSymbols = pusch.SymbolAllocation(2);
-            PUSCHDemCfg.dmrsSymbPos = dmrsSymbolMask;
-            PUSCHDemCfg.dmrsConfigType = pusch.DMRS.DMRSConfigurationType;
-            PUSCHDemCfg.nofCdmGroupsWithoutData = pusch.DMRS.NumCDMGroupsWithoutData;
-            PUSCHDemCfg.nId = pusch.NID;
-            PUSCHDemCfg.nofTxLayers = pusch.NumAntennaPorts;
-            PUSCHDemCfg.rxPorts = rxPorts;
-        end % of function PUSCHDemCfg = configurePUSCHDem(...)
-   end % of methods (Static)
+    end % of methods (Access = private, Static)
 end % of classdef srsPUSCHDemodulator < matlab.System

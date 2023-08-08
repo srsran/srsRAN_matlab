@@ -456,11 +456,13 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             % Initialize the SRS PUSCH demodulator mex.
             PUSCHDemodulator = srsPUSCHDemodulator;
 
-            % Fill the PUSCH demodulator configuration.
-            PUSCHDemCfg = srsPUSCHDemodulator.configurePUSCHDem(obj.pusch, obj.carrier.NSizeGrid, obj.puschDmrsIndices, obj.rxPorts);
+            gridSize = size(rxGrid);
+            puschIx = sub2ind(gridSize, obj.puschRxIndices(:, 1) + 1, obj.puschRxIndices(:, 2) + 1, obj.puschRxIndices(:, 3) + 1);
+            dmrsIx = sub2ind(gridSize, obj.puschDmrsIndices(:, 1) + 1, obj.puschDmrsIndices(:, 2) + 1, obj.puschDmrsIndices(:, 3) + 1);
 
             % Run the PUSCH demodulator.
-            schSoftBits = PUSCHDemodulator(rxSymbols(:), obj.puschRxIndices, obj.ce(:), PUSCHDemCfg, noiseVar);
+            schSoftBits = PUSCHDemodulator(rxGrid, obj.ce, noiseVar, obj.pusch, puschIx, ...
+                dmrsIx, obj.rxPorts);
 
             % Verify the correct demodulation (expected, since the SNR is very high).
             % i) Soft demapping.
