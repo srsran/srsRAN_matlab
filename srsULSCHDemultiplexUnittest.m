@@ -10,7 +10,7 @@
 %
 %   srsBlock      - The tested block (i.e., 'ulsch_demultiplex').
 %   srsBlockType  - The type of the tested block, including layer
-%                   (i.e., 'phy/upper/channel_processors').
+%                   (i.e., 'phy/upper/channel_processors/pusch').
 %
 %   srsULSCHDemultiplexUnittest Properties (ClassSetupParameter):
 %
@@ -57,7 +57,7 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
         srsBlock = 'ulsch_demultiplex'
 
         %Type of the tested block.
-        srsBlockType = 'phy/upper/channel_processors'
+        srsBlockType = 'phy/upper/channel_processors/pusch'
     end
 
     properties (ClassSetupParameter)
@@ -83,7 +83,7 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
         function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
             
-            fprintf(fileID, '#include "srsran/phy/upper/channel_processors/ulsch_demultiplex.h"\n');
+            fprintf(fileID, '#include "srsran/phy/upper/channel_processors/pusch/ulsch_demultiplex.h"\n');
             fprintf(fileID, '#include "srsran/phy/upper/log_likelihood_ratio.h"\n');
             fprintf(fileID, '#include "srsran/support/file_vector.h"\n');
         end
@@ -120,7 +120,7 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
             import srsLib.phy.helpers.srsConfigurePUSCH
             import srsLib.phy.helpers.srsModulationFromMatlab
             import srsLib.phy.upper.signal_processors.srsPUSCHdmrs
-            import srsLib.phy.upper.channel_processors.srsULSCHScramblingPlaceholders
+            import srsLib.phy.upper.channel_processors.pusch.srsULSCHScramblingPlaceholders
             import srsTest.helpers.symbolAllocationMask2string
             import srsTest.helpers.writeInt8File
             import srsTest.helpers.writeUint16File

@@ -10,7 +10,7 @@
 %
 %   srsBlock      - The tested block (i.e., 'pusch_processor').
 %   srsBlockType  - The type of the tested block, including layer
-%                   (i.e., 'phy/upper/channel_processors').
+%                   (i.e., 'phy/upper/channel_processors/pusch').
 %
 %   srsPUSCHProcessorUnittest Properties (ClassSetupParameter):
 %
@@ -60,7 +60,7 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
         srsBlock = 'pusch_processor'
 
         %Type of the tested block.
-        srsBlockType = 'phy/upper/channel_processors'
+        srsBlockType = 'phy/upper/channel_processors/pusch'
     end
 
     properties (ClassSetupParameter)
@@ -99,8 +99,8 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
         function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
             
-            fprintf(fileID, '#include "../../support/resource_grid_test_doubles.h"\n');
-            fprintf(fileID, '#include "srsran/phy/upper/channel_processors/pusch_processor.h"\n');
+            fprintf(fileID, '#include "../../../support/resource_grid_test_doubles.h"\n');
+            fprintf(fileID, '#include "srsran/phy/upper/channel_processors/pusch/pusch_processor.h"\n');
             fprintf(fileID, '#include "srsran/support/file_vector.h"\n');
             fprintf(fileID, '#include "srsran/phy/upper/channel_estimation.h"\n');
         end

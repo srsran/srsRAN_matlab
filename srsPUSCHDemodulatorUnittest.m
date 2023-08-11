@@ -9,7 +9,7 @@
 %
 %   srsBlock      - The tested block (i.e., 'pusch_demodulator').
 %   srsBlockType  - The type of the tested block, including layer
-%                   (i.e., 'phy/upper/channel_processors').
+%                   (i.e., 'phy/upper/channel_processors/pusch').
 %
 %   srsPUSCHDemodulatorUnittest Properties (ClassSetupParameter):
 %
@@ -57,7 +57,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
         srsBlock = 'pusch_demodulator'
 
         %Type of the tested block.
-        srsBlockType = 'phy/upper/channel_processors'
+        srsBlockType = 'phy/upper/channel_processors/pusch'
     end
 
     properties (ClassSetupParameter)
@@ -109,8 +109,8 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
         function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
 
-            fprintf(fileID, '#include "../../support/resource_grid_test_doubles.h"\n');
-            fprintf(fileID, '#include "srsran/phy/upper/channel_processors/pusch_demodulator.h"\n');
+            fprintf(fileID, '#include "../../../support/resource_grid_test_doubles.h"\n');
+            fprintf(fileID, '#include "srsran/phy/upper/channel_processors/pusch/pusch_demodulator.h"\n');
             fprintf(fileID, '#include "srsran/support/file_tensor.h"\n');
         end
 

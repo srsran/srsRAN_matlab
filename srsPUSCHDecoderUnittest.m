@@ -9,7 +9,7 @@
 %
 %   srsBlock      - The tested block (i.e., 'pusch_decoder').
 %   srsBlockType  - The type of the tested block, including layer
-%                   (i.e., 'phy/upper/channel_processors').
+%                   (i.e., 'phy/upper/channel_processors/pusch').
 %
 %   srsPUSCHDecoderUnittest Properties (ClassSetupParameter):
 %
@@ -59,7 +59,7 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
         srsBlock = 'pusch_decoder'
 
         %Type of the tested block.
-        srsBlockType = 'phy/upper/channel_processors'
+        srsBlockType = 'phy/upper/channel_processors/pusch'
     end
 
     properties (ClassSetupParameter)
