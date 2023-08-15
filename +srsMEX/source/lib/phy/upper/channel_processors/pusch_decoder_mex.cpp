@@ -20,7 +20,7 @@
 #include "pusch_decoder_mex.h"
 #include "srsran_matlab/support/matlab_to_srs.h"
 #include "srsran/phy/upper/channel_coding/ldpc/ldpc.h"
-#include "srsran/phy/upper/channel_processors/pusch_decoder_result.h"
+#include "srsran/phy/upper/channel_processors/pusch/pusch_decoder_result.h"
 #include "srsran/phy/upper/rx_softbuffer_pool.h"
 #include "srsran/ran/modulation_scheme.h"
 #include "srsran/support/units.h"
