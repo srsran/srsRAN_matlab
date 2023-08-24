@@ -193,6 +193,7 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             DMRSAdditionalPosition = randi([0, 3]);
             NIDNSCID = randi([0, 65535]);
             NSCID = randi([0, 1]);
+            DCPosition = randi(12 * [PrbStart, PrbStart + NumPrb]) + BWPStart;
 
             % Fix parameters.
             rv = 0;
@@ -280,6 +281,9 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
 
             % Add channel noise to all receive ports.
             rxGrid = rxGrid + noiseStdDev * (randn(rxGridDims) + 1i * randn(rxGridDims)) / sqrt(2 * NumRxPorts);
+
+            % Add a symbolic DC leakage.
+            rxGrid(DCPosition + 1, :) = rxGrid(DCPosition + 1, :) + 1;
 
             % Grid indices for a single receive port in subscript form.
             rxGridPortIndexes = [nrPUSCHIndices(carrier, pusch, 'IndexStyle','subscript', 'IndexBase','0based'); ...
@@ -386,6 +390,7 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
                 pusch.SymbolAllocation(1), ...                % start_symbol_index
                 pusch.SymbolAllocation(2), ...                % nof_symbols
                 'ldpc::MAX_CODEBLOCK_SIZE / 8', ...           % tbs_lbrm_bytes
+                DCPosition, ...                               % dc_position
                 };
 
             contextDescription = {...
