@@ -142,8 +142,6 @@ classdef srsPUSCHDecoder < matlab.System
                 fcnName, 'RV');
             validateattributes(segConfig.Nref, {'double'}, {'scalar', 'integer', 'nonnegative'}, ...
                 fcnName, 'NREF');
-            validateattributes(segConfig.nof_ch_symbols, {'double'}, {'scalar', 'integer', 'positive'}, ...
-                fcnName, 'NOF_CH_SYMBOLS');
             modList = {'pi/2-BPSK', 'BPSK', 'QPSK', '16QAM', '64QAM', '256QAM'};
             validatestring(segConfig.modulation, modList, fcnName, 'MODULATION');
 
@@ -154,14 +152,7 @@ classdef srsPUSCHDecoder < matlab.System
             validateattributes(harqBufID.nof_codeblocks, {'double'}, {'scalar', 'integer', 'positive'}, ...
                 fcnName, 'NOF_CODEBLOCKS');
 
-            bpsList = [1, 1, 2, 4, 6, 8];
-            ind = strcmpi(modList, segConfig.modulation);
-            tmp = bpsList(ind);
-            bps = tmp(1);
-
-            nLLRS = segConfig.nof_ch_symbols * segConfig.nof_layers * bps;
-
-            validateattributes(llrs, {'int8'}, {'numel', nLLRS}, fcnName, 'LLRS');
+            validateattributes(llrs, {'int8'}, {}, fcnName, 'LLRS');
 
             [transportBlock, stats] = obj.pusch_decoder_mex('step', obj.softbufferPoolID, ...
                llrs, newData, segConfig, harqBufID);
@@ -225,7 +216,7 @@ classdef srsPUSCHDecoder < matlab.System
     end % of methods (Access = private)
 
     methods (Static)
-        function segmentCfg = configureSegment(NumLayers, NumREs, TBSize, TargetCodeRate, Modulation, RV, Nref)
+        function segmentCfg = configureSegment(NumLayers, TBSize, TargetCodeRate, Modulation, RV, Nref)
         %configureSegment Static helper method for filling the SEGCONFIG input of "step"
         %   SEGMENTCFG = configureSegment(NUMLAYERS, NUMRES, TBSIZE, TARGETCODERATE, MODULATION, RV, NREF)
         %   generates a segment configuration for NUMLAYERS transmission layers, NUMRES allocated REs per layer,
@@ -233,7 +224,6 @@ classdef srsPUSCHDecoder < matlab.System
         %   version RV. NREF limits the rate-matcher buffer size (set to zero for unlimited buffer size).
             arguments
                 NumLayers      (1, 1) double {mustBeInteger, mustBeInRange(NumLayers, 1, 4)} = 1
-                NumREs         (1, 1) double {mustBeInteger, mustBePositive} = 12
                 TBSize         (1, 1) double {mustBeInteger, mustBePositive} = 100
                 TargetCodeRate (1, 1) double {mustBeInRange(TargetCodeRate, 0, 1, 'exclusive')} = 0.5
                 Modulation     (1, :) char   {mustBeMember(Modulation, ...
@@ -247,7 +237,6 @@ classdef srsPUSCHDecoder < matlab.System
             segmentCfg.nof_layers = NumLayers;
             segmentCfg.rv = RV;
             segmentCfg.Nref = Nref;
-            segmentCfg.nof_ch_symbols = NumREs;
             segmentCfg.modulation = Modulation;
             segmentCfg.base_graph = segmentInfo.BGN;
             segmentCfg.tbs = TBSize;

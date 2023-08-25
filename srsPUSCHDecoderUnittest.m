@@ -328,7 +328,7 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
             setTransportBlock(ULSCHEncoder, TB, obj.HARQProcessID);
 
             % Fill segment configuration for the decoder.
-            segmentCfg = srsPUSCHDecoder.configureSegment(obj.NumLayers, obj.nofREs, ...
+            segmentCfg = srsPUSCHDecoder.configureSegment(obj.NumLayers, ...
                 TransportBlockLength, TargetCodeRateLoc, obj.Modulation, 0, Nref);
 
             % Fill the HARQ buffer ID.

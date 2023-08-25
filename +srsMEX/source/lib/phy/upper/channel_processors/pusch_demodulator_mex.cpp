@@ -20,11 +20,66 @@
 #include "pusch_demodulator_mex.h"
 #include "srsran_matlab/support/matlab_to_srs.h"
 #include "srsran/phy/support/resource_grid_writer.h"
+#include "srsran/phy/upper/channel_processors/pusch/pusch_codeword_buffer.h"
 
 using matlab::mex::ArgumentList;
 using namespace matlab::data;
 using namespace srsran;
 using namespace srsran_matlab;
+
+namespace {
+
+class pusch_codeword_buffer_spy : private pusch_codeword_buffer
+{
+public:
+  pusch_codeword_buffer_spy(unsigned size) : data(size) {}
+
+  span<const log_likelihood_ratio> get_data() const
+  {
+    srsran_assert(completed, "Data processing is not completed.");
+    return data;
+  }
+
+  pusch_codeword_buffer& get_buffer() { return *this; }
+
+private:
+  span<log_likelihood_ratio> get_next_block_view(unsigned block_size) override
+  {
+    srsran_assert(!completed, "Data processing is completed.");
+    srsran_assert(
+        data.size() >= block_size + count,
+        "The sum of the block size (i.e., {}) and the current count (i.e., {}) exceeds the data size (i.e., {}).",
+        block_size,
+        count,
+        data.size());
+    return span<log_likelihood_ratio>(data).subspan(count, block_size);
+  }
+
+  void on_new_block(span<const log_likelihood_ratio> demodulated, span<const log_likelihood_ratio> descrambled) override
+  {
+    srsran_assert(!completed, "Data processing is completed.");
+    span<log_likelihood_ratio> block = get_next_block_view(demodulated.size());
+
+    if (block.data() != demodulated.data()) {
+      srsvec::copy(block, demodulated);
+    }
+
+    count += demodulated.size();
+  }
+
+  void on_end_codeword() override
+  {
+    srsran_assert(!completed, "Data processing is completed.");
+    srsran_assert(data.size() == count, "Expected {} bits but only wrote {}.", data.size(), count);
+    completed = true;
+  }
+
+  bool                              completed = false;
+  std::vector<log_likelihood_ratio> data;
+  unsigned                          count = 0;
+};
+
+} // namespace
 
 void MexFunction::check_step_outputs_inputs(ArgumentList outputs, ArgumentList inputs)
 {
@@ -237,14 +292,14 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
       bits_per_symbol = 8;
   }
 
-  unsigned                          nof_expected_soft_output_bits = nof_rx_symbols_port * bits_per_symbol;
-  std::vector<log_likelihood_ratio> sch_data(nof_expected_soft_output_bits);
+  unsigned                  nof_expected_soft_output_bits = nof_rx_symbols_port * bits_per_symbol;
+  pusch_codeword_buffer_spy sch_data(nof_expected_soft_output_bits);
 
   // Demodulate the PUSCH transmission.
-  demodulator->demodulate(sch_data, grid->get_reader(), chan_estimates, demodulator_config);
+  demodulator->demodulate(sch_data.get_buffer(), grid->get_reader(), chan_estimates, demodulator_config);
 
   // Return the results to MATLAB.
-  std::vector<int8_t> sch_data_int8(sch_data.cbegin(), sch_data.cend());
+  std::vector<int8_t> sch_data_int8(sch_data.get_data().begin(), sch_data.get_data().end());
   TypedArray<int8_t> out = factory.createArray({sch_data_int8.size(), 1}, sch_data_int8.cbegin(), sch_data_int8.cend());
   outputs[0]             = out;
 }

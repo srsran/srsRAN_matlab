@@ -19,7 +19,10 @@
 
 #include "pusch_decoder_mex.h"
 #include "srsran_matlab/support/matlab_to_srs.h"
+#include "srsran/adt/optional.h"
 #include "srsran/phy/upper/channel_coding/ldpc/ldpc.h"
+#include "srsran/phy/upper/channel_processors/pusch/pusch_decoder_buffer.h"
+#include "srsran/phy/upper/channel_processors/pusch/pusch_decoder_notifier.h"
 #include "srsran/phy/upper/channel_processors/pusch/pusch_decoder_result.h"
 #include "srsran/phy/upper/rx_softbuffer_pool.h"
 #include "srsran/ran/modulation_scheme.h"
@@ -32,6 +35,25 @@ using matlab::mex::ArgumentList;
 using namespace matlab::data;
 using namespace srsran;
 using namespace srsran_matlab;
+
+namespace {
+
+class pusch_decoder_notifier_spy : private pusch_decoder_notifier
+{
+public:
+  bool has_result() const { return result.has_value(); }
+
+  const pusch_decoder_result& get_result() const { return result.value(); }
+
+  pusch_decoder_notifier& get_notifier() { return *this; }
+
+private:
+  void on_sch_data(const pusch_decoder_result& result_) override { result = result_; }
+
+  srsran::optional<pusch_decoder_result> result;
+};
+
+} // namespace
 
 unique_rx_softbuffer MexFunction::pusch_memento::retrieve_softbuffer(const rx_softbuffer_identifier& id,
                                                                      const unsigned                  nof_codeblocks)
@@ -129,16 +151,18 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
 
   bool new_data = static_cast<TypedArray<bool>>(inputs[3])[0];
 
-  StructArray      in_struct_array = inputs[4];
-  Struct           in_seg_cfg      = in_struct_array[0];
-  segmenter_config seg_cfg         = {};
-  seg_cfg.base_graph               = matlab_to_srs_base_graph(in_seg_cfg["base_graph"][0]);
-  CharArray in_mod_scheme          = in_seg_cfg["modulation"];
-  seg_cfg.mod                      = matlab_to_srs_modulation(in_mod_scheme.toAscii());
-  seg_cfg.nof_ch_symbols           = in_seg_cfg["nof_ch_symbols"][0];
-  seg_cfg.nof_layers               = in_seg_cfg["nof_layers"][0];
-  seg_cfg.rv                       = in_seg_cfg["rv"][0];
-  seg_cfg.Nref                     = in_seg_cfg["Nref"][0];
+  StructArray                  in_struct_array = inputs[4];
+  Struct                       in_seg_cfg      = in_struct_array[0];
+  CharArray                    in_mod_scheme   = in_seg_cfg["modulation"];
+  pusch_decoder::configuration cfg             = {};
+  cfg.base_graph                               = matlab_to_srs_base_graph(in_seg_cfg["base_graph"][0]);
+  cfg.rv                                       = in_seg_cfg["rv"][0];
+  cfg.mod                                      = matlab_to_srs_modulation(in_mod_scheme.toAscii());
+  cfg.Nref                                     = in_seg_cfg["Nref"][0];
+  cfg.nof_layers                               = in_seg_cfg["nof_layers"][0];
+  cfg.nof_ldpc_iterations                      = 6;
+  cfg.use_early_stop                           = true;
+  cfg.new_data                                 = new_data;
 
   units::bits tbs(static_cast<unsigned>(in_seg_cfg["tbs"][0]));
   if (!tbs.is_byte_exact()) {
@@ -153,7 +177,7 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
   buf_id.rnti                        = in_buf_id["rnti"][0];
 
   unsigned nof_codeblocks       = in_buf_id["nof_codeblocks"][0];
-  unsigned nof_codeblocks_check = ldpc::compute_nof_codeblocks(tbs, seg_cfg.base_graph);
+  unsigned nof_codeblocks_check = ldpc::compute_nof_codeblocks(tbs, cfg.base_graph);
   if (nof_codeblocks != nof_codeblocks_check) {
     std::string msg =
         fmt::format("Softbuffer ({}, {}) requested with {} codeblocks, but the codeword has {} codeblocks.",
@@ -166,11 +190,19 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
 
   uint64_t key = static_cast<TypedArray<uint64_t>>(inputs[1])[0];
 
-  unique_rx_softbuffer         softbuffer = retrieve_softbuffer(key, buf_id, nof_codeblocks);
-  pusch_decoder_result         dec_result = {};
-  pusch_decoder::configuration cfg        = {seg_cfg, 6, true, new_data};
-  std::vector<uint8_t>         rx_tb(tbs_bytes.value());
-  decoder->decode(rx_tb, dec_result, &softbuffer.get(), llrs, cfg);
+  unique_rx_softbuffer softbuffer = retrieve_softbuffer(key, buf_id, nof_codeblocks);
+  std::vector<uint8_t> rx_tb(tbs_bytes.value());
+
+  pusch_decoder_notifier_spy notifier_spy;
+  pusch_decoder_buffer&      buffer = decoder->new_data(rx_tb, softbuffer.get(), notifier_spy.get_notifier(), cfg);
+
+  buffer.on_new_softbits(llrs);
+  buffer.on_end_softbits();
+
+  if (!notifier_spy.has_result()) {
+    mex_abort("Notifier result has not been reported.");
+  }
+  const pusch_decoder_result& dec_result = notifier_spy.get_result();
 
   TypedArray<uint8_t> out = factory.createArray({rx_tb.size(), 1}, rx_tb.cbegin(), rx_tb.cend());
   outputs[0]              = out;
