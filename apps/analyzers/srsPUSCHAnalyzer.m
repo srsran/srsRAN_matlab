@@ -88,6 +88,10 @@ if pusch.DMRS.NumCDMGroupsWithoutData
     H = H * sqrt(1 / 2);
 end
 
+% Remove DC from the grid if it is available.
+if isfield(extra, 'dcPosition')
+    rxGrid(extra.dcPosition, :) = 0;
+end
 
 %% Equalize.
 [dataInd, puschInfo] = nrPUSCHIndices(carrier, pusch);
@@ -106,6 +110,11 @@ end
 
 % Demodulate codeword.
 [rxcw, ~] = nrPUSCHDecode(carrier, pusch, equalized, nVar);
+
+% Make sure equalized zeros translate to soft zeros.
+zerosInd = (equalized == 0);
+cwZerosInd = repelem(zerosInd, 6);
+rxcw(cwZerosInd) = 0;
 
 % Prepare UL-SCH decoder.
 ULSCHDecoder = srsConfigureULSCHDecoder(MultipleHARQProcesses, TargetCodeRate, TransportBlockLength);
