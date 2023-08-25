@@ -216,6 +216,10 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
                 dmrsTypeString, ...                     % dmrs_type
                 dmrsSymbolMask, ...                     % dmrs_symbol_mask
                 pusch.DMRS.NumCDMGroupsWithoutData, ... % nof_cdm_groups_without_data
+                nofHarqAckBits, ...                     % nof_harq_ack_bits
+                ulschInfo.GACK, ...                     % nof_enc_harq_ack_bits
+                nofCsiPart1Bits, ...                    % nof_csi_part1_bits
+                ulschInfo.GCSI1, ...                    % nof_enc_csi_part1_bits
                 };
 
             % Prepare message information.
