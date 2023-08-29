@@ -92,18 +92,19 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
 
             fprintf(fileID, 'struct test_case_context{\n');
-            fprintf(fileID, '  ulsch_demultiplex::configuration       config;\n');
-            fprintf(fileID, '  ulsch_demultiplex::message_information msg_info;\n');
+            fprintf(fileID, '  ulsch_demultiplex::configuration config;\n');
+            fprintf(fileID, '  unsigned                         nof_csi_part2_bits;\n');
+            fprintf(fileID, '  unsigned                         nof_enc_csi_part2_bits;\n');
             fprintf(fileID, '};\n');
             fprintf(fileID, '\n');
             fprintf(fileID, 'struct test_case_t {\n');
             fprintf(fileID, '  test_case_context                 context;\n');
-            fprintf(fileID, '  file_vector<log_likelihood_ratio> input;\n');
+            fprintf(fileID, '  file_vector<log_likelihood_ratio> demodulated;\n');
+            fprintf(fileID, '  file_vector<log_likelihood_ratio> codeword;\n');
             fprintf(fileID, '  file_vector<log_likelihood_ratio> output_ulsch;\n');
             fprintf(fileID, '  file_vector<log_likelihood_ratio> output_harq_ack;\n');
             fprintf(fileID, '  file_vector<log_likelihood_ratio> output_csi_part1;\n');
             fprintf(fileID, '  file_vector<log_likelihood_ratio> output_csi_part2;\n');
-            fprintf(fileID, '  file_vector<uint16_t>             placeholders;\n');
             fprintf(fileID, '};\n');
         end
     end % of methods (Access = protected)
@@ -142,6 +143,7 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
             % Configure PUSCH.
             NumLayers = randi([1, 4]);
             pusch = srsConfigurePUSCH(NumLayers, Modulation, PRBSet);
+            pusch.NID = 1;
             pusch.DMRS.DMRSConfigurationType = randi([1, 2]);
             pusch.DMRS.DMRSAdditionalPosition = randi([0, 3]);
             pusch.DMRS.NumCDMGroupsWithoutData = pusch.DMRS.DMRSConfigurationType + 1;
@@ -162,8 +164,11 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
             ulschInfo = nrULSCHInfo(pusch, targetCodeRate, tbs, ...
                 nofHarqAckBits, nofCsiPart1Bits, nofCsiPart2Bits);
 
-            % Generate random codeword with LLR.
-            cw = randi([-120, 120], puschInfo.G, 1);
+            % Generate random soft bits.
+            demodulated = randi([-120, 120], puschInfo.G, 1);
+
+            % Deescramble demodulated bits.
+            cw = nrPUSCHDescramble(demodulated, pusch.NID, pusch.RNTI);
 
             % Demultiplex signal.
             [schData, harqAck, csiPart1, csiPart2] = ...
@@ -175,8 +180,11 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
                 targetCodeRate, tbs, nofHarqAckBits, nofCsiPart1Bits, ...
                 nofCsiPart2Bits);
 
+            % Save codeword before reverting the scrambling.
+            testCase.saveDataFile('_test_demodulated', testID, @writeInt8File, demodulated);
+
             % Save codeword.
-            testCase.saveDataFile('_test_input', testID, @writeInt8File, cw);
+            testCase.saveDataFile('_test_codeword', testID, @writeInt8File, cw);
 
             % Save SCH data.
             testCase.saveDataFile('_test_data', testID, @writeInt8File, schData);
@@ -189,9 +197,6 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
 
             % Save CSI-Part2.
             testCase.saveDataFile('_test_csi2', testID, @writeInt8File, csiPart2);
-
-            % Save position of placeholders.
-            testCase.saveDataFile('_test_placeholders', testID, @writeUint16File, placeholders);
 
             % Generate modulation cheme type string.
             modString = srsModulationFromMatlab(pusch.Modulation, 'full');
@@ -222,20 +227,16 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
                 ulschInfo.GCSI1, ...                    % nof_enc_csi_part1_bits
                 };
 
-            % Prepare message information.
-            msg_info = { ...
-                nofHarqAckBits, ...       % nof_harq_ack_bits
-                ulschInfo.GACK, ...       % nof_enc_harq_ack_bits
-                nofCsiPart1Bits, ...      % nof_csi_part1_bits
-                ulschInfo.GCSI1, ...      % nof_enc_csi_part1_bits
-                nofCsiPart2Bits, ...      % nof_csi_part2_bits
-                ulschInfo.GCSI2, ...      % nof_enc_csi_part2_bits
+            % Prepare test context in a cell.
+            context = {...
+                configuration, ...   % config
+                nofCsiPart2Bits, ... % nof_csi_part2_bits
+                ulschInfo.GCSI2, ... % nof_enc_csi_part2_bits
                 };
 
             testCaseString = testCase.testCaseToString(testID, ...
-                {configuration, msg_info}, true, '_test_input', '_test_data', ...
-                '_test_harq', '_test_csi1', '_test_csi2', ...
-                '_test_placeholders');
+                context, true, '_test_demodulated', '_test_codeword', ...
+                '_test_data', '_test_harq', '_test_csi1', '_test_csi2');
 
             % Add the test to the file header.
             testCase.addTestToHeaderFile(testCase.headerFileID, ...

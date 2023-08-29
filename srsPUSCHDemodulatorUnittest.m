@@ -132,59 +132,6 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
         end
     end % of methods (Access = protected)
 
-    methods (Access = private)
-        function [reIndices, xIndices, yIndices] = getPlaceholders(~, Modulation, NumLayers, NumRe, ProbPlaceholder)
-        %getPlaceholders Generates a list of the RE containing repetition
-        %   placeholders and their respective soft bits indices for x and y
-        %   placeholders. All indices are 0based.
-
-            % Deduce modulation order.
-            Qm = 1;
-            switch Modulation
-                case 'QPSK'
-                    Qm = 2;
-                case '16QAM'
-                    Qm = 4;
-                case '64QAM'
-                    Qm = 6;
-                case '256QAM'
-                    Qm = 8;
-            end
-
-            % Early return if the modulation order is not suffcient or the
-            % probability of placeholder is zero.
-            if (Qm < 2) || (ProbPlaceholder == 0)
-                reIndices = {};
-                xIndices = [];
-                yIndices = [];
-                return;
-            end
-
-            % Select REs that contain placeholders.
-            reIndices = 1:floor(1 / ProbPlaceholder):(NumRe - 1);
-
-            nIndices = numel(reIndices) * NumLayers;
-            xIndices = nan(nIndices * (Qm - 2), 1);
-            yIndices = nan(nIndices, 1);
-
-            % Generate placeholder bit indices.
-            i = 0;
-            for reIndex = reIndices
-                for layer = 0:NumLayers-1
-                    offset = i * (Qm - 2);
-                    xIndices(offset + (1:Qm-2)) = (reIndex * NumLayers + layer) * Qm + transpose(2:Qm - 1);
-                    i = i + 1;
-                    yIndices(i) = (reIndex * NumLayers + layer) * Qm + 1;
-                end
-            end
-
-            % If the number of indices is scalar, then convert to cell.
-            if length(reIndices) < 2
-                reIndices = {reIndices};
-            end
-        end % of function getPlaceholders(...
-    end % of methods (Access = private)
-
     methods (TestClassSetup)
         function classSetup(obj)
             orig = rng;
@@ -284,13 +231,13 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             % Generate channel estimates.
             obj.ce = nrPerfectChannelEstimate(obj.carrier,pathGains,pathFilters);
 
-        end % of function setupsimulation(obj, DMRSConfigurationType, Modulation, probPlaceholder, nofRxPorts)
+        end % of function setupsimulation(obj, DMRSConfigurationType, Modulation, nofRxPorts)
     end % of methods (Access = Private)
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(obj, DMRSConfigurationType, Modulation, probPlaceholder, NumRxPorts)
+        function testvectorGenerationCases(obj, DMRSConfigurationType, Modulation, NumRxPorts)
         %testvectorGenerationCases Generates a test vector for the given
-        %   DMRSConfigurationType, Modulation, probPlaceholder and NumRxPorts.
+        %   DMRSConfigurationType, Modulation, and NumRxPorts.
 
             import srsLib.phy.upper.channel_modulation.srsDemodulator
             import srsLib.phy.upper.equalization.srsChannelEqualizer
@@ -348,12 +295,8 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             % Soft demapping.
             softBits = srsDemodulator(eqSymbols, obj.pusch.Modulation, eqNoise);
 
-            % Generate repetition placeholders.
-            [obj.placeholderReIndices, xBitIndices, yBitIndices] = obj.getPlaceholders(obj.pusch.Modulation, obj.pusch.NumLayers, length(eqSymbols), probPlaceholder);
-
-            % Reverse Scrambling. Attention: placeholderBitIndices are
-            % 0based.
-            schSoftBits = nrPUSCHDescramble(softBits, obj.pusch.NID, obj.pusch.RNTI, xBitIndices + 1, yBitIndices + 1);
+            % Reverse Scrambling.
+            schSoftBits = nrPUSCHDescramble(softBits, obj.pusch.NID, obj.pusch.RNTI);
 
             % Generate a DM-RS symbol mask.
             dmrsSymbolMask = symbolAllocationMask2string(obj.puschDmrsIndices);
@@ -391,7 +334,6 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
                 obj.pusch.DMRS.NumCDMGroupsWithoutData, ... % nof_cdm_groups_without_data
                 obj.pusch.NID, ...                          % n_id
                 obj.pusch.NumAntennaPorts, ...              % nof_tx_layers
-                obj.placeholderReIndices, ...               % placeholders
                 portsString, ...                            % rx_ports
                 };
 
@@ -420,7 +362,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
     end % of methods (Test, TestTags = {'testvector'})
 
     methods (Test, TestTags = {'testmex'})
-        function mexTest(obj, DMRSConfigurationType, Modulation, probPlaceholder, NumRxPorts)
+        function mexTest(obj, DMRSConfigurationType, Modulation, NumRxPorts)
         %mexTest  Tests the mex wrapper of the SRSGNB PUSCH demodulator.
         %   mexTest(OBJ, DMRSCONFIGURATIONTYPE, MODULATION,
         %   PROBPLACEHOLDER, NUMRXPORTS) runs a short simulation with a 
@@ -467,9 +409,6 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
 
             % Equalize.
             [eqSymbols, eqNoise] = srsChannelEqualizer(rxSymbols, cePusch, 'ZF', noiseVar, 1.0);
-
-            % Generate repetition placeholders.
-            [obj.placeholderReIndices, xBitIndices, yBitIndices] = obj.getPlaceholders(obj.pusch.Modulation, obj.pusch.NumLayers, length(eqSymbols), probPlaceholder);
 
             % Initialize the SRS PUSCH demodulator mex.
             PUSCHDemodulator = srsPUSCHDemodulator;
