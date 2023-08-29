@@ -19,8 +19,6 @@
 %
 %   DMRSConfigurationType - PUSCH DM-RS configuration type.
 %   Modulation            - PUSCH Modulation scheme.
-%   probPlaceholder       - Probability of a Resource element to contain a 
-%                           placeholder.
 %   NumRxPorts            - Number of receive antenna ports for PUSCH.
 %
 %   srsPUSCHDemodulatorUnittest Methods (TestTags = {'testvector'}):
@@ -72,9 +70,6 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
         %Modulation {pi/2-BPSK, QPSK, 16-QAM, 64-QAM, 256-QAM}.
         Modulation = {'pi/2-BPSK', 'QPSK', '16QAM', '64QAM', '256QAM'};
 
-        %Probability of a Resource Element to contain a placeholder.
-        probPlaceholder = {0, 0.01}
-
         %Number of receive antenna ports for PUSCH.
         NumRxPorts = {1, 2, 4}
     end
@@ -99,8 +94,6 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
         txGrid
         % Channel estimates.
         ce
-        % Placeholder repetition indices.
-        placeholderReIndices
         % Receive antenna port indices the PUSCH transmission is mapped to.
         rxPorts
     end % of properties (Hidden)
@@ -127,7 +120,8 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             fprintf(fileID, '  context_t                                                            context;\n');
             fprintf(fileID, '  file_vector<resource_grid_reader_spy::expected_entry_t>              symbols;\n');
             fprintf(fileID, '  file_tensor<static_cast<unsigned>(ch_dims::nof_dims), cf_t, ch_dims> estimates;\n');
-            fprintf(fileID, '  file_vector<log_likelihood_ratio>                                    sch_data;\n');
+            fprintf(fileID, '  file_vector<log_likelihood_ratio>                                    demodulated;\n');
+            fprintf(fileID, '  file_vector<log_likelihood_ratio>                                    codeword;\n');
             fprintf(fileID, '};\n');
         end
     end % of methods (Access = protected)
@@ -308,6 +302,9 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             % Write channel estimates to a binary file.
             obj.saveDataFile('_test_input_estimates', testID, @writeComplexFloatFile, obj.ce(:));
 
+            % Write soft bits before descrambling to a binary file.
+            obj.saveDataFile('_test_demodulated', testID, @writeInt8File, softBits);
+
             % Write soft bits to a binary file.
             obj.saveDataFile('_test_output', testID, @writeInt8File, schSoftBits);
 
@@ -353,7 +350,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
 
             testCaseString = obj.testCaseToString(testID, ...
                 testCaseContext, true, '_test_input_symbols', ...
-                {'_test_input_estimates', estimatesDims}, '_test_output');
+                {'_test_input_estimates', estimatesDims}, '_test_demodulated', '_test_output');
 
             % Add the test to the file header.
             obj.addTestToHeaderFile(obj.headerFileID, testCaseString);
@@ -365,10 +362,9 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
         function mexTest(obj, DMRSConfigurationType, Modulation, NumRxPorts)
         %mexTest  Tests the mex wrapper of the SRSGNB PUSCH demodulator.
         %   mexTest(OBJ, DMRSCONFIGURATIONTYPE, MODULATION,
-        %   PROBPLACEHOLDER, NUMRXPORTS) runs a short simulation with a 
+        %   NUMRXPORTS) runs a short simulation with a 
         %   ULSCH transmission using DM-RS type DMRSCONFIGURATIONTYPE,
-        %   symbol modulation MODULATION, probability of a resource element
-        %   containing a placeholder PROBPLACEHOLDER and number of receive 
+        %   symbol modulation MODULATION and number of receive 
         %   antenna ports NUMRXPORTS. Channel estimation on the PUSCH
         %   transmission is done in MATLAB and PUSCH equalization and
         %   demodulation is then performed using the mex wrapper of the

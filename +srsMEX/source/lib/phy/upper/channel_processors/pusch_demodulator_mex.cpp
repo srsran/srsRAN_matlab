@@ -161,14 +161,6 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
     dmrs_symb_pos[symb_index] = (dmrs_pos_in[symb_index] == 1);
   }
 
-  // Build the placeholder RE indices list.
-  const TypedArray<double> placeholders_in   = in_dem_cfg["placeholders"];
-  unsigned                 num_of_re_indices = placeholders_in.getNumberOfElements();
-  ulsch_placeholder_list   placeholders;
-  for (unsigned re_index = 0; re_index != num_of_re_indices; ++re_index) {
-    placeholders.push_back(static_cast<unsigned>(placeholders_in[re_index]));
-  }
-
   // Build the rx port list.
   const TypedArray<double>          rx_ports_in     = in_dem_cfg["rxPorts"];
   unsigned                          num_of_rx_ports = rx_ports_in.getNumberOfElements();
@@ -189,7 +181,6 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
   demodulator_config.nof_cdm_groups_without_data = in_dem_cfg["nofCdmGroupsWithoutData"][0];
   demodulator_config.n_id                        = in_dem_cfg["nId"][0];
   demodulator_config.nof_tx_layers               = in_dem_cfg["nofTxLayers"][0];
-  demodulator_config.placeholders                = placeholders;
   demodulator_config.rx_ports                    = rx_ports;
 
   // Get the PUSCH data and grid indices.

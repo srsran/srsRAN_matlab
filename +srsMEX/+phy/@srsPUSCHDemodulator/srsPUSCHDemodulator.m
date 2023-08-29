@@ -33,7 +33,6 @@
 %      nofCdmGroupsWithoutData - number of DMRS CDM groups without data;
 %      nId                     - scrambling identifier;
 %      nofTxLayers             - number of transmit layers;
-%      placeholders            - ULSCH Scrambling placeholder list;
 %      rxPorts                 - receive antenna port indices the PUSCH transmission is mapped to;
 
 %   Copyright 2021-2023 Software Radio Systems Limited
@@ -100,18 +99,16 @@ classdef srsPUSCHDemodulator < matlab.System
     end % of methods (Access = private)
 
    methods (Static)
-        function PUSCHDemCfg = configurePUSCHDem(pusch, NSizeGrid, puschDmrsIndices, placeholderReIndices, rxPorts)
+        function PUSCHDemCfg = configurePUSCHDem(pusch, NSizeGrid, puschDmrsIndices, rxPorts)
         %configurePUSCHDem Static helper method for filling the PUSCHDEMCONFIG input of "step"
-        %   PUSCHDEMCONFIG = configurePUSCHDem(PUSCH, NSIZEGRID, PUSCHDMRSINDICES, PLACEHOLDERREINDICES)
+        %   PUSCHDEMCONFIG = configurePUSCHDem(PUSCH, NSIZEGRID, PUSCHDMRSINDICES, RXPORTS)
         %   generates a PUSCH demodulator configuration for the physical uplink
-        %   shared channel PUSCH using the DMRS indices PUSCHDMRSINDICES and
-        %   placeholder repetition indices PLACEHOLDERREINDICES for a grid of
+        %   shared channel PUSCH using the DMRS indices PUSCHDMRSINDICES for a grid of
         %   size NSIZEGRID and mapped to transmit antennas RXPORTS.
             arguments
                 pusch                (1, 1) nrPUSCHConfig
                 NSizeGrid            (1, 1) double {mustBeInteger, mustBePositive} = 25
                 puschDmrsIndices     (:, 3) double {mustBeInteger, mustBeNonnegative} = [0, 0, 0]
-                placeholderReIndices (:, 1) double {mustBeInteger, mustBeNonnegative} = [0]
                 rxPorts              (:, 1) double {mustBeInteger, mustBeNonnegative} = [0]
             end
 
@@ -138,7 +135,6 @@ classdef srsPUSCHDemodulator < matlab.System
             PUSCHDemCfg.nofCdmGroupsWithoutData = pusch.DMRS.NumCDMGroupsWithoutData;
             PUSCHDemCfg.nId = pusch.NID;
             PUSCHDemCfg.nofTxLayers = pusch.NumAntennaPorts;
-            PUSCHDemCfg.placeholders = placeholderReIndices;
             PUSCHDemCfg.rxPorts = rxPorts;
         end % of function PUSCHDemCfg = configurePUSCHDem(...)
    end % of methods (Static)

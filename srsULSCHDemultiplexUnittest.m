@@ -100,7 +100,7 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
             fprintf(fileID, 'struct test_case_t {\n');
             fprintf(fileID, '  test_case_context                 context;\n');
             fprintf(fileID, '  file_vector<log_likelihood_ratio> demodulated;\n');
-            fprintf(fileID, '  file_vector<log_likelihood_ratio> codeword;\n');
+            fprintf(fileID, '  file_vector<log_likelihood_ratio> descrambled;\n');
             fprintf(fileID, '  file_vector<log_likelihood_ratio> output_ulsch;\n');
             fprintf(fileID, '  file_vector<log_likelihood_ratio> output_harq_ack;\n');
             fprintf(fileID, '  file_vector<log_likelihood_ratio> output_csi_part1;\n');
@@ -164,39 +164,44 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
             ulschInfo = nrULSCHInfo(pusch, targetCodeRate, tbs, ...
                 nofHarqAckBits, nofCsiPart1Bits, nofCsiPart2Bits);
 
+            % Generate placeholders.
+            [xInd, yInd] = srsULSCHScramblingPlaceholders(pusch, ...
+                targetCodeRate, tbs, nofHarqAckBits, nofCsiPart1Bits, ...
+                nofCsiPart2Bits);
+
             % Generate random soft bits.
             demodulated = randi([-120, 120], puschInfo.G, 1);
 
-            % Deescramble demodulated bits.
-            cw = nrPUSCHDescramble(demodulated, pusch.NID, pusch.RNTI);
+            % Descramble demodulated bits without placeholders.
+            descrambled = nrPUSCHDescramble(demodulated, pusch.NID, pusch.RNTI);
+
+            % Descramble demodulated bits with placeholders.
+            codeword = nrPUSCHDescramble(demodulated, pusch.NID, ...
+                pusch.RNTI, xInd + 1, yInd + 1);
 
             % Demultiplex signal.
             [schData, harqAck, csiPart1, csiPart2] = ...
                 nrULSCHDemultiplex(pusch, targetCodeRate, tbs, ...
-                nofHarqAckBits, nofCsiPart1Bits, nofCsiPart2Bits, cw);
-
-            % Generate placeholders.
-            placeholders = srsULSCHScramblingPlaceholders(pusch, ...
-                targetCodeRate, tbs, nofHarqAckBits, nofCsiPart1Bits, ...
-                nofCsiPart2Bits);
+                nofHarqAckBits, nofCsiPart1Bits, nofCsiPart2Bits, ...
+                codeword);
 
             % Save codeword before reverting the scrambling.
-            testCase.saveDataFile('_test_demodulated', testID, @writeInt8File, demodulated);
+            testCase.saveDataFile('_test_input_demodulated', testID, @writeInt8File, demodulated);
 
             % Save codeword.
-            testCase.saveDataFile('_test_codeword', testID, @writeInt8File, cw);
+            testCase.saveDataFile('_test_input_descrambled', testID, @writeInt8File, descrambled);
 
             % Save SCH data.
-            testCase.saveDataFile('_test_data', testID, @writeInt8File, schData);
+            testCase.saveDataFile('_test_output_data', testID, @writeInt8File, schData);
 
             % Save HARQ-ACK.
-            testCase.saveDataFile('_test_harq', testID, @writeInt8File, harqAck);
+            testCase.saveDataFile('_test_output_harq', testID, @writeInt8File, harqAck);
 
             % Save CSI-Part1.
-            testCase.saveDataFile('_test_csi1', testID, @writeInt8File, csiPart1);
+            testCase.saveDataFile('_test_output_csi1', testID, @writeInt8File, csiPart1);
 
             % Save CSI-Part2.
-            testCase.saveDataFile('_test_csi2', testID, @writeInt8File, csiPart2);
+            testCase.saveDataFile('_test_output_csi2', testID, @writeInt8File, csiPart2);
 
             % Generate modulation cheme type string.
             modString = srsModulationFromMatlab(pusch.Modulation, 'full');
@@ -235,8 +240,10 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
                 };
 
             testCaseString = testCase.testCaseToString(testID, ...
-                context, true, '_test_demodulated', '_test_codeword', ...
-                '_test_data', '_test_harq', '_test_csi1', '_test_csi2');
+                context, true, '_test_input_demodulated', ...
+                '_test_input_descrambled', '_test_output_data', ...
+                '_test_output_harq', '_test_output_csi1', ...
+                '_test_output_csi2');
 
             % Add the test to the file header.
             testCase.addTestToHeaderFile(testCase.headerFileID, ...
