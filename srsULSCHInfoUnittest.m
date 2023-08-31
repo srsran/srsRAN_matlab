@@ -26,6 +26,7 @@
 %   nofHarqAckBits        - Number of HARQ-ACK bits to multiplex.
 %   nofCsiPart1Bits       - Number of CSI-Part1 bits to multiplex.
 %   nofCsiPart2Bits       - Number of CSI-Part2 bits to multiplex.
+%   UlSchDataEnabled      - Adds UL-SCH data to the PUSCH. 
 %
 %   srsULSCHInfoUnittest Methods (TestTags = {'testvector'}):
 %
@@ -74,7 +75,7 @@ classdef srsULSCHInfoUnittest < srsTest.srsBlockUnittest
         NumLayers = {1, 2, 4}
 
         %Number of PRBs.
-        NumPRB = {1, 2, 52}
+        NumPRB = {1, 52}
 
         % DM-RS Configuration type {1, 2}.
         DMRSConfigurationType = {1, 2};
@@ -92,7 +93,10 @@ classdef srsULSCHInfoUnittest < srsTest.srsBlockUnittest
         nofCsiPart1Bits = {0, 1, 4}
 
         %Number of CSI-Part2 bits.
-        nofCsiPart2Bits = {0}
+        nofCsiPart2Bits = {0, 4, 7}
+
+        %UL-SCH data.
+        UlSchDataEnabled = {true, false}
     end
 
     methods (Access = protected)
@@ -115,11 +119,11 @@ classdef srsULSCHInfoUnittest < srsTest.srsBlockUnittest
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, NumLayers, NumPRB, ...
                 DMRSConfigurationType, Modulation, targetCodeRate, ...
-                nofHarqAckBits, nofCsiPart1Bits, nofCsiPart2Bits)
+                nofHarqAckBits, nofCsiPart1Bits, nofCsiPart2Bits, UlSchDataEnabled)
         %testvectorGenerationCases Generates a test vectors given the
         %   combinations of NumLayers, NumPRB, DMRSConfigurationType,
-        %   Modulation, targetCodeRate, nofHarqAckBits, nofCsiPart1Bits and
-        %   nofCsiPart2Bits.
+        %   Modulation, targetCodeRate, nofHarqAckBits, nofCsiPart1Bits,
+        %   nofCsiPart2Bits and UlSchDataEnabled.
 
             import srsLib.phy.helpers.srsConfigureCarrier
             import srsLib.phy.helpers.srsConfigurePUSCH
@@ -144,12 +148,17 @@ classdef srsULSCHInfoUnittest < srsTest.srsBlockUnittest
 
             numPRB = length(pusch.PRBSet);
 
-            tbs = nrTBS(pusch.Modulation, ...
-                pusch.NumLayers, ...
-                numPRB, ...
-                puschInfo.NREPerPRB, ...
-                targetCodeRate);
+            tbs = 0;
 
+            if (UlSchDataEnabled)
+                tbs = nrTBS(pusch.Modulation, ...
+                    pusch.NumLayers, ...
+                    numPRB, ...
+                    puschInfo.NREPerPRB, ...
+                    targetCodeRate);
+            end
+                
+           
             ulschInfo = nrULSCHInfo(pusch, targetCodeRate, tbs, ...
                 nofHarqAckBits, nofCsiPart1Bits, nofCsiPart2Bits);
 
@@ -196,7 +205,7 @@ classdef srsULSCHInfoUnittest < srsTest.srsBlockUnittest
                 };
 
             ulschInformation = {...
-                schInformation, ...                     % sch
+                {schInformation}, ...                   % sch
                 integer2srsBits(ulschInfo.GULSCH), ...  % nof_ul_sch_bits
                 integer2srsBits(ulschInfo.GACK), ...    % nof_harq_ack_bits
                 integer2srsBits(ulschInfo.GACKRvd), ... % nof_harq_ack_bits
