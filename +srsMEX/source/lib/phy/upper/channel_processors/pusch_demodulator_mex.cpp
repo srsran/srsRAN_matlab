@@ -19,8 +19,10 @@
 
 #include "pusch_demodulator_mex.h"
 #include "srsran_matlab/support/matlab_to_srs.h"
+#include "srsran/adt/optional.h"
 #include "srsran/phy/support/resource_grid_writer.h"
 #include "srsran/phy/upper/channel_processors/pusch/pusch_codeword_buffer.h"
+#include "srsran/phy/upper/channel_processors/pusch/pusch_demodulator_notifier.h"
 
 using matlab::mex::ArgumentList;
 using namespace matlab::data;
@@ -77,6 +79,20 @@ private:
   bool                              completed = false;
   std::vector<log_likelihood_ratio> data;
   unsigned                          count = 0;
+};
+
+class pusch_demodulator_notifier_spy : private pusch_demodulator_notifier
+{
+public:
+  pusch_demodulator_notifier& get_notifier() { return *this; }
+
+  const demodulation_stats& get_stats() const { return stats.value(); }
+
+private:
+  void on_provisional_stats(const demodulation_stats& stats_) override { stats = stats_; }
+  void on_end_stats(const demodulation_stats& stats_) override { stats = stats_; }
+
+  srsran::optional<demodulation_stats> stats;
 };
 
 } // namespace
@@ -287,7 +303,9 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
   pusch_codeword_buffer_spy sch_data(nof_expected_soft_output_bits);
 
   // Demodulate the PUSCH transmission.
-  demodulator->demodulate(sch_data.get_buffer(), grid->get_reader(), chan_estimates, demodulator_config);
+  pusch_demodulator_notifier_spy notifier;
+  demodulator->demodulate(
+      sch_data.get_buffer(), notifier.get_notifier(), grid->get_reader(), chan_estimates, demodulator_config);
 
   // Return the results to MATLAB.
   std::vector<int8_t> sch_data_int8(sch_data.get_data().begin(), sch_data.get_data().end());
