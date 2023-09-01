@@ -29,13 +29,13 @@
 function PRACHthresholds(filename, format)
 
     confs = loadconfs();
-    nConfs = length(confs);
+    lastConf = length(confs);
 
     % Prepare table to store results.
-    varNames = ["Conf. #", "NCS", "Threshold", "PFA AWGN", "PD AWGN", "PFA TDL", "PD TDL"];
-    varTypes = ["double", "double", "double", "double", "double", "double", "double"];
+    varNames = ["Conf. #", "Format", "# Ant.", "SCS", "NCS", "Threshold", "PFA AWGN", "PD AWGN", "PFA TDL", "PD TDL"];
+    varTypes = ["double", "string", "double", "double", "double", "double", "double", "double", "double", "double"];
     nResColumns = length(varTypes);
-    sz = [nConfs * 16, nResColumns];
+    sz = [lastConf * 16, nResColumns];
 
     w2e = warning('error', 'MATLAB:load:variableNotFound');
     try
@@ -72,7 +72,19 @@ function PRACHthresholds(filename, format)
     % If a specific format is requested, skip all other configurations.
     if ((nargin == 2) && ~strcmp(format, 'all'))
         mask = strcmp({confs.Format}, format);
-        confs = confs(mask);
+        allIndices = 1:length(confs);
+        confIndices = allIndices(mask);
+        lastConf = confIndices(end);
+
+        % If the result table is new (i.e., NCSused == -1) or if startConf (the last
+        % configuration in the table) is not in the range, then set startConf
+        % to the first configuration in the range.
+        % Otherwise (the table is old and startConf is part of the range), nothing
+        % to change.
+        if ((NCSused == -1) || ~ismember(startConf, confIndices))
+            startConf = confIndices(1);
+            NCSused = -1;
+        end
     end
 
     % Target false-alarm probability and number of runs needed to estimate it properly.
@@ -85,7 +97,7 @@ function PRACHthresholds(filename, format)
     prachWarn = warning('query', 'srsran_matlab:srsPRACHdetector');
     warning('off', 'srsran_matlab:srsPRACHdetector');
 
-    for iConf = startConf:nConfs
+    for iConf = startConf:lastConf
         % Load the configuration and set up the PRACHPERF simulator.
         thisConf = confs(iConf);
 
@@ -144,6 +156,7 @@ function PRACHthresholds(filename, format)
             pdet = prachperf.ProbabilityDetectionPerfect;
 
             %%%% Try the TDL channel.
+            snr = thisConf.SNRtdl;
             prachperf.release();
             prachperf.DelayProfile = 'TDLC300';
             prachperf.FrequencyOffset = 400;
@@ -161,12 +174,13 @@ function PRACHthresholds(filename, format)
             pdetTDL = prachperf.ProbabilityDetectionPerfect;
 
             % Store the results in the table.
-            results(iRow, :) = {iConf, NCS, th, pfa, pdet, pfaTDL, pdetTDL};
+            results(iRow, :) = {iConf, thisConf.Format, thisConf.NumReceiveAntennas, ...
+                thisConf.PUSCHSubcarrierSpacing, NCS, th, pfa, pdet, pfaTDL, pdetTDL};
             iRow = iRow + 1;
             save(filename, 'results');
         end % of for NCS = NCSlist
 
-    end % of for iConf = startConf:nConfs
+    end % of for iConf = startConf:lastConf
 
     warning(prachWarn.state, 'srsran_matlab:srsPRACHdetector');
 
