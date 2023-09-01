@@ -12,6 +12,8 @@
 %   As an example of a log entry expected by the srsParseLogs function, the
 %   following excerpt from a srsGNB log file refers to a PUSCH transmission
 %   (similar ones can be found for PUCCH transmissions, too).
+%   Important: The srsGNB log level must be set to "debug" to obtain detailed
+%   information as shown below.
 %
 %   2023-06-07T20:54:24.497343 [UL-PHY1 ] [D] [   584.9] PUSCH: rnti=0x4601 h_id=0 prb=[4, 10) symb=[0, 14) mod=64QAM rv=0 tbs=544 crc=OK iter=2.0 snr=31.8dB t=135.0us
 %     rnti=0x4601
