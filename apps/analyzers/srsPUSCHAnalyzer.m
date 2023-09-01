@@ -90,7 +90,7 @@ end
 
 % Remove DC from the grid if it is available.
 if isfield(extra, 'dcPosition')
-    rxGrid(extra.dcPosition, :) = 0;
+    rxGrid(extra.dcPosition + 1, :) = 0;
 end
 
 %% Equalize.

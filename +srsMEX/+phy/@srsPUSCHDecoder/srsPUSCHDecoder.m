@@ -218,7 +218,7 @@ classdef srsPUSCHDecoder < matlab.System
     methods (Static)
         function segmentCfg = configureSegment(NumLayers, TBSize, TargetCodeRate, Modulation, RV, Nref)
         %configureSegment Static helper method for filling the SEGCONFIG input of "step"
-        %   SEGMENTCFG = configureSegment(NUMLAYERS, NUMRES, TBSIZE, TARGETCODERATE, MODULATION, RV, NREF)
+        %   SEGMENTCFG = configureSegment(NUMLAYERS, TBSIZE, TARGETCODERATE, MODULATION, RV, NREF)
         %   generates a segment configuration for NUMLAYERS transmission layers, NUMRES allocated REs per layer,
         %   transport block size TBSIZE, target code rate TARGETCODERATE, modulation MODULATION and redundancy
         %   version RV. NREF limits the rate-matcher buffer size (set to zero for unlimited buffer size).
