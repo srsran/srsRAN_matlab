@@ -63,11 +63,11 @@ function srsPUCCHAnalyzer(carrier, pucch, rgFilename, rgOffset, rgSize)
     [estChannel, noiseEst] = nrChannelEstimate(carrier, rxGrid, dmrsInd, dmrsSym);
 
     % Get PUCCH REs from received grid and estimated channel grid.
-    [pucchIndices, pucchIndicesInfo] = nrPUCCHIndices(carrier, pucch);
+    pucchIndices = nrPUCCHIndices(carrier, pucch);
     [pucchRx, pucchHest] = nrExtractResources(pucchIndices, rxGrid, estChannel);
 
     % Perform equalization.
-    [pucchEq, csi] = nrEqualizeMMSE(pucchRx, pucchHest, noiseEst);
+    pucchEq = nrEqualizeMMSE(pucchRx, pucchHest, noiseEst);
 
     % % Decode PUCCH symbols
     % % TODO: For this, we need to log the number of uncoded UCI bits, which is not

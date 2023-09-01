@@ -117,7 +117,7 @@ function [carrier, phych, extra] = srsParseLogs
         % If a PUCCH entry, we need the PUCCH format.
         fPattern = "format=" + digitsPattern;
         fType = extract(allLines{1}, fPattern);
-        format = str2num(fType{1}(end));
+        format = str2double(fType{1}(end));
         if ismember(format, [1, 2])
             phych = srsLib.phy.helpers.srsConfigurePUCCH(format);
         else
