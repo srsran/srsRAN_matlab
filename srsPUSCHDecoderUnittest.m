@@ -138,14 +138,6 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
         end
     end % of methods (Access = protected)
 
-    methods (TestClassSetup)
-        function classSetup(obj)
-            orig = rng;
-            obj.addTeardown(@rng,orig)
-            rng('default');
-        end
-    end % of methods (TestClassSetup)
-
     methods (Access = private)
         function setupsimulation(obj, SymbolAllocation, PRBAllocation, mcs)
         % Sets secondary simulation variables.

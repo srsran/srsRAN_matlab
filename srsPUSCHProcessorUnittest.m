@@ -124,14 +124,6 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
         end
     end % of methods (Access = protected)
 
-    methods (TestClassSetup)
-        function classSetup(testCase)
-            orig = rng;
-            testCase.addTeardown(@rng,orig)
-            rng('default');
-        end
-    end
-
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, Modulation, ...
                 SymbolAllocation, targetCodeRate, nofHarqAck, nofCsiPart1, nofCsiPart2, NumRxPorts)

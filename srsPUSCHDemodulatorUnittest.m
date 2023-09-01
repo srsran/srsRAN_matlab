@@ -74,9 +74,6 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
         NumRxPorts = {1, 2, 4}
     end
 
-    properties (Constant, Hidden)
-    end % of properties (Constant, Hidden)
-
     properties (Hidden)
         % Carrier.
         carrier
@@ -126,13 +123,58 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
         end
     end % of methods (Access = protected)
 
-    methods (TestClassSetup)
-        function classSetup(obj)
-            orig = rng;
-            obj.addTeardown(@rng,orig)
-            rng('default');
-        end
-    end
+    methods (Access = private)
+        function [reIndices, xIndices, yIndices] = getPlaceholders(~, Modulation, NumLayers, NumRe, ProbPlaceholder)
+        %getPlaceholders Generates a list of the RE containing repetition
+        %   placeholders and their respective soft bits indices for x and y
+        %   placeholders. All indices are 0based.
+
+            % Deduce modulation order.
+            Qm = 1;
+            switch Modulation
+                case 'QPSK'
+                    Qm = 2;
+                case '16QAM'
+                    Qm = 4;
+                case '64QAM'
+                    Qm = 6;
+                case '256QAM'
+                    Qm = 8;
+            end
+
+            % Early return if the modulation order is not suffcient or the
+            % probability of placeholder is zero.
+            if (Qm < 2) || (ProbPlaceholder == 0)
+                reIndices = {};
+                xIndices = [];
+                yIndices = [];
+                return;
+            end
+
+            % Select REs that contain placeholders.
+            reIndices = 1:floor(1 / ProbPlaceholder):(NumRe - 1);
+
+            nIndices = numel(reIndices) * NumLayers;
+            xIndices = nan(nIndices * (Qm - 2), 1);
+            yIndices = nan(nIndices, 1);
+
+            % Generate placeholder bit indices.
+            i = 0;
+            for reIndex = reIndices
+                for layer = 0:NumLayers-1
+                    offset = i * (Qm - 2);
+                    xIndices(offset + (1:Qm-2)) = (reIndex * NumLayers + layer) * Qm + transpose(2:Qm - 1);
+                    i = i + 1;
+                    yIndices(i) = (reIndex * NumLayers + layer) * Qm + 1;
+                end
+            end
+
+            % If the number of indices is scalar, then convert to cell.
+            if length(reIndices) < 2
+                reIndices = {reIndices};
+            end
+        end % of function getPlaceholders(...
+    end % of methods (Access = private)
 
     methods (Access = private)
         function setupsimulation(obj, DMRSConfigurationType, Modulation, nofRxPorts)
@@ -362,9 +404,9 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
         function mexTest(obj, DMRSConfigurationType, Modulation, NumRxPorts)
         %mexTest  Tests the mex wrapper of the SRSGNB PUSCH demodulator.
         %   mexTest(OBJ, DMRSCONFIGURATIONTYPE, MODULATION,
-        %   NUMRXPORTS) runs a short simulation with a 
+        %   NUMRXPORTS) runs a short simulation with a
         %   ULSCH transmission using DM-RS type DMRSCONFIGURATIONTYPE,
-        %   symbol modulation MODULATION and number of receive 
+        %   symbol modulation MODULATION and number of receive
         %   antenna ports NUMRXPORTS. Channel estimation on the PUSCH
         %   transmission is done in MATLAB and PUSCH equalization and
         %   demodulation is then performed using the mex wrapper of the
@@ -421,7 +463,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             % ii) Reverse Scrambling. Attention: placeholderBitIndices are 0based.
             schSoftBitsMatlab = nrPUSCHDescramble(softBits, obj.pusch.NID, obj.pusch.RNTI);
             % iii) Compare srsRAN and MATLAB results.
-            obj.assertEqual(schSoftBits, int8(schSoftBitsMatlab), 'AbsTol', int8(1), 'Demodulation errors.');
+            obj.assertEqual(schSoftBits, int8(schSoftBitsMatlab), 'Demodulation errors.', AbsTol = int8(1));
         end % of function mextest
     end % of methods (Test, TestTags = {'testmex'})
 end % of classdef srsPUSCHDemodulatorUnittest

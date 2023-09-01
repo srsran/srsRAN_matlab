@@ -107,14 +107,6 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
         end
     end % of methods (Access = protected)
 
-    methods (TestClassSetup)
-        function classSetup(testCase)
-            orig = rng;
-            testCase.addTeardown(@rng,orig)
-            rng('default');
-        end
-    end
-
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, Duration, CCEREGMapping, AggregationLevel)
         %testvectorGenerationCases Generates a test vector for the given CORESET duration,

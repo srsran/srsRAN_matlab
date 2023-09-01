@@ -34,7 +34,7 @@ namespace {
 class pusch_codeword_buffer_spy : private pusch_codeword_buffer
 {
 public:
-  pusch_codeword_buffer_spy(unsigned size) : data(size) {}
+  explicit pusch_codeword_buffer_spy(unsigned size) : data(size) {}
 
   span<const log_likelihood_ratio> get_data() const
   {
@@ -48,18 +48,22 @@ private:
   span<log_likelihood_ratio> get_next_block_view(unsigned block_size) override
   {
     srsran_assert(!completed, "Data processing is completed.");
-    srsran_assert(
-        data.size() >= block_size + count,
-        "The sum of the block size (i.e., {}) and the current count (i.e., {}) exceeds the data size (i.e., {}).",
-        block_size,
-        count,
-        data.size());
+
+    block_size = std::min(block_size, static_cast<unsigned>(data.size()) - count);
+
     return span<log_likelihood_ratio>(data).subspan(count, block_size);
   }
 
-  void on_new_block(span<const log_likelihood_ratio> demodulated, span<const log_likelihood_ratio> descrambled) override
+  void on_new_block(span<const log_likelihood_ratio> /* unused */,
+                    span<const log_likelihood_ratio> descrambled) override
   {
     srsran_assert(!completed, "Data processing is completed.");
+    srsran_assert(
+        data.size() >= descrambled.size() + count,
+        "The sum of the block size (i.e., {}) and the current count (i.e., {}) exceeds the data size (i.e., {}).",
+        descrambled.size(),
+        count,
+        data.size());
     span<log_likelihood_ratio> block = get_next_block_view(descrambled.size());
 
     if (block.data() != descrambled.data()) {

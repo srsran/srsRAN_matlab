@@ -91,14 +91,6 @@ classdef srsDFTProcessorUnittest < srsTest.srsBlockUnittest
         end
     end % of methods (Access = protected)
 
-    methods (TestClassSetup)
-        function classSetup(testCase)
-            orig = rng;
-            testCase.addTeardown(@rng,orig)
-            rng('default');
-        end
-    end
-
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, DFTsize, direction)
         %testvectorGenerationCases Generates a test vector for the given DFTsize

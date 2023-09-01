@@ -115,14 +115,6 @@ classdef srsPRACHGeneratorUnittest < srsTest.srsBlockUnittest
 
     end % of methods (Access = protected)
 
-    methods (TestClassSetup)
-        function classSetup(testCase)
-            orig = rng;
-            testCase.addTeardown(@rng,orig)
-            rng('default');
-        end
-    end
-
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet, ZeroCorrelationZone, RBOffset)
         %testvectorGenerationCases Generates a test vector for the given 

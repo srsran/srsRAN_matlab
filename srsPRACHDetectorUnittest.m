@@ -145,15 +145,11 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
     end % of methods (Access = protected)
 
     methods (TestClassSetup)
-        function classSetup(obj)
-            orig = rng;
-            rng('default');
-
+        function silenceWarnings(obj)
             warn = warning('query', 'srsran_matlab:srsPRACHdetector');
             warning('off', 'srsran_matlab:srsPRACHdetector');
 
             obj.addTeardown(@warning, warn.state, 'srsran_matlab:srsPRACHdetector');
-            obj.addTeardown(@rng,orig)
         end
     end % of methods (TestClassSetup)
 
