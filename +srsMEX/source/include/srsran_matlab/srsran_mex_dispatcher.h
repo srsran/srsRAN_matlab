@@ -74,7 +74,7 @@ protected:
   /// \brief Links a method to an identifier.
   ///
   /// Stores an association between string identifier \c name and the method \c fnc.
-  void create_callback(const std::string& name, const std::function<void(ArgumentList&, ArgumentList&)>& fnc)
+  void create_callback(const std::string& name, const std::function<void(ArgumentList, ArgumentList)>& fnc)
   {
     auto action_iter = callbacks.find(name);
     if (action_iter != callbacks.end()) {
@@ -108,7 +108,7 @@ protected:
 
 private:
   /// Container of the identifier&ndash;method pairs.
-  std::map<std::string, std::function<void(ArgumentList&, ArgumentList&)>> callbacks = {};
+  std::map<std::string, std::function<void(ArgumentList, ArgumentList)>> callbacks = {};
   /// Engine to access the MATLAB shell.
   std::shared_ptr<matlab::engine::MATLABEngine> matlabPtr = getEngine();
 };

@@ -102,7 +102,7 @@ private:
 
 } // namespace
 
-void MexFunction::check_step_outputs_inputs(ArgumentList& outputs, ArgumentList& inputs)
+void MexFunction::check_step_outputs_inputs(ArgumentList outputs, ArgumentList inputs)
 {
   if (inputs.size() != 5) {
     mex_abort("Wrong number of inputs.");
@@ -142,7 +142,7 @@ static std::unique_ptr<resource_grid> create_resource_grid(unsigned nof_ports, u
   return rg_factory->create(nof_ports, nof_symbols, nof_subc);
 }
 
-void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
+void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
 {
   check_step_outputs_inputs(outputs, inputs);
 

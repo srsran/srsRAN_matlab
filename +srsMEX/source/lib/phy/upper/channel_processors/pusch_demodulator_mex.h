@@ -49,12 +49,12 @@ public:
       mex_abort("Cannot create srsran PUSCH demodulator.");
     }
 
-    create_callback("step", [this](ArgumentList& out, ArgumentList& in) { return this->method_step(out, in); });
+    create_callback("step", [this](ArgumentList out, ArgumentList in) { return this->method_step(out, in); });
   }
 
 private:
   /// Checks that outputs/inputs arguments match the requirements of method_step().
-  void check_step_outputs_inputs(matlab::mex::ArgumentList& outputs, matlab::mex::ArgumentList& inputs);
+  void check_step_outputs_inputs(matlab::mex::ArgumentList outputs, matlab::mex::ArgumentList inputs);
 
   /// \brief Demodulates a PUSCH transmission according to the given configuration.
   ///
@@ -80,7 +80,7 @@ private:
   ///
   /// The method has one single output.
   ///   - An array of \c log_likelihood_ratio resulting from the PUSCH demodulation.
-  void method_step(ArgumentList& outputs, ArgumentList& inputs);
+  void method_step(ArgumentList outputs, ArgumentList inputs);
 
   /// A pointer to the actual PUSCH decoder.
   std::unique_ptr<srsran::pusch_demodulator> demodulator = create_pusch_demodulator();

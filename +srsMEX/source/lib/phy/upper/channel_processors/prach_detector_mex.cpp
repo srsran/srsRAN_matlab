@@ -46,7 +46,7 @@ void MexFunction::check_step_outputs_inputs(ArgumentList outputs, ArgumentList i
   }
 }
 
-void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
+void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
 {
   check_step_outputs_inputs(outputs, inputs);
 
@@ -75,13 +75,13 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
   }
 
   // Restricted sets are not implemented. Skip.
-  prach_detector::configuration detector_config;
-  detector_config.restricted_set        = matlab_to_srs_restricted_set(restricted_set_in.toAscii());
-  detector_config.root_sequence_index   = in_det_cfg["root_sequence_index"][0];
-  detector_config.format                = matlab_to_srs_preamble_format(format_in.toAscii());
-  detector_config.zero_correlation_zone = in_det_cfg["zero_correlation_zone"][0];
-  detector_config.start_preamble_index  = 0;
-  detector_config.nof_preamble_indices  = 64;
+  prach_detector::configuration detector_config = {};
+  detector_config.restricted_set                = matlab_to_srs_restricted_set(restricted_set_in.toAscii());
+  detector_config.root_sequence_index           = in_det_cfg["root_sequence_index"][0];
+  detector_config.format                        = matlab_to_srs_preamble_format(format_in.toAscii());
+  detector_config.zero_correlation_zone         = in_det_cfg["zero_correlation_zone"][0];
+  detector_config.start_preamble_index          = 0;
+  detector_config.nof_preamble_indices          = 64;
   detector_config.ra_scs =
       to_ra_subcarrier_spacing(static_cast<unsigned>(1000.0 * static_cast<double>(in_det_cfg["scs"][0])));
   detector_config.nof_rx_ports = nof_rx_ports;
@@ -110,7 +110,7 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
     for (unsigned i_symbol = 0; i_symbol != nof_symbols; ++i_symbol) {
       span<cf_t> symbol_view = buffer->get_symbol(i_rx_port, 0, 0, i_symbol);
       for (unsigned i_sample = 0; i_sample != nof_re; ++i_sample) {
-        symbol_view[i_sample] = cf_t(in_cft_array[i_sample][i_symbol][i_rx_port]);
+        symbol_view[i_sample] = static_cast<cf_t>(in_cft_array[i_sample][i_symbol][i_rx_port]);
       }
     }
   }

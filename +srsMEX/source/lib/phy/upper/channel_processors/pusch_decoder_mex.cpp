@@ -114,7 +114,7 @@ void MexFunction::check_step_outputs_inputs(ArgumentList outputs, ArgumentList i
 }
 
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-void MexFunction::method_new(ArgumentList& outputs, ArgumentList& inputs)
+void MexFunction::method_new(ArgumentList outputs, ArgumentList inputs)
 {
   if (outputs.size() != 1) {
     mex_abort("Only one output expected.");
@@ -141,7 +141,7 @@ void MexFunction::method_new(ArgumentList& outputs, ArgumentList& inputs)
   outputs[0]                    = pool_key;
 }
 
-void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
+void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
 {
   check_step_outputs_inputs(outputs, inputs);
 
@@ -206,7 +206,7 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
   outputs[1]         = S;
 }
 
-void MexFunction::method_reset_crcs(ArgumentList& outputs, ArgumentList& inputs)
+void MexFunction::method_reset_crcs(ArgumentList outputs, ArgumentList inputs)
 {
   if (outputs.size() != 0) {
     mex_abort("No outputs expected.");
@@ -238,7 +238,7 @@ void MexFunction::method_reset_crcs(ArgumentList& outputs, ArgumentList& inputs)
   softbuffer.get().reset_codeblocks_crc();
 }
 
-void MexFunction::method_release(ArgumentList& outputs, ArgumentList& inputs)
+void MexFunction::method_release(ArgumentList outputs, ArgumentList inputs)
 {
   if (outputs.size() != 0) {
     mex_abort("No outputs expected.");
