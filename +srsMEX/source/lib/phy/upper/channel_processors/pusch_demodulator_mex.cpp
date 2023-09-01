@@ -19,6 +19,7 @@
 
 #include "pusch_demodulator_mex.h"
 #include "srsran_matlab/support/matlab_to_srs.h"
+#include "srsran_matlab/support/to_span.h"
 #include "srsran/adt/optional.h"
 #include "srsran/phy/support/resource_grid_writer.h"
 #include "srsran/phy/upper/channel_processors/pusch/pusch_codeword_buffer.h"
@@ -35,7 +36,7 @@ namespace {
 class pusch_codeword_buffer_spy : private pusch_codeword_buffer
 {
 public:
-  explicit pusch_codeword_buffer_spy(unsigned size) : data(size) {}
+  explicit pusch_codeword_buffer_spy(span<log_likelihood_ratio> data_) : data(data_) {}
 
   span<const log_likelihood_ratio> get_data() const
   {
@@ -80,9 +81,9 @@ private:
     completed = true;
   }
 
-  bool                              completed = false;
-  std::vector<log_likelihood_ratio> data;
-  unsigned                          count = 0;
+  bool                       completed = false;
+  span<log_likelihood_ratio> data;
+  unsigned                   count = 0;
 };
 
 class pusch_demodulator_notifier_spy : private pusch_demodulator_notifier
@@ -241,7 +242,8 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
   unsigned nof_ch_re_port = in_ce_cft_array.getNumberOfElements() / ce_dims.nof_rx_ports;
 
   // Set estimated channel.
-  span<const std::complex<double>> ce_port_view(&(*in_ce_cft_array.cbegin()), &(*in_ce_cft_array.cend()));
+  span<const std::complex<double>> ce_port_view = to_span(in_ce_cft_array);
+
   for (unsigned i_rx_port = 0; i_rx_port != ce_dims.nof_rx_ports; ++i_rx_port) {
     // Copy channel estimates for a single receive port.
     srsvec::copy(chan_estimates.get_path_ch_estimate(i_rx_port, 0), ce_port_view.first(nof_ch_re_port));
@@ -256,15 +258,15 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
   // Compute expected soft output bit number.
   unsigned bits_per_symbol = srsran::get_bits_per_symbol(demodulator_config.modulation);
 
-  unsigned                  nof_expected_soft_output_bits = nof_rx_symbols_port * bits_per_symbol;
-  pusch_codeword_buffer_spy sch_data(nof_expected_soft_output_bits);
+  unsigned                   nof_expected_soft_output_bits = nof_rx_symbols_port * bits_per_symbol;
+  TypedArray<int8_t>         out       = factory.createArray<int8_t>({nof_expected_soft_output_bits, 1});
+  span<log_likelihood_ratio> soft_bits = to_span<int8_t, log_likelihood_ratio>(out);
+  pusch_codeword_buffer_spy  sch_data(soft_bits);
 
   // Demodulate the PUSCH transmission.
   pusch_demodulator_notifier_spy notifier;
   demodulator->demodulate(
       sch_data.get_buffer(), notifier.get_notifier(), grid->get_reader(), chan_estimates, demodulator_config);
 
-  std::vector<int8_t> sch_data_int8(sch_data.get_data().begin(), sch_data.get_data().end());
-  TypedArray<int8_t> out = factory.createArray({sch_data_int8.size(), 1}, sch_data_int8.cbegin(), sch_data_int8.cend());
-  outputs[0]             = out;
+  outputs[0] = out;
 }

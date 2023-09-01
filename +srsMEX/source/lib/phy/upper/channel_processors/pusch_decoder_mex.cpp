@@ -19,6 +19,7 @@
 
 #include "pusch_decoder_mex.h"
 #include "srsran_matlab/support/matlab_to_srs.h"
+#include "srsran_matlab/support/to_span.h"
 #include "srsran/adt/optional.h"
 #include "srsran/phy/upper/channel_coding/ldpc/ldpc.h"
 #include "srsran/phy/upper/channel_processors/pusch/pusch_decoder_buffer.h"
@@ -144,8 +145,8 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
 {
   check_step_outputs_inputs(outputs, inputs);
 
-  const TypedArray<int8_t>                in_int8_array = inputs[2];
-  const std::vector<log_likelihood_ratio> llrs(in_int8_array.cbegin(), in_int8_array.cend());
+  const TypedArray<int8_t>         in_int8_array = inputs[2];
+  span<const log_likelihood_ratio> llrs          = to_span<int8_t, log_likelihood_ratio>(in_int8_array);
 
   StructArray                  in_struct_array = inputs[4];
   Struct                       in_seg_cfg      = in_struct_array[0];
@@ -183,7 +184,8 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
   uint64_t key = static_cast<TypedArray<uint64_t>>(inputs[1])[0];
 
   unique_rx_softbuffer softbuffer = retrieve_softbuffer(key, buf_id, nof_codeblocks);
-  std::vector<uint8_t> rx_tb(tbs_bytes.value());
+  TypedArray<uint8_t>  out        = factory.createArray<uint8_t>({tbs_bytes.value(), 1});
+  span<uint8_t>        rx_tb      = to_span(out);
 
   pusch_decoder_notifier_spy notifier_spy;
   pusch_decoder_buffer&      buffer = decoder->new_data(rx_tb, softbuffer.get(), notifier_spy.get_notifier(), cfg);
@@ -191,13 +193,12 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
   buffer.on_new_softbits(llrs);
   buffer.on_end_softbits();
 
+  outputs[0] = out;
+
   if (!notifier_spy.has_result()) {
     mex_abort("Notifier result has not been reported.");
   }
   const pusch_decoder_result& dec_result = notifier_spy.get_result();
-
-  TypedArray<uint8_t> out = factory.createArray({rx_tb.size(), 1}, rx_tb.cbegin(), rx_tb.cend());
-  outputs[0]              = out;
 
   StructArray S      = factory.createStructArray({1, 1}, {"crc_ok", "ldpc_iters"});
   S[0]["crc_ok"]     = factory.createScalar(dec_result.tb_crc_ok);
