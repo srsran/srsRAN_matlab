@@ -10,7 +10,7 @@
 %
 %   testSetup  - Common test setup.
 %
-%   CheckAnalyzers Methods (Test):
+%   CheckAnalyzers Methods (Test, TestTags = {'matlab code'}):
 %
 %   checkParserPUSCH    - Checks that the parser for PUSCH logs.
 %   checkParserPUCCHF1  - Checks that the parser for PUCCH Format 1 logs.
@@ -59,7 +59,7 @@ classdef CheckAnalyzers < matlab.unittest.TestCase
         end % of function testSetup(obj)
     end % of methods (TestClassSetup)
 
-    methods (Test)
+    methods (Test, TestTags = {'matlab code'})
         function checkParserPUSCH(obj)
             % Create a log and feed it to the stub pause function.
             logs = ['2023-08-05T16:59:48.857764 [UL-PHY1 ] [D] [   749.9] PUSCH: rnti=0x4601 h_id=3 prb=[4, 271) symb=[0, 14) mod=64QAM rv=0 tbs=24597 crc=OK iter=2.1 snr=30.7dB t=1532.4us', newline, ...
@@ -279,7 +279,7 @@ classdef CheckAnalyzers < matlab.unittest.TestCase
             obj.assertClass(extra, 'struct', 'Output "extra" is not a struct.');
             obj.assertEmpty(extra, 'Output "extra" is not empty.');
         end % of function checkParserPUCCHF2(obj)
-    end % of methods (Test)
+    end % of methods (Test, TestTags = {'matlab code'})
 
     methods (Access=private)
         function injectClipboardStub(obj, logdata)
