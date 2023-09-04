@@ -60,13 +60,13 @@ private:
   void on_new_block(span<const log_likelihood_ratio> demodulated, span<const log_likelihood_ratio> descrambled) override
   {
     srsran_assert(!completed, "Data processing is completed.");
-    span<log_likelihood_ratio> block = get_next_block_view(demodulated.size());
+    span<log_likelihood_ratio> block = get_next_block_view(descrambled.size());
 
-    if (block.data() != demodulated.data()) {
-      srsvec::copy(block, demodulated);
+    if (block.data() != descrambled.data()) {
+      srsvec::copy(block, descrambled);
     }
 
-    count += demodulated.size();
+    count += descrambled.size();
   }
 
   void on_end_codeword() override
