@@ -1,5 +1,5 @@
 %CheckTests Unit tests for the SRS unit test classes.
-%   This class, based on the matlab.unittest.Testcase framework, double checks
+%   This class, based on the matlab.unittest.TestCase framework, double checks
 %   that the classes implementing SRS unit tests comply with the required
 %   specifications. The test only checks that
 %

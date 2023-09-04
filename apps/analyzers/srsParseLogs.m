@@ -186,7 +186,7 @@ function [carrier, phych, extra] = srsParseLogs
                 prb = sscanf(parameter{2}, '[%d, %d)');
                 phych.PRBSet = prb(1):(prb(2)-1);
             case 'dc_position'
-                dcPositionStr = parameter{2};
+                dcPosition = sscanf(parameter{2}, '%d');
             case 'prb1'
                 % This applies to PUCCH Format 1 only.
                 prb = sscanf(parameter{2}, '%d');
@@ -220,13 +220,8 @@ function [carrier, phych, extra] = srsParseLogs
         tStart = strfind(allLines{1}, 'tbs');
         tbs = sscanf(allLines{1}(tStart:end), 'tbs=%d');
 
-        extra = struct('RV', rv, 'TargetCodeRate', tcr, 'TransportBlockLength', tbs * 8);
-
-        % Parse the DC position. Set it as an extra parameter if it is available.
-        dcPosition = sscanf(dcPositionStr, '%d');
-        if ~isempty(dcPosition)
-            extra.dcPosition = dcPosition;
-        end
+        extra = struct('RV', rv, 'TargetCodeRate', tcr, 'TransportBlockLength', tbs * 8, ...
+            'dcPosition', dcPosition);
     else
         extra = struct([]);
     end

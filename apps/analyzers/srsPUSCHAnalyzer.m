@@ -89,7 +89,7 @@ if pusch.DMRS.NumCDMGroupsWithoutData
 end
 
 % Remove DC from the grid if it is available.
-if isfield(extra, 'dcPosition')
+if ~isempy(extra.dcPosition)
     rxGrid(extra.dcPosition + 1, :) = 0;
 end
 
