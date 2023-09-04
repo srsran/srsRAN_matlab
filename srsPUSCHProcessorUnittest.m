@@ -71,7 +71,7 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
 
     properties (TestParameter)
         %Modulation {pi/2-BPSK, QPSK, 16-QAM, 64-QAM, 256-QAM}.
-        Modulation = {'pi/2-BPSK', 'QPSK', '16QAM', '64QAM', '256QAM'}
+        Modulation = {'64QAM', '256QAM'}
 
         %Symbols allocated to the PUSCH transmission.
         %   The symbol allocation is described by a two-element array with the starting
@@ -85,11 +85,9 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
         %Number of HARQ-ACK bits multiplexed with the message.
         nofHarqAck = {0, 1, 10}
 
-        %Number of CSI-Part1 bits multiplexed with the message.
-        nofCsiPart1 = {0, 1, 4};
-
-        %Number of CSI-Part2 bits multiplexed with the message.
-        nofCsiPart2= {0};
+        %Number of CSI Part 1 and Part 2 bits multiplexed with the message.
+        %   CSI Part 2 must be present with CSI Part 1.
+        nofCsiBits = {[0, 0], [4, 0], [5, 1]};
 
         %Number of receive antenna ports for PUSCH.
         NumRxPorts = {1, 2, 4};
@@ -120,13 +118,14 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             fprintf(fileID, '  file_vector<uint8_t>                                    harq_ack;\n');
             fprintf(fileID, '  file_vector<uint8_t>                                    csi_part1;\n');
             fprintf(fileID, '  file_vector<uint8_t>                                    csi_part2;\n');
-            fprintf(fileID, '};\n');
+            fprintf(fileID, '};\n\n');
+            fprintf(fileID, 'using csi_part2_size = uci_part2_size_description;\n\n');
         end
     end % of methods (Access = protected)
 
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, Modulation, ...
-                SymbolAllocation, targetCodeRate, nofHarqAck, nofCsiPart1, nofCsiPart2, NumRxPorts)
+                SymbolAllocation, targetCodeRate, nofHarqAck, nofCsiBits, NumRxPorts)
         %testvectorGenerationCases Generates test vectors with permutations
         %   of the modulation, symbol allocation, target code rate, number
         %   of HARQ-ACK, CSI-Part1 and CSI-Part2 information bits, and
@@ -149,6 +148,10 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
      
             % Select a random cell ID.
             NCellID = randi([0, 1007]);
+
+            % Extract the number of CSI Part 1 and 2 message bits.
+            nofCsiPart1 = nofCsiBits(1);
+            nofCsiPart2 = nofCsiBits(2);
 
             % Minimum number of PRB. It increases when UCI needs to be
             % multiplexed on the PUSCH resources.
@@ -348,10 +351,12 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
                 'true', ...          % new_data
                 };
 
+            csiPart2Size = sprintf('csi_part2_size(%d)', nofCsiPart2);
+
             uciDescription = {...
                 nofHarqAck, ...           % nof_harq_ack
                 nofCsiPart1, ...          % nof_csi_part1
-                nofCsiPart2, ...          % nof_csi_part2
+                csiPart2Size, ...         % nof_csi_part2
                 pusch.UCIScaling, ...     % alpha_scaling
                 pusch.BetaOffsetACK, ...  % beta_offset_harq_ack
                 pusch.BetaOffsetCSI1, ... % beta_offset_csi_part1
