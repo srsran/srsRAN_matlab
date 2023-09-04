@@ -7,6 +7,7 @@
 %   CheckSimulators Methods (Test, TestTags = {'matlab code'}):
 %
 %   testPUSCHBLERmatlab  - Verifies the PUSCHBLER simulator class using MATLAB objects only.
+%   testPRACHPERFmatlab  - Verifies the PRACHPERF simulator class using MATLAB objects only.
 %
 %   CheckSimulators Methods (Test, TestTags = {'mex code'}):
 %
@@ -62,6 +63,55 @@ classdef CheckSimulators < matlab.unittest.TestCase
             obj.assertEqual(pp.ThroughputMATLAB, [0; 0; 0.0178; 0.1636; 0.5755], "Wrong througuput curve.", RelTol=0.02);
             obj.assertEqual(pp.BlockErrorRateMATLAB, [1; 1; 0.9901; 0.9091; 0.6803], "Wrong BLER curve.", RelTol=0.02);
         end % of function testPUSCHBLERmatlab(obj)
+
+        function testPRACHPERFmatlab(obj)
+            import matlab.unittest.fixtures.CurrentFolderFixture
+
+            obj.applyFixture(CurrentFolderFixture('../apps/simulators/PRACHPERF'));
+
+            try
+                pp = PRACHPERF;
+            catch ME
+                obj.assertFail(['Could not create a PRACHPERF object because of exception: ', ...
+                    ME.message]);
+            end
+
+            obj.assertClass(pp, 'PRACHPERF', 'The created object is not a PRACHPERF object.');
+
+            snr = -14.2;
+            pp.IgnoreCFO = true;
+
+            % Run detection test.
+            try
+                pp(snr, 100)
+            catch ME
+                obj.assertFail(['PRACHPERF could not run because of exception: ', ...
+                    ME.message]);
+            end
+
+            obj.assertEqual(pp.SNRrange, snr, 'Wrong SNR range.');
+            obj.assertEqual(pp.Occasions, 100, 'Wrong number of occasions.');
+            obj.assertEqual(pp.Detected, 100, 'Wrong number of detected preambles.');
+            obj.assertEqual(pp.DetectedPerfect, 100, 'Wrong number of perfectly detected preambles.');
+            obj.assertEqual(pp.ProbabilityDetection, 1, 'Wrong probability of detection.');
+            obj.assertEqual(pp.ProbabilityDetectionPerfect, 1, 'Wrong probability of perfect detection.');
+            obj.assertEqual(pp.OffsetError, [0.2127 0.2461], 'Wrong offset error.', RelTol=0.02);
+
+            % Run false alarm test.
+            pp.release;
+            pp.TestType = 'False Alarm';
+            try
+                pp(snr, 100)
+            catch ME
+                obj.assertFail(['PRACHPERF could not run because of exception: ', ...
+                    ME.message]);
+            end
+
+            obj.assertEqual(pp.SNRrange, snr, 'Wrong SNR range.');
+            obj.assertEqual(pp.Occasions, 100, 'Wrong number of occasions.');
+            obj.assertEqual(pp.Detected, 2, 'Wrong number of detected preambles.', AbsTol=2);
+            obj.assertEqual(pp.ProbabilityFalseAlarm, 0.02, 'Wrong probability of detection.', AbsTol=0.02);
+        end % of function testPRACHPERFmatlab(obj)
     end % of methods (Test, TestTags = {'matlab code'})
 
     methods (Test, TestTags = {'mex code'})
