@@ -19,9 +19,7 @@
 %   srsULSCHInfoUnittest Properties (TestParameter):
 %
 %   NumLayers             - Number of transmission layers.
-%   NumPRB                - Transmission bandwidth in PRB.
 %   DMRSConfigurationType - DM-RS configuration type.
-%   Modulation            - Modulation.
 %   targetCodeRate        - Transmission target code rate.
 %   nofHarqAckBits        - Number of HARQ-ACK bits to multiplex.
 %   nofCsiPart1Bits       - Number of CSI-Part1 bits to multiplex.
@@ -74,14 +72,8 @@ classdef srsULSCHInfoUnittest < srsTest.srsBlockUnittest
         %Number of transmission layers.
         NumLayers = {1, 2, 4}
 
-        %Number of PRBs.
-        NumPRB = {1, 52}
-
         % DM-RS Configuration type {1, 2}.
         DMRSConfigurationType = {1, 2};
-
-        %Modulation {QPSK, 16QAM, 64QAM, 256QAM}.
-        Modulation = {'QPSK', '16QAM', '64QAM', '256QAM'};
 
         %Target code rate.
         targetCodeRate = {0.5};
@@ -117,9 +109,9 @@ classdef srsULSCHInfoUnittest < srsTest.srsBlockUnittest
     end % of methods (Access = protected)
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(testCase, NumLayers, NumPRB, ...
-                DMRSConfigurationType, Modulation, targetCodeRate, ...
-                nofHarqAckBits, nofCsiPart1Bits, nofCsiPart2Bits, UlSchDataEnabled)
+        function testvectorGenerationCases(testCase, NumLayers, ...
+                DMRSConfigurationType, targetCodeRate, nofHarqAckBits, ...
+                nofCsiPart1Bits, nofCsiPart2Bits, UlSchDataEnabled)
         %testvectorGenerationCases Generates a test vectors given the
         %   combinations of NumLayers, NumPRB, DMRSConfigurationType,
         %   Modulation, targetCodeRate, nofHarqAckBits, nofCsiPart1Bits,
@@ -132,6 +124,13 @@ classdef srsULSCHInfoUnittest < srsTest.srsBlockUnittest
             import srsTest.helpers.symbolAllocationMask2string
             import srsTest.helpers.mcsDescription2Cell
             import srsTest.helpers.integer2srsBits
+
+            % Random number of RB.
+            NumPRB = randi([1, 52]);
+
+            % Random modulation.
+            ModulationOpts = {'QPSK', '16QAM', '64QAM', '256QAM'};
+            Modulation = ModulationOpts{randi([1, 4])};
 
             % Configure carrier.
             carrier = srsConfigureCarrier;
