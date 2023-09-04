@@ -419,7 +419,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             % i) Soft demapping.
             softBits = srsDemodulator(eqSymbols, obj.pusch.Modulation, eqNoise);
             % ii) Reverse Scrambling. Attention: placeholderBitIndices are 0based.
-            schSoftBitsMatlab = nrPUSCHDescramble(softBits, obj.pusch.NID, obj.pusch.RNTI, xBitIndices + 1, yBitIndices + 1);
+            schSoftBitsMatlab = nrPUSCHDescramble(softBits, obj.pusch.NID, obj.pusch.RNTI);
             % iii) Compare srsRAN and MATLAB results.
             obj.assertEqual(schSoftBits, int8(schSoftBitsMatlab), 'AbsTol', int8(1), 'Demodulation errors.');
         end % of function mextest
