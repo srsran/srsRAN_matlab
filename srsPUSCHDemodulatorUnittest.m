@@ -410,11 +410,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             PUSCHDemodulator = srsPUSCHDemodulator;
 
             % Fill the PUSCH demodulator configuration.
-            placeholderIndicesLoc = obj.placeholderReIndices;
-            if iscell(placeholderIndicesLoc)
-                placeholderIndicesLoc = cell2mat(placeholderIndicesLoc);
-            end
-            PUSCHDemCfg = srsPUSCHDemodulator.configurePUSCHDem(obj.pusch, obj.carrier.NSizeGrid, obj.puschDmrsIndices, placeholderIndicesLoc, obj.rxPorts);
+            PUSCHDemCfg = srsPUSCHDemodulator.configurePUSCHDem(obj.pusch, obj.carrier.NSizeGrid, obj.puschDmrsIndices, obj.rxPorts);
 
             % Run the PUSCH demodulator.
             schSoftBits = PUSCHDemodulator(rxSymbols(:), obj.puschRxIndices, obj.ce(:), PUSCHDemCfg, noiseVar);

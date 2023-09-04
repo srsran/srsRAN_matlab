@@ -44,12 +44,12 @@ function [xInd, yInd] = srsULSCHScramblingPlaceholders(pusch, tcr, tbs, ...
     % Multiplex message, placeholders are marked as -2.
     encBits = nrULSCHMultiplex(pusch, tcr, tbs, schBits, ackEncBits, csi1EncBits, csi2EncBits);
 
-    % Create bit indexes list.
+    % Create bit indices list.
     indexes = transpose(0:length(encBits) - 1);
 
-    % Select the bit indexes that are x placeholders.
+    % Select the bit indices that are x placeholders.
     xInd = indexes(encBits == -1);
 
-    % Select the bit indexes that are y placeholders.
+    % Select the bit indices that are y placeholders.
     yInd = indexes(encBits == -2);
 end
