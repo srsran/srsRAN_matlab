@@ -54,23 +54,22 @@ private:
     return span<log_likelihood_ratio>(data).subspan(count, block_size);
   }
 
-  void on_new_block(span<const log_likelihood_ratio> /* unused */,
-                    span<const log_likelihood_ratio> descrambled) override
+  void on_new_block(span<const log_likelihood_ratio> in_block, const bit_buffer& /* scrambling_seq */) override
   {
     srsran_assert(!completed, "Data processing is completed.");
     srsran_assert(
-        data.size() >= descrambled.size() + count,
+        data.size() >= in_block.size() + count,
         "The sum of the block size (i.e., {}) and the current count (i.e., {}) exceeds the data size (i.e., {}).",
-        descrambled.size(),
+        in_block.size(),
         count,
         data.size());
-    span<log_likelihood_ratio> block = get_next_block_view(descrambled.size());
+    span<log_likelihood_ratio> block = get_next_block_view(in_block.size());
 
-    if (block.data() != descrambled.data()) {
-      srsvec::copy(block, descrambled);
+    if (block.data() != in_block.data()) {
+      srsvec::copy(block, in_block);
     }
 
-    count += descrambled.size();
+    count += in_block.size();
   }
 
   void on_end_codeword() override
