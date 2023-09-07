@@ -99,8 +99,8 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
             fprintf(fileID, '\n');
             fprintf(fileID, 'struct test_case_t {\n');
             fprintf(fileID, '  test_case_context                 context;\n');
-            fprintf(fileID, '  file_vector<log_likelihood_ratio> demodulated;\n');
-            fprintf(fileID, '  file_vector<log_likelihood_ratio> descrambled;\n');
+            fprintf(fileID, '  file_vector<log_likelihood_ratio> codeword;\n');
+            fprintf(fileID, '  file_vector<uint8_t>              scrambling_seq;\n');
             fprintf(fileID, '  file_vector<log_likelihood_ratio> output_ulsch;\n');
             fprintf(fileID, '  file_vector<log_likelihood_ratio> output_harq_ack;\n');
             fprintf(fileID, '  file_vector<log_likelihood_ratio> output_csi_part1;\n');
@@ -124,7 +124,7 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
             import srsLib.phy.upper.channel_processors.pusch.srsULSCHScramblingPlaceholders
             import srsTest.helpers.symbolAllocationMask2string
             import srsTest.helpers.writeInt8File
-            import srsTest.helpers.writeUint16File
+            import srsTest.helpers.writeUint8File
 
             % Generate a unique test ID by looking at the number of files
             % generated so far.
@@ -179,6 +179,9 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
             % Descramble demodulated bits without placeholders.
             descrambled = nrPUSCHDescramble(demodulated, pusch.NID, pusch.RNTI);
 
+            % Generate scrambling sequence.
+            scramblingSeq= nrPUSCHScramble(zeros(puschInfo.G, 1), pusch.NID, pusch.RNTI);
+
             % Descramble demodulated bits with placeholders.
             codeword = nrPUSCHDescramble(demodulated, pusch.NID, ...
                 pusch.RNTI, xInd + 1, yInd + 1);
@@ -190,10 +193,10 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
                 codeword);
 
             % Save codeword before reverting the scrambling.
-            testCase.saveDataFile('_test_input_demodulated', testID, @writeInt8File, demodulated);
+            testCase.saveDataFile('_test_input_data', testID, @writeInt8File, descrambled);
 
             % Save codeword.
-            testCase.saveDataFile('_test_input_descrambled', testID, @writeInt8File, descrambled);
+            testCase.saveDataFile('_test_input_scrambling_seq', testID, @writeUint8File, scramblingSeq);
 
             % Save SCH data.
             testCase.saveDataFile('_test_output_data', testID, @writeInt8File, schData);
@@ -244,8 +247,8 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
                 };
 
             testCaseString = testCase.testCaseToString(testID, ...
-                context, true, '_test_input_demodulated', ...
-                '_test_input_descrambled', '_test_output_data', ...
+                context, true, '_test_input_data', ...
+                '_test_input_scrambling_seq', '_test_output_data', ...
                 '_test_output_harq', '_test_output_csi1', ...
                 '_test_output_csi2');
 

@@ -117,7 +117,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             fprintf(fileID, '  context_t                                                            context;\n');
             fprintf(fileID, '  file_vector<resource_grid_reader_spy::expected_entry_t>              symbols;\n');
             fprintf(fileID, '  file_tensor<static_cast<unsigned>(ch_dims::nof_dims), cf_t, ch_dims> estimates;\n');
-            fprintf(fileID, '  file_vector<log_likelihood_ratio>                                    demodulated;\n');
+            fprintf(fileID, '  file_vector<uint8_t>                                                 scrambling_seq;\n');
             fprintf(fileID, '  file_vector<log_likelihood_ratio>                                    codeword;\n');
             fprintf(fileID, '};\n');
         end
@@ -334,6 +334,9 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             % Reverse Scrambling.
             schSoftBits = nrPUSCHDescramble(softBits, obj.pusch.NID, obj.pusch.RNTI);
 
+            % Generate scrambling sequence.
+            scramblingSeq = nrPUSCHScramble(zeros(size(schSoftBits)), obj.pusch.NID, obj.pusch.RNTI);
+
             % Generate a DM-RS symbol mask.
             dmrsSymbolMask = symbolAllocationMask2string(obj.puschDmrsIndices);
 
@@ -345,7 +348,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             obj.saveDataFile('_test_input_estimates', testID, @writeComplexFloatFile, obj.ce(:));
 
             % Write soft bits before descrambling to a binary file.
-            obj.saveDataFile('_test_demodulated', testID, @writeInt8File, softBits);
+            obj.saveDataFile('_test_output_scrambling_seq', testID, @writeUint8File, scramblingSeq);
 
             % Write soft bits to a binary file.
             obj.saveDataFile('_test_output', testID, @writeInt8File, schSoftBits);
@@ -392,7 +395,8 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
 
             testCaseString = obj.testCaseToString(testID, ...
                 testCaseContext, true, '_test_input_symbols', ...
-                {'_test_input_estimates', estimatesDims}, '_test_demodulated', '_test_output');
+                {'_test_input_estimates', estimatesDims}, ...
+                '_test_output_scrambling_seq', '_test_output');
 
             % Add the test to the file header.
             obj.addTestToHeaderFile(obj.headerFileID, testCaseString);

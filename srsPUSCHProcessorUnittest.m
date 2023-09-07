@@ -22,8 +22,7 @@
 %   SymbolAllocation - PUSCH start symbol index and number of symbols.
 %   targetCodeRate   - UL-SCH rate matching Target code rate.
 %   nofHarqAck       - Number of HARQ-ACK feedback bits multiplexed.
-%   nofCsiPart1      - Number of CSI-Part1 report bits multiplexed.
-%   nofCsiPart2      - Number of CSI-Part2 report bits multiplexed.
+%   nofCsiBits       - Number of CSI-Part1 and CSI-Part2 report bits multiplexed.
 %   NumRxPorts       - Number of receive antenna ports for PUSCH.
 %
 %   srsPUSCHProcessorUnittest Methods (TestTags = {'testvector'}):
@@ -70,17 +69,11 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
     end
 
     properties (TestParameter)
-        %Modulation {pi/2-BPSK, QPSK, 16-QAM, 64-QAM, 256-QAM}.
-        Modulation = {'64QAM', '256QAM'}
-
         %Symbols allocated to the PUSCH transmission.
         %   The symbol allocation is described by a two-element array with the starting
         %   symbol (0...13) and the length (1...14) of the PUSCH transmission.
         %   Example: [0, 14].
         SymbolAllocation = {[0, 14]}
-
-        %Target code rate.
-        targetCodeRate = {0.1, 0.5, 0.8}
 
         %Number of HARQ-ACK bits multiplexed with the message.
         nofHarqAck = {0, 1, 10}
@@ -124,15 +117,14 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
     end % of methods (Access = protected)
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(testCase, Modulation, ...
-                SymbolAllocation, targetCodeRate, nofHarqAck, nofCsiBits, NumRxPorts)
+        function testvectorGenerationCases(testCase, SymbolAllocation, ...
+                nofHarqAck, nofCsiBits, NumRxPorts)
         %testvectorGenerationCases Generates test vectors with permutations
-        %   of the modulation, symbol allocation, target code rate, number
-        %   of HARQ-ACK, CSI-Part1 and CSI-Part2 information bits, and
-        %   number of receive ports. Other parameters such as physical cell 
-        %   identifier, BWP dimensions, slot number, RNTI, scrambling
-        %   identifiers, frequency allocation and DM-RS additional
-        %   positions are randomly selected.
+        %   of the symbol allocation, number of HARQ-ACK, CSI-Part1 and
+        %   CSI-Part2 information bits, and number of receive ports. Other
+        %   parameters such as physical cell identifier, BWP dimensions,
+        %   slot number, RNTI, scrambling identifiers, frequency allocation
+        %   and DM-RS additional positions are randomly selected.
             import srsLib.phy.helpers.srsConfigureCarrier
             import srsLib.phy.helpers.srsConfigurePUSCH
             import srsTest.helpers.rbAllocationIndexes2String
@@ -178,6 +170,13 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             % Number of PRB allocated to PUSCH.
             NumPrb = randi([MinNumPrb, MaxNumPrb]);
             
+            % Random modulation.
+            ModulationOpts = {'QPSK', '16QAM', '64QAM', '256QAM'};
+            Modulation = ModulationOpts{randi([1, 4])};
+
+            % Random target code rate between 0.1 to 0.7.
+            targetCodeRate = 0.6 * rand() + 0.1;
+
             % Generate carrier configuration.
             carrier = srsConfigureCarrier(NCellID, NSizeGrid, NStartGrid);
 
