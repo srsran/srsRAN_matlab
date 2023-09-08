@@ -282,6 +282,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             import srsTest.helpers.symbolAllocationMask2string
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.writeInt8File
+            import srsTest.helpers.writeUint8File
             import srsTest.helpers.writeComplexFloatFile
             import srsTest.helpers.cellarray2str
 
