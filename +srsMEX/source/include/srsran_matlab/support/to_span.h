@@ -27,6 +27,8 @@
 
 namespace srsran_matlab {
 
+// NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast)
+
 /// \brief Creates a read&ndash;write span from a MATLAB TypedArray.
 ///
 /// The output span is a view over the memory traversed by the \c typed_array default iterator.
@@ -59,5 +61,7 @@ srsran::span<const SpanType> to_span(const matlab::data::TypedArray<ArrayType>& 
   return {reinterpret_cast<const SpanType*>(&(*typed_array.cbegin())),
           reinterpret_cast<const SpanType*>(&(*typed_array.cend()))};
 }
+
+// NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast)
 
 } // namespace srsran_matlab

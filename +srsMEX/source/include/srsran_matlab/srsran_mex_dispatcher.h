@@ -80,7 +80,7 @@ protected:
     if (action_iter != callbacks.end()) {
       mex_abort("Action " + name + " already exists.");
     }
-    callbacks.emplace(std::make_pair(name, fnc));
+    callbacks.emplace(name, fnc);
   }
 
   /// \brief Calls MATLAB \c error function.
