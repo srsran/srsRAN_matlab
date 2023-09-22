@@ -54,7 +54,7 @@ public:
       mex_abort("Cannot create srsran PRACH detector.");
     }
 
-    create_callback("step", [this](ArgumentList& out, ArgumentList& in) { return this->method_step(out, in); });
+    create_callback("step", [this](ArgumentList out, ArgumentList in) { return this->method_step(out, in); });
   }
 
 private:
@@ -85,7 +85,7 @@ private:
   ///      - \c rssi_dB, average RSSI value in dB;
   ///      - \c time_resolution, time resoultion of the PRACH detector;
   ///      - \c time_advance_max, maximum time in advance of the PRACH detector;
-  void method_step(ArgumentList& outputs, ArgumentList& inputs);
+  void method_step(ArgumentList outputs, ArgumentList inputs);
 
   /// A pointer to the actual PRACH detector.
   std::unique_ptr<srsran::prach_detector> detector = create_prach_detector();

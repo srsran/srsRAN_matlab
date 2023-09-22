@@ -30,7 +30,8 @@ The development of *srsRAN-matlab* closely follows all new features of the srsRA
 |     0a235460    |     56a771df   |
 |     3c050654    |     0112729f   |
 |     73f47e3e    |     bcb449d7   |
-|     latest      |     583c92b1   |
+|     f38c2c32    |     583c92b1   |
+|     latest      |     5e6f50a2   |
 
 ### Contents
 
@@ -162,12 +163,23 @@ This app analyzes a PUSCH transmission from the baseband complex-valued samples 
 
 See `help srsPUSCHAnalyzer` for more details.
 
+### apps/analyzers/srsPUCCHAnalyzer
+
+This app analyzes a PUCCH (Formats 1 or 2) transmission from the baseband complex-valued samples corresponding to one slot, as received by the gNB. See the [Configuration Parameters Section](https://docs.srsran.com/projects/project/en/latest/user_manuals/source/config_ref.html#configuration-parameters) of the srsRAN Project documentation for information on how to configure the logging level of the SRS gNB to record the received samples.
+
+See `help srsPUCCHAnalyzer` for more details.
+
 ### apps/analyzers/srsPRACHAnalyzer
 
 This app analyzes a PRACH transmission from the baseband complex-valued samples corresponding to one PRACH occasion, as received by the gNB. See the [Configuration Parameters Section](https://docs.srsran.com/projects/project/en/latest/user_manuals/source/config_ref.html#configuration-parameters) of the srsRAN Project documentation for information on how to configure the logging level of the SRS gNB to record the received samples.
 
 See `help srsPRACHAnalyzer` for more details.
 
+### apps/analyzers/srsResourceGridAnalyzer
+
+This app displays the content of a resource grid (all subcarriers and one slot) as a heat map of the resource element amplitudes. See the [Configuration Parameters Section](https://docs.srsran.com/projects/project/en/latest/user_manuals/source/config_ref.html#configuration-parameters) of the srsRAN Project documentation for information on how to configure the logging level of the SRS gNB to record the received samples.
+
+See `help srsResourceGridAnalyzer` for more details.
 
 ## Repository CI/CD
 The class *unitTests/CheckTests* implements a series of checks to provide a basic level of quality assurance for the unit tests in the root folder.

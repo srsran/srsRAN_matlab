@@ -61,6 +61,9 @@
 %   FrequencyOffset         - Frequency offset in Hz.
 %   TimeErrorTolerance      - Time error tolerance in microseconds.
 %   TestType                - Test type ('Detection', 'False Alarm').
+%   IgnoreCFO               - CFO flag: if true, the detector will assume perfect
+%                             frequency synchronization.
+%   DetectionThreshold      - Custom detection threshold (NaN for default or positive value).
 %   QuickSimulation         - Quick-simulation flag: set to true to stop each point
 %                             after 100 failed transport blocks (tunable).
 %
@@ -130,6 +133,10 @@ classdef PRACHPERF < matlab.System
         TestType (1, :) char {mustBeMember(TestType, {'Detection', 'False Alarm'})} = 'Detection'
         %CFO flag: if true, the detector will assume perfect frequency synchronization.
         IgnoreCFO (1, 1) logical = false
+        %Custom detection threshold.
+        %   If NaN, the detector uses the default threshold value.
+        DetectionThreshold (1, 1) double = NaN
+
     end
 
     properties (Access = private, Hidden)
@@ -314,6 +321,7 @@ classdef PRACHPERF < matlab.System
             carrier = obj.Carrier;
             isDetectTest = obj.isDetectionTest;
             ignoreCFO = obj.IgnoreCFO;
+            detectionThreshold = obj.DetectionThreshold;
 
             % Get the channel characteristic information.
             channelInfo = info(channel);
@@ -400,7 +408,7 @@ classdef PRACHPERF < matlab.System
 
                     % PRACH detection for all cell preamble indices.
                     [indicesMask, offsets] = srsLib.phy.upper.channel_processors.srsPRACHdetector(carrier, prachRx, ...
-                        prachDemodulated, ignoreCFO);
+                        prachDemodulated, ignoreCFO, detectionThreshold);
 
                     % Test for preamble detection.
                     if any(indicesMask)
@@ -618,6 +626,14 @@ classdef PRACHPERF < matlab.System
         function isDT = get.isDetectionTest(obj)
             isDT = strcmp(obj.TestType, 'Detection');
         end
+
+        function set.DetectionThreshold(obj, value)
+            if (isnan(value) || (isfinite(value) && (value > 0)))
+                obj.DetectionThreshold = value;
+            else
+                error('DetectionThreshold should be either positive or NaN for default value.');
+            end
+        end % of function set.DetectionThreshold(obj, value)
 
         function plot(obj)
             % Plot detection or false-alarm probability.

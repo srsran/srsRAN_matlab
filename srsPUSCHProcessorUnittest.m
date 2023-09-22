@@ -10,7 +10,7 @@
 %
 %   srsBlock      - The tested block (i.e., 'pusch_processor').
 %   srsBlockType  - The type of the tested block, including layer
-%                   (i.e., 'phy/upper/channel_processors').
+%                   (i.e., 'phy/upper/channel_processors/pusch').
 %
 %   srsPUSCHProcessorUnittest Properties (ClassSetupParameter):
 %
@@ -22,8 +22,7 @@
 %   SymbolAllocation - PUSCH start symbol index and number of symbols.
 %   targetCodeRate   - UL-SCH rate matching Target code rate.
 %   nofHarqAck       - Number of HARQ-ACK feedback bits multiplexed.
-%   nofCsiPart1      - Number of CSI-Part1 report bits multiplexed.
-%   nofCsiPart2      - Number of CSI-Part2 report bits multiplexed.
+%   nofCsiBits       - Number of CSI-Part1 and CSI-Part2 report bits multiplexed.
 %   NumRxPorts       - Number of receive antenna ports for PUSCH.
 %
 %   srsPUSCHProcessorUnittest Methods (TestTags = {'testvector'}):
@@ -60,7 +59,7 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
         srsBlock = 'pusch_processor'
 
         %Type of the tested block.
-        srsBlockType = 'phy/upper/channel_processors'
+        srsBlockType = 'phy/upper/channel_processors/pusch'
     end
 
     properties (ClassSetupParameter)
@@ -70,26 +69,18 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
     end
 
     properties (TestParameter)
-        %Modulation {pi/2-BPSK, QPSK, 16-QAM, 64-QAM, 256-QAM}.
-        Modulation = {'pi/2-BPSK', 'QPSK', '16QAM', '64QAM', '256QAM'}
-
         %Symbols allocated to the PUSCH transmission.
         %   The symbol allocation is described by a two-element array with the starting
         %   symbol (0...13) and the length (1...14) of the PUSCH transmission.
         %   Example: [0, 14].
         SymbolAllocation = {[0, 14]}
 
-        %Target code rate.
-        targetCodeRate = {0.1, 0.5, 0.8}
-
         %Number of HARQ-ACK bits multiplexed with the message.
         nofHarqAck = {0, 1, 10}
 
-        %Number of CSI-Part1 bits multiplexed with the message.
-        nofCsiPart1 = {0, 1, 4};
-
-        %Number of CSI-Part2 bits multiplexed with the message.
-        nofCsiPart2= {0};
+        %Number of CSI Part 1 and Part 2 bits multiplexed with the message.
+        %   CSI Part 2 must be present with CSI Part 1.
+        nofCsiBits = {[0, 0], [4, 0], [5, 1]};
 
         %Number of receive antenna ports for PUSCH.
         NumRxPorts = {1, 2, 4};
@@ -99,8 +90,8 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
         function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
             
-            fprintf(fileID, '#include "../../support/resource_grid_test_doubles.h"\n');
-            fprintf(fileID, '#include "srsran/phy/upper/channel_processors/pusch_processor.h"\n');
+            fprintf(fileID, '#include "../../../support/resource_grid_test_doubles.h"\n');
+            fprintf(fileID, '#include "srsran/phy/upper/channel_processors/pusch/pusch_processor.h"\n');
             fprintf(fileID, '#include "srsran/support/file_vector.h"\n');
             fprintf(fileID, '#include "srsran/phy/upper/channel_estimation.h"\n');
         end
@@ -120,28 +111,20 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             fprintf(fileID, '  file_vector<uint8_t>                                    harq_ack;\n');
             fprintf(fileID, '  file_vector<uint8_t>                                    csi_part1;\n');
             fprintf(fileID, '  file_vector<uint8_t>                                    csi_part2;\n');
-            fprintf(fileID, '};\n');
+            fprintf(fileID, '};\n\n');
+            fprintf(fileID, 'using csi_part2_size = uci_part2_size_description;\n\n');
         end
     end % of methods (Access = protected)
 
-    methods (TestClassSetup)
-        function classSetup(testCase)
-            orig = rng;
-            testCase.addTeardown(@rng,orig)
-            rng('default');
-        end
-    end
-
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(testCase, Modulation, ...
-                SymbolAllocation, targetCodeRate, nofHarqAck, nofCsiPart1, nofCsiPart2, NumRxPorts)
+        function testvectorGenerationCases(testCase, SymbolAllocation, ...
+                nofHarqAck, nofCsiBits, NumRxPorts)
         %testvectorGenerationCases Generates test vectors with permutations
-        %   of the modulation, symbol allocation, target code rate, number
-        %   of HARQ-ACK, CSI-Part1 and CSI-Part2 information bits, and
-        %   number of receive ports. Other parameters such as physical cell 
-        %   identifier, BWP dimensions, slot number, RNTI, scrambling
-        %   identifiers, frequency allocation and DM-RS additional
-        %   positions are randomly selected.
+        %   of the symbol allocation, number of HARQ-ACK, CSI-Part1 and
+        %   CSI-Part2 information bits, and number of receive ports. Other
+        %   parameters such as physical cell identifier, BWP dimensions,
+        %   slot number, RNTI, scrambling identifiers, frequency allocation
+        %   and DM-RS additional positions are randomly selected.
             import srsLib.phy.helpers.srsConfigureCarrier
             import srsLib.phy.helpers.srsConfigurePUSCH
             import srsTest.helpers.rbAllocationIndexes2String
@@ -157,6 +140,10 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
      
             % Select a random cell ID.
             NCellID = randi([0, 1007]);
+
+            % Extract the number of CSI Part 1 and 2 message bits.
+            nofCsiPart1 = nofCsiBits(1);
+            nofCsiPart2 = nofCsiBits(2);
 
             % Minimum number of PRB. It increases when UCI needs to be
             % multiplexed on the PUSCH resources.
@@ -183,6 +170,13 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             % Number of PRB allocated to PUSCH.
             NumPrb = randi([MinNumPrb, MaxNumPrb]);
             
+            % Random modulation.
+            ModulationOpts = {'QPSK', '16QAM', '64QAM', '256QAM'};
+            Modulation = ModulationOpts{randi([1, 4])};
+
+            % Random target code rate between 0.1 to 0.7.
+            targetCodeRate = 0.6 * rand() + 0.1;
+
             % Generate carrier configuration.
             carrier = srsConfigureCarrier(NCellID, NSizeGrid, NStartGrid);
 
@@ -193,6 +187,7 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             DMRSAdditionalPosition = randi([0, 3]);
             NIDNSCID = randi([0, 65535]);
             NSCID = randi([0, 1]);
+            DCPosition = randi(12 * [PrbStart, PrbStart + NumPrb]) + BWPStart;
 
             % Fix parameters.
             rv = 0;
@@ -281,6 +276,9 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             % Add channel noise to all receive ports.
             rxGrid = rxGrid + noiseStdDev * (randn(rxGridDims) + 1i * randn(rxGridDims)) / sqrt(2 * NumRxPorts);
 
+            % Add a symbolic DC leakage.
+            rxGrid(DCPosition + 1, :) = rxGrid(DCPosition + 1, :) + 1;
+
             % Grid indices for a single receive port in subscript form.
             rxGridPortIndexes = [nrPUSCHIndices(carrier, pusch, 'IndexStyle','subscript', 'IndexBase','0based'); ...
                 nrPUSCHDMRSIndices(carrier, pusch, 'IndexStyle','subscript', 'IndexBase','0based')];
@@ -352,10 +350,12 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
                 'true', ...          % new_data
                 };
 
+            csiPart2Size = sprintf('csi_part2_size(%d)', nofCsiPart2);
+
             uciDescription = {...
                 nofHarqAck, ...           % nof_harq_ack
                 nofCsiPart1, ...          % nof_csi_part1
-                nofCsiPart2, ...          % nof_csi_part2
+                csiPart2Size, ...         % nof_csi_part2
                 pusch.UCIScaling, ...     % alpha_scaling
                 pusch.BetaOffsetACK, ...  % beta_offset_harq_ack
                 pusch.BetaOffsetCSI1, ... % beta_offset_csi_part1
@@ -386,6 +386,7 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
                 pusch.SymbolAllocation(1), ...                % start_symbol_index
                 pusch.SymbolAllocation(2), ...                % nof_symbols
                 'ldpc::MAX_CODEBLOCK_SIZE / 8', ...           % tbs_lbrm_bytes
+                DCPosition, ...                               % dc_position
                 };
 
             contextDescription = {...

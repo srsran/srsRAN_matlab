@@ -9,7 +9,7 @@
 %
 %   srsBlock      - The tested block (i.e., 'pusch_demodulator').
 %   srsBlockType  - The type of the tested block, including layer
-%                   (i.e., 'phy/upper/channel_processors').
+%                   (i.e., 'phy/upper/channel_processors/pusch').
 %
 %   srsPUSCHDemodulatorUnittest Properties (ClassSetupParameter):
 %
@@ -19,8 +19,6 @@
 %
 %   DMRSConfigurationType - PUSCH DM-RS configuration type.
 %   Modulation            - PUSCH Modulation scheme.
-%   probPlaceholder       - Probability of a Resource element to contain a 
-%                           placeholder.
 %   NumRxPorts            - Number of receive antenna ports for PUSCH.
 %
 %   srsPUSCHDemodulatorUnittest Methods (TestTags = {'testvector'}):
@@ -57,7 +55,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
         srsBlock = 'pusch_demodulator'
 
         %Type of the tested block.
-        srsBlockType = 'phy/upper/channel_processors'
+        srsBlockType = 'phy/upper/channel_processors/pusch'
     end
 
     properties (ClassSetupParameter)
@@ -72,15 +70,9 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
         %Modulation {pi/2-BPSK, QPSK, 16-QAM, 64-QAM, 256-QAM}.
         Modulation = {'pi/2-BPSK', 'QPSK', '16QAM', '64QAM', '256QAM'};
 
-        %Probability of a Resource Element to contain a placeholder.
-        probPlaceholder = {0, 0.01}
-
         %Number of receive antenna ports for PUSCH.
         NumRxPorts = {1, 2, 4}
     end
-
-    properties (Constant, Hidden)
-    end % of properties (Constant, Hidden)
 
     properties (Hidden)
         % Carrier.
@@ -99,8 +91,6 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
         txGrid
         % Channel estimates.
         ce
-        % Placeholder repetition indices.
-        placeholderReIndices
         % Receive antenna port indices the PUSCH transmission is mapped to.
         rxPorts
     end % of properties (Hidden)
@@ -109,8 +99,8 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
         function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
 
-            fprintf(fileID, '#include "../../support/resource_grid_test_doubles.h"\n');
-            fprintf(fileID, '#include "srsran/phy/upper/channel_processors/pusch_demodulator.h"\n');
+            fprintf(fileID, '#include "../../../support/resource_grid_test_doubles.h"\n');
+            fprintf(fileID, '#include "srsran/phy/upper/channel_processors/pusch/pusch_demodulator.h"\n');
             fprintf(fileID, '#include "srsran/support/file_tensor.h"\n');
         end
 
@@ -127,7 +117,8 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             fprintf(fileID, '  context_t                                                            context;\n');
             fprintf(fileID, '  file_vector<resource_grid_reader_spy::expected_entry_t>              symbols;\n');
             fprintf(fileID, '  file_tensor<static_cast<unsigned>(ch_dims::nof_dims), cf_t, ch_dims> estimates;\n');
-            fprintf(fileID, '  file_vector<log_likelihood_ratio>                                    sch_data;\n');
+            fprintf(fileID, '  file_vector<uint8_t>                                                 scrambling_seq;\n');
+            fprintf(fileID, '  file_vector<log_likelihood_ratio>                                    codeword;\n');
             fprintf(fileID, '};\n');
         end
     end % of methods (Access = protected)
@@ -184,14 +175,6 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             end
         end % of function getPlaceholders(...
     end % of methods (Access = private)
-
-    methods (TestClassSetup)
-        function classSetup(obj)
-            orig = rng;
-            obj.addTeardown(@rng,orig)
-            rng('default');
-        end
-    end
 
     methods (Access = private)
         function setupsimulation(obj, DMRSConfigurationType, Modulation, nofRxPorts)
@@ -284,13 +267,13 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             % Generate channel estimates.
             obj.ce = nrPerfectChannelEstimate(obj.carrier,pathGains,pathFilters);
 
-        end % of function setupsimulation(obj, DMRSConfigurationType, Modulation, probPlaceholder, nofRxPorts)
+        end % of function setupsimulation(obj, DMRSConfigurationType, Modulation, nofRxPorts)
     end % of methods (Access = Private)
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(obj, DMRSConfigurationType, Modulation, probPlaceholder, NumRxPorts)
+        function testvectorGenerationCases(obj, DMRSConfigurationType, Modulation, NumRxPorts)
         %testvectorGenerationCases Generates a test vector for the given
-        %   DMRSConfigurationType, Modulation, probPlaceholder and NumRxPorts.
+        %   DMRSConfigurationType, Modulation, and NumRxPorts.
 
             import srsLib.phy.upper.channel_modulation.srsDemodulator
             import srsLib.phy.upper.equalization.srsChannelEqualizer
@@ -299,6 +282,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             import srsTest.helpers.symbolAllocationMask2string
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.writeInt8File
+            import srsTest.helpers.writeUint8File
             import srsTest.helpers.writeComplexFloatFile
             import srsTest.helpers.cellarray2str
 
@@ -348,12 +332,11 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             % Soft demapping.
             softBits = srsDemodulator(eqSymbols, obj.pusch.Modulation, eqNoise);
 
-            % Generate repetition placeholders.
-            [obj.placeholderReIndices, xBitIndices, yBitIndices] = obj.getPlaceholders(obj.pusch.Modulation, obj.pusch.NumLayers, length(eqSymbols), probPlaceholder);
+            % Reverse Scrambling.
+            schSoftBits = nrPUSCHDescramble(softBits, obj.pusch.NID, obj.pusch.RNTI);
 
-            % Reverse Scrambling. Attention: placeholderBitIndices are
-            % 0based.
-            schSoftBits = nrPUSCHDescramble(softBits, obj.pusch.NID, obj.pusch.RNTI, xBitIndices + 1, yBitIndices + 1);
+            % Generate scrambling sequence.
+            scramblingSeq = nrPUSCHScramble(zeros(size(schSoftBits)), obj.pusch.NID, obj.pusch.RNTI);
 
             % Generate a DM-RS symbol mask.
             dmrsSymbolMask = symbolAllocationMask2string(obj.puschDmrsIndices);
@@ -364,6 +347,9 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
 
             % Write channel estimates to a binary file.
             obj.saveDataFile('_test_input_estimates', testID, @writeComplexFloatFile, obj.ce(:));
+
+            % Write soft bits before descrambling to a binary file.
+            obj.saveDataFile('_test_output_scrambling_seq', testID, @writeUint8File, scramblingSeq);
 
             % Write soft bits to a binary file.
             obj.saveDataFile('_test_output', testID, @writeInt8File, schSoftBits);
@@ -391,7 +377,6 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
                 obj.pusch.DMRS.NumCDMGroupsWithoutData, ... % nof_cdm_groups_without_data
                 obj.pusch.NID, ...                          % n_id
                 obj.pusch.NumAntennaPorts, ...              % nof_tx_layers
-                obj.placeholderReIndices, ...               % placeholders
                 portsString, ...                            % rx_ports
                 };
 
@@ -411,7 +396,8 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
 
             testCaseString = obj.testCaseToString(testID, ...
                 testCaseContext, true, '_test_input_symbols', ...
-                {'_test_input_estimates', estimatesDims}, '_test_output');
+                {'_test_input_estimates', estimatesDims}, ...
+                '_test_output_scrambling_seq', '_test_output');
 
             % Add the test to the file header.
             obj.addTestToHeaderFile(obj.headerFileID, testCaseString);
@@ -420,13 +406,12 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
     end % of methods (Test, TestTags = {'testvector'})
 
     methods (Test, TestTags = {'testmex'})
-        function mexTest(obj, DMRSConfigurationType, Modulation, probPlaceholder, NumRxPorts)
+        function mexTest(obj, DMRSConfigurationType, Modulation, NumRxPorts)
         %mexTest  Tests the mex wrapper of the SRSGNB PUSCH demodulator.
         %   mexTest(OBJ, DMRSCONFIGURATIONTYPE, MODULATION,
-        %   PROBPLACEHOLDER, NUMRXPORTS) runs a short simulation with a 
+        %   NUMRXPORTS) runs a short simulation with a
         %   ULSCH transmission using DM-RS type DMRSCONFIGURATIONTYPE,
-        %   symbol modulation MODULATION, probability of a resource element
-        %   containing a placeholder PROBPLACEHOLDER and number of receive 
+        %   symbol modulation MODULATION and number of receive
         %   antenna ports NUMRXPORTS. Channel estimation on the PUSCH
         %   transmission is done in MATLAB and PUSCH equalization and
         %   demodulation is then performed using the mex wrapper of the
@@ -468,29 +453,24 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             % Equalize.
             [eqSymbols, eqNoise] = srsChannelEqualizer(rxSymbols, cePusch, 'ZF', noiseVar, 1.0);
 
-            % Generate repetition placeholders.
-            [obj.placeholderReIndices, xBitIndices, yBitIndices] = obj.getPlaceholders(obj.pusch.Modulation, obj.pusch.NumLayers, length(eqSymbols), probPlaceholder);
-
             % Initialize the SRS PUSCH demodulator mex.
             PUSCHDemodulator = srsPUSCHDemodulator;
 
-            % Fill the PUSCH demodulator configuration.
-            placeholderIndicesLoc = obj.placeholderReIndices;
-            if iscell(placeholderIndicesLoc)
-                placeholderIndicesLoc = cell2mat(placeholderIndicesLoc);
-            end
-            PUSCHDemCfg = srsPUSCHDemodulator.configurePUSCHDem(obj.pusch, obj.carrier.NSizeGrid, obj.puschDmrsIndices, placeholderIndicesLoc, obj.rxPorts);
+            gridSize = size(rxGrid);
+            puschIx = sub2ind(gridSize, obj.puschRxIndices(:, 1) + 1, obj.puschRxIndices(:, 2) + 1, obj.puschRxIndices(:, 3) + 1);
+            dmrsIx = sub2ind(gridSize, obj.puschDmrsIndices(:, 1) + 1, obj.puschDmrsIndices(:, 2) + 1, obj.puschDmrsIndices(:, 3) + 1);
 
             % Run the PUSCH demodulator.
-            schSoftBits = PUSCHDemodulator(rxSymbols(:), obj.puschRxIndices, obj.ce(:), PUSCHDemCfg, noiseVar);
+            schSoftBits = PUSCHDemodulator(rxGrid, obj.ce, noiseVar, obj.pusch, puschIx, ...
+                dmrsIx, obj.rxPorts);
 
             % Verify the correct demodulation (expected, since the SNR is very high).
             % i) Soft demapping.
             softBits = srsDemodulator(eqSymbols, obj.pusch.Modulation, eqNoise);
             % ii) Reverse Scrambling. Attention: placeholderBitIndices are 0based.
-            schSoftBitsMatlab = nrPUSCHDescramble(softBits, obj.pusch.NID, obj.pusch.RNTI, xBitIndices + 1, yBitIndices + 1);
+            schSoftBitsMatlab = nrPUSCHDescramble(softBits, obj.pusch.NID, obj.pusch.RNTI);
             % iii) Compare srsRAN and MATLAB results.
-            obj.assertEqual(schSoftBits, int8(schSoftBitsMatlab), 'AbsTol', int8(1), 'Demodulation errors.');
+            obj.assertEqual(schSoftBits, int8(schSoftBitsMatlab), 'Demodulation errors.', AbsTol = int8(1));
         end % of function mextest
     end % of methods (Test, TestTags = {'testmex'})
 end % of classdef srsPUSCHDemodulatorUnittest

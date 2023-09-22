@@ -1,5 +1,5 @@
 %CheckTests Unit tests for the SRS unit test classes.
-%   This class, based on the matlab.unittest.Testcase framework, double checks
+%   This class, based on the matlab.unittest.TestCase framework, double checks
 %   that the classes implementing SRS unit tests comply with the required
 %   specifications. The test only checks that
 %
@@ -26,15 +26,18 @@
 %
 %   classSetup - Test setup.
 %
-%   CheckTests Methods (Test, TestTags = {'testvector'}):
+%   CheckTests Methods (Test, TestTags = {'matlab code'}):
 %
 %   runDefinitionTest  - Checks that test classes are properly defined.
 %   runVectorTest      - Checks that the testvector functionalities of the test classes
 %                        are correct.
-%   runMexTest         - Checks that the testmex functionalities of the test classes
-%                        are correct.
 %   checkList          - Secondary test to ensure the list of SRS blocks is not
 %                        over-populated.
+%
+%   CheckTests Methods (Test, TestTags = {'mex code'})
+%
+%   runMexTest         - Checks that the testmex functionalities of the test classes
+%                        are correct.
 %
 %   Example
 %      runtests('CheckTests')
@@ -110,7 +113,7 @@ classdef CheckTests < matlab.unittest.TestCase
         end
     end
 
-    methods (Test, TestTags = {'testvector'})
+    methods (Test, TestTags = {'matlab code'})
         function runDefinitionTest(obj, testName)
         %runDefinitionTest checks that the test class with the given name is properly defined.
 
@@ -231,7 +234,7 @@ classdef CheckTests < matlab.unittest.TestCase
         end % of function checkList
     end % of methods (Test, TestTags = {'testvector'})
 
-    methods (Test, TestTags = {'testmex'})
+    methods (Test, TestTags = {'mex code'})
         function runMexTest(obj, testName)
         %runMexTest checks that the testmex functionalities of the test class with
         %   the given name are correct.

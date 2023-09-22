@@ -105,46 +105,72 @@ classdef srsUCIDecoderUnittest < srsTest.srsBlockUnittest
             import srsTest.helpers.writeUint8File
             import srsTest.helpers.writeInt8File
 
-            % The current srsRAN implementation only supports UCI messages
-            % up to 11 bits.
-            isASupported = A < 12;
-            if (~isASupported)
-                return;
-            end
-
             % Generate a unique test ID.
             testID = testCase.generateTestID;
 
             % Set randomized values.
             UCIbits = randi([0 1], A, 1);
-            % The length of the rate-matched UCI codeword, E, depends on A and on
-            % the modulation scheme (maximum length = 8192).
-            minE = A + 1;
-            % For sequences larger than 12 bits there will be 11 CRC bits.
-            if A >= 12
-                minE = A + 11;
-            end
-            bitsSymbol = srsGetBitsSymbol(Modulation);
-            maxE = max([floor(8192 / bitsSymbol), minE]);
-            E = bitsSymbol * randi([minE maxE], 1, 1);
 
-            % Current fixed parameter values (e.g., SNR).
-            snrdB = 20;
+            % The length of the rate-matched UCI codeword, E, depends on A 
+            % and on the modulation scheme (maximum length = 8192).
+            minE = A + 1;
+            maxE = 8192;
+
+            % For sequence sizes in {12,..., 19} bits there will be 6 CRC
+            % bits, for longer sequences there will be 11 CRC bits.
+            L = 0;
+            if A > 19
+                L = 11;
+            elseif A > 11
+                L = 6;
+            end
+            
+            % If a second polar code codeblock is used, the maximum number
+            % of rate matched bits is doubled.
+            if A > 1013
+                maxE = 2 * maxE;
+                L = 2 * L;
+            end
+            minE  = minE + L;
+
+            % Select a number of rate macthed bits between the minimum and
+            % the maximum.
+            E = randi([minE maxE]);
+
+            % Round the number of rate macthed bits to the number of bits
+            % per symbol.
+            bitsSymbol = srsGetBitsSymbol(Modulation);
+            E = floor(E / bitsSymbol) * bitsSymbol;
+
+            % Set up an SNR that can challenge the decoder.
+            snrdB = 25;
+            nVar = 10 ^ (-snrdB / 10);
 
             % Encode the UCI bits.
             UCICodeWord = nrUCIEncode(UCIbits, E, Modulation);
 
-            % Replace placeholders -1 (x) and -2 (y) as part of the descrambling.
+            % Replace placeholders -1 (x) and -2 (y) as part of the
+            % descrambling.
             UCICodeWord(UCICodeWord == -1) = 1;
             UCICodeWord(UCICodeWord == -2) = UCICodeWord(find(UCICodeWord == -2) - 1);
 
-            % Estimate the LLR soft bits.
+            % Modulate signal.
             modulatedUCI = nrSymbolModulate(UCICodeWord, Modulation);
-            rxSignal = awgn(modulatedUCI, snrdB);
-            LLRSoftBits = nrSymbolDemodulate(rxSignal, Modulation);
 
-            % Decode the received UCI LLR soft bits.
-            decodedUCIBits = nrUCIDecode(LLRSoftBits, A, Modulation);
+            % Apply AWGN and try to decode. Repeat process until it is 
+            % possible to decode.
+            decodedOk = false;
+            while ~decodedOk
+                % Estimate the LLR soft bits.
+                rxSignal = awgn(modulatedUCI, snrdB);
+                LLRSoftBits = nrSymbolDemodulate(rxSignal, Modulation, nVar);
+    
+                % Decode the received UCI LLR soft bits.
+                decodedUCIBits = nrUCIDecode(LLRSoftBits, A, Modulation);
+
+                % Check if the message is decoded.
+                decodedOk = (sum(xor(UCIbits, decodedUCIBits)) == 0);
+            end
 
             % Clip and quantize the LLRs.
             LLRSoftBits(LLRSoftBits > 20) = 20;
@@ -154,7 +180,7 @@ classdef srsUCIDecoderUnittest < srsTest.srsBlockUnittest
             testCase.saveDataFile('_test_input', testID, @writeInt8File, LLRSoftBits(:));
 
             % Write the decoded UCI message to a binary file.
-            testCase.saveDataFile('_test_output', testID, @writeUint8File, decodedUCIBits);
+            testCase.saveDataFile('_test_output', testID, @writeUint8File, UCIbits);
 
             % Generate the test case entry.
             testCaseString = testCase.testCaseToString(testID, ...

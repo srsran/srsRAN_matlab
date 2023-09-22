@@ -46,15 +46,15 @@ void MexFunction::check_step_outputs_inputs(ArgumentList outputs, ArgumentList i
   }
 }
 
-void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
+void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
 {
   check_step_outputs_inputs(outputs, inputs);
 
   StructArray in_struct_array = inputs[2];
   Struct      in_det_cfg      = in_struct_array[0];
 
-  CharArray restricted_set_in = in_det_cfg["restricted_set"];
-  CharArray format_in         = in_det_cfg["format"];
+  CharArray restricted_set_in = in_det_cfg["RestrictedSet"];
+  CharArray format_in         = in_det_cfg["Format"];
 
   // Get frequency domain data.
   const TypedArray<std::complex<double>> in_cft_array = inputs[1];
@@ -75,15 +75,15 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
   }
 
   // Restricted sets are not implemented. Skip.
-  prach_detector::configuration detector_config;
-  detector_config.restricted_set        = matlab_to_srs_restricted_set(restricted_set_in.toAscii());
-  detector_config.root_sequence_index   = in_det_cfg["root_sequence_index"][0];
-  detector_config.format                = matlab_to_srs_preamble_format(format_in.toAscii());
-  detector_config.zero_correlation_zone = in_det_cfg["zero_correlation_zone"][0];
-  detector_config.start_preamble_index  = 0;
-  detector_config.nof_preamble_indices  = 64;
+  prach_detector::configuration detector_config = {};
+  detector_config.restricted_set                = matlab_to_srs_restricted_set(restricted_set_in.toAscii());
+  detector_config.root_sequence_index           = in_det_cfg["SequenceIndex"][0];
+  detector_config.format                        = matlab_to_srs_preamble_format(format_in.toAscii());
+  detector_config.zero_correlation_zone         = in_det_cfg["ZeroCorrelationZone"][0];
+  detector_config.start_preamble_index          = 0;
+  detector_config.nof_preamble_indices          = 64;
   detector_config.ra_scs =
-      to_ra_subcarrier_spacing(static_cast<unsigned>(1000.0 * static_cast<double>(in_det_cfg["scs"][0])));
+      to_ra_subcarrier_spacing(static_cast<unsigned>(1000.0 * static_cast<double>(in_det_cfg["SubcarrierSpacing"][0])));
   detector_config.nof_rx_ports = nof_rx_ports;
 
   // Run validator
@@ -110,7 +110,7 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
     for (unsigned i_symbol = 0; i_symbol != nof_symbols; ++i_symbol) {
       span<cf_t> symbol_view = buffer->get_symbol(i_rx_port, 0, 0, i_symbol);
       for (unsigned i_sample = 0; i_sample != nof_re; ++i_sample) {
-        symbol_view[i_sample] = cf_t(in_cft_array[i_sample][i_symbol][i_rx_port]);
+        symbol_view[i_sample] = static_cast<cf_t>(in_cft_array[i_sample][i_symbol][i_rx_port]);
       }
     }
   }
@@ -119,28 +119,35 @@ void MexFunction::method_step(ArgumentList& outputs, ArgumentList& inputs)
   prach_detection_result result = detector->detect(*buffer, detector_config);
 
   // Detected PRACH preamble parameters.
-  StructArray detected_preamble_indication = factory.createStructArray({result.preambles.size(), 1},
-                                                                       {"nof_detected_preambles",
-                                                                        "preamble_index",
-                                                                        "time_advance",
-                                                                        "power_dB",
-                                                                        "snr_dB",
-                                                                        "rssi_dB",
-                                                                        "time_resolution",
-                                                                        "time_advance_max"});
-  for (unsigned i_preamble = 0, i_preamble_end = result.preambles.size(); i_preamble != i_preamble_end; ++i_preamble) {
+  StructArray detected_preamble_indication = factory.createStructArray({1, 1},
+                                                                       {"NumDetectedPreambles",
+                                                                        "PreambleIndices",
+                                                                        "TimeAdvance",
+                                                                        "PowerDecibel",
+                                                                        "SINRDecibel",
+                                                                        "RSSIDecibel",
+                                                                        "TimeResolution",
+                                                                        "MaxTimeAdvance"});
+
+  unsigned          nof_detections = result.preambles.size();
+  Reference<Struct> dpi            = detected_preamble_indication[0];
+  dpi["NumDetectedPreambles"]      = factory.createScalar(nof_detections);
+  dpi["RSSIDecibel"]               = factory.createScalar(result.rssi_dB);
+  dpi["TimeResolution"]            = factory.createScalar(result.time_resolution.to_seconds());
+  dpi["MaxTimeAdvance"]            = factory.createScalar(result.time_advance_max.to_seconds());
+  dpi["PreambleIndices"]           = factory.createArray<double>({nof_detections, 1});
+  dpi["TimeAdvance"]               = factory.createArray<double>({nof_detections, 1});
+  dpi["PowerDecibel"]              = factory.createArray<double>({nof_detections, 1});
+  dpi["SINRDecibel"]               = factory.createArray<double>({nof_detections, 1});
+
+  for (unsigned i_preamble = 0, i_preamble_end = nof_detections; i_preamble != i_preamble_end; ++i_preamble) {
     const prach_detection_result::preamble_indication& preamble = result.preambles[i_preamble];
 
-    detected_preamble_indication[i_preamble]["nof_detected_preambles"] = factory.createScalar(result.preambles.size());
-    detected_preamble_indication[i_preamble]["preamble_index"]         = factory.createScalar(preamble.preamble_index);
-    detected_preamble_indication[i_preamble]["time_advance"] = factory.createScalar(preamble.time_advance.to_seconds());
-    detected_preamble_indication[i_preamble]["power_dB"]     = factory.createScalar(preamble.power_dB);
-    detected_preamble_indication[i_preamble]["snr_dB"]       = factory.createScalar(preamble.snr_dB);
-    detected_preamble_indication[i_preamble]["rssi_dB"]      = factory.createScalar(result.rssi_dB);
-    detected_preamble_indication[i_preamble]["time_resolution"] =
-        factory.createScalar(result.time_resolution.to_seconds());
-    detected_preamble_indication[i_preamble]["time_advance_max"] =
-        factory.createScalar(result.time_advance_max.to_seconds());
+    dpi["PreambleIndices"][i_preamble] = static_cast<double>(preamble.preamble_index);
+    dpi["TimeAdvance"][i_preamble]     = static_cast<double>(preamble.time_advance.to_seconds());
+    dpi["PowerDecibel"][i_preamble]    = static_cast<double>(preamble.power_dB);
+    dpi["SINRDecibel"][i_preamble]     = static_cast<double>(preamble.snr_dB);
   }
+
   outputs[0] = detected_preamble_indication;
 }

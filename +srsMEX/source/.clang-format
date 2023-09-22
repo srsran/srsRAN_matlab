@@ -66,7 +66,7 @@ IncludeCategories: #Changed
     Priority:        2
   - Regex:           '^"(srsran|llvm|llvm-c|clang|clang-c)/'
     Priority:        3
-  - Regex:           '^(<|"(CLI|fmt|gtest|gmock|isl|json)/)'
+  - Regex:           '^(<|"(CLI|fmt|gtest|gmock|isl|json|Matlab.*)/)'
     Priority:        4
   - Regex:           '.*'
     Priority:        1

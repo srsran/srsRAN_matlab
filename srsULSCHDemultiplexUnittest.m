@@ -10,7 +10,7 @@
 %
 %   srsBlock      - The tested block (i.e., 'ulsch_demultiplex').
 %   srsBlockType  - The type of the tested block, including layer
-%                   (i.e., 'phy/upper/channel_processors').
+%                   (i.e., 'phy/upper/channel_processors/pusch').
 %
 %   srsULSCHDemultiplexUnittest Properties (ClassSetupParameter):
 %
@@ -57,7 +57,7 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
         srsBlock = 'ulsch_demultiplex'
 
         %Type of the tested block.
-        srsBlockType = 'phy/upper/channel_processors'
+        srsBlockType = 'phy/upper/channel_processors/pusch'
     end
 
     properties (ClassSetupParameter)
@@ -83,7 +83,7 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
         function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
             
-            fprintf(fileID, '#include "srsran/phy/upper/channel_processors/ulsch_demultiplex.h"\n');
+            fprintf(fileID, '#include "srsran/phy/upper/channel_processors/pusch/ulsch_demultiplex.h"\n');
             fprintf(fileID, '#include "srsran/phy/upper/log_likelihood_ratio.h"\n');
             fprintf(fileID, '#include "srsran/support/file_vector.h"\n');
         end
@@ -92,18 +92,19 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
 
             fprintf(fileID, 'struct test_case_context{\n');
-            fprintf(fileID, '  ulsch_demultiplex::configuration       config;\n');
-            fprintf(fileID, '  ulsch_demultiplex::message_information msg_info;\n');
+            fprintf(fileID, '  ulsch_demultiplex::configuration config;\n');
+            fprintf(fileID, '  unsigned                         nof_csi_part2_bits;\n');
+            fprintf(fileID, '  unsigned                         nof_enc_csi_part2_bits;\n');
             fprintf(fileID, '};\n');
             fprintf(fileID, '\n');
             fprintf(fileID, 'struct test_case_t {\n');
             fprintf(fileID, '  test_case_context                 context;\n');
-            fprintf(fileID, '  file_vector<log_likelihood_ratio> input;\n');
+            fprintf(fileID, '  file_vector<log_likelihood_ratio> codeword;\n');
+            fprintf(fileID, '  file_vector<uint8_t>              scrambling_seq;\n');
             fprintf(fileID, '  file_vector<log_likelihood_ratio> output_ulsch;\n');
             fprintf(fileID, '  file_vector<log_likelihood_ratio> output_harq_ack;\n');
             fprintf(fileID, '  file_vector<log_likelihood_ratio> output_csi_part1;\n');
             fprintf(fileID, '  file_vector<log_likelihood_ratio> output_csi_part2;\n');
-            fprintf(fileID, '  file_vector<uint16_t>             placeholders;\n');
             fprintf(fileID, '};\n');
         end
     end % of methods (Access = protected)
@@ -120,10 +121,10 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
             import srsLib.phy.helpers.srsConfigurePUSCH
             import srsLib.phy.helpers.srsModulationFromMatlab
             import srsLib.phy.upper.signal_processors.srsPUSCHdmrs
-            import srsLib.phy.upper.channel_processors.srsULSCHScramblingPlaceholders
+            import srsLib.phy.upper.channel_processors.pusch.srsULSCHScramblingPlaceholders
             import srsTest.helpers.symbolAllocationMask2string
             import srsTest.helpers.writeInt8File
-            import srsTest.helpers.writeUint16File
+            import srsTest.helpers.writeUint8File
 
             % Generate a unique test ID by looking at the number of files
             % generated so far.
@@ -142,6 +143,7 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
             % Configure PUSCH.
             NumLayers = randi([1, 4]);
             pusch = srsConfigurePUSCH(NumLayers, Modulation, PRBSet);
+            pusch.NID = 1;
             pusch.DMRS.DMRSConfigurationType = randi([1, 2]);
             pusch.DMRS.DMRSAdditionalPosition = randi([0, 3]);
             pusch.DMRS.NumCDMGroupsWithoutData = pusch.DMRS.DMRSConfigurationType + 1;
@@ -162,36 +164,51 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
             ulschInfo = nrULSCHInfo(pusch, targetCodeRate, tbs, ...
                 nofHarqAckBits, nofCsiPart1Bits, nofCsiPart2Bits);
 
-            % Generate random codeword with LLR.
-            cw = randi([-120, 120], puschInfo.G, 1);
+            % Generate placeholders.
+            [xInd, yInd] = srsULSCHScramblingPlaceholders(pusch, ...
+                targetCodeRate, tbs, nofHarqAckBits, nofCsiPart1Bits, ...
+                nofCsiPart2Bits);
+
+            % Generate random soft bits.
+            demodulated = randi([-120, 120], puschInfo.G, 1);
+            % Avoid null LLRs.
+            % TODO: remove this after fixing
+            % https://gitlab.com/softwareradiosystems/srsgnb/-/issues/1104.
+            demodulated(demodulated == 0) = 1;
+
+            % Descramble demodulated bits without placeholders.
+            descrambled = nrPUSCHDescramble(demodulated, pusch.NID, pusch.RNTI);
+
+            % Generate scrambling sequence.
+            scramblingSeq= nrPUSCHScramble(zeros(puschInfo.G, 1), pusch.NID, pusch.RNTI);
+
+            % Descramble demodulated bits with placeholders.
+            codeword = nrPUSCHDescramble(demodulated, pusch.NID, ...
+                pusch.RNTI, xInd + 1, yInd + 1);
 
             % Demultiplex signal.
             [schData, harqAck, csiPart1, csiPart2] = ...
                 nrULSCHDemultiplex(pusch, targetCodeRate, tbs, ...
-                nofHarqAckBits, nofCsiPart1Bits, nofCsiPart2Bits, cw);
+                nofHarqAckBits, nofCsiPart1Bits, nofCsiPart2Bits, ...
+                codeword);
 
-            % Generate placeholders.
-            placeholders = srsULSCHScramblingPlaceholders(pusch, ...
-                targetCodeRate, tbs, nofHarqAckBits, nofCsiPart1Bits, ...
-                nofCsiPart2Bits);
+            % Save codeword before reverting the scrambling.
+            testCase.saveDataFile('_test_input_data', testID, @writeInt8File, descrambled);
 
             % Save codeword.
-            testCase.saveDataFile('_test_input', testID, @writeInt8File, cw);
+            testCase.saveDataFile('_test_input_scrambling_seq', testID, @writeUint8File, scramblingSeq);
 
             % Save SCH data.
-            testCase.saveDataFile('_test_data', testID, @writeInt8File, schData);
+            testCase.saveDataFile('_test_output_data', testID, @writeInt8File, schData);
 
             % Save HARQ-ACK.
-            testCase.saveDataFile('_test_harq', testID, @writeInt8File, harqAck);
+            testCase.saveDataFile('_test_output_harq', testID, @writeInt8File, harqAck);
 
             % Save CSI-Part1.
-            testCase.saveDataFile('_test_csi1', testID, @writeInt8File, csiPart1);
+            testCase.saveDataFile('_test_output_csi1', testID, @writeInt8File, csiPart1);
 
             % Save CSI-Part2.
-            testCase.saveDataFile('_test_csi2', testID, @writeInt8File, csiPart2);
-
-            % Save position of placeholders.
-            testCase.saveDataFile('_test_placeholders', testID, @writeUint16File, placeholders);
+            testCase.saveDataFile('_test_output_csi2', testID, @writeInt8File, csiPart2);
 
             % Generate modulation cheme type string.
             modString = srsModulationFromMatlab(pusch.Modulation, 'full');
@@ -216,22 +233,24 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
                 dmrsTypeString, ...                     % dmrs_type
                 dmrsSymbolMask, ...                     % dmrs_symbol_mask
                 pusch.DMRS.NumCDMGroupsWithoutData, ... % nof_cdm_groups_without_data
+                nofHarqAckBits, ...                     % nof_harq_ack_bits
+                ulschInfo.GACK, ...                     % nof_enc_harq_ack_bits
+                nofCsiPart1Bits, ...                    % nof_csi_part1_bits
+                ulschInfo.GCSI1, ...                    % nof_enc_csi_part1_bits
                 };
 
-            % Prepare message information.
-            msg_info = { ...
-                nofHarqAckBits, ...       % nof_harq_ack_bits
-                ulschInfo.GACK, ...       % nof_enc_harq_ack_bits
-                nofCsiPart1Bits, ...      % nof_csi_part1_bits
-                ulschInfo.GCSI1, ...      % nof_enc_csi_part1_bits
-                nofCsiPart2Bits, ...      % nof_csi_part2_bits
-                ulschInfo.GCSI2, ...      % nof_enc_csi_part2_bits
+            % Prepare test context in a cell.
+            context = {...
+                configuration, ...   % config
+                nofCsiPart2Bits, ... % nof_csi_part2_bits
+                ulschInfo.GCSI2, ... % nof_enc_csi_part2_bits
                 };
 
             testCaseString = testCase.testCaseToString(testID, ...
-                {configuration, msg_info}, true, '_test_input', '_test_data', ...
-                '_test_harq', '_test_csi1', '_test_csi2', ...
-                '_test_placeholders');
+                context, true, '_test_input_data', ...
+                '_test_input_scrambling_seq', '_test_output_data', ...
+                '_test_output_harq', '_test_output_csi1', ...
+                '_test_output_csi2');
 
             % Add the test to the file header.
             testCase.addTestToHeaderFile(testCase.headerFileID, ...

@@ -1,7 +1,7 @@
 %srsULSCHScramblingPlaceholders Generate UL-SCH Scrambling placeholders
 %position.
-%   placeholders = srsULSCHScramblingPlaceholders(PUSCH, TCR, TBS, OACK, OCSI1, OCSI2)
-%   generates a list of UL-SCH scrambling repetition placeholders.
+%   [xInd, yInd] = srsULSCHScramblingPlaceholders(PUSCH, TCR, TBS, OACK, OCSI1, OCSI2)
+%   generates a list of UL-SCH scrambling repetition placeholders x and a list of placeholders y.
 %
 %   See also nrULSCHInfo, nrULSCHDemultiplex, nrPUSCHDecode
 
@@ -20,7 +20,7 @@
 %   A copy of the BSD 2-Clause License can be found in the LICENSE
 %   file in the top-level directory of this distribution.
 
-function placeholders = srsULSCHScramblingPlaceholders(pusch, tcr, tbs, ...
+function [xInd, yInd] = srsULSCHScramblingPlaceholders(pusch, tcr, tbs, ...
                 OAck, OCsi1, OCsi2)
 
     % Get UL-SCH information.
@@ -44,9 +44,12 @@ function placeholders = srsULSCHScramblingPlaceholders(pusch, tcr, tbs, ...
     % Multiplex message, placeholders are marked as -2.
     encBits = nrULSCHMultiplex(pusch, tcr, tbs, schBits, ackEncBits, csi1EncBits, csi2EncBits);
 
-    % Create bit indexes list.
-    indexes = 0:length(encBits) - 1;
+    % Create bit indices list.
+    indexes = transpose(0:length(encBits) - 1);
 
-    % Select the bit indexes that are repetition placeholders.
-    placeholders = indexes(encBits == -2);
+    % Select the bit indices that are x placeholders.
+    xInd = indexes(encBits == -1);
+
+    % Select the bit indices that are y placeholders.
+    yInd = indexes(encBits == -2);
 end

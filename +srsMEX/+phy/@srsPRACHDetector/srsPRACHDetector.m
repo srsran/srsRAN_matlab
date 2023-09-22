@@ -2,43 +2,40 @@
 %   User-friendly interface to the srsRAN PRACH detector class, which is wrapped
 %   by the MEX static method prach_detector_mex.
 %
-%   PRACHDET = srsPRACHDetector(DELAYSAMPLES) creates a PHY PRACH Detector
-%   object with a fixed DFT size of 1536, which is meant to be tested with
-%   a frequency-domain singal featuring a delay of DELAYSAMPLES samples.
-%
-%   srsPRACHDetector Properties (Nontunable):
-%
-%   delaySamples     - Number of delay samples passed during the MEX calls.
+%   PRACHDETECTOR = srsPRACHDetector creates a PHY PRACH Detector object.
 %
 %   srsPRACHDetector Methods:
 %
 %   step               - Detects a PRACH preamble (if any is present).
-%   configurePRACH     - Static helper method for filling the PRACHCONFIG input of "step".
 %
 %   Step method syntax
 %
-%   PRACHDETECTIONRESULT = step(PRACHDETECTOR, PRACHSYMBOLS, PRACHCONFIG) uses
+%   DETECTIONRESULTS = step(PRACHDETECTOR, PRACH, SYMBOLS) uses
 %   the object PRACHDETECTOR to detect a PRACH preamble in the frequency-domain
-%   signal PRACHSYMBOLS and returns the detection result PRACHDETECTIONRESULT.
-%   PRACHSYMBOLS is a complex array which comprises the outputs of the PRACH
-%   demodulator stage. Structure PRACHCONFIG describes the utilized PRACH
-%   configuration parameters. The fields are
-%      format                - the PRACH preamble format;
-%      root_sequence_index   - the root sequence index;
-%      restricted_set        - the restricted set configuration;
-%      zero_correlation_zone - the zero correlation zone configuration index;
-%      preamble_index        - the PRACH preamble index.
-%   Structure PRACHDETECTIONRESULT provides the PRACH detection result. The
+%   signal SYMBOLS and returns the detection results DETECTIONRESULTS.
+%
+%   PRACH is a PRACH configuration object, nrPRACHConfig. Only these object properties
+%   are relevant for this function:
+%      Format                - the PRACH preamble format;
+%      SequenceIndex         - the root sequence index;
+%      RestrictedSet         - the restricted set configuration;
+%      ZeroCorrelationZone   - the zero correlation zone configuration index;
+%      SubcarrierSpacing     - the PRACH subcarrier spacing.
+%
+%   SYMBOLS is a complex array which comprises the outputs of the PRACH
+%   demodulator stage.
+%
+%   Structure DETECTIONRESULTS provides the PRACH detection results. The
 %   fields are
-%      nof_detected_preambles - number of detected PRACH preambles (should be one);
-%      preamble_index         - index of the detected PRACH preamble;
-%      time_advance           - timing advance between the observed arrival time
-%                               (for the considered UE) and the reference uplink time;
-%      power_dB               - average RSRP value in dB;
-%      snr_dB                 - average SNR value in dB;
-%      rssi_dB                - average RSSI value in dB;
-%      time_resolution        - detector time resolution;
-%      time_advance_max       - detector maximum tine in advance.
+%      NumDetectedPreambles - number of detected PRACH preambles;
+%      RSSIDecibel          - average RSSI value in dB;
+%      TimeResolution       - detector time resolution;
+%      MaxTimeAdvance       - detector maximum tolerated time advance;
+%      PreambleIndices      - array of indices of the detected PRACH preambles;
+%      TimeAdvance          - array of timing advance values between the observed arrival time
+%                             (for the corresponding preamble indices) and the reference uplink time;
+%      PowerDecibel         - array of average RSRP values in dB (for the corresponding preamble indices);
+%      SINRDecibel          - array of average SINR values in dB (for the corresponding preamble indices).
 
 %   Copyright 2021-2023 Software Radio Systems Limited
 %
@@ -56,40 +53,23 @@
 %   file in the top-level directory of this distribution.
 
 classdef srsPRACHDetector < matlab.System
-    properties (Nontunable)
-          %Delay in samples.
-          DelaySamples    (1, 1) double {mustBeInteger} = 0
-    end % properties (Nontunable)
-
-    methods
-        function obj = srsPRACHDetector(varargin)
-        %Constructor: sets nontunable properties.
-            setProperties(obj, nargin, varargin{:});
-        end % constructor
-    end % of methods
-
     methods (Access = protected)
-        function PRACHdetectionResult = stepImpl(obj, PRACHSymbols, PRACHConfig)
+        function PRACHdetectionResult = stepImpl(obj, prach, symbols)
             arguments
-                obj          (1, 1) srsMEX.phy.srsPRACHDetector
-                PRACHSymbols (:, :, :) double
-                PRACHConfig  (1, 1) struct
+                obj     (1, 1)    srsMEX.phy.srsPRACHDetector
+                prach   (1, 1)    nrPRACHConfig
+                symbols (:, :, :) double
             end
 
-            fcnName = [class(obj) '/step'];
+            PRACHCfg = struct(...
+                'Format', prach.Format, ...
+                'SequenceIndex', prach.SequenceIndex, ...
+                'RestrictedSet', prach.RestrictedSet, ...
+                'ZeroCorrelationZone', prach.ZeroCorrelationZone, ...
+                'SubcarrierSpacing', prach.SubcarrierSpacing ...
+                );
 
-            formatList = {'0', '1', '2', '3', 'A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'B4', 'C0', 'C2'};
-            validatestring(PRACHConfig.format, formatList, fcnName, 'FORMAT');
-            validateattributes(PRACHConfig.root_sequence_index, {'double'}, {'scalar', 'integer', 'nonnegative'}, ...
-                 fcnName, 'ROOT_SEQUENCE_INDEX');
-            restrictedSetList = {'UnrestrictedSet', 'RestrictedSetTypeA', 'RestrictedSetTypeB'};
-            validatestring(PRACHConfig.restricted_set, restrictedSetList, fcnName, 'RESTRICTED_SET');
-            validateattributes(PRACHConfig.zero_correlation_zone, {'double'}, {'scalar', 'integer', 'nonnegative'}, ...
-                 fcnName, 'ZERO_CORRELATION_ZONE');
-            validateattributes(PRACHConfig.preamble_index, {'double'}, {'scalar', 'integer', 'nonnegative'}, ...
-                 fcnName, 'PREAMBLE_INDEX');
- 
-            PRACHdetectionResult = obj.prach_detector_mex('step', PRACHSymbols, PRACHConfig);
+            PRACHdetectionResult = obj.prach_detector_mex('step', symbols, PRACHCfg);
         end % function step(...)
     end % of methods (Access = protected)
 
@@ -98,23 +78,4 @@ classdef srsPRACHDetector < matlab.System
         varargout = prach_detector_mex(varargin)
     end % of methods (Access = private)
 
-   methods (Static)
-        function PRACHCfg = configurePRACH(prach)
-        %configurePRACH Static helper method for filling the PRACHCONFIG input of "step"
-        %   PRACHCFG = configurePRACH(PRACH)
-        %   generates a PRACH configuration for the preamble FORMAT,RESTRICTEDSET, 
-        %   ZEROCORRLEATIONZONE, SEQUENCEINDEX AND PREAMBLEINDEX provided by the
-        %   nrPRACHConfig PRACH object.
-            arguments
-                prach          (1, 1) nrPRACHConfig
-            end
-
-            PRACHCfg.format = prach.Format;
-            PRACHCfg.root_sequence_index = prach.SequenceIndex;
-            PRACHCfg.restricted_set = prach.RestrictedSet;
-            PRACHCfg.zero_correlation_zone = prach.ZeroCorrelationZone;
-            PRACHCfg.preamble_index = prach.PreambleIndex;
-            PRACHCfg.scs = prach.SubcarrierSpacing;
-        end % of function configurePRACH = configurePRACH(...)
-   end % of methods (Static)
 end % of classdef srsPRACHDetector < matlab.System

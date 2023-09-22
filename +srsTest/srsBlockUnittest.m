@@ -102,13 +102,23 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
 
         %Test header file identifier.
         headerFileID (1, 1) double {mustBeInteger(headerFileID)} = -1
+
+        %Seed used by the random generator.
+        RngSeed
     end % of properties (Hidden)
+
+    properties (Hidden, Constant)
+        %Flag for initializing the random generator with the default seed (true)
+        %   or with one based on the current time (false).
+        %   Non-expert users are advised against changing this flag.
+        RandomDefault = true
+    end
 
     methods (TestClassSetup)
         function initializeClass(obj, outputPath)
         %initializeClass Test class setup
         %   Creates the temporary working folder, defines its teardown, and creates the
-        %   header file for the test vectors.
+        %   header file for the test vectors. Initializes the random generator.
             tmp = obj.srsBlockType;
             tmp(tmp == filesep) = '_';
             obj.pathInRepo = upper([tmp, '_', obj.srsBlock]);
@@ -118,9 +128,27 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
             tmp = obj.applyFixture(TemporaryFolderFixture);
             obj.tmpOutputPath = tmp.Folder;
 
+            % Get current random generator state.
+            orig = rng;
+
+            if obj.RandomDefault
+                % Initialize the random generator to its default state for reproducible
+                % results.
+                rng('default');
+            else
+                % Initialize the random generator with a seed based on the current
+                % time for producing a completely different set of results.
+                rng('shuffle');
+            end
+
+            curr = rng;
+            obj.RngSeed = curr.Seed;
+
             obj.headerFileID = obj.createHeaderFile;
 
             % Add teardown steps, in reverse order (it's a LIFO stack).
+            obj.addTeardown(@rng, orig);
+
             obj.addTeardown(@obj.copyTestVectors, outputPath);
 
             obj.addTeardown(@obj.closeHeaderFile, obj.headerFileID);
@@ -340,8 +368,8 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
             fprintf(fileID, '\n');
             fprintf(fileID, '#pragma once\n');
             fprintf(fileID, '\n');
-            fprintf(fileID, '// This file was generated using the following MATLAB class on %s:\n', ...
-                char(datetime('now', 'Format', 'dd-MM-yyyy')));
+            fprintf(fileID, '// This file was generated using the following MATLAB class on %s (seed %d):\n', ...
+                char(datetime('now', 'Format', 'dd-MM-yyyy')), obj.RngSeed);
             fprintf(fileID, '//   + "%s.m"\n', class(obj));
             fprintf(fileID, '\n');
         end

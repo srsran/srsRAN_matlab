@@ -25,7 +25,7 @@
 #include "srsran_matlab/srsran_mex_dispatcher.h"
 #include "srsran_matlab/support/memento.h"
 #include "srsran/phy/upper/channel_processors/channel_processor_factories.h"
-#include "srsran/phy/upper/channel_processors/pusch_decoder.h"
+#include "srsran/phy/upper/channel_processors/pusch/pusch_decoder.h"
 #include "srsran/phy/upper/rx_softbuffer.h"
 #include "srsran/phy/upper/rx_softbuffer_pool.h"
 #include "srsran/phy/upper/unique_rx_softbuffer.h"
@@ -79,11 +79,11 @@ public:
       mex_abort("Cannot create srsran PUSCH decoder.");
     }
 
-    create_callback("new", [this](ArgumentList& out, ArgumentList& in) { return this->method_new(out, in); });
-    create_callback("step", [this](ArgumentList& out, ArgumentList& in) { return this->method_step(out, in); });
+    create_callback("new", [this](ArgumentList out, ArgumentList in) { return this->method_new(out, in); });
+    create_callback("step", [this](ArgumentList out, ArgumentList in) { return this->method_step(out, in); });
     create_callback("reset_crcs",
-                    [this](ArgumentList& out, ArgumentList& in) { return this->method_reset_crcs(out, in); });
-    create_callback("release", [this](ArgumentList& out, ArgumentList& in) { return this->method_release(out, in); });
+                    [this](ArgumentList out, ArgumentList in) { return this->method_reset_crcs(out, in); });
+    create_callback("release", [this](ArgumentList out, ArgumentList in) { return this->method_release(out, in); });
   }
 
 private:
@@ -115,7 +115,7 @@ private:
   ///      - \c expire_timeout_slots, softbuffer expiration time as a number of slots.
   ///
   /// The only output of the method is the identifier of the created pool (a \c uint64_t number).
-  void method_new(ArgumentList& outputs, ArgumentList& inputs);
+  void method_new(ArgumentList outputs, ArgumentList inputs);
 
   /// \brief Decodes one codeword.
   ///
@@ -143,7 +143,7 @@ private:
   ///   - A one-dimensional structure with decoding statistics. The fields are
   ///      - \c crc_ok, equal to \c true if the codeword CRC is valid, \c false if invalid;
   ///      - \c ldpc_iters, the maximum number of LDPC iterations across all codeblocks forming the codeword.
-  void method_step(ArgumentList& outputs, ArgumentList& inputs);
+  void method_step(ArgumentList outputs, ArgumentList inputs);
 
   /// \brief Resets the CRC status of a softbuffer.
   ///
@@ -156,13 +156,13 @@ private:
   ///      - \c nof_codeblocks, the number of codeblocks forming the codeword.
   ///
   /// The method has no outputs.
-  void method_reset_crcs(ArgumentList& outputs, ArgumentList& inputs);
+  void method_reset_crcs(ArgumentList outputs, ArgumentList inputs);
 
   /// \brief Releases a softbuffer pool.
   ///
   /// The method takes, as input, a softbuffer pool identifier (a \c uint64_t number). It returns 1 if the
   /// associated softbuffer pool was released, 0 otherwise.
-  void method_release(ArgumentList& outputs, ArgumentList& inputs);
+  void method_release(ArgumentList outputs, ArgumentList inputs);
 
   /// A pointer to the actual PUSCH decoder.
   std::unique_ptr<srsran::pusch_decoder> decoder = create_pusch_decoder();

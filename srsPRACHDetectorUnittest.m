@@ -82,7 +82,7 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
         %Zero-correlation zone boolean flag. Set to false for no cyclic shift
         %   and set to true for cyclic shift. The final value of the zero-configuration
         %   zone index is the one given in TS38.141 Table A.6-1.
-        UseZCZ = {'false', 'true'}
+        UseZCZ = {false, true}
 
         %Number of receive antennas.
         nAntennas = {1, 2, 4};
@@ -145,10 +145,11 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
     end % of methods (Access = protected)
 
     methods (TestClassSetup)
-        function classSetup(obj)
-            orig = rng;
-            obj.addTeardown(@rng,orig)
-            rng('default');
+        function silenceWarnings(obj)
+            warn = warning('query', 'srsran_matlab:srsPRACHdetector');
+            warning('off', 'srsran_matlab:srsPRACHdetector');
+
+            obj.addTeardown(@warning, warn.state, 'srsran_matlab:srsPRACHdetector');
         end
     end % of methods (TestClassSetup)
 
@@ -169,6 +170,8 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
             obj.carrier = nrCarrierConfig;
             obj.carrier.CyclicPrefix = 'normal';
             obj.carrier.NSizeGrid = obj.CarrierBandwidth;
+
+            ZeroCorrelationZone = 0;
 
             % Select zero correlation zone according to TS38.104 Table A.6-1.
             if UseZCZ
@@ -353,28 +356,38 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
             % Configure the test.
             obj.setupsimulation(DuplexMode, PreambleFormat, UseZCZ);
 
-            % Generate PRACH grid.
-            PRACHGrid = obj.generatePRACH(nAntennas);
-
             % Configure the SRS PRACH detector mex.
             PRACHDetector = srsPRACHDetector();
 
-            % Fill the PRACH configuration for the detector.
-            PRACHCfg = srsPRACHDetector.configurePRACH(obj.prach);
+            nRuns = 10;
+            nDetections = 0;
+            nPerfectDetections = 0;
+            for iRun = 1:nRuns
+                % Generate PRACH grid.
+                PRACHGrid = obj.generatePRACH(nAntennas);
 
-            % Reshape grid with PRACH symbols.
-            PRACHGrid = reshape(PRACHGrid, obj.prach.LRA, obj.prach.PRACHDuration, nAntennas);
+                % Reshape grid with PRACH symbols.
+                PRACHGrid = reshape(PRACHGrid, obj.prach.LRA, obj.prach.PRACHDuration, nAntennas);
 
-            % Run the PRACH detector.
-            PRACHdetectionResult = PRACHDetector(PRACHGrid, PRACHCfg);
+                % Run the PRACH detector.
+                PRACHdetectionResult = PRACHDetector(obj.prach, PRACHGrid);
 
-            listIndices = [PRACHdetectionResult.preamble_index];
-            obj.assumeTrue(any(listIndices == obj.prach.PreambleIndex), ...
-                'The transmitted preamble was not detected.');
+                maskDetected = (PRACHdetectionResult.PreambleIndices == obj.prach.PreambleIndex);
 
-            goodPreamble = PRACHdetectionResult(listIndices == obj.prach.PreambleIndex);
+                % If we only detect the transmitted preamble...
+                if (sum(maskDetected) == 1);
+                    nDetections = nDetections + 1;
 
-            obj.assertEqual(goodPreamble.time_advance, obj.TrueDelay, 'AbsTol', 1.0e-6, 'Expected delay error.');
+                    % Now check if it's a perfect detection.
+                    timeAdvanceDetected = PRACHdetectionResult.TimeAdvance(maskDetected);
+                    if (abs(timeAdvanceDetected - obj.TrueDelay) <= 1.0e-6)
+                        nPerfectDetections = nPerfectDetections + 1;
+                    end
+                end
+            end
+            % Not a performance test: set very loose detection probability requirements.
+            obj.assertGreaterThan(nDetections, nRuns * 0.7, 'Detection probability too low.');
+            obj.assertGreaterThan(nPerfectDetections, nRuns * 0.6, 'Perfect detection probability too low.');
         end % of function mextest
     end % of methods (Test, TestTags = {'testmex'})
 end % of classdef srsPUSCHDecoderUnittest

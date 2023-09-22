@@ -28,7 +28,7 @@
 %   A copy of the BSD 2-Clause License can be found in the LICENSE
 %   file in the top-level directory of this distribution.
 
-function [indices, offsets, sinr, rssi] = srsPRACHdetector(carrier, prachConf, grid, ignoreCFO)
+function [indices, offsets, sinr, rssi] = srsPRACHdetector(carrier, prachConf, grid, ignoreCFO, newThreshold)
     assert(prachConf.RestrictedSet == "UnrestrictedSet", "srsran_matlab:srsPRACHdetector",...
         "Only unrestricted sets are supported.");
 
@@ -58,6 +58,10 @@ function [indices, offsets, sinr, rssi] = srsPRACHdetector(carrier, prachConf, g
     % Detection threshold. The detector is inspired by the GLRT test, but it's
     % not exactly that one - threshold must be tuned by simulation.
     [winMargin, threshold] = getThreshold(prach, nAntennas, ignoreCFO);
+
+    if ((nargin == 5) && isfinite(newThreshold))
+        threshold = newThreshold;
+    end
 
     Nfft = fftsize(prach.Format);
 

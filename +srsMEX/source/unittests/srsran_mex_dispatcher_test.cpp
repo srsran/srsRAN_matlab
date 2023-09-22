@@ -40,18 +40,18 @@ public:
   /// "two"&ndash;method_two.
   MexFunction()
   {
-    create_callback("one", [this](ArgumentList& out, ArgumentList& in) { return this->method_one(out, in); });
-    create_callback("two", [this](ArgumentList& out, ArgumentList& in) { return this->method_two(out, in); });
+    create_callback("one", [this](ArgumentList out, ArgumentList in) { return this->method_one(out, in); });
+    create_callback("two", [this](ArgumentList out, ArgumentList in) { return this->method_two(out, in); });
   }
 
 private:
   /// Prints a string identifying the method and the second input (it should be a scalar double).
-  void method_one(ArgumentList& outputs, ArgumentList& inputs);
+  void method_one(ArgumentList outputs, ArgumentList inputs);
   /// Prints a string identifying the method and the second input (it should be a scalar double).
-  void method_two(ArgumentList& outputs, ArgumentList& inputs);
+  void method_two(ArgumentList outputs, ArgumentList inputs);
 };
 
-void MexFunction::method_one(ArgumentList& outputs, ArgumentList& inputs)
+void MexFunction::method_one(ArgumentList outputs, ArgumentList inputs)
 {
   if (inputs.size() != 2) {
     mex_abort("Wrong number of inputs.");
@@ -65,7 +65,7 @@ void MexFunction::method_one(ArgumentList& outputs, ArgumentList& inputs)
   outputs[0] = factory.createScalar(in + 1);
 }
 
-void MexFunction::method_two(ArgumentList& outputs, ArgumentList& inputs)
+void MexFunction::method_two(ArgumentList outputs, ArgumentList inputs)
 {
   if (inputs.size() != 2) {
     mex_abort("Wrong number of inputs.");
