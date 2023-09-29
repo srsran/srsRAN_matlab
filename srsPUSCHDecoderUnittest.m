@@ -311,14 +311,7 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
             % Configure the PUSCH encoder.
             MultipleHARQProcessesLoc = obj.MultipleHARQProcesses;
             TargetCodeRateLoc = obj.TargetCodeRate;
-            TransportBlockLength = obj.TransportBlockSize;
             ULSCHEncoder = srsConfigureULSCHEncoder(MultipleHARQProcessesLoc, TargetCodeRateLoc);
-
-            Nref = ULSCHEncoder.LimitedBufferSize;
-            % 25344 is the maximum coded length of a code block and implies no limit on the buffer size.
-            if Nref >= 25344
-              Nref = 0;
-            end
 
             % Configure the SRS PUSCH decoder mex.
             ULSCHDecoder = srsPUSCHDecoder('MaxCodeblockSize', obj.ulschInfo.N, ...
