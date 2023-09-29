@@ -15,5 +15,18 @@
 # file in the top-level directory of this distribution.
 #
 
-add_subdirectory(channel_processors)
-add_subdirectory(signal_processors)
+matlab_add_mex(
+    NAME multiport_channel_estimator_mex
+    SRC multiport_channel_estimator_mex.cpp
+    R2018a
+)
+
+target_link_libraries(multiport_channel_estimator_mex
+    srsran::srsran_signal_processors
+    srsran::srsran_channel_precoder
+)
+
+set_target_properties(multiport_channel_estimator_mex
+    PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/../../+srsMEX/+phy/@srsMultiPortChannelEstimator"
+)
