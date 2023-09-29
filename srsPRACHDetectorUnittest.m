@@ -375,7 +375,7 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
                 maskDetected = (PRACHdetectionResult.PreambleIndices == obj.prach.PreambleIndex);
 
                 % If we only detect the transmitted preamble...
-                if (sum(maskDetected) == 1);
+                if (sum(maskDetected) == 1)
                     nDetections = nDetections + 1;
 
                     % Now check if it's a perfect detection.

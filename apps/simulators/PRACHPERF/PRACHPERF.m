@@ -240,7 +240,7 @@ classdef PRACHPERF < matlab.System
             obj.PRACH.SequenceIndex = obj.SequenceIndex;         % Logical sequence index
             obj.PRACH.PreambleIndex = obj.PreambleIndex;         % Preamble index
 
-            if ~ismember(PreambleFormat, {'0', '1', '2'})
+            if ~ismember(PreambleFormat, {'0', '1', '2', '3'})
                 obj.PRACH.SubcarrierSpacing = obj.PUSCHSubcarrierSpacing;
                 if (obj.PUSCHSubcarrierSpacing == 30)
                     obj.PRACH.ActivePRACHSlot = 1;
