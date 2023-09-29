@@ -327,6 +327,88 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
         end % of function testvectorGenerationCases(...)
     end % of methods (Test, TestTags = {'testvector'})
 
+    methods (Test, TestTags = {'testmex'})
+        function compareMex(obj, configuration, FrequencyHopping)
+        %compareMex - Compare mex results with those from the reference estimator for
+        %   a given CONFIGURATION and FREQUENCYHOPPING type.
+
+            import srsLib.phy.upper.signal_processors.srsChannelEstimator
+            import srsMEX.phy.srsMultiPortChannelEstimator
+
+            % Cannot do frequency hopping if the entire BWP is allocated or if using a single OFDM symbol.
+            if ((configuration.nPRBs == obj.NSizeBWP) || (configuration.symbolAllocation(2) == 1)) ...
+                    && strcmp(FrequencyHopping, 'intraSlot')
+                return;
+            end
+
+            assert((sum(configuration.symbolAllocation) <= obj.nSymbolsSlot), ...
+                'srsran_matlab:srsChEstimatorUnittest', 'Time allocation exceeds slot length.');
+
+            % Configure each hop.
+            [hop1, hop2] = obj.configureHops(configuration, FrequencyHopping);
+
+            % Build DM-RS-like pilots.
+            nDMRSsymbols = sum(obj.DMRSsymbols);
+            nPilots = configuration.nPRBs * sum(obj.DMRSREmask) * nDMRSsymbols;
+            pilots = (2 * randi([0 1], nPilots, 2) - 1) * [1; 1j] / sqrt(2);
+            pilots = reshape(pilots, [], nDMRSsymbols);
+
+            betaDMRS = 10^(-configuration.betaDMRS / 20);
+
+            % Place pilots on the resource grid.
+            transmittedRG = obj.transmitPilots(pilots, betaDMRS, hop1, hop2);
+
+            % For now, consider a single-tap channel (max delay is 1/4 of
+            % the cyclic prefix length).
+            fftSize =  obj.NSizeGrid * obj.NRE;
+            channelDelay = randi([0, floor(fftSize * 0.07 * 0.25)]);
+            channelCoef = exp(2j * pi * rand);
+            channelTF = fft([zeros(channelDelay, 1); channelCoef; zeros(5, 1)], fftSize);
+            channelTF = fftshift(channelTF);
+            % We assume the channel constant over the entire slot.
+            channelRG = repmat(channelTF, 1, obj.nSymbolsSlot);
+
+            % Compute received resource grid.
+            receivedRG = channelRG .* transmittedRG;
+            SNR = 20; % dB
+            noiseVar = 10^(-SNR/10);
+            noise = randn(size(receivedRG)) + 1j * randn(size(receivedRG));
+            noise(receivedRG == 0) = 0;
+            noise = noise * sqrt(noiseVar / 2);
+            receivedRG = receivedRG + noise;
+
+            EstimatorConfig.DMRSSymbolMask = obj.DMRSsymbols;
+            EstimatorConfig.DMRSREmask = obj.DMRSREmask;
+            EstimatorConfig.nPilotsNoiseAvg = sum(obj.DMRSREmask);
+            EstimatorConfig.scs = 15000;
+            EstimatorConfig.useFilter = true;
+            [channelEst, noiseEst, rsrp, epre, timeAlignment] = srsChannelEstimator(receivedRG, ...
+                pilots, betaDMRS, hop1, hop2, EstimatorConfig);
+
+            % Cast input for the mex estimator.
+            pilotRBMask = hop1.maskPRBs * hop1.DMRSsymbols';
+            if (~isempty(hop2.maskPRBs) && ~isempty(hop2.DMRSsymbols))
+                pilotRBMask = pilotRBMask + hop2.maskPRBs * hop2.DMRSsymbols';
+            end
+            pilotMask = kron(pilotRBMask, hop1.DMRSREmask);
+            pilotIndices = find(pilotMask);
+
+            mexEstimator = srsMultiPortChannelEstimator;
+            [channelEstMEX, noiseEstMEX, extra] ...
+                = mexEstimator(receivedRG, configuration.symbolAllocation, pilotIndices, ...
+                pilots(:), HoppingIndex = hop2.startSymbol, BetaScaling = betaDMRS); %#ok<FNDSB>
+
+            tolerance = 0.05;
+            chEstIdx = (channelEst ~= 0);
+            obj.assertEqual(channelEstMEX(chEstIdx), channelEst(chEstIdx), 'Wrong channel estimates.', RelTol = tolerance);
+            obj.assertEqual(noiseEstMEX, noiseEst, 'Wrong noise variance estimate.', RelTol = tolerance);
+            obj.assertEqual(extra.RSRP, rsrp, 'Wrong RSRP estimate.', RelTol = tolerance);
+            obj.assertEqual(extra.EPRE, epre, 'Wrong EPRE estimate.', RelTol = tolerance);
+            obj.assertEqual(extra.SINR, rsrp / betaDMRS^2 / noiseEst, 'Wrong SINR estimate.', RelTol = tolerance);
+            obj.assertEqual(extra.TimeAlignment, timeAlignment, 'Wrong time alignment estimate.', RelTol = tolerance);
+        end % of function testvectorGenerationCases(...)
+    end % of methods (Test, TestTags = {'testmex'})
+
     methods % public
         function [mse, noiseEst, rsrpEst, epreEst, crlb] = characterize(obj, configuration, ...
                 FrequencyHopping, channelType, snrValues, nRuns)
@@ -505,6 +587,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
 
                 hop2.DMRSsymbols = [];
                 hop2.maskPRBs = {};
+                hop2.startSymbol = [];
             end
         end % of function [hop1 hop2] = configureHops()
 
