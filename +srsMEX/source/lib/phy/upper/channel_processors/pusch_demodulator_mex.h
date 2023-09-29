@@ -44,9 +44,9 @@ public:
   /// object.
   MexFunction()
   {
-    // Ensure srsran PUSCH demodulator was created successfully.
+    // Ensure srsRAN PUSCH demodulator was created successfully.
     if (!demodulator) {
-      mex_abort("Cannot create srsran PUSCH demodulator.");
+      mex_abort("Cannot create srsRAN PUSCH demodulator.");
     }
 
     create_callback("step", [this](ArgumentList out, ArgumentList in) { return this->method_step(out, in); });

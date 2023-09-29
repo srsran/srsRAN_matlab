@@ -74,9 +74,9 @@ public:
   /// Stores the string identifier&ndash;method pairs that form the public interface of the PUSCH decoder MEX object.
   MexFunction()
   {
-    // Ensure srsran PUSCH decoder was created successfully.
+    // Ensure srsRAN PUSCH decoder was created successfully.
     if (!decoder) {
-      mex_abort("Cannot create srsran PUSCH decoder.");
+      mex_abort("Cannot create srsRAN PUSCH decoder.");
     }
 
     create_callback("new", [this](ArgumentList out, ArgumentList in) { return this->method_new(out, in); });
