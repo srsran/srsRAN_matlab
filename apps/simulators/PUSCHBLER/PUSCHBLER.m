@@ -828,10 +828,10 @@ classdef PUSCHBLER < matlab.System
                         [decbitsSRS, statsSRS] = obj.DecodeULSCHsrs(ulschLLRsInt8, harqEntity.NewData, segmentCfg, harqBufID);
 
                         % Store values to calculate throughput and BLER.
-                        simThroughputSRS(snrIdx) = simThroughputSRS(snrIdx) + (statsSRS.crc_ok * trBlkSize);
+                        simThroughputSRS(snrIdx) = simThroughputSRS(snrIdx) + (statsSRS.CRCOK * trBlkSize);
                         simBLERSRS(snrIdx) = simBLERSRS(snrIdx) + (isLastRetransmission && any(decbitsSRS ~= srsTest.helpers.bitPack(trBlk)));
 
-                        blkerrBoth = blkerrBoth || (~statsSRS.crc_ok);
+                        blkerrBoth = blkerrBoth || (~statsSRS.CRCOK);
                     end
 
                     % Increase total number of transmitted information bits.

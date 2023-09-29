@@ -109,10 +109,10 @@ private:
   /// The method accepts only two inputs.
   ///   - The string <tt>"new"</tt>.
   ///   - A one-dimensional structure with fields (see also srsran::rx_softbuffer_pool_description):
-  ///      - \c max_codeblock_size, maximum size of the codeblocks stored in the pool;
-  ///      - \c max_softbuffers, maximum number of softbuffers managed by the pool;
-  ///      - \c max_nof_codeblocks, maximum number of codeblocks managed by the pool (shared by all softbuffers); and
-  ///      - \c expire_timeout_slots, softbuffer expiration time as a number of slots.
+  ///      - \c MaxCodeblockSize, maximum size of the codeblocks stored in the pool;
+  ///      - \c MaxSoftbuffers, maximum number of softbuffers managed by the pool;
+  ///      - \c MaxCodeblocks, maximum number of codeblocks managed by the pool (shared by all softbuffers); and
+  ///      - \c ExpireTimeoutSlots, softbuffer expiration time as a number of slots.
   ///
   /// The only output of the method is the identifier of the created pool (a \c uint64_t number).
   void method_new(ArgumentList outputs, ArgumentList inputs);
@@ -126,23 +126,22 @@ private:
   ///   - A scalar logical indicating whether the LLRs correspond to a new transmission (\c true) or to a retransmission
   ///     in a HARQ process (\c false).
   ///   - A one-dimensional structure that describes the segmentation of the transport block. The fields are
-  ///      - \c base_graph, the LDPC base graph;
-  ///      - \c modulation, modulation identifier;
-  ///      - \c nof_ch_symbols, the number of channel symbols corresponding to one codeword;
-  ///      - \c nof_layers, the number of transmission layers;
-  ///      - \c rv, the redundancy version;
-  ///      - \c Nref, limited buffer rate matching length (set to zero for unlimited buffer);
-  ///      - \c tbs, the transport block size.
+  ///      - \c BGN, the LDPC base graph;
+  ///      - \c Modulation, modulation identifier;
+  ///      - \c NumLayers, the number of transmission layers;
+  ///      - \c RV, the redundancy version;
+  ///      - \c LimitedBufferSize, limited buffer rate matching length (set to zero for unlimited buffer);
+  ///      - \c TransportBlockLength, the transport block size.
   ///   - A one-dimensional structure with fields
-  ///      - \c harq_ack_id, the ID of the HARQ process;
-  ///      - \c rnti, the UE RNTI;
-  ///      - \c nof_codeblocks, the number of codeblocks forming the codeword.
+  ///      - \c HARQProcessID, the ID of the HARQ process;
+  ///      - \c RNTI, the UE RNTI;
+  ///      - \c NumCodeblocks, the number of codeblocks forming the codeword.
   ///
   /// The method has two outputs.
   ///   - The decoded transport block (in packed format).
   ///   - A one-dimensional structure with decoding statistics. The fields are
-  ///      - \c crc_ok, equal to \c true if the codeword CRC is valid, \c false if invalid;
-  ///      - \c ldpc_iters, the maximum number of LDPC iterations across all codeblocks forming the codeword.
+  ///      - \c CRCOK, equal to \c true if the codeword CRC is valid, \c false if invalid;
+  ///      - \c LDPCIterations, the maximum number of LDPC iterations across all codeblocks forming the codeword.
   void method_step(ArgumentList outputs, ArgumentList inputs);
 
   /// \brief Resets the CRC status of a softbuffer.
@@ -151,9 +150,9 @@ private:
   ///   - The string <tt>"reset_crcs"</tt>.
   ///   - A softbuffer pool identifier (a \c uint64_t number).
   ///   - A one-dimensional structure with fields
-  ///      - \c harq_ack_id, the ID of the HARQ process;
-  ///      - \c rnti, the UE RNTI;
-  ///      - \c nof_codeblocks, the number of codeblocks forming the codeword.
+  ///      - \c HARQProcessID, the ID of the HARQ process;
+  ///      - \c RNTI, the UE RNTI;
+  ///      - \c NumCodeblocks, the number of codeblocks forming the codeword.
   ///
   /// The method has no outputs.
   void method_reset_crcs(ArgumentList outputs, ArgumentList inputs);

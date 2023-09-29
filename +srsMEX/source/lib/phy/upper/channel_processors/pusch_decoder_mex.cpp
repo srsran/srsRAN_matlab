@@ -104,7 +104,7 @@ void MexFunction::check_step_outputs_inputs(ArgumentList outputs, ArgumentList i
     mex_abort("Input 'seg_cfg' must be a scalar structure.");
   }
 
-  if ((inputs[5].getType() != ArrayType::STRUCT) || (inputs[4].getNumberOfElements() > 1)) {
+  if ((inputs[5].getType() != ArrayType::STRUCT) || (inputs[5].getNumberOfElements() > 1)) {
     mex_abort("Input 'buf_id' must be a scalar structure.");
   }
 
@@ -200,10 +200,10 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
   }
   const pusch_decoder_result& dec_result = notifier_spy.get_result();
 
-  StructArray S      = factory.createStructArray({1, 1}, {"crc_ok", "ldpc_iters"});
-  S[0]["crc_ok"]     = factory.createScalar(dec_result.tb_crc_ok);
-  S[0]["ldpc_iters"] = factory.createScalar(dec_result.ldpc_decoder_stats.get_max());
-  outputs[1]         = S;
+  StructArray S          = factory.createStructArray({1, 1}, {"CRCOK", "LDPCIterations"});
+  S[0]["CRCOK"]          = factory.createScalar(dec_result.tb_crc_ok);
+  S[0]["LDPCIterations"] = factory.createScalar(dec_result.ldpc_decoder_stats.get_max());
+  outputs[1]             = S;
 }
 
 void MexFunction::method_reset_crcs(ArgumentList outputs, ArgumentList inputs)

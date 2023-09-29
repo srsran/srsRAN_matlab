@@ -67,24 +67,24 @@ private:
   ///   - The string <tt>"step"</tt>.
   ///   - An array of \c cf_t containing the baseband input signal.
   ///   - A one-dimesional structure that describes the PRACH configuration. The fields are
-  ///      - \c root_sequence_index, the root sequence index;
-  ///      - \c format, preamble format;
-  ///      - \c restricted_set, restricted set configuration;
-  ///      - \c zero_correlation_zone, zero-correlation zone configuration index;
-  ///      - \c start_preamble_index, start preamble index to monitor;
-  ///      - \c nof_preamble_indices, number of preamble indices to monitor;
+  ///      - \c SequenceIndex, the root sequence index;
+  ///      - \c Format, preamble format;
+  ///      - \c RestrictedSet, restricted set configuration;
+  ///      - \c ZeroCorrelationZone, zero-correlation zone configuration index;
+  ///      - \c SubcarrierSpacing, the subcarrier spacing in kHz;
   ///
   /// The method has one single output.
   ///   - A two-dimensional structure with the detected preambles. Each field comprises a structure using the
   ///     fields:
-  ///      - \c nof_detected_preambles, number of detected PRACH preambles (should be one);
-  ///      - \c preamble_index, index of the detected preamble;
-  ///      - \c time_advance, timing advance between the observed arrival time and the reference uplink time;
-  ///      - \c power_dB, average RSRP value in dB;
-  ///      - \c snr_dB, average SNR value in dB;
-  ///      - \c rssi_dB, average RSSI value in dB;
-  ///      - \c time_resolution, time resoultion of the PRACH detector;
-  ///      - \c time_advance_max, maximum time in advance of the PRACH detector;
+  ///      - \c NumDetectedPreambles, number of detected PRACH preambles (should be one);
+  ///      - \c RSSIDecibel, average RSSI value in dB;
+  ///      - \c TimeResolution, time resoultion of the PRACH detector, in seconds;
+  ///      - \c MaxTimeAdvance, maximum timing of the PRACH detector, in seconds;
+  ///      - \c PreambleIndices, array of indices of the detected preamble;
+  ///      - \c TimeAdvance, array of timing advance between the observed arrival time and the reference uplink time,
+  ///        in seconds, for the corresponding preamble indices;
+  ///      - \c PowerDecibel, array of average RSRP values in dB, for the corresponding preamble indices;
+  ///      - \c SINRDecibel, array of average SNR values in dB, for the corresponding preamble indices;
   void method_step(ArgumentList outputs, ArgumentList inputs);
 
   /// A pointer to the actual PRACH detector.
