@@ -80,6 +80,9 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
 
         %Number of HARQ-ACK bits (0, 1, 2).
         ackSize = {0, 1, 2}
+
+        %Number of receive ports.
+        NumRxPorts = {4};
     end % of properties (TestParameter)
 
     methods (Access = protected)
@@ -101,7 +104,7 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
     end % of methods (Access = protected)
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(testCase, numerology, intraSlotFreqHopping, SymbolAllocation, ackSize)
+        function testvectorGenerationCases(testCase, numerology, intraSlotFreqHopping, SymbolAllocation, ackSize, NumRxPorts)
         %testvectorGenerationCases Generates a test vector for the given numerology, format and frequency hopping,
         %  while using a random NCellID, random NSlot and random symbol and PRB length.
 
@@ -206,24 +209,50 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
             % Generate and map the DM-RS sequence.
             grid(pucchDmrsIndices) = nrPUCCHDMRS(carrier, pucch, "OutputDataType", "single");
 
+            % Init received signals.
+            rxGrid = nrResourceGrid(carrier, NumRxPorts, "OutputDataType", "single");
+            dataChEsts = zeros(length(pucchDataIdices), NumRxPorts);
+            rxSymbols = zeros(length(pucchDataIdices), NumRxPorts);
+            
             % Noise variance.
             snrdB = 30;
             noiseStdDev = 10 ^ (-snrdB / 20);
+            noiseVar = noiseStdDev.^2;
 
-            % Create some noise samples.
-            normNoise = (randn(gridDims) + 1i * randn(gridDims)) / sqrt(2);
+            % Iterate each receive port.
+            for iRxPort = 1:NumRxPorts
+                % Create some noise samples.
+                normNoise = (randn(gridDims) + 1i * randn(gridDims)) / sqrt(2);
 
-            % Generate channel estimates as a phase rotation in the frequency
-            % domain.
-            estimates = exp(1i * linspace(0, 2 * pi, gridDims(1))') * ones(1, gridDims(2));
+                % Generate channel estimates as a phase rotation in the
+                % frequency domain.
+                estimates = exp(1i * linspace(0, 2 * pi, gridDims(1))') * ones(1, gridDims(2));
 
-            % Create noisy modulated symbols.
-            rxGrid = estimates .* grid + (noiseStdDev * normNoise);
+                % Create noisy modulated symbols.
+                rxGrid(:, :, iRxPort) = estimates .* grid + (noiseStdDev * normNoise);
 
-             % Extract the elements of interest from the grid.
-             rxGridSymbols = [rxGrid(pucchDataIdices); rxGrid(pucchDmrsIndices)];
-             rxGridIndexes = [nrPUCCHIndices(carrier, pucch, 'IndexStyle','subscript', 'IndexBase','0based'); ...
-                nrPUCCHDMRSIndices(carrier, pucch, 'IndexStyle','subscript', 'IndexBase','0based')];
+                % Extract PUCCH symbols from the received grid.
+                rxSymbols(:, iRxPort) = rxGrid(pucchDataIdices);
+
+                % Extract perfect channel estimates corresponding to the PUCCH.
+                dataChEsts(:, iRxPort) = estimates(pucchDataIdices);
+            end
+
+            % Extract the elements of interest from the grid.
+            nofRePort = length(pucchDataIdices) + length(pucchDmrsIndices);
+            rxGridSymbols = zeros(1, NumRxPorts * nofRePort);
+            rxGridIndexes = zeros(NumRxPorts * nofRePort, 3);
+            onePortindexes = [nrPUCCHIndices(carrier, pucch, 'IndexStyle','subscript', 'IndexBase','0based'); ...
+                    nrPUCCHDMRSIndices(carrier, pucch, 'IndexStyle','subscript', 'IndexBase','0based')];
+            for iRxPort = 0:(NumRxPorts - 1)
+                offset = iRxPort * nofRePort;
+                rxGridSymbols(offset + (1:nofRePort)) = [rxGrid(pucchDataIdices); rxGrid(pucchDmrsIndices)];
+
+                indexes = onePortindexes;
+                indexes(:,3) = iRxPort;
+
+                rxGridIndexes(offset + (1:nofRePort), :) = indexes;
+            end
 
             % Write each complex symbol, along with its associated index,
             % into a binary file.
@@ -244,6 +273,9 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
                 secondHopConfig = {pucch.SecondHopStartPRB};
             end
 
+            % Reception port list.
+            portsString = ['{' num2str(0:(NumRxPorts-1), "%d,") '}'];
+
             % Generate PUCCH common configuration.
             pucchConfig = {...
                 'nullopt', ...                 % context
@@ -255,7 +287,7 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
                 secondHopConfig, ...           % second_hop_prb
                 carrier.NCellID, ...           % n_id
                 length(ack), ...               % nof_harq_ack
-                num2cell(0), ...               % ports
+                portsString, ...               % ports
                 pucch.InitialCyclicShift, ...  % initial_cyclic_shift
                 pucch.SymbolAllocation(2), ... % nof_symbols
                 pucch.SymbolAllocation(1), ... % start_symbol_index
