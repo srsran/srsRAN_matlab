@@ -123,8 +123,6 @@ classdef PUSCHBLER < matlab.System
     properties (Constant)
         %Number of transmit antennas.
         NTxAnts = 1
-        %Number of receive antennas.
-        NRxAnts = 1
     end % of constant properties
 
     properties (Nontunable)
@@ -134,6 +132,8 @@ classdef PUSCHBLER < matlab.System
         DisplaySimulationInformation (1, 1) logical = false
         %Flag for displaying simulation diagnostics.
         DisplayDiagnostics (1, 1) logical = false
+        %Number of receive antennas.
+        NRxAnts = 1
         %Bandwidth in number of resource blocks.
         NSizeGrid = 52
         %Subcarrier spacing in kHz (15, 30, 60, 120).
@@ -578,6 +578,7 @@ classdef PUSCHBLER < matlab.System
 
             if useSRSDecoder
                 srsDemodulatePUSCH = srsMEX.phy.srsPUSCHDemodulator;
+                srsChannelEstimate = srsMEX.phy.srsMultiPortChannelEstimator;
             end
 
             % %%% Simulation loop.
@@ -766,8 +767,6 @@ classdef PUSCHBLER < matlab.System
                         % which are created by specifying the non-codebook transmission
                         % scheme.
                         dmrsLayerSymbols = nrPUSCHDMRS(carrier, puschNonCodebook);
-                        [estChannelGrid, noiseEst] = nrChannelEstimate(carrier, rxGrid, ...
-                            dmrsLayerIndices, dmrsLayerSymbols, 'CDMLengths', pusch.DMRS.CDMLengths);
                     end
 
                     % Display EVM per layer, per slot and per RB. Reference symbols for
@@ -784,6 +783,11 @@ classdef PUSCHBLER < matlab.System
                     blkerrBoth = false;
 
                     if useMATLABDecoder
+                        if (~perfectChannelEstimator)
+                            [estChannelGrid, noiseEst] = nrChannelEstimate(carrier, rxGrid, ...
+                                dmrsLayerIndices, dmrsLayerSymbols, 'CDMLengths', pusch.DMRS.CDMLengths);
+                        end
+
                         % Get PUSCH resource elements from the received grid.
                         [puschRx, puschHest] = nrExtractResources(puschIndices, rxGrid, estChannelGrid);
 
@@ -819,6 +823,15 @@ classdef PUSCHBLER < matlab.System
                     end
 
                     if useSRSDecoder
+                        if (~perfectChannelEstimator)
+                            [estChannelGrid, noiseEst] = srsChannelEstimate(rxGrid, pusch.SymbolAllocation, ...
+                                dmrsLayerIndices, dmrsLayerSymbols, ...
+                                'CyclicPrefix', carrier.CyclicPrefix, ...
+                                'SubcarrierSpacing', carrier.SubcarrierSpacing, ...
+                                'PortIndices', (0:nRxAnts-1)', ...
+                                'BetaScaling', sqrt(2));
+                        end
+
                         ulschLLRsInt8 = int8(srsDemodulatePUSCH(rxGrid, estChannelGrid, noiseEst, pusch, ...
                             puschIndices, dmrsLayerIndices, 0:nRxAnts-1));
 
