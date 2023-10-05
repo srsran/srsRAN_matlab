@@ -153,9 +153,11 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
   re_measurement_dimensions pilot_dims;
   pilot_dims.nof_subc    = nof_pilot_res;
   pilot_dims.nof_symbols = nof_pilot_symbols;
-  pilot_dims.nof_slices  = 1;
+  pilot_dims.nof_slices  = nof_rx_ports;
   dmrs_symbol_list pilots(pilot_dims);
-  pilots.set_slice(pilot_view, 0);
+  for (unsigned i_port = 0; i_port != nof_rx_ports; ++i_port) {
+    pilots.set_slice(pilot_view, i_port);
+  }
 
   channel_estimate::channel_estimate_dimensions ch_est_dims;
   ch_est_dims.nof_prb       = dmrs_pattern.rb_mask.size();
@@ -163,15 +165,16 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
   ch_est_dims.nof_rx_ports  = nof_rx_ports;
   ch_est_dims.nof_tx_layers = 1;
   channel_estimate ch_estimate(ch_est_dims);
+
+  TypedArray<cf_t> ch_est_out = factory.createArray<cf_t>(
+      {static_cast<size_t>(ch_est_dims.nof_prb * NRE), ch_est_dims.nof_symbols, nof_rx_ports});
+  TypedArray<cf_t>::iterator ch_est_out_iter = ch_est_out.begin();
   for (unsigned i_port = 0; i_port != nof_rx_ports; ++i_port) {
     estimator->compute(ch_estimate, grid->get_reader(), i_port, pilots, cfg);
-  }
 
-  span<const cf_t> ch_estimate_view = ch_estimate.get_path_ch_estimate(0);
-  TypedArray<cf_t> ch_est_out =
-      factory.createArray({static_cast<size_t>(ch_est_dims.nof_prb * NRE), ch_est_dims.nof_symbols},
-                          ch_estimate_view.begin(),
-                          ch_estimate_view.end());
+    span<const cf_t> ch_estimate_view = ch_estimate.get_path_ch_estimate(i_port);
+    ch_est_out_iter                   = std::copy_n(ch_estimate_view.begin(), ch_estimate_view.size(), ch_est_out_iter);
+  }
 
   StructArray info_out =
       factory.createStructArray({nof_rx_ports + 1, 1}, {"NoiseVar", "RSRP", "EPRE", "SINR", "TimeAlignment"});
