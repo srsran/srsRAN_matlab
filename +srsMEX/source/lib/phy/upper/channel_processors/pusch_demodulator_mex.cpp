@@ -109,12 +109,12 @@ void MexFunction::check_step_outputs_inputs(ArgumentList outputs, ArgumentList i
     mex_abort("Wrong number of inputs.");
   }
 
-  if (inputs[1].getType() != ArrayType::COMPLEX_DOUBLE) {
-    mex_abort("Input 'rxSymbols' must be an array of complex double.");
+  if (inputs[1].getType() != ArrayType::COMPLEX_SINGLE) {
+    mex_abort("Input 'rxSymbols' must be an array of complex floats.");
   }
 
   if (inputs[2].getType() != ArrayType::COMPLEX_DOUBLE) {
-    mex_abort("Input 'cest' must be an array of complex double.");
+    mex_abort("Input 'cest' must be an array of complex doubles.");
   }
 
   if ((inputs[3].getType() != ArrayType::DOUBLE) || (inputs[3].getNumberOfElements() > 1)) {
@@ -178,9 +178,21 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
     demodulator_config.rx_ports.push_back(static_cast<uint8_t>(rxp));
   }
 
-  // Get the PUSCH data and grid indices.
-  const TypedArray<std::complex<double>> in_data_cft_array     = inputs[1];
-  const TypedArray<double>               in_grid_indices_array = in_dem_cfg["PUSCHIndices"];
+  unsigned nof_rx_ports = demodulator_config.rx_ports.size();
+
+  // Get the PUSCH grid indices.
+  const TypedArray<double> in_grid_indices_array = in_dem_cfg["PUSCHIndices"];
+
+  // Number of received symbols per antenna port.
+  unsigned nof_rx_symbols_port = in_grid_indices_array.getNumberOfElements() / 3;
+
+  pusch_coordinates_list.clear();
+
+  // Put elements in the grid for the selected port.
+  for (unsigned i_re = 0; i_re != nof_rx_symbols_port; ++i_re) {
+    pusch_coordinates_list.emplace_back(/* symbol */ static_cast<uint16_t>(in_grid_indices_array[i_re][1]),
+                                        /* subcarrier */ static_cast<uint16_t>(in_grid_indices_array[i_re][0]));
+  }
 
   // Prepare the resource grid.
   std::unique_ptr<resource_grid> grid =
@@ -194,22 +206,19 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
   // Write zeros in grid.
   grid->set_all_zero();
 
-  unsigned nof_rx_ports = demodulator_config.rx_ports.size();
+  // Get the PUSCH data.
+  const TypedArray<cf_t> in_data_cft_array = inputs[1];
 
-  // Total number of received RE.
-  unsigned nof_resources = in_grid_indices_array.getNumberOfElements() / 3;
+  if (in_data_cft_array.getNumberOfElements() != in_grid_indices_array.getNumberOfElements() * nof_rx_ports / 3) {
+    mex_abort("The number of PUSCH symbols per port {} and the number of PUSCH coordinates {} do not match.",
+              in_data_cft_array.getNumberOfElements() / nof_rx_ports,
+              in_grid_indices_array.getNumberOfElements() / 3);
+  }
 
-  // Number of received symbols per antenna port.
-  unsigned nof_rx_symbols_port = nof_resources / nof_rx_ports;
-
-  // Put elements in the grid for the selected port.
-  for (unsigned i_re = 0; i_re != nof_resources; ++i_re) {
-    resource_grid_coordinate coordinate;
-    coordinate.subcarrier = static_cast<uint16_t>(in_grid_indices_array[i_re][0]);
-    coordinate.symbol     = static_cast<uint16_t>(in_grid_indices_array[i_re][1]);
-    uint16_t i_port       = static_cast<uint16_t>(in_grid_indices_array[i_re][2]);
-    cf_t     value        = static_cast<cf_t>(in_data_cft_array[coordinate.subcarrier][coordinate.symbol][i_port]);
-    grid->get_writer().put(i_port, {&coordinate, 1}, {&value, 1});
+  span<const cf_t> in_data_cft_view = to_span(in_data_cft_array);
+  for (unsigned i_port = 0; i_port != nof_rx_ports; ++i_port) {
+    grid->get_writer().put(i_port, pusch_coordinates_list, in_data_cft_view.first(nof_rx_symbols_port));
+    in_data_cft_view = in_data_cft_view.last(in_data_cft_view.size() - nof_rx_symbols_port);
   }
 
   // Get the channel estimates.

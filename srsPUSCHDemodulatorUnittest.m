@@ -457,8 +457,10 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             PUSCHDemodulator = srsPUSCHDemodulator;
 
             gridSize = size(rxGrid);
-            puschIx = sub2ind(gridSize, obj.puschRxIndices(:, 1) + 1, obj.puschRxIndices(:, 2) + 1, obj.puschRxIndices(:, 3) + 1);
-            dmrsIx = sub2ind(gridSize, obj.puschDmrsIndices(:, 1) + 1, obj.puschDmrsIndices(:, 2) + 1, obj.puschDmrsIndices(:, 3) + 1);
+            singlePortPUSCH = (obj.puschRxIndices(:, 3) == obj.puschRxIndices(1, 3));
+            puschIx = sub2ind(gridSize(1:2), obj.puschRxIndices(singlePortPUSCH, 1) + 1, obj.puschRxIndices(singlePortPUSCH, 2) + 1);
+            singlePortDMRS = (obj.puschDmrsIndices(:, 3) == obj.puschDmrsIndices(1, 3));
+            dmrsIx = sub2ind(gridSize(1:2), obj.puschDmrsIndices(singlePortDMRS, 1) + 1, obj.puschDmrsIndices(singlePortDMRS, 2) + 1);
 
             % Run the PUSCH demodulator.
             schSoftBits = PUSCHDemodulator(rxGrid, obj.ce, noiseVar, obj.pusch, puschIx, ...

@@ -92,7 +92,9 @@ classdef srsPUSCHDemodulator < matlab.System
             PUSCHDemConfig.PUSCHIndices = [I1, I2, I3] - 1;
             PUSCHDemConfig.RxPorts = rxPorts;
 
-            schSoftBits = obj.pusch_demodulator_mex('step', rxSymbols, cest, noiseVar, ...
+            puschSymbols = nrExtractResources(puschIndices, rxSymbols);
+
+            schSoftBits = obj.pusch_demodulator_mex('step', single(puschSymbols), cest, noiseVar, ...
                 PUSCHDemConfig);
         end % function step(...)
     end % of methods (Access = protected)

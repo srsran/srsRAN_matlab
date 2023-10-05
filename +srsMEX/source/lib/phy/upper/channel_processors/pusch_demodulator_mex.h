@@ -23,10 +23,12 @@
 #pragma once
 
 #include "srsran_matlab/srsran_mex_dispatcher.h"
+#include "srsran/phy/support/resource_grid_writer.h"
 #include "srsran/phy/support/support_factories.h"
 #include "srsran/phy/upper/channel_processors/channel_processor_factories.h"
 #include "srsran/phy/upper/channel_processors/pusch/pusch_demodulator.h"
 #include "srsran/phy/upper/equalization/equalization_factories.h"
+#include "srsran/ran/frame_types.h"
 
 /// \brief Factory method for a PUSCH demodulator.
 ///
@@ -84,6 +86,11 @@ private:
 
   /// A pointer to the actual PUSCH decoder.
   std::unique_ptr<srsran::pusch_demodulator> demodulator = create_pusch_demodulator();
+
+  /// Temporal list of PUSCH RE coordinates.
+  srsran::static_vector<srsran::resource_grid_coordinate,
+                        srsran::MAX_NOF_PRBS * srsran::NRE * srsran::NOF_OFDM_SYM_PER_SLOT_NORMAL_CP>
+      pusch_coordinates_list;
 };
 
 std::unique_ptr<srsran::pusch_demodulator> create_pusch_demodulator()
