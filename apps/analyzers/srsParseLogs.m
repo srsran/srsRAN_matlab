@@ -69,7 +69,7 @@
 
 function [carrier, phych, extra] = srsParseLogs
 
-    fprintf(['\nCopy the relevant section of the logs to the system clipboard', ...
+    fprintf(['\nCopy the relevant section of the logs to the system clipboard ', ...
         '(typically select and Ctrl+C), then switch back to MATLAB and press any key.\n']);
 
     pause;
