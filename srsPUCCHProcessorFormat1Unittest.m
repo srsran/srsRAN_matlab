@@ -80,9 +80,6 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
 
         %Number of HARQ-ACK bits (0, 1, 2).
         ackSize = {0, 1, 2}
-
-        %Number of receive ports.
-        NumRxPorts = {4};
     end % of properties (TestParameter)
 
     methods (Access = protected)
@@ -104,7 +101,7 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
     end % of methods (Access = protected)
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(testCase, numerology, intraSlotFreqHopping, SymbolAllocation, ackSize, NumRxPorts)
+        function testvectorGenerationCases(testCase, numerology, intraSlotFreqHopping, SymbolAllocation, ackSize)
         %testvectorGenerationCases Generates a test vector for the given numerology, format and frequency hopping,
         %  while using a random NCellID, random NSlot and random symbol and PRB length.
 
@@ -132,6 +129,7 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
             GroupHopping = 'neither';
             FrequencyHopping = 'neither';
             SecondHopStartPRB = 0;
+            NumRxPorts = 4;
 
             % Random frame number.
             NFrame = randi([0, 1023]);
@@ -240,8 +238,8 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
 
             % Extract the elements of interest from the grid.
             nofRePort = length(pucchDataIdices) + length(pucchDmrsIndices);
-            rxGridSymbols = zeros(1, NumRxPorts * nofRePort);
-            rxGridIndexes = zeros(NumRxPorts * nofRePort, 3);
+            rxGridSymbols = complex(nan(1, NumRxPorts * nofRePort));
+            rxGridIndexes = complex(nan(NumRxPorts * nofRePort, 3));
             onePortindexes = [nrPUCCHIndices(carrier, pucch, 'IndexStyle','subscript', 'IndexBase','0based'); ...
                     nrPUCCHDMRSIndices(carrier, pucch, 'IndexStyle','subscript', 'IndexBase','0based')];
             for iRxPort = 0:(NumRxPorts - 1)

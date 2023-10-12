@@ -89,9 +89,6 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
         %Maximum code rate, from TS38.311 Section 6.3.2, PUCCH-config
         %   information element (0.08, 0.15, 0.25, 0.35, 0.45, 0.6, 0.8).
         maxCodeRate = {0.08, 0.15, 0.25, 0.35, 0.45, 0.6};
-
-        %Number of receive ports.
-        NumRxPorts = {4};
     end
 
     methods (Access = protected)
@@ -126,7 +123,7 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
 
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, SymbolAllocation, ...
-                nofHarqAck, nofSR, nofCSIPart1, nofCSIPart2, maxCodeRate, NumRxPorts)
+                nofHarqAck, nofSR, nofCSIPart1, nofCSIPart2, maxCodeRate)
         %testvectorGenerationCases Generates a test vector for the given
         %   Symbol allocation, HARQ-ACK, SR, CSI Part 1 and CSI Part 2 payload
         %   sizes in number of bits, and the maximum code rate. the Cell ID,
@@ -168,6 +165,9 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
 
             % Number of RE within a PUCCH Format 2 RB used for control data.
             dataREFormat2 = 8;
+
+            % Fix number of receive ports.
+            NumRxPorts = 4;
 
             % UCI payload size.
             nofUCIBits = nofHarqAck + nofSR + nofCSIPart1 + nofCSIPart2;
@@ -272,8 +272,8 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
 
             % Init received signals.
             rxGrid = nrResourceGrid(carrier, NumRxPorts, "OutputDataType", "single");
-            dataChEsts = zeros(length(pucchDataIdices), NumRxPorts);
-            rxSymbols = zeros(length(pucchDataIdices), NumRxPorts);
+            dataChEsts = complex(nan(length(pucchDataIdices), NumRxPorts));
+            rxSymbols = complex(nan(length(pucchDataIdices), NumRxPorts));
             
             % Noise variance.
             snrdB = 30;
@@ -324,8 +324,8 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
 
             % Extract the elements of interest from the grid.
             nofRePort = length(pucchDataIdices) + length(pucchDmrsIndices);
-            rxGridSymbols = zeros(1, NumRxPorts * nofRePort);
-            rxGridIndexes = zeros(NumRxPorts * nofRePort, 3);
+            rxGridSymbols = complex(nan(1, NumRxPorts * nofRePort));
+            rxGridIndexes = complex(nan(NumRxPorts * nofRePort, 3));
             onePortindexes = [nrPUCCHIndices(carrier, pucch, 'IndexStyle','subscript', 'IndexBase','0based'); ...
                     nrPUCCHDMRSIndices(carrier, pucch, 'IndexStyle','subscript', 'IndexBase','0based')];
             for iRxPort = 0:(NumRxPorts - 1)
