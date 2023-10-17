@@ -576,6 +576,9 @@ classdef PUSCHBLER < matlab.System
 
             quickSim = obj.QuickSimulation;
 
+            % DM-RS over data amplitude gain.
+            betaDMRS = sqrt(2);
+
             if useSRSDecoder
                 srsDemodulatePUSCH = srsMEX.phy.srsPUSCHDemodulator;
                 srsChannelEstimate = srsMEX.phy.srsMultiPortChannelEstimator;
@@ -677,7 +680,7 @@ classdef PUSCHBLER < matlab.System
 
                     % Implementation-specific PUSCH DM-RS MIMO precoding and mapping.
                     % The first DM-RS creation includes codebook based MIMO precoding if applicable.
-                    dmrsSymbols = nrPUSCHDMRS(carrier, pusch);
+                    dmrsSymbols = nrPUSCHDMRS(carrier, pusch) * betaDMRS;
                     dmrsIndices = nrPUSCHDMRSIndices(carrier, pusch);
                     for p = 1:size(dmrsSymbols, 2)
                         [~, dmrsAntIndices] = nrExtractResources(dmrsIndices(:, p), puschGrid);
@@ -785,7 +788,7 @@ classdef PUSCHBLER < matlab.System
                     if useMATLABDecoder
                         if (~perfectChannelEstimator)
                             [estChannelGrid, noiseEst] = nrChannelEstimate(carrier, rxGrid, ...
-                                dmrsLayerIndices, dmrsLayerSymbols, 'CDMLengths', pusch.DMRS.CDMLengths);
+                                dmrsLayerIndices, dmrsLayerSymbols * betaDMRS, 'CDMLengths', pusch.DMRS.CDMLengths);
                         end
 
                         % Get PUSCH resource elements from the received grid.
@@ -829,7 +832,7 @@ classdef PUSCHBLER < matlab.System
                                 'CyclicPrefix', carrier.CyclicPrefix, ...
                                 'SubcarrierSpacing', carrier.SubcarrierSpacing, ...
                                 'PortIndices', (0:nRxAnts-1)', ...
-                                'BetaScaling', sqrt(2));
+                                'BetaScaling', betaDMRS);
                         end
 
                         ulschLLRsInt8 = int8(srsDemodulatePUSCH(rxGrid, estChannelGrid, noiseEst, pusch, ...
