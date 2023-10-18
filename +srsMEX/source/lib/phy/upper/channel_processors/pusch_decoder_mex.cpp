@@ -188,7 +188,7 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
   span<uint8_t>        rx_tb      = to_span(out);
 
   pusch_decoder_notifier_spy notifier_spy;
-  pusch_decoder_buffer&      buffer = decoder->new_data(rx_tb, softbuffer.get(), notifier_spy.get_notifier(), cfg);
+  pusch_decoder_buffer&      buffer = decoder->new_data(rx_tb, std::move(softbuffer), notifier_spy.get_notifier(), cfg);
 
   buffer.on_new_softbits(llrs);
   buffer.on_end_softbits();
