@@ -171,10 +171,6 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
 
             % Generate random soft bits.
             demodulated = randi([-120, 120], puschInfo.G, 1);
-            % Avoid null LLRs.
-            % TODO: remove this after fixing
-            % https://gitlab.com/softwareradiosystems/srsgnb/-/issues/1104.
-            demodulated(demodulated == 0) = 1;
 
             % Descramble demodulated bits without placeholders.
             descrambled = nrPUSCHDescramble(demodulated, pusch.NID, pusch.RNTI);

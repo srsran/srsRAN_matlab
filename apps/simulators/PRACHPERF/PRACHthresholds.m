@@ -43,7 +43,9 @@ function PRACHthresholds(filename, format)
         load(filename, 'results');
         assert(all(results.Properties.VariableNames == varNames), 'The table variable names are incorrect.');
         r1 = results(1, vartype('double'));
-        assert(width(r1) == nResColumns, 'The table variable types are incorrect.');
+        assert(all(r1.Properties.VariableNames == varNames(varTypes == "double")), 'The table variable types are incorrect.');
+        r2 = results(1, vartype("string"));
+        assert(all(r2.Properties.VariableNames == varNames(varTypes == "string")), 'The table variable types are incorrect.');
 
         % Find the last non-zero entry of the first column.
         c1 = results.("Conf. #");
@@ -257,7 +259,7 @@ function PRACHthresholds(filename, format)
 
             prachperf.release();
             prachperf.DetectionThreshold = th_;
-            prachperf(snr_, nRuns_);
+            prachperf(snr_, nRuns_); %#ok<NOEFF>
             pfa_ = prachperf.ProbabilityFalseAlarm;
         end
 

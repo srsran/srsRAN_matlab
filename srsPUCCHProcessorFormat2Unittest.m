@@ -166,6 +166,9 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
             % Number of RE within a PUCCH Format 2 RB used for control data.
             dataREFormat2 = 8;
 
+            % Fix number of receive ports.
+            NumRxPorts = 4;
+
             % UCI payload size.
             nofUCIBits = nofHarqAck + nofSR + nofCSIPart1 + nofCSIPart2;
             
@@ -255,7 +258,7 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
             uciCW = nrUCIEncode(UCIPayload, CodeWordLength);
 
             % Modulate PUCCH Format 2.
-            grid(pucchDataIdices) = nrPUCCH2(uciCW, NID, RNTI, "OutputDataType", "single");
+            grid(pucchDataIdices) = nrPUCCH2(uciCW, NID, RNTI);
 
             assert(length(pucchDataIdices) * modulationOrder == CodeWordLength, ...
                 'srsran_matlab:srsPUCCHProcessorFormat2Unittest', ...
@@ -267,26 +270,34 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
             % Generate and map the DM-RS sequence.
             grid(pucchDmrsIndices) = nrPUCCHDMRS(carrier, pucch, "OutputDataType", "single");
 
+            % Init received signals.
+            rxGrid = nrResourceGrid(carrier, NumRxPorts, "OutputDataType", "single");
+            dataChEsts = complex(nan(length(pucchDataIdices), NumRxPorts));
+            rxSymbols = complex(nan(length(pucchDataIdices), NumRxPorts));
+            
             % Noise variance.
             snrdB = 30;
             noiseStdDev = 10 ^ (-snrdB / 20);
             noiseVar = noiseStdDev.^2;
 
-            % Create some noise samples.
-            normNoise = (randn(gridDims) + 1i * randn(gridDims)) / sqrt(2);
+            % Iterate each receive port.
+            for iRxPort = 1:NumRxPorts
+                % Create some noise samples.
+                normNoise = (randn(gridDims) + 1i * randn(gridDims)) / sqrt(2);
 
-            % Generate channel estimates as a phase rotation in the
-            % frequency domain.
-            estimates = exp(1i * linspace(0, 2 * pi, gridDims(1))') * ones(1, gridDims(2));
-            
-            % Create noisy modulated symbols.
-            rxGrid = estimates .* grid + (noiseStdDev * normNoise);
-            
-            % Extract PUCCH symbols from the received grid.
-            rxSymbols = rxGrid(pucchDataIdices); 
+                % Generate channel estimates as a phase rotation in the
+                % frequency domain.
+                estimates = exp(1i * linspace(0, 2 * pi, gridDims(1))') * ones(1, gridDims(2));
 
-            % Extract perfect channel estimates corresponding to the PUCCH.
-            dataChEsts = estimates(pucchDataIdices);
+                % Create noisy modulated symbols.
+                rxGrid(:, :, iRxPort) = estimates .* grid + (noiseStdDev * normNoise);
+
+                % Extract PUCCH symbols from the received grid.
+                rxSymbols(:, iRxPort) = rxGrid(pucchDataIdices);
+
+                % Extract perfect channel estimates corresponding to the PUCCH.
+                dataChEsts(:, iRxPort) = estimates(pucchDataIdices);
+            end
 
             % Equalize channel symbols.
             [eqSymbols, eqNoiseVars] = srsChannelEqualizer(rxSymbols, dataChEsts, 'ZF', noiseVar, 1);
@@ -312,14 +323,24 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
                 'Decoded UCI payload has errors');
 
             % Extract the elements of interest from the grid.
-            rxGridSymbols = [rxGrid(pucchDataIdices); rxGrid(pucchDmrsIndices)];
-            rxGridIndexes = [nrPUCCHIndices(carrier, pucch, 'IndexStyle','subscript', 'IndexBase','0based'); ...
-                nrPUCCHDMRSIndices(carrier, pucch, 'IndexStyle','subscript', 'IndexBase','0based')];
+            nofRePort = length(pucchDataIdices) + length(pucchDmrsIndices);
+            rxGridSymbols = complex(nan(1, NumRxPorts * nofRePort));
+            rxGridIndexes = complex(nan(NumRxPorts * nofRePort, 3));
+            onePortindexes = [nrPUCCHIndices(carrier, pucch, 'IndexStyle','subscript', 'IndexBase','0based'); ...
+                    nrPUCCHDMRSIndices(carrier, pucch, 'IndexStyle','subscript', 'IndexBase','0based')];
+            for iRxPort = 0:(NumRxPorts - 1)
+                offset = iRxPort * nofRePort;
+                rxGridSymbols(offset + (1:nofRePort)) = [rxGrid(pucchDataIdices); rxGrid(pucchDmrsIndices)];
+
+                indexes = onePortindexes;
+                indexes(:,3) = iRxPort;
+
+                rxGridIndexes(offset + (1:nofRePort), :) = indexes;
+            end
 
             % Write the entire resource grid in a file.
             testCase.saveDataFile('_test_input_symbols', testID, ...
                 @writeResourceGridEntryFile, rxGridSymbols, rxGridIndexes);
-
 
             % Write HARQ-ACK payload to a binary file.
             testCase.saveDataFile('_test_harq', testID, @writeUint8File, harqAckPayload);
@@ -334,7 +355,7 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
             testCase.saveDataFile('_test_csi2', testID, @writeUint8File, CSI2Payload);
 
             % Reception port list.
-            portsString = '{0}';
+            portsString = ['{' num2str(0:(NumRxPorts-1), "%d,") '}'];
             
             % Slot configuration.
             slotConfig = {log2(carrier.SubcarrierSpacing/15), carrier.NSlot};

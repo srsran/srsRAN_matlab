@@ -18,6 +18,7 @@
  */
 
 #include "pusch_demodulator_mex.h"
+#include "srsran_matlab/support/factory_functions.h"
 #include "srsran_matlab/support/matlab_to_srs.h"
 #include "srsran_matlab/support/to_span.h"
 #include "srsran/adt/optional.h"
@@ -129,19 +130,6 @@ void MexFunction::check_step_outputs_inputs(ArgumentList outputs, ArgumentList i
   }
 }
 
-static std::unique_ptr<resource_grid> create_resource_grid(unsigned nof_ports, unsigned nof_symbols, unsigned nof_subc)
-{
-  std::shared_ptr<channel_precoder_factory> precoding_factory = create_channel_precoder_factory("auto");
-  if (!precoding_factory) {
-    return nullptr;
-  }
-  std::shared_ptr<resource_grid_factory> rg_factory = create_resource_grid_factory(precoding_factory);
-  if (!rg_factory) {
-    return nullptr;
-  }
-  return rg_factory->create(nof_ports, nof_symbols, nof_subc);
-}
-
 void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
 {
   check_step_outputs_inputs(outputs, inputs);
@@ -196,9 +184,9 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
 
   // Prepare the resource grid.
   std::unique_ptr<resource_grid> grid =
-      create_resource_grid(demodulator_config.rx_ports.size(),
+      create_resource_grid(demodulator_config.rb_mask.size() * NRE,
                            demodulator_config.start_symbol_index + demodulator_config.nof_symbols,
-                           demodulator_config.rb_mask.size() * NRE);
+                           demodulator_config.rx_ports.size());
   if (!grid) {
     mex_abort("Cannot create resource grid.");
   }

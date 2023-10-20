@@ -828,10 +828,10 @@ classdef PUSCHBLER < matlab.System
                         [decbitsSRS, statsSRS] = obj.DecodeULSCHsrs(ulschLLRsInt8, harqEntity.NewData, segmentCfg, harqBufID);
 
                         % Store values to calculate throughput and BLER.
-                        simThroughputSRS(snrIdx) = simThroughputSRS(snrIdx) + (statsSRS.crc_ok * trBlkSize);
+                        simThroughputSRS(snrIdx) = simThroughputSRS(snrIdx) + (statsSRS.CRCOK * trBlkSize);
                         simBLERSRS(snrIdx) = simBLERSRS(snrIdx) + (isLastRetransmission && any(decbitsSRS ~= srsTest.helpers.bitPack(trBlk)));
 
-                        blkerrBoth = blkerrBoth || (~statsSRS.crc_ok);
+                        blkerrBoth = blkerrBoth || (~statsSRS.CRCOK);
                     end
 
                     % Increase total number of transmitted information bits.
@@ -1030,27 +1030,6 @@ function mixedArray = joinArrays(arrayA, arrayB, removeFromA, outputOrder)
     arrayA(removeFromA) = [];
     mixedArray = [arrayA; arrayB];
     mixedArray = mixedArray(outputOrder);
-end
-
-function softBitsQuant = quantize(softBits, mod)
-%Soft-bit quantization.
-    rangeLimitInt = 120;
-    switch mod
-        case {'BPSK', 'pi/2-BPSK', 'QPSK'}
-            rangeLimitFloat = 24;
-        case '16QAM'
-            rangeLimitFloat = 20;
-        case '64QAM'
-            rangeLimitFloat = 20;
-        case '256QAM'
-            rangeLimitFloat = 20;
-        otherwise
-            error('srsDemodulator:Unknown constellation.');
-    end
-    softBitsQuant = softBits;
-    clipIdx = (abs(softBits) > rangeLimitFloat);
-    softBitsQuant(clipIdx) = rangeLimitFloat * sign(softBitsQuant(clipIdx));
-    softBitsQuant = round(softBitsQuant * rangeLimitInt / rangeLimitFloat);
 end
 
 function validateNumLayers(simParameters)

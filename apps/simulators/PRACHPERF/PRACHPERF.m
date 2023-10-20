@@ -14,8 +14,9 @@
 %   simulation is over, the results will be available as properties of the
 %   PRACHSIM object (see below).
 %
-%   step(PRACHSIM, SNRIN) simulates the transmission of 10 PRACH occasions for
-%   each one of the SNR values (dB) specified in SNRIN (a real-valued array).
+%   step(PRACHSIM, SNRIN, NOCCASIONS) simulates the transmission of NOCCASIONS
+%   PRACH occasions for each one of the SNR values (dB) specified in SNRIN
+%   (a real-valued array).
 %
 %   Being a MATLAB system object, the PRACHSIM object may be called directly as
 %   a function instead of using the step method. For example, step(PRACHSIM, SNRIN)
@@ -240,7 +241,7 @@ classdef PRACHPERF < matlab.System
             obj.PRACH.SequenceIndex = obj.SequenceIndex;         % Logical sequence index
             obj.PRACH.PreambleIndex = obj.PreambleIndex;         % Preamble index
 
-            if ~ismember(PreambleFormat, {'0', '1', '2'})
+            if ~ismember(PreambleFormat, {'0', '1', '2', '3'})
                 obj.PRACH.SubcarrierSpacing = obj.PUSCHSubcarrierSpacing;
                 if (obj.PUSCHSubcarrierSpacing == 30)
                     obj.PRACH.ActivePRACHSlot = 1;
