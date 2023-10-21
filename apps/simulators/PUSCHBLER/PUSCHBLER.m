@@ -648,9 +648,6 @@ classdef PUSCHBLER < matlab.System
                         end
                         % The SRS decoder must be reset explicitely in any case.
                         obj.DecodeULSCHsrs.resetCRCS(harqBufID);
-
-                        % Increment counter of transmitted transport blocks.
-                        totalBlocks(snrIdx) = totalBlocks(snrIdx) + 1;
                     end
 
                     % Encode the UL-SCH transport block.
@@ -820,7 +817,8 @@ classdef PUSCHBLER < matlab.System
 
                         % Store values to calculate throughput and BLER.
                         simThroughput(snrIdx) = simThroughput(snrIdx) + (~blkerr * trBlkSize);
-                        simBLER(snrIdx) = simBLER(snrIdx) + (isLastRetransmission && any(decbits ~= trBlk));
+                        isCountBLER = (isLastRetransmission || ~blkerr);
+                        simBLER(snrIdx) = simBLER(snrIdx) + (isCountBLER && any(decbits ~= trBlk));
 
                         blkerrBoth = blkerr;
                     end
@@ -845,7 +843,8 @@ classdef PUSCHBLER < matlab.System
 
                         % Store values to calculate throughput and BLER.
                         simThroughputSRS(snrIdx) = simThroughputSRS(snrIdx) + (statsSRS.CRCOK * trBlkSize);
-                        simBLERSRS(snrIdx) = simBLERSRS(snrIdx) + (isLastRetransmission && any(decbitsSRS ~= srsTest.helpers.bitPack(trBlk)));
+                        isCountBLER = (isLastRetransmission || statsSRS.CRCOK);
+                        simBLERSRS(snrIdx) = simBLERSRS(snrIdx) + (isCountBLER && any(decbitsSRS ~= srsTest.helpers.bitPack(trBlk)));
 
                         blkerrBoth = blkerrBoth || (~statsSRS.CRCOK);
                     end
@@ -853,7 +852,14 @@ classdef PUSCHBLER < matlab.System
                     % Increase total number of transmitted information bits.
                     maxThroughput(snrIdx) = maxThroughput(snrIdx) + trBlkSize;
 
-                    % Update current process with CRC error and advance to next process
+                    % If the block was received correctly or if it's the last
+                    % restransmission, increment counter of transmitted transport blocks.
+                    if (~blkerrBoth || isLastRetransmission)
+                        totalBlocks(snrIdx) = totalBlocks(snrIdx) + 1;
+                    end
+
+                    % Update current process with CRC error and advance to
+                    % next process.
                     procstatus = updateAndAdvance(harqEntity, blkerrBoth, trBlkSize, puschBitCapacity);
                     if (displaySimulationInformation)
                         fprintf('\n(%3.2f%%) NSlot=%d, %s', 100*(nslot+1)/NSlots, nslot, procstatus);
