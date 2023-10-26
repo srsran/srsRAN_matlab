@@ -260,13 +260,18 @@ classdef PUSCHBLER < matlab.System
                 error('PRB allocation and resource grid are incompatible.');
             end
         end
+
+        function checkHARQandDecType(obj)
+            if (obj.EnableHARQ && strcmp(obj.DecoderType, 'both'))
+                error('Cannot run both decoders when HARQ is enabled.');
+            end
+        end
     end % of methods (Access = private)
 
     methods % public
         function set.NSizeGrid(obj, value)
             validateattributes(value, 'numeric', {'real', 'scalar', '>', 0});
             obj.NSizeGrid = value;
-            obj.checkPRBSetandGrid();
         end
 
         function set.SubcarrierSpacing(obj, value)
@@ -274,7 +279,6 @@ classdef PUSCHBLER < matlab.System
             mustBeMember(value, [15, 30, 60, 120])
 
             obj.SubcarrierSpacing = value;
-            obj.checkSCSandCP();
         end
 
         function set.CyclicPrefix(obj, value)
@@ -282,14 +286,12 @@ classdef PUSCHBLER < matlab.System
             mustBeMember(value, {'Normal', 'Extended'})
 
             obj.CyclicPrefix = value;
-            obj.checkSCSandCP();
         end
 
         function set.PRBSet(obj, value)
             validateattributes(value, 'numeric', {'real', 'integer', 'vector', 'nonempty', ...
                 '>=', 0, '<=', 274});
-        obj.PRBSet = value;
-        obj.checkPRBSetandGrid();
+            obj.PRBSet = value;
         end
 
         function set.SymbolAllocation(obj, value)
@@ -509,8 +511,18 @@ classdef PUSCHBLER < matlab.System
             tmp.PUSCH.NumLayers = obj.NumLayers;
             tmp.NTxAnts = obj.NTxAnts;
             tmp.NRxAnts = obj.NRxAnts;
+
             % Cross-check the PUSCH layering against the channel geometry
             validateNumLayers(tmp);
+
+            % Cross-check that grid size and PRB allocation are compatible.
+            obj.checkPRBSetandGrid();
+
+            % Cross-check that SCS and CP are compatible.
+            obj.checkSCSandCP();
+
+            % Cross-check that we are not testing both decoders when HARQ is enabled.
+            obj.checkHARQandDecType();
         end
 
         function stepImpl(obj, SNRIn, nFrames)
