@@ -46,16 +46,16 @@ function srsPUCCHAnalyzer(carrier, pucch, rgFilename, rgOffset, rgSize)
         rgSize     (1, 1) double {mustBeInteger, mustBePositive}
     end
 
-    % Create resource grid.
-    rxGrid = nrResourceGrid(carrier);
-    gridDimensions = size(rxGrid);
+    nSubcarriers = carrier.NSizeGrid * 12;
+    nSymbols = 14;
+    nPorts = floor(rgSize / (nSubcarriers * nSymbols));
 
-    assert(prod(gridDimensions) == rgSize, ['The dimensions of the resource grid ', ...
-        '(%d x %d) are not consistent with the buffer size %d.'], gridDimensions(1), gridDimensions(2), rgSize);
+    assert(nSubcarriers * nSymbols * nPorts == rgSize, ['The dimensions of the resource grid ', ...
+        '(%d x %d) are not consistent with the buffer size %d.'], nSubcarriers, nSymbols, rgSize);
 
     % Read file containing the resource grid.
     rxGrid = reshape(srsTest.helpers.readComplexFloatFile(rgFilename, rgOffset, rgSize), ...
-        gridDimensions);
+        [nSubcarriers, nSymbols, nPorts]);
 
     dmrsInd = nrPUCCHDMRSIndices(carrier, pucch);
     dmrsSym = nrPUCCHDMRS(carrier, pucch);
@@ -74,52 +74,65 @@ function srsPUCCHAnalyzer(carrier, pucch, rgFilename, rgOffset, rgSize)
     % %       done at the moment.
     % [uciLLRs, rxSymbols] = nrPUCCHDecode(carrier, pucch, ouci, pucchEq, noiseEst);
 
-    % Plots.
-    NumXPlots = 2;
-    NumYPlots = 2;
+    figRG = figure("Name", "srsPUCCHAnalyzer: Resource grid amplitude");
+    tiledlayout(nPorts, 1);
+    figChannel = figure("Name", "srsPUCCHAnalyzer: Channel estimate");
+    tiledlayout(nPorts, 2);
 
-    figure("Name", "srsPUCCHAnalyzer");
-    clf;
+    for iPort=1:nPorts
+        % Plot resource grid power.
+        figure(figRG)
+        nexttile
+        imagesc(0, 0, abs(rxGrid(:, :, iPort)));
+        % By default, imagesc reverses the y axis.
+        set(gca, 'YDir','normal');
+        colorbar;
+        xlabel('Symbol')
+        ylabel('Subcarrier')
 
-    % Plot resource grid power.
-    subplot(NumYPlots, NumXPlots, 1);
-    imagesc(0, 0, abs(rxGrid));
-    % By default, imagesc reverses the y axis.
-    set(gca, 'YDir','normal');
-    colorbar;
-    xlabel('Symbol')
-    ylabel('Subcarrier')
+        % Plot estimated channel magnitude.
+        figure(figChannel)
+        nexttile
+        [symbolIndices, subcIndices] = meshgrid(0:nSymbols - 1, 0:nSubcarriers - 1);
+        surf(symbolIndices, subcIndices, abs(estChannel(:, :, iPort)), 'LineStyle','none', 'FaceColor','flat');
+        shading flat;
+        colorbar;
+        xlabel('Symbol');
+        ylabel('Subcarrier');
+        zlabel('Magnitude');
+        zmin = min(abs(estChannel(:,:,iPort)), [], 'all') * 0.9;
+        zmax = max(abs(estChannel(:,:,iPort)), [], 'all') * 1.1;
+        if zmin == zmax
+            zmin = zmin - 0.5;
+            zmax = zmax + 0.5;
+        end
+        axis([0, nSymbols - 1, 0, nSubcarriers - 1, zmin, zmax]);
 
-    % Plot estimated channel magnitude.
-    subplot(NumYPlots, NumXPlots, 3);
-    [symbolIndices, subcIndices] = meshgrid(0:gridDimensions(2) - 1, 0:gridDimensions(1) - 1);
-    surf(symbolIndices, subcIndices, abs(estChannel), 'LineStyle','none', 'FaceColor','flat');
-    shading flat;
-    colorbar;
-    title('Channel estimate magnitude');
-    xlabel('Symbol');
-    ylabel('Subcarrier');
-    zlabel('Magnitude');
-    axis([0, gridDimensions(2) - 1, 0, gridDimensions(1) - 1, min(abs(estChannel(:))) * 0.9, max(abs(estChannel(:))) * 1.1]);
+        % Plot estimated channel magnitude.
+        nexttile
+        surf(symbolIndices, subcIndices, angle(estChannel(:, :, iPort)), 'LineStyle','none', 'FaceColor','flat');
+        shading flat;
+        colorbar;
+        xlabel('Symbol');
+        ylabel('Subcarrier');
+        zlabel('Angle [rad]');
+        zmin = min(angle(estChannel(:,:,iPort)), [], 'all') * 0.9;
+        zmax = max(angle(estChannel(:,:,iPort)), [], 'all') * 1.1;
+        if zmin == zmax
+            zmin = zmin - 0.5;
+            zmax = zmax + 0.5;
+        end
+        axis([0, nSymbols - 1, 0, nSubcarriers - 1, zmin, zmax]);
+    end
 
-    % Plot estimated channel magnitude.
-    subplot(NumYPlots, NumXPlots, 4);
-    surf(symbolIndices, subcIndices, angle(estChannel), 'LineStyle','none', 'FaceColor','flat');
-    shading flat;
-    colorbar;
-    title('Channel estimate phase');
-    xlabel('Symbol');
-    ylabel('Subcarrier');
-    zlabel('Angle [rad]');
-    axis([0, gridDimensions(2) - 1, 0, gridDimensions(1) - 1, min(angle(estChannel(:))) * 0.9, max(angle(estChannel(:))) * 1.1]);
-
+    figure
     % Plot detected constellation.
-    subplot(NumYPlots, NumXPlots, 2);
     plot(real(pucchEq), imag(pucchEq), 'x');
     grid on;
     xlabel('Real');
     ylabel('Imaginary');
-    title('Equalized constellation');
+    title('srsPUCCHAnalyzer: Equalized constellation');
+    axis([-1.2, 1.2, -1.2, 1.2])
 
     % % Plot soft bits histogram.
     % subplot(NumYPlots, NumXPlots, 5);

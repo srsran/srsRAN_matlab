@@ -34,32 +34,30 @@ function RG = srsResourceGridAnalyzer(nRBs, cyclicPrefix, rgFilename, rgOffset, 
         rgSize (1, 1) double {mustBeInteger, mustBePositive}
     end
 
-    scs = 15;
-    if strcmp(cyclicPrefix, 'extended')
-        scs = 60;
-    end
+    nSubcarriers = nRBs * 12;
+    nSymbols = 14;
+    nPorts = floor(rgSize / (nSubcarriers * nSymbols));
 
-    carrier = nrCarrierConfig('NSizeGrid', nRBs, 'CyclicPrefix', cyclicPrefix, 'SubcarrierSpacing', scs);
-
-    % Create resource grid.
-    rxGrid = nrResourceGrid(carrier);
-    gridDimensions = size(rxGrid);
-
-    assert(prod(gridDimensions) == rgSize, ['The dimensions of the resource grid ', ...
-        '(%d x %d) are not consistent with the buffer size %d.'], gridDimensions(1), gridDimensions(2), rgSize);
+    assert(nSubcarriers * nSymbols * nPorts == rgSize, ['The dimensions of the resource grid ', ...
+        '(%d x %d) are not consistent with the buffer size %d.'], nSubcarriers, nSymbols, rgSize);
 
     % Read file containing the resource grid.
     rxGrid = reshape(srsTest.helpers.readComplexFloatFile(rgFilename, rgOffset, rgSize), ...
-        gridDimensions);
+        [nSubcarriers, nSymbols, nPorts]);
 
     % Plot the heat map of the RG amplitude.
     figure("Name", "srsResourceGridAnalyzer");
-    imagesc(0, 0, abs(rxGrid));
-    % By default, imagesc reverses the y axis.
-    set(gca, 'YDir','normal');
-    colorbar;
-    xlabel('Symbol')
-    ylabel('Subcarrier')
+    tiledlayout('flow');
+
+    for iPort = 1:nPorts
+        nexttile
+        imagesc(0, 0, abs(rxGrid(:,:,iPort)));
+        % By default, imagesc reverses the y axis.
+        set(gca, 'YDir','normal');
+        colorbar;
+        xlabel('Symbol')
+        ylabel('Subcarrier')
+    end
 
     if nargout == 1
         RG = rxGrid;

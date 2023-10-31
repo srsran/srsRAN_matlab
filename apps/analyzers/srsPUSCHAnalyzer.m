@@ -61,21 +61,16 @@ RV = extra.RV;
 TransportBlockLength = extra.TransportBlockLength;
 
 %% Load resource grid.
+nSubcarriers = carrier.NSizeGrid * 12;
+nSymbols = 14;
+nPorts = floor(rgSize / (nSubcarriers * nSymbols));
+
+assert(nSubcarriers * nSymbols * nPorts == rgSize, ['The dimensions of the resource grid ', ...
+    '(%d x %d) are not consistent with the buffer size %d.'], nSubcarriers, nSymbols, rgSize);
+
 % Read file containing the resource grid.
-rgSamples = readComplexFloatFile(rgFilename, rgOffset, rgSize);
-
-% Create resource grid.
-rxGrid = nrResourceGrid(carrier);
-gridDimensions = size(rxGrid);
-
-assert(prod(gridDimensions) == rgSize, ['The dimensions of the resource grid ', ...
-    '(%d x %d) are not consistent with the buffer size %d.'], gridDimensions(1), gridDimensions(2), rgSize);
-
-% Map the samples from the file to the grid.
-rxGrid(:) = rgSamples(:);
-
-% Free unused samples.
-clear rgSamples;
+rxGrid = reshape(readComplexFloatFile(rgFilename, rgOffset, rgSize), ...
+    [nSubcarriers, nSymbols, nPorts]);
 
 %% Estimate channel.
 
@@ -95,8 +90,8 @@ end
 
 %% Equalize.
 [dataInd, puschInfo] = nrPUSCHIndices(carrier, pusch);
-rxSym = rxGrid(dataInd);
-Hest = H(dataInd);
+
+[rxSym, Hest] = nrExtractResources(dataInd, rxGrid, H);
 
 [equalized, ~] = nrEqualizeMMSE(rxSym, Hest, nVar);
 
@@ -129,59 +124,63 @@ end
 fprintf('The block CRC is %s.\n', crcStatus);
 
 %% Plot analysis.
-NumXPlots = 3;
-NumYPlots = 2;
+figRG = figure("Name", "srsPUSCHAnalyzer: Resource grid amplitude");
+tiledlayout(nPorts, 1);
+figChannel = figure("Name", "srsPUSCHAnalyzer: Channel estimate");
+tiledlayout(nPorts, 2);
 
-figure("Name", "srsPUSCHAnalyzer");
-clf;
+for iPort=1:nPorts
+    % Plot resource grid power.
+    figure(figRG);
+    nexttile
+    imagesc(0, 0, abs(rxGrid(:,:,iPort)));
+    % By default, imagesc reverses the y axis.
+    set(gca, 'YDir','normal');
+    colorbar;
+    xlabel('Symbol');
+    ylabel('Subcarrier');
 
-% Plot resource grid power.
-subplot(NumYPlots, NumXPlots, 1);
-subcIndexes = 0:gridDimensions(1) - 1;
-symbolIndexes = 0:gridDimensions(2) - 1;
-[symbolIndexes, subcIndexes] = meshgrid(symbolIndexes, subcIndexes);
-surf(symbolIndexes, subcIndexes, abs(rxGrid), 'LineStyle','none', 'FaceColor','flat');
-view(0, 90);
-shading flat;
-colormap parula;
-colorbar;
-title('Resource grid amplitude');
-xlabel('Symbol');
-ylabel('Subcarrier');
-axis([0, gridDimensions(2) - 1, 0, gridDimensions(1) - 1, min(abs(rxGrid(:))), max(abs(rxGrid(:)))]);
+    % Plot estimated channel magnitude.
+    figure(figChannel);
+    nexttile
+    subcIndexes = 0:nSubcarriers - 1;
+    symbolIndexes = 0:nSymbols - 1;
+    [symbolIndexes, subcIndexes] = meshgrid(symbolIndexes, subcIndexes);
+    surf(symbolIndexes, subcIndexes, abs(H(:,:,iPort)), 'LineStyle','none', 'FaceColor','flat');
+    shading flat;
+    colorbar;
+    xlabel('Symbol');
+    ylabel('Subcarrier');
+    zlabel('Magnitude');
+    zmin = min(abs(estChannel(:,:,iPort)), [], 'all') * 0.9;
+    zmax = max(abs(estChannel(:,:,iPort)), [], 'all') * 1.1;
+    if zmin == zmax
+        zmin = zmin - 0.5;
+        zmax = zmax + 0.5;
+    end
+    axis([0, nSymbols - 1, 0, nSubcarriers - 1, zmin, zmax]);
 
-% Plot estimated channel magnitude.
-subplot(NumYPlots, NumXPlots, 2);
-subcIndexes = 0:gridDimensions(1) - 1;
-symbolIndexes = 0:gridDimensions(2) - 1;
-[symbolIndexes, subcIndexes] = meshgrid(symbolIndexes, subcIndexes);
-surf(symbolIndexes, subcIndexes, abs(H), 'LineStyle','none', 'FaceColor','flat');
-shading flat;
-colormap parula;
-colorbar;
-title('Channel estimate magnitude');
-xlabel('Symbol');
-ylabel('Subcarrier');
-zlabel('Magnitude');
-axis([0, gridDimensions(2) - 1, 0, gridDimensions(1) - 1, min(abs(H(:))) * 0.9, max(abs(H(:))) * 1.1]);
+    % Plot estimated channel phase.
+    nexttile
+    surf(symbolIndexes, subcIndexes, angle(H(:,:,iPort)), 'LineStyle','none', 'FaceColor','flat');
+    shading flat;
+    colorbar;
+    xlabel('Symbol');
+    ylabel('Subcarrier');
+    zlabel('Angle [rad]');
+    zmin = min(angle(estChannel(:,:,iPort)), [], 'all') * 0.9;
+    zmax = max(angle(estChannel(:,:,iPort)), [], 'all') * 1.1;
+    if zmin == zmax
+        zmin = zmin - 0.5;
+        zmax = zmax + 0.5;
+    end
+    axis([0, nSymbols - 1, 0, nSubcarriers - 1, zmin, zmax]);
+end
 
-% Plot estimated channel magnitude.
-subplot(NumYPlots, NumXPlots, 3);
-subcIndexes = 0:gridDimensions(1) - 1;
-symbolIndexes = 0:gridDimensions(2) - 1;
-[symbolIndexes, subcIndexes] = meshgrid(symbolIndexes, subcIndexes);
-surf(symbolIndexes, subcIndexes, angle(H), 'LineStyle','none', 'FaceColor','flat');
-shading flat;
-colormap parula;
-colorbar;
-title('Channel estimate phase');
-xlabel('Symbol');
-ylabel('Subcarrier');
-zlabel('Angle [rad]');
-axis([0, gridDimensions(2) - 1, 0, gridDimensions(1) - 1, min(angle(H(:))) * 0.9, max(angle(H(:))) * 1.1]);
-
+figure("Name", "srsPUSCHAnalyzer")
+tiledlayout('flow')
 % Plot detected constellation.
-subplot(NumYPlots, NumXPlots, 4);
+nexttile
 plot(real(equalized), imag(equalized), 'x');
 grid on;
 xlabel('Real');
@@ -189,7 +188,7 @@ ylabel('Imaginary');
 title('Equalized constellation');
 
 % Plot soft bits histogram.
-subplot(NumYPlots, NumXPlots, 5);
+nexttile
 histogram(rxcw, 'Normalization', 'pdf');
 grid on;
 xlabel('Soft bits');
