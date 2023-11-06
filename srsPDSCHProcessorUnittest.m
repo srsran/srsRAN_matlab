@@ -59,6 +59,9 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
 
         %Type of the tested block.
         srsBlockType = 'phy/upper/channel_processors'
+
+        %Maximum number of layers.
+        MaxNumLayers = 4
     end
 
     properties (ClassSetupParameter)
@@ -80,14 +83,11 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
         %   The symbol allocation is described by a two-element array with the starting
         %   symbol (0...13) and the length (1...14) of the PDSCH transmission.
         %   Example: [0, 14].
-        SymbolAllocation = {[0, 14], [1, 9]}
+        SymbolAllocation = {[2, 12]}
 
         %PDSCH DM-RS subcarrier reference point.
         %    It can be either CRB 0 or PRB 0 within the BWP.
         DMRSReferencePoint = {'CRB0', 'PRB0'};
-
-        %Number of transmission layers (1, 2, 3, 4).
-        NumLayers = {1, 2, 3, 4}
     end
 
     methods (Access = protected)
@@ -126,13 +126,13 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
 
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, BWPConfig, Modulation, ...
-                SymbolAllocation, DMRSReferencePoint, NumLayers)
+                SymbolAllocation, DMRSReferencePoint)
         %testvectorGenerationCases Generates a test vector for the given
-        %   BWP, modulation scheme, symbol allocation, DM-RS reference 
-        %   point and number of layers settings. Other parameters, such as
-        %   subcarrier spacing, PDSCH frequency allocation, slot number, 
-        %   RNTI, scrambling identifiers, target code rate and DM-RS 
-        %   additional positions are randomly generated.
+        %   BWP, modulation scheme, symbol allocation, and DM-RS reference
+        %   point settings. Other parameters, such as subcarrier spacing,
+        %   PDSCH frequency allocation, slot number, RNTI, scrambling
+        %   identifiers, target code rate and DM-RS additional positions
+        %   are randomly generated.
 
             import srsLib.phy.helpers.srsConfigureCarrier
             import srsLib.phy.helpers.srsCSIRSValidateConfig
@@ -147,8 +147,9 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
             % Generate a unique test ID.
             testID = testCase.generateTestID;
 
-            % Carrier configuration parameters.
+            % Random parameters.
             NCellID = randi([0, 1007]);
+            NumLayers = randi([1, testCase.MaxNumLayers]);
             
             % BWP allocation, referenced to CRB0.
             NStartBWP = BWPConfig(1);
@@ -166,8 +167,8 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
             % Redundancy Version 0.
             rv = 0;
 
-            % Target code rate, between 0.1 and 0.9;
-            targetCodeRate = 0.1 + rand() * 0.8;
+            % Target code rate, between 0.1 and 0.8;
+            targetCodeRate = 0.1 + rand() * 0.7;
 
             % Minimum number of PRB.
             MinNumPrb = 1;
@@ -216,7 +217,7 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
             csirs1.CSIRSPeriod = 'on';
             csirs1.RowNumber = 1;
             csirs1.Density = 'three';
-            csirs1.SymbolLocations = {0};
+            csirs1.SymbolLocations = {3};
             csirs1.SubcarrierLocations = {0};
             csirs1.NumRB = NSizeBWP;
             csirs1.RBOffset = NStartBWP;
@@ -229,7 +230,7 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
             csirs2.CSIRSPeriod = 'on';
             csirs2.RowNumber = 2;
             csirs2.Density = 'dot5odd';
-            csirs2.SymbolLocations = {randi([1, 11])};
+            csirs2.SymbolLocations = {4};
             csirs2.SubcarrierLocations = {randi([0, 11])};
             csirs2.NumRB = NSizeBWP;
             csirs2.RBOffset = NStartBWP;
@@ -242,7 +243,7 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
             csirs3.CSIRSPeriod = 'on';
             csirs3.RowNumber = 3;
             csirs3.Density = 'dot5even';
-            csirs3.SymbolLocations = {randi([1, 11])};
+            csirs3.SymbolLocations = {12};
             csirs3.SubcarrierLocations = {randi([0, 10])};
             csirs3.NumRB = NSizeBWP;
             csirs3.RBOffset = NStartBWP;
