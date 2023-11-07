@@ -22,7 +22,7 @@
 %   Modulation         - Modulation scheme.
 %   SymbolAllocation   - PDSCH start symbol index and number of symbols.
 %   DMRSReferencePoint - PDSCH DM-RS subcarrier reference point.
-%   NumLayers          - Number of transmission layers.
+%   MaxNumLayers       - Maximum number of transmission layers.
 %
 %   srsPDSCHProcessorUnittest Methods (TestTags = {'testvector'}):
 %
@@ -62,6 +62,12 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
 
         %Maximum number of layers.
         MaxNumLayers = 4
+
+        %Symbols allocated to the PDSCH transmission.
+        %   The symbol allocation is described by a two-element array with the starting
+        %   symbol (0...13) and the length (1...14) of the PDSCH transmission.
+        %   Example: [0, 14].
+        SymbolAllocation = [2, 12]
     end
 
     properties (ClassSetupParameter)
@@ -79,12 +85,6 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
         %Modulation {QPSK, 16-QAM, 64-QAM, 256-QAM}.
         Modulation = {'QPSK', '16QAM', '64QAM', '256QAM'}
         
-        %Symbols allocated to the PDSCH transmission.
-        %   The symbol allocation is described by a two-element array with the starting
-        %   symbol (0...13) and the length (1...14) of the PDSCH transmission.
-        %   Example: [0, 14].
-        SymbolAllocation = {[2, 12]}
-
         %PDSCH DM-RS subcarrier reference point.
         %    It can be either CRB 0 or PRB 0 within the BWP.
         DMRSReferencePoint = {'CRB0', 'PRB0'};
@@ -126,13 +126,13 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
 
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, BWPConfig, Modulation, ...
-                SymbolAllocation, DMRSReferencePoint)
+                DMRSReferencePoint)
         %testvectorGenerationCases Generates a test vector for the given
-        %   BWP, modulation scheme, symbol allocation, and DM-RS reference
-        %   point settings. Other parameters, such as subcarrier spacing,
-        %   PDSCH frequency allocation, slot number, RNTI, scrambling
-        %   identifiers, target code rate and DM-RS additional positions
-        %   are randomly generated.
+        %   BWP, modulation scheme, and DM-RS reference point settings. 
+        %   Other parameters, such as subcarrier spacing, PDSCH frequency
+        %   allocation, slot number, RNTI, scrambling identifiers, target
+        %   code rate and DM-RS additional positions are randomly
+        %   generated.
 
             import srsLib.phy.helpers.srsConfigureCarrier
             import srsLib.phy.helpers.srsCSIRSValidateConfig
@@ -201,7 +201,7 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
             pdsch.RNTI = RNTI;
             pdsch.NID = NID;
             pdsch.Modulation = Modulation;
-            pdsch.SymbolAllocation = SymbolAllocation;
+            pdsch.SymbolAllocation = testCase.SymbolAllocation;
             pdsch.NStartBWP = NStartBWP;
             pdsch.NSizeBWP = NSizeBWP;
             pdsch.PRBSet = PdschStartRB + (0:PdschNumRB - 1);
