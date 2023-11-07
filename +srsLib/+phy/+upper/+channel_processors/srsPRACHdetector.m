@@ -139,7 +139,7 @@ function [indices, offsets, sinr, rssi] = srsPRACHdetector(carrier, prachConf, g
             % 1/5 of the detection window.
             [m, delay] = max(metricGlobal);
             if (m > threshold) && (delay < length(metricGlobal) * 0.8)
-                pos = (iSequence - 1) * nWindows + iWindow;
+                pos = (iSequence - 1) * info.nShifts + iWindow;
                 indices(pos) = true;
                 d = delay + winStart - 1;
                 offsets(pos) = (d / Nfft - mod(LRA - info.WinStart(iWindow), LRA) / LRA) / prach.SubcarrierSpacing * 1000;
