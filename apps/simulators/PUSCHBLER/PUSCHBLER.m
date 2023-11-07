@@ -73,10 +73,9 @@
 %   DMRSAdditionalPosition       - Additional DM-RS symbol positions (0...3).
 %   DMRSConfigurationType        - DM-RS configuration type (1, 2).
 %   DelayProfile                 - Channel delay profile ('AWGN'(no delay, no Doppler),
-%                                  'TDL-A'(indoor hotspot model), 'TDLA30' (simplified
-%                                  indoor hotspot model)).
-%   DelaySpread                  - Delay spread in seconds (TDL-A delay profile only).
-%   MaximumDopplerShift          - Maximum Doppler shift in hertz (TDL-A and TDLA30 delay profile only).
+%                                  'TDL-A', 'TDLA30', 'TDL-B', 'TDLB100', 'TDL-C', 'TDLC300').
+%   DelaySpread                  - Delay spread in seconds (TDL-{A,B,C} delay profiles only).
+%   MaximumDopplerShift          - Maximum Doppler shift in hertz (TDL delay profiles only).
 %   EnableHARQ                   - HARQ flag: true for enabling retransmission with
 %                                  RV sequence [0, 2, 3, 1], false for no retransmissions.
 %   DecoderType                  - PUSCH decoder type ('matlab', 'srs' (requires mex), 'both')
@@ -170,11 +169,13 @@ classdef PUSCHBLER < matlab.System
         DMRSAdditionalPosition (1, 1) double {mustBeReal, mustBeMember(DMRSAdditionalPosition, [0, 1, 2, 3])} = 1
         %DM-RS configuration type (1, 2).
         DMRSConfigurationType (1, 1) double {mustBeReal, mustBeMember(DMRSConfigurationType, [1, 2])} = 1
-        %Channel delay profile ('AWGN'(no delay), 'TDL-A'(Indoor hotspot model)).
-        DelayProfile (1, :) char {mustBeMember(DelayProfile, {'AWGN', 'TDL-A', 'TDLA30'})} = 'AWGN'
-        %TDL-A delay profile only: Delay spread in seconds.
+        %Channel delay profile ('AWGN'(no delay), 'TDL-A', 'TDLA30' 'TDL-B', 'TDLB100',
+        %   'TDL-C', 'TDLC300').
+        DelayProfile (1, :) char {mustBeMember(DelayProfile, {'AWGN', 'TDL-A', 'TDLA30', ...
+            'TDL-B', 'TDLB100', 'TDL-C', 'TDLC300'})} = 'AWGN'
+        %TDL-{A,B,C} delay profiles only: Delay spread in seconds.
         DelaySpread (1, 1) double {mustBeReal, mustBeNonnegative} = 30e-9
-        %TDL-A delay profile only: Maximum Doppler shift in hertz.
+        %TDL delay profiles only: Maximum Doppler shift in hertz.
         MaximumDopplerShift (1, 1) double {mustBeReal, mustBeNonnegative} = 0
         %HARQ flag: true for enabling retransmission with RV sequence [0, 2, 3, 1], false for no retransmissions.
         EnableHARQ (1, 1) logical = false
@@ -946,8 +947,11 @@ classdef PUSCHBLER < matlab.System
             switch property
                 case 'DMRSTypeAPosition'
                     flag = (obj.MappingType == 'B');
-                case {'DelaySpread', 'MaximumDopplerShift'}
-                    flag = strcmp(obj.DelayProfile, 'AWGN') || strcmp(obj.DelayProfile, 'TDLA30');
+                case 'DelaySpread'
+                    flag = strcmp(obj.DelayProfile, 'AWGN') || strcmp(obj.DelayProfile, 'TDLA30') ...
+                        || strcmp(obj.DelayProfile, 'TDLB100') || strcmp(obj.DelayProfile, 'TDLC300');
+                case 'MaximumDopplerShift'
+                    flag = strcmp(obj.DelayProfile, 'AWGN');
                 case {'ThroughputMATLABCtr', 'MissedBlocksMATLABCtr'}
                     flag = isempty(obj.SNRrange) || strcmp(obj.DecoderType, 'srs');
                 case {'ThroughputSRSCtr', 'MissedBlocksSRSCtr'}
