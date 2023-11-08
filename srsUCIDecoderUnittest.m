@@ -54,7 +54,7 @@ classdef srsUCIDecoderUnittest < srsTest.srsBlockUnittest
         srsBlock = 'uci_decoder'
 
         %Type of the tested block.
-        srsBlockType = 'phy/upper/channel_processors'
+        srsBlockType = 'phy/upper/channel_processors/uci'
     end
 
     properties (ClassSetupParameter)
@@ -76,7 +76,7 @@ classdef srsUCIDecoderUnittest < srsTest.srsBlockUnittest
         function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
 
-            fprintf(fileID, '#include "srsran/phy/upper/channel_processors/uci_decoder.h"\n');
+            fprintf(fileID, '#include "srsran/phy/upper/channel_processors/uci/uci_decoder.h"\n');
             fprintf(fileID, '#include "srsran/phy/upper/log_likelihood_ratio.h"\n');
             fprintf(fileID, '#include "srsran/ran/modulation_scheme.h"\n');
             fprintf(fileID, '#include "srsran/support/file_vector.h"\n');

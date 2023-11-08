@@ -25,7 +25,7 @@
 #include "srsran_matlab/srsran_mex_dispatcher.h"
 #include "srsran/phy/support/resource_grid_writer.h"
 #include "srsran/phy/support/support_factories.h"
-#include "srsran/phy/upper/channel_processors/channel_processor_factories.h"
+#include "srsran/phy/upper/channel_processors/pusch/factories.h"
 #include "srsran/phy/upper/channel_processors/pusch/pusch_demodulator.h"
 #include "srsran/phy/upper/equalization/equalization_factories.h"
 #include "srsran/ran/frame_types.h"
