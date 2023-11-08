@@ -230,7 +230,7 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
             
             % Generate and map the DM-RS sequence.
             puschDmrs1 = nrPUCCHDMRS(carrier, pucch1, "OutputDataType", "single");
-            puschDmrs2 = nrPUCCHDMRS(carrier, pucch1, "OutputDataType", "single");
+            puschDmrs2 = nrPUCCHDMRS(carrier, pucch2, "OutputDataType", "single");
             grid(pucchDmrsIndices) = puschDmrs1 + puschDmrs2;
 
             % Init received signals.
