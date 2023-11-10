@@ -252,7 +252,7 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
             % Generate PRACH grid.
             grid = obj.generatePRACH(nAntennas);
 
-            [ix, delays, sinr, rssi] = srsLib.phy.upper.channel_processors.srsPRACHdetector(obj.carrier, obj.prach, grid, true);
+            [ix, delays, normMetric, rssi] = srsLib.phy.upper.channel_processors.srsPRACHdetector(obj.carrier, obj.prach, grid, true);
             pp = obj.prach.PreambleIndex + 1;
             assert(ix(pp), 'Transmitted preamble %d not detected.', pp - 1);
 
@@ -296,8 +296,7 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
             srsPreambleIndication = {...
                 obj.prach.PreambleIndex, ...            % preamble_index
                 delayString, ...                        % time_advance
-                0.0, ...                                % power_dB
-                sinr(pp), ...                           % snr_dB
+                normMetric(pp), ...                     % normalized detection metric
                 };
 
             srsPrachDetectionResult = {...
