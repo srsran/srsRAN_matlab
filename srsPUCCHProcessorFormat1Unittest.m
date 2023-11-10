@@ -198,6 +198,7 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
             gridDims = size(grid);
 
             ack = randi([0, 1], ackSize, 1);
+            ack2 = randi([0, 1], ackSize, 1);
             sr = [];
 
             if ackSize == 0
@@ -218,7 +219,7 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
                 pucch1.GroupHopping, pucch1.InitialCyclicShift, FrequencyHopping, ...
                 pucch1.OCCI, "OutputDataType", "single");
 
-            pucchData2 = nrPUCCH1(ack, sr, pucch2.SymbolAllocation, ...
+            pucchData2 = nrPUCCH1(ack2, sr, pucch2.SymbolAllocation, ...
                 carrier.CyclicPrefix, carrier.NSlot, carrier.NCellID, ...
                 pucch2.GroupHopping, pucch2.InitialCyclicShift, FrequencyHopping, ...
                 pucch2.OCCI, "OutputDataType", "single");
@@ -241,8 +242,20 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
             % Noise variance.
             snrdB = 30;
             noiseStdDev = 10 ^ (-snrdB / 20);
-            noiseVar = noiseStdDev.^2;
 
+            % Carrier Frequency offset.
+            cfoHz = 400;
+
+            % Modulate baseband signal.
+            [baseband, OfdmInfo] = nrOFDMModulate(grid, carrier.SubcarrierSpacing, carrier.NSlot);
+
+            % Apply carrier frequency offset in time domain.
+            timeSeconds = (0:(length(baseband) - 1)) / OfdmInfo.SampleRate;
+            basebandWithCfo = baseband .* transpose(exp(2i * pi * timeSeconds * cfoHz));
+
+            % Demodulate baseband signal.
+            gridWithCfo = nrOFDMDemodulate(carrier, basebandWithCfo);
+            
             % Iterate each receive port.
             for iRxPort = 1:NumRxPorts
                 % Create some noise samples.
@@ -253,7 +266,7 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
                 estimates = exp(1i * linspace(0, 2 * pi, gridDims(1))') * ones(1, gridDims(2));
 
                 % Create noisy modulated symbols.
-                rxGrid(:, :, iRxPort) = estimates .* grid + (noiseStdDev * normNoise);
+                rxGrid(:, :, iRxPort) = estimates .* gridWithCfo + (noiseStdDev * normNoise);
 
                 % Extract PUCCH symbols from the received grid.
                 rxSymbols(:, iRxPort) = rxGrid(pucchDataIdices);
@@ -343,8 +356,8 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
 
             % Generate test case cell.
             pucchEntry2 = {...
-                pucchConfig2, ...  % config
-                num2cell(ack), ... % ack_bits
+                pucchConfig2, ...   % config
+                num2cell(ack2), ... % ack_bits
                 };
 
             % Concatenate PUCCH entries.
