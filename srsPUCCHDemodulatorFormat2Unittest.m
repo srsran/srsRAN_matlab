@@ -71,13 +71,13 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
         SymbolAllocation = {[0, 1], [6, 2], [12, 2]};
 
         %Number of contiguous PRB allocated to PUCCH Format 2 (1...16).
-        PRBNum = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};   
+        PRBNum = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
     end
 
     methods (Access = protected)
         function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
-           
+
             fprintf(fileID, '#include "../../support/resource_grid_test_doubles.h"\n');
             fprintf(fileID, '#include "srsran/phy/upper/channel_processors/pucch_demodulator.h"\n');
             fprintf(fileID, '#include "srsran/support/file_vector.h"\n');
@@ -85,7 +85,7 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
 
         function addTestDefinitionToHeaderFile(~, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
-           
+
             fprintf(fileID, 'struct context_t {\n');
             fprintf(fileID, '  unsigned                                 grid_nof_prb;\n');
             fprintf(fileID, '  unsigned                                 grid_nof_symbols;\n');
@@ -105,7 +105,7 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
 
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, SymbolAllocation, PRBNum)
-        %testvectorGenerationCases Generates a test vector for the given 
+        %testvectorGenerationCases Generates a test vector for the given
         % Fixed Reference Channel.
 
             import srsLib.phy.upper.channel_modulation.srsDemodulator
@@ -133,12 +133,12 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
             MaxGridSize = 275;
 
             % Resource grid starts at CRB0.
-            NStartGrid = 0;                    
+            NStartGrid = 0;
 
             % BWP start relative to CRB0.
             NStartBWP = randi([0, MaxGridSize - PRBNum - 1]);
 
-            % BWP size. 
+            % BWP size.
             % PUCCH Format 2 frequency allocation must fit inside the BWP.
             NSizeBWP = randi([PRBNum, MaxGridSize - NStartBWP]);
 
@@ -147,12 +147,12 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
 
             % Fit resource grid size to the BWP.
             NSizeGrid = NStartBWP + NSizeBWP;
-            
+
             % PRB set assigned to PUCCH Format 2 within the BWP.
             % Each element within the PRB set indicates the location of a
             % Resource Block relative to the BWP starting PRB.
             PRBSet = PRBStart : PRBStart + PRBNum - 1;
-           
+
             % Normal cyclic prefix.
             CyclicPrefix = 'normal';
 
@@ -168,8 +168,8 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
             FrequencyHopping = 'neither';
 
             % Configure the PUCCH.
-            pucch = srsConfigurePUCCH(2, NStartBWP, NSizeBWP, SymbolAllocation, ... 
-                 PRBSet, FrequencyHopping, NID, RNTI);         
+            pucch = srsConfigurePUCCH(2, NStartBWP, NSizeBWP, SymbolAllocation, ...
+                 PRBSet, FrequencyHopping, NID, RNTI);
 
             % Number of PUCCH Subcarriers.
             nofPUCCHSubcs = PRBNum * 12;
@@ -187,7 +187,7 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
             % resources.
             [~, info] = nrPUCCHIndices(carrier, pucch);
             uciCWLength = info.G;
-            
+
             % Generate a random UCI codeword that fills the available PUCCH resources.
             uciCW = randi([0, 1], uciCWLength, 1);
 
@@ -198,21 +198,21 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
                 error("Inconsistent UCI Codeword and PUCCH index list lengths");
             end
 
-            % Create some noise samples with different variances. Round standard 
+            % Create some noise samples with different variances. Round standard
             % deviation to reduce double to float error in the soft-demodulator.
             normNoise = (randn(nofPUCCHDataRE, 1) + 1i * randn(nofPUCCHDataRE, 1)) / sqrt(2);
             noiseStd = round(0.1 + 0.9 * rand(), 1);
             noiseVar = noiseStd.^2;
 
             % Create random channel estimates with a single Rx port and Tx layer.
-            % Create a full resource grid of estimates.            
-            estimates = (0.1 + 0.9 * rand(nofGridSubcs, nofGridSymbols)) + 1i * (0.1 + 0.9 * rand(nofGridSubcs, nofGridSymbols)); 
+            % Create a full resource grid of estimates.
+            estimates = (0.1 + 0.9 * rand(nofGridSubcs, nofGridSymbols)) + 1i * (0.1 + 0.9 * rand(nofGridSubcs, nofGridSymbols));
             estimates = estimates / sqrt(2);
 
-            % Extract channel estimation coefficients corresponding to 
+            % Extract channel estimation coefficients corresponding to
             % PUCCH control data RE.
             dataChEsts = estimates(sub2ind(size(estimates), dataSymbolIndices(:, 1) + 1, dataSymbolIndices(:, 2) + 1));
-            
+
             % Create noisy modulated symbols.
             channelSymbols = dataChEsts .* modulatedSymbols + (noiseStd * normNoise);
 
@@ -231,7 +231,7 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
 
             % Scrambling sequence for PUCCH.
             [scSequence, ~] = nrPUCCHPRBS(NID, RNTI, length(schSoftBits));
-            
+
             % Encode the scrambling sequence into the sign, so it can be
             % used with soft bits.
             scSequence = -(scSequence * 2) + 1;
@@ -249,21 +249,21 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
             firstPRB = NStartBWP + PRBStart;
 
             pucchF2Config = {...
-                portsString, ...         % rx_ports                
+                portsString, ...         % rx_ports
                 firstPRB, ...            % first_prb
                 PRBNum, ...              % nof_prb
                 SymbolAllocation(1), ... % start_symbol_index
                 SymbolAllocation(2), ... % nof_symbols
                 RNTI, ...                % rnti
                 NID, ...                 % n_id
-		    };
+                };
 
             testCaseContext = { ...
                 NSizeGrid, ...      % grid_nof_prb
                 nofGridSymbols, ... % grid_nof_symbols
                 noiseVar, ...       % noise_var
                 pucchF2Config, ...  % config
-		    };
+                };
 
             testCaseString = testCase.testCaseToString(testID, testCaseContext, true, ...
                 '_test_input_symbols', '_test_input_estimates', '_test_output_sch_soft_bits');
