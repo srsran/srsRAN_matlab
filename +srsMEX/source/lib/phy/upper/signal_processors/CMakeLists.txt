@@ -28,5 +28,5 @@ target_link_libraries(multiport_channel_estimator_mex
 
 set_target_properties(multiport_channel_estimator_mex
     PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/../../+srsMEX/+phy/@srsMultiPortChannelEstimator"
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/../+phy/@srsMultiPortChannelEstimator"
 )
