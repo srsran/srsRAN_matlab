@@ -32,13 +32,13 @@
 ///
 /// Creates and assemblies all the necessary components (DFT, PRACH generator, ...) for a fully-functional
 /// PRACH detector.
-static std::unique_ptr<srsran::prach_detector> create_prach_detector();
+inline std::unique_ptr<srsran::prach_detector> create_prach_detector();
 
 /// \brief Factory method for a PRACH validator.
 ///
 /// Creates and assemblies all the necessary components (DFT, PRACH generator, ...) for a fully-functional
 /// PRACH validator.
-static std::unique_ptr<srsran::prach_detector_validator> create_prach_validator();
+inline std::unique_ptr<srsran::prach_detector_validator> create_prach_validator();
 
 /// Implements a PRACH detector following the srsran_mex_dispatcher template.
 class MexFunction : public srsran_mex_dispatcher

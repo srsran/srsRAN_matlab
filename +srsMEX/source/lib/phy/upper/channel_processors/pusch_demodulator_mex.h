@@ -34,7 +34,7 @@
 ///
 /// Creates and assemblies all the necessary components (equalizer, modulator and PRG) for a fully-functional
 /// PUSCH demodulator.
-static std::unique_ptr<srsran::pusch_demodulator> create_pusch_demodulator();
+inline std::unique_ptr<srsran::pusch_demodulator> create_pusch_demodulator();
 
 /// Implements a PUSCH demodulator following the srsran_mex_dispatcher template.
 class MexFunction : public srsran_mex_dispatcher

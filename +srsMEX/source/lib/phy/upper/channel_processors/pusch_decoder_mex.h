@@ -36,7 +36,7 @@
 ///
 /// Creates and assemblies all the necessary components (LDPC blocks, CRC calculators, ...) for a fully-functional
 /// PUSCH decoder.
-static std::unique_ptr<srsran::pusch_decoder> create_pusch_decoder();
+inline std::unique_ptr<srsran::pusch_decoder> create_pusch_decoder();
 
 /// Implements a PUSCH decoder following the srsran_mex_dispatcher template.
 class MexFunction : public srsran_mex_dispatcher
