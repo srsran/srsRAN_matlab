@@ -120,17 +120,13 @@ function [channelEstRG, noiseEst, rsrp, epre, timeAlignment] = srsChannelEstimat
         % detectMetricNum = detectMetricNum + norm(recXpilots_, 'fro')^2;
 
         if ~useLegacyEst
-            if length(estimatedChannelP_) <= 12
-                estimatedChannelP_ = ones(size(estimatedChannelP_)) * mean(estimatedChannelP_);
-            else
-                [rcFilter_, correction_] = getRCfilter(12/sum(config.DMRSREmask), min(3, sum(maskPRBs_)));
-    
-                est2_ = conv(estimatedChannelP_, rcFilter_, "same");
-                nCorr_ = length(correction_);
-                est2_(1:nCorr_) = est2_(1:nCorr_) .* correction_;
-                est2_(end:-1:end-nCorr_+1) = est2_(end:-1:end-nCorr_+1) .* correction_;
-                estimatedChannelP_ = est2_;
-            end
+            [rcFilter_, correction_] = getRCfilter(12/sum(config.DMRSREmask), min(3, sum(maskPRBs_)));
+
+            est2_ = conv(estimatedChannelP_, rcFilter_, "same");
+            nCorr_ = length(correction_);
+            est2_(1:nCorr_) = est2_(1:nCorr_) .* correction_;
+            est2_(end:-1:end-nCorr_+1) = est2_(end:-1:end-nCorr_+1) .* correction_;
+            estimatedChannelP_ = est2_;
         end
 
         % Estimate time alignment.
