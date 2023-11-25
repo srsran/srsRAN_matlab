@@ -304,11 +304,13 @@ classdef PUSCHBLER < matlab.System
         end
 
         function tp = get.ThroughputMATLAB(obj)
-            tp = 1e-6 * obj.ThroughputMATLABCtr ./ (obj.MaxThroughputCtr / obj.TBS * 1e-3);
+            tp = 1e-6 * obj.ThroughputMATLABCtr ./ (obj.MaxThroughputCtr / obj.TBS * 1e-3) ...
+                * obj.SubcarrierSpacing / 15;
         end
 
         function tp = get.ThroughputSRS(obj)
-            tp = 1e-6 * obj.ThroughputSRSCtr ./ (obj.MaxThroughputCtr / obj.TBS * 1e-3);
+            tp = 1e-6 * obj.ThroughputSRSCtr ./ (obj.MaxThroughputCtr / obj.TBS * 1e-3) ...
+                * obj.SubcarrierSpacing / 15;
         end
 
         function bler = get.BlockErrorRateMATLAB(obj)
@@ -320,7 +322,7 @@ classdef PUSCHBLER < matlab.System
         end
 
         function maxTP = get.MaxThroughput(obj)
-            maxTP = obj.TBS * 1e-3;
+            maxTP = obj.TBS * 1e-3 * obj.SubcarrierSpacing / 15;
         end
 
         function plot(obj)

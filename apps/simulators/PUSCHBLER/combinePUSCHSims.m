@@ -35,9 +35,10 @@
 %   A copy of the BSD 2-Clause License can be found in the LICENSE
 %   file in the top-level directory of this distribution.
 
-function [tableSRS, tableMATLAB] = combinePUSCHSims(files)
+function [tableSRS, tableMATLAB] = combinePUSCHSims(files, opt)
     arguments
         files (1,:) string
+        opt.TPType (1, :) string {mustBeMember(opt.TPType, {'absolute', 'relative'})} = 'absolute'
     end
 
     returnMATLAB = false;
@@ -96,8 +97,11 @@ function [tableSRS, tableMATLAB] = combinePUSCHSims(files)
             hasMATLAB = true;
             blerMATLAB = puschsim.BlockErrorRateMATLAB;
 
-            plot(tpFig, SNRrange, puschsim.ThroughputMATLAB / puschsim.MaxThroughput * 100, ...
-                '-', 'LineWidth', 1, 'Color', [0 0.4500 0.7400]);
+            tp = puschsim.ThroughputMATLAB;
+            if strcmp(opt.TPType, 'relative')
+                tp = tp / puschsim.MaxThroughput * 100;
+            end
+            plot(tpFig, SNRrange, tp, '-', 'LineWidth', 1, 'Color', [0 0.4500 0.7400]);
             semilogy(blerFig, puschsim.SNRrange, blerMATLAB, ...
                 '-', 'LineWidth', 1, 'Color', [0 0.4500 0.7400]);
 
@@ -109,8 +113,12 @@ function [tableSRS, tableMATLAB] = combinePUSCHSims(files)
         if ~strcmp(puschsim.DecoderType, 'matlab')
             hasSRS = true;
             blerSRS = puschsim.BlockErrorRateSRS;
-            plot(tpFig, SNRrange, puschsim.ThroughputSRS / puschsim.MaxThroughput * 100, ...
-                '-', 'LineWidth', 1, 'Color', [0.8500 0.3250 0.0980]);
+
+            tp = puschsim.ThroughputSRS;
+            if strcmp(opt.TPType, 'relative')
+                tp = tp / puschsim.MaxThroughput * 100;
+            end
+            plot(tpFig, SNRrange, tp, '-', 'LineWidth', 1, 'Color', [0.8500 0.3250 0.0980]);
             semilogy(blerFig, puschsim.SNRrange, blerSRS, ...
                 '-', 'LineWidth', 1, 'Color', [0.8500 0.3250 0.0980]);
             if returnSRS
@@ -129,7 +137,11 @@ function [tableSRS, tableMATLAB] = combinePUSCHSims(files)
     end
 
     xlabel(tpFig, 'SNR [dB]');
-    ylabel(tpFig, 'Throughput %');
+    if strcmp(opt.TPType, 'relative')
+        ylabel(tpFig, 'Throughput %');
+    else
+        ylabel(tpFig, 'Throughput Mbps');
+    end
     grid(tpFig, 'ON');
     legend(tpFig, lineLegend);
     xlabel(blerFig, 'SNR [dB]');
