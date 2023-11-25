@@ -152,8 +152,8 @@ for iPort=1:nPorts
     xlabel('Symbol');
     ylabel('Subcarrier');
     zlabel('Magnitude');
-    zmin = min(abs(estChannel(:,:,iPort)), [], 'all') * 0.9;
-    zmax = max(abs(estChannel(:,:,iPort)), [], 'all') * 1.1;
+    zmin = min(abs(H(:,:,iPort)), [], 'all') * 0.9;
+    zmax = max(abs(H(:,:,iPort)), [], 'all') * 1.1;
     if zmin == zmax
         zmin = zmin - 0.5;
         zmax = zmax + 0.5;
@@ -168,8 +168,8 @@ for iPort=1:nPorts
     xlabel('Symbol');
     ylabel('Subcarrier');
     zlabel('Angle [rad]');
-    zmin = min(angle(estChannel(:,:,iPort)), [], 'all') * 0.9;
-    zmax = max(angle(estChannel(:,:,iPort)), [], 'all') * 1.1;
+    zmin = min(angle(H(:,:,iPort)), [], 'all') * 0.9;
+    zmax = max(angle(H(:,:,iPort)), [], 'all') * 1.1;
     if zmin == zmax
         zmin = zmin - 0.5;
         zmax = zmax + 0.5;
