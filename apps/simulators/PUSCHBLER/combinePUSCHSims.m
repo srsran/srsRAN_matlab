@@ -7,11 +7,18 @@
 %   FILES is an array of strings, e.g. ["my_file1.mat", "my_file2.mat"]. Each
 %   file in FILES must contain one and only one *locked* PUSCHBLER object.
 %
-%   TABLESRS = combinePUSCHSims(FILES) returns a table with a summary of the
+%   The file names in FILE can be followed by a parameter/value pair specifying
+%   the type of throughput plot, either 'absolute' or 'relative' (default 'absolute'), e.g.
+%   combinePUSCHSims(FILES, 'TPType', 'relative')
+%
+%   TABLESRS = combinePUSCHSims(___) returns a table with a summary of the
 %   simulations using the SRS PUSCH decoder.
 %
-%   [TABLESRS, TABLEMATLAB] = combinePUSCHSims(FILES) also returns a summary
+%   [TABLESRS, TABLEMATLAB] = combinePUSCHSims(___) also returns a summary
 %   table for the simulations using the MATLAB PUSCH decoder.
+%
+%   [TABLESRS, TABLEMATLAB, FIGS] = combinePUSCHSims(___) also returns a 2x1
+%   array of the created axes objects.
 %
 %   Example
 %      D = dir('my_file*.mat');
@@ -35,7 +42,7 @@
 %   A copy of the BSD 2-Clause License can be found in the LICENSE
 %   file in the top-level directory of this distribution.
 
-function [tableSRS, tableMATLAB] = combinePUSCHSims(files, opt)
+function [tableSRS, tableMATLAB, figs] = combinePUSCHSims(files, opt)
     arguments
         files (1,:) string
         opt.TPType (1, :) string {mustBeMember(opt.TPType, {'absolute', 'relative'})} = 'absolute'
@@ -148,6 +155,10 @@ function [tableSRS, tableMATLAB] = combinePUSCHSims(files, opt)
     ylabel(blerFig, 'BLER');
     grid(blerFig, 'ON');
     legend(blerFig, lineLegend);
+
+    if nargout == 3
+        figs = [tpFig; blerFig];
+    end
 
 end % of function [tableSRS, tableMATLAB] = combinePUSCHSims(files)
 
