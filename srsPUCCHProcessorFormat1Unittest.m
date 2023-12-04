@@ -92,9 +92,12 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
 
         function addTestDefinitionToHeaderFile(~, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
-            fprintf(fileID, 'struct test_case_t {\n');
+            fprintf(fileID, 'struct pucch_entry {\n');
             fprintf(fileID, '  pucch_processor::format1_configuration                  config;\n');
             fprintf(fileID, '  std::vector<uint8_t>                                    ack_bits;\n');
+            fprintf(fileID, '};\n');
+            fprintf(fileID, 'struct test_case_t {\n');
+            fprintf(fileID, '  std::vector<pucch_entry>                                entries;\n');
             fprintf(fileID, '  file_vector<resource_grid_reader_spy::expected_entry_t> grid;\n');
             fprintf(fileID, '};\n');
         end
@@ -134,9 +137,17 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
             % Random frame number.
             NFrame = randi([0, 1023]);
 
-            % Random initial cyclic shift.
-            InitialCyclicShift = randi([0, 11]);
-            
+            % Random initial cyclic shift for the first PUCCH.
+            InitialCyclicShift1 = randi([0, 11]);
+
+            % Random initial cyclic shift for the second PUCCH. Make sure
+            % it does not coincide with the first instance.
+            InitialCyclicShift2 = InitialCyclicShift1;
+            while InitialCyclicShift2 == InitialCyclicShift1
+                InitialCyclicShift2 = randi([0, 11]);
+            end
+
+
             % Random start PRB index and length in number of PRBs.
             PRBSet  = randi([0, NSizeBWP - 1]);
 
@@ -172,15 +183,22 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
                 NSlotLoc, NFrame, CyclicPrefix);
 
             % Configure the PUCCH according to the test parameters.
-            pucch = srsConfigurePUCCH(1, SymbolAllocation, PRBSet,...
+            pucch1 = srsConfigurePUCCH(1, SymbolAllocation, PRBSet,...
                 FrequencyHopping, GroupHopping, SecondHopStartPRB, ...
-                InitialCyclicShift, OCCI, NStartBWP, NSizeBWP);
+                OCCI, NStartBWP, NSizeBWP);
+            pucch1.InitialCyclicShift = InitialCyclicShift1;
             
+            pucch2 = srsConfigurePUCCH(1, SymbolAllocation, PRBSet,...
+                FrequencyHopping, GroupHopping, SecondHopStartPRB, ...
+                OCCI, NStartBWP, NSizeBWP);
+            pucch2.InitialCyclicShift = InitialCyclicShift2;
+
             % Create resource grid.
             grid = nrResourceGrid(carrier, "OutputDataType", "single");
             gridDims = size(grid);
 
             ack = randi([0, 1], ackSize, 1);
+            ack2 = randi([0, 1], ackSize, 1);
             sr = [];
 
             if ackSize == 0
@@ -188,24 +206,33 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
             end
 
              % Get the PUCCH control data indices.
-            pucchDataIdices = nrPUCCHIndices(carrier, pucch);
+            pucchDataIdices = nrPUCCHIndices(carrier, pucch1);
 
             % Modulate PUCCH Format 1.
             FrequencyHopping = 'disabled';
-            if strcmp(pucch.FrequencyHopping, 'intraSlot')
+            if strcmp(pucch1.FrequencyHopping, 'intraSlot')
                 FrequencyHopping = 'enabled';
             end
 
-            grid(pucchDataIdices) = nrPUCCH1(ack, sr, pucch.SymbolAllocation, ...
+            pucchData1 = nrPUCCH1(ack, sr, pucch1.SymbolAllocation, ...
                 carrier.CyclicPrefix, carrier.NSlot, carrier.NCellID, ...
-                pucch.GroupHopping, pucch.InitialCyclicShift, FrequencyHopping, ...
-                pucch.OCCI, "OutputDataType", "single");
+                pucch1.GroupHopping, pucch1.InitialCyclicShift, FrequencyHopping, ...
+                pucch1.OCCI, "OutputDataType", "single");
+
+            pucchData2 = nrPUCCH1(ack2, sr, pucch2.SymbolAllocation, ...
+                carrier.CyclicPrefix, carrier.NSlot, carrier.NCellID, ...
+                pucch2.GroupHopping, pucch2.InitialCyclicShift, FrequencyHopping, ...
+                pucch2.OCCI, "OutputDataType", "single");
+
+            grid(pucchDataIdices) = pucchData1 + pucchData2;
 
             % Get the DM-RS indices.
-            pucchDmrsIndices = nrPUCCHDMRSIndices(carrier, pucch);
+            pucchDmrsIndices = nrPUCCHDMRSIndices(carrier, pucch1);
             
             % Generate and map the DM-RS sequence.
-            grid(pucchDmrsIndices) = nrPUCCHDMRS(carrier, pucch, "OutputDataType", "single");
+            puschDmrs1 = nrPUCCHDMRS(carrier, pucch1, "OutputDataType", "single");
+            puschDmrs2 = nrPUCCHDMRS(carrier, pucch2, "OutputDataType", "single");
+            grid(pucchDmrsIndices) = puschDmrs1 + puschDmrs2;
 
             % Init received signals.
             rxGrid = nrResourceGrid(carrier, NumRxPorts, "OutputDataType", "single");
@@ -215,8 +242,20 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
             % Noise variance.
             snrdB = 30;
             noiseStdDev = 10 ^ (-snrdB / 20);
-            noiseVar = noiseStdDev.^2;
 
+            % Carrier Frequency offset.
+            cfoHz = 400;
+
+            % Modulate baseband signal.
+            [baseband, OfdmInfo] = nrOFDMModulate(grid, carrier.SubcarrierSpacing, carrier.NSlot);
+
+            % Apply carrier frequency offset in time domain.
+            timeSeconds = (0:(length(baseband) - 1)) / OfdmInfo.SampleRate;
+            basebandWithCfo = baseband .* transpose(exp(2i * pi * timeSeconds * cfoHz));
+
+            % Demodulate baseband signal.
+            gridWithCfo = nrOFDMDemodulate(carrier, basebandWithCfo);
+            
             % Iterate each receive port.
             for iRxPort = 1:NumRxPorts
                 % Create some noise samples.
@@ -227,7 +266,7 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
                 estimates = exp(1i * linspace(0, 2 * pi, gridDims(1))') * ones(1, gridDims(2));
 
                 % Create noisy modulated symbols.
-                rxGrid(:, :, iRxPort) = estimates .* grid + (noiseStdDev * normNoise);
+                rxGrid(:, :, iRxPort) = estimates .* gridWithCfo + (noiseStdDev * normNoise);
 
                 % Extract PUCCH symbols from the received grid.
                 rxSymbols(:, iRxPort) = rxGrid(pucchDataIdices);
@@ -240,8 +279,8 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
             nofRePort = length(pucchDataIdices) + length(pucchDmrsIndices);
             rxGridSymbols = complex(nan(1, NumRxPorts * nofRePort));
             rxGridIndexes = complex(nan(NumRxPorts * nofRePort, 3));
-            onePortindexes = [nrPUCCHIndices(carrier, pucch, 'IndexStyle','subscript', 'IndexBase','0based'); ...
-                    nrPUCCHDMRSIndices(carrier, pucch, 'IndexStyle','subscript', 'IndexBase','0based')];
+            onePortindexes = [nrPUCCHIndices(carrier, pucch1, 'IndexStyle','subscript', 'IndexBase','0based'); ...
+                    nrPUCCHDMRSIndices(carrier, pucch1, 'IndexStyle','subscript', 'IndexBase','0based')];
             for iRxPort = 0:(NumRxPorts - 1)
                 offset = iRxPort * nofRePort;
                 rxGridSymbols(offset + (1:nofRePort)) = [rxGrid(pucchDataIdices); rxGrid(pucchDmrsIndices)];
@@ -268,35 +307,61 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
 
             secondHopConfig = {};
             if intraSlotFreqHopping
-                secondHopConfig = {pucch.SecondHopStartPRB};
+                secondHopConfig = {pucch1.SecondHopStartPRB};
             end
 
             % Reception port list.
             portsString = ['{' num2str(0:(NumRxPorts-1), "%d,") '}'];
 
             % Generate PUCCH common configuration.
-            pucchConfig = {...
-                'nullopt', ...                 % context
-                slotPointConfig, ...           % slot
-                NSizeBWP, ...                  % bwp_size_rb
-                NStartBWP, ...                 % bwp_start_rb
-                cyclicPrefixConfig, ...        % cp
-                pucch.PRBSet, ...              % starting_prb
-                secondHopConfig, ...           % second_hop_prb
-                carrier.NCellID, ...           % n_id
-                length(ack), ...               % nof_harq_ack
-                portsString, ...               % ports
-                pucch.InitialCyclicShift, ...  % initial_cyclic_shift
-                pucch.SymbolAllocation(2), ... % nof_symbols
-                pucch.SymbolAllocation(1), ... % start_symbol_index
-                pucch.OCCI, ...                % time_domain_occ
+            pucchConfig1 = {...
+                'nullopt', ...                  % context
+                slotPointConfig, ...            % slot
+                NSizeBWP, ...                   % bwp_size_rb
+                NStartBWP, ...                  % bwp_start_rb
+                cyclicPrefixConfig, ...         % cp
+                pucch1.PRBSet, ...              % starting_prb
+                secondHopConfig, ...            % second_hop_prb
+                carrier.NCellID, ...            % n_id
+                length(ack), ...                % nof_harq_ack
+                portsString, ...                % ports
+                pucch1.InitialCyclicShift, ...  % initial_cyclic_shift
+                pucch1.SymbolAllocation(2), ... % nof_symbols
+                pucch1.SymbolAllocation(1), ... % start_symbol_index
+                pucch1.OCCI, ...                % time_domain_occ
+                };
+
+            pucchConfig2 = {...
+                'nullopt', ...                  % context
+                slotPointConfig, ...            % slot
+                NSizeBWP, ...                   % bwp_size_rb
+                NStartBWP, ...                  % bwp_start_rb
+                cyclicPrefixConfig, ...         % cp
+                pucch2.PRBSet, ...              % starting_prb
+                secondHopConfig, ...            % second_hop_prb
+                carrier.NCellID, ...            % n_id
+                length(ack), ...                % nof_harq_ack
+                portsString, ...                % ports
+                pucch2.InitialCyclicShift, ...  % initial_cyclic_shift
+                pucch2.SymbolAllocation(2), ... % nof_symbols
+                pucch2.SymbolAllocation(1), ... % start_symbol_index
+                pucch2.OCCI, ...                % time_domain_occ
                 };
 
             % Generate test case cell.
-            testCaseCell = {...
-                pucchConfig, ...   % config
+            pucchEntry1 = {...
+                pucchConfig1, ...  % config
                 num2cell(ack), ... % ack_bits
                 };
+
+            % Generate test case cell.
+            pucchEntry2 = {...
+                pucchConfig2, ...   % config
+                num2cell(ack2), ... % ack_bits
+                };
+
+            % Concatenate PUCCH entries.
+            testCaseCell = {{pucchEntry1, pucchEntry2}};
 
             % Generate the test case entry.
             testCaseString = testCase.testCaseToString(testID, ...

@@ -34,8 +34,8 @@
 %      PreambleIndices      - array of indices of the detected PRACH preambles;
 %      TimeAdvance          - array of timing advance values between the observed arrival time
 %                             (for the corresponding preamble indices) and the reference uplink time;
-%      PowerDecibel         - array of average RSRP values in dB (for the corresponding preamble indices);
-%      SINRDecibel          - array of average SINR values in dB (for the corresponding preamble indices).
+%      NormalizedMetric     - array of detection metrics, normalized with respect to the
+%                             detection threshold.
 
 %   Copyright 2021-2023 Software Radio Systems Limited
 %

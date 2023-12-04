@@ -24,7 +24,7 @@
 
 #include "srsran_matlab/srsran_mex_dispatcher.h"
 #include "srsran_matlab/support/memento.h"
-#include "srsran/phy/upper/channel_processors/channel_processor_factories.h"
+#include "srsran/phy/upper/channel_processors/pusch/factories.h"
 #include "srsran/phy/upper/channel_processors/pusch/pusch_decoder.h"
 #include "srsran/phy/upper/rx_softbuffer.h"
 #include "srsran/phy/upper/rx_softbuffer_pool.h"

@@ -123,8 +123,7 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
                                                                        {"NumDetectedPreambles",
                                                                         "PreambleIndices",
                                                                         "TimeAdvance",
-                                                                        "PowerDecibel",
-                                                                        "SINRDecibel",
+                                                                        "NormalizedMetric",
                                                                         "RSSIDecibel",
                                                                         "TimeResolution",
                                                                         "MaxTimeAdvance"});
@@ -137,16 +136,14 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
   dpi["MaxTimeAdvance"]            = factory.createScalar(result.time_advance_max.to_seconds());
   dpi["PreambleIndices"]           = factory.createArray<double>({nof_detections, 1});
   dpi["TimeAdvance"]               = factory.createArray<double>({nof_detections, 1});
-  dpi["PowerDecibel"]              = factory.createArray<double>({nof_detections, 1});
-  dpi["SINRDecibel"]               = factory.createArray<double>({nof_detections, 1});
+  dpi["NormalizedMetric"]          = factory.createArray<double>({nof_detections, 1});
 
   for (unsigned i_preamble = 0, i_preamble_end = nof_detections; i_preamble != i_preamble_end; ++i_preamble) {
     const prach_detection_result::preamble_indication& preamble = result.preambles[i_preamble];
 
-    dpi["PreambleIndices"][i_preamble] = static_cast<double>(preamble.preamble_index);
-    dpi["TimeAdvance"][i_preamble]     = static_cast<double>(preamble.time_advance.to_seconds());
-    dpi["PowerDecibel"][i_preamble]    = static_cast<double>(preamble.power_dB);
-    dpi["SINRDecibel"][i_preamble]     = static_cast<double>(preamble.snr_dB);
+    dpi["PreambleIndices"][i_preamble]  = static_cast<double>(preamble.preamble_index);
+    dpi["TimeAdvance"][i_preamble]      = static_cast<double>(preamble.time_advance.to_seconds());
+    dpi["NormalizedMetric"][i_preamble] = static_cast<double>(preamble.detection_metric);
   }
 
   outputs[0] = detected_preamble_indication;

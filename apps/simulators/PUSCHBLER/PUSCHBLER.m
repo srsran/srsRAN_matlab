@@ -47,8 +47,7 @@
 %
 %   NTxAnts                      - Number of transmit antennas (temporarily
 %                                  constant and fixed to 1).
-%   NRxAnts                      - Number of receive antennas (temporarily
-%                                  constant and fixed to 1).
+%   NRxAnts                      - Number of receive antennas.
 %   PerfectChannelEstimator      - Perfect channel estimation flag.
 %   DisplaySimulationInformation - Flag for displaying simulation information.
 %   DisplayDiagnostics           - Flag for displaying simulation diagnostics.
@@ -74,9 +73,9 @@
 %   DMRSAdditionalPosition       - Additional DM-RS symbol positions (0...3).
 %   DMRSConfigurationType        - DM-RS configuration type (1, 2).
 %   DelayProfile                 - Channel delay profile ('AWGN'(no delay, no Doppler),
-%                                  'TDL-A'(indoor hotspot model)).
-%   DelaySpread                  - Delay spread in seconds (TDL-A delay profile only)
-%   MaximumDopplerShift          - Maximum Doppler shift in hertz (TDL-A delay profile only)
+%                                  'TDL-A', 'TDLA30', 'TDL-B', 'TDLB100', 'TDL-C', 'TDLC300').
+%   DelaySpread                  - Delay spread in seconds (TDL-{A,B,C} delay profiles only).
+%   MaximumDopplerShift          - Maximum Doppler shift in hertz (TDL delay profiles only).
 %   EnableHARQ                   - HARQ flag: true for enabling retransmission with
 %                                  RV sequence [0, 2, 3, 1], false for no retransmissions.
 %   DecoderType                  - PUSCH decoder type ('matlab', 'srs' (requires mex), 'both')
@@ -123,22 +122,18 @@ classdef PUSCHBLER < matlab.System
     properties (Constant)
         %Number of transmit antennas.
         NTxAnts = 1
-        %Number of receive antennas.
-        NRxAnts = 1
     end % of constant properties
 
     properties (Nontunable)
         %Perfect channel estimation flag.
         PerfectChannelEstimator (1, 1) logical = true
-        %Flag for displaying simulation information.
-        DisplaySimulationInformation (1, 1) logical = false
-        %Flag for displaying simulation diagnostics.
-        DisplayDiagnostics (1, 1) logical = false
+        %Number of receive antennas.
+        NRxAnts = 1
         %Bandwidth in number of resource blocks.
         NSizeGrid = 52
         %Subcarrier spacing in kHz (15, 30, 60, 120).
         SubcarrierSpacing = 15
-        %Cyclic prefix: 'Normal' or 'Extended' (Extended CP is relevant for 60 kHz SCS only)
+        %Cyclic prefix: 'Normal' or 'Extended' (Extended CP is relevant for 60 kHz SCS only).
         CyclicPrefix = 'Normal'
         %Cell identity.
         NCellID (1, 1) double {mustBeReal, mustBeInteger, mustBeInRange(NCellID, 0, 1007)} = 1
@@ -174,19 +169,25 @@ classdef PUSCHBLER < matlab.System
         DMRSAdditionalPosition (1, 1) double {mustBeReal, mustBeMember(DMRSAdditionalPosition, [0, 1, 2, 3])} = 1
         %DM-RS configuration type (1, 2).
         DMRSConfigurationType (1, 1) double {mustBeReal, mustBeMember(DMRSConfigurationType, [1, 2])} = 1
-        %Channel delay profile ('AWGN'(no delay), 'TDL-A'(Indoor hotspot model)).
-        DelayProfile (1, :) char {mustBeMember(DelayProfile, {'AWGN', 'TDL-A'})} = 'AWGN'
-        %TDL-A delay profile only: Delay spread in seconds.
+        %Channel delay profile ('AWGN'(no delay), 'TDL-A', 'TDLA30' 'TDL-B', 'TDLB100',
+        %   'TDL-C', 'TDLC300').
+        DelayProfile (1, :) char {mustBeMember(DelayProfile, {'AWGN', 'TDL-A', 'TDLA30', ...
+            'TDL-B', 'TDLB100', 'TDL-C', 'TDLC300'})} = 'AWGN'
+        %TDL-{A,B,C} delay profiles only: Delay spread in seconds.
         DelaySpread (1, 1) double {mustBeReal, mustBeNonnegative} = 30e-9
-        %TDL-A delay profile only: Maximum Doppler shift in hertz.
+        %TDL delay profiles only: Maximum Doppler shift in hertz.
         MaximumDopplerShift (1, 1) double {mustBeReal, mustBeNonnegative} = 0
         %HARQ flag: true for enabling retransmission with RV sequence [0, 2, 3, 1], false for no retransmissions.
         EnableHARQ (1, 1) logical = false
-        %PUSCH decoder type ('matlab', 'srs' (requires mex), 'both')
+        %PUSCH decoder type ('matlab', 'srs' (requires mex), 'both').
         DecoderType (1, :) char {mustBeMember(DecoderType, {'matlab', 'srs', 'both'})} = 'matlab'
     end % of properties (Nontunable)
 
     properties % Tunable
+        %Flag for displaying simulation information.
+        DisplaySimulationInformation (1, 1) logical = false
+        %Flag for displaying simulation diagnostics.
+        DisplayDiagnostics (1, 1) logical = false
         %Quick-simulation flag: set to true to stop each point after 100 failed transport blocks.
         QuickSimulation (1, 1) logical = true
     end % of properties Tunable
@@ -260,13 +261,18 @@ classdef PUSCHBLER < matlab.System
                 error('PRB allocation and resource grid are incompatible.');
             end
         end
+
+        function checkHARQandDecType(obj)
+            if (obj.EnableHARQ && strcmp(obj.DecoderType, 'both'))
+                error('Cannot run both decoders when HARQ is enabled.');
+            end
+        end
     end % of methods (Access = private)
 
     methods % public
         function set.NSizeGrid(obj, value)
             validateattributes(value, 'numeric', {'real', 'scalar', '>', 0});
             obj.NSizeGrid = value;
-            obj.checkPRBSetandGrid();
         end
 
         function set.SubcarrierSpacing(obj, value)
@@ -274,7 +280,6 @@ classdef PUSCHBLER < matlab.System
             mustBeMember(value, [15, 30, 60, 120])
 
             obj.SubcarrierSpacing = value;
-            obj.checkSCSandCP();
         end
 
         function set.CyclicPrefix(obj, value)
@@ -282,14 +287,12 @@ classdef PUSCHBLER < matlab.System
             mustBeMember(value, {'Normal', 'Extended'})
 
             obj.CyclicPrefix = value;
-            obj.checkSCSandCP();
         end
 
         function set.PRBSet(obj, value)
             validateattributes(value, 'numeric', {'real', 'integer', 'vector', 'nonempty', ...
                 '>=', 0, '<=', 274});
-        obj.PRBSet = value;
-        obj.checkPRBSetandGrid();
+            obj.PRBSet = value;
         end
 
         function set.SymbolAllocation(obj, value)
@@ -301,11 +304,13 @@ classdef PUSCHBLER < matlab.System
         end
 
         function tp = get.ThroughputMATLAB(obj)
-            tp = 1e-6 * obj.ThroughputMATLABCtr ./ (obj.MaxThroughputCtr / obj.TBS * 1e-3);
+            tp = 1e-6 * obj.ThroughputMATLABCtr ./ (obj.MaxThroughputCtr / obj.TBS * 1e-3) ...
+                * obj.SubcarrierSpacing / 15;
         end
 
         function tp = get.ThroughputSRS(obj)
-            tp = 1e-6 * obj.ThroughputSRSCtr ./ (obj.MaxThroughputCtr / obj.TBS * 1e-3);
+            tp = 1e-6 * obj.ThroughputSRSCtr ./ (obj.MaxThroughputCtr / obj.TBS * 1e-3) ...
+                * obj.SubcarrierSpacing / 15;
         end
 
         function bler = get.BlockErrorRateMATLAB(obj)
@@ -317,7 +322,7 @@ classdef PUSCHBLER < matlab.System
         end
 
         function maxTP = get.MaxThroughput(obj)
-            maxTP = obj.TBS * 1e-3;
+            maxTP = obj.TBS * 1e-3 * obj.SubcarrierSpacing / 15;
         end
 
         function plot(obj)
@@ -428,10 +433,10 @@ classdef PUSCHBLER < matlab.System
 
             % Additional simulation and UL-SCH related parameters.
             %
-            % Target code rate
+            % Target code rate.
             obj.PUSCHExtension.TargetCodeRate = obj.TargetCodeRate;
             %
-            % HARQ process and rate matching/TBS parameters
+            % HARQ process and rate matching/TBS parameters.
             obj.PUSCHExtension.XOverhead = 0;       % Set PUSCH rate matching overhead for TBS (Xoh).
             obj.PUSCHExtension.NHARQProcesses = 16; % Number of parallel HARQ processes to use.
             obj.PUSCHExtension.EnableHARQ = obj.EnableHARQ;
@@ -443,19 +448,19 @@ classdef PUSCHBLER < matlab.System
 
             % The simulation relies on various pieces of information about the baseband
             % waveform, such as sample rate.
-            waveformInfo = nrOFDMInfo(obj.Carrier); % Get information about the baseband waveform after OFDM modulation step
+            waveformInfo = nrOFDMInfo(obj.Carrier); % Get information about the baseband waveform after OFDM modulation step.
 
             % Store the FFT size.
             obj.Nfft = waveformInfo.Nfft;
 
             % Create a channel system object for the simulations.
-            channel = nrTDLChannel; % TDL channel object
+            channel = nrTDLChannel; % TDL channel object.
 
-            % Set the channel geometry
+            % Set the channel geometry.
             channel.NumTransmitAntennas = obj.NTxAnts;
             channel.NumReceiveAntennas = obj.NRxAnts;
 
-            % Assign simulation channel parameters and waveform sample rate to the object
+            % Assign simulation channel parameters and waveform sample rate to the object.
             channel.SampleRate = waveformInfo.SampleRate;
             channel.DelaySpread = obj.DelaySpread;
 
@@ -509,8 +514,18 @@ classdef PUSCHBLER < matlab.System
             tmp.PUSCH.NumLayers = obj.NumLayers;
             tmp.NTxAnts = obj.NTxAnts;
             tmp.NRxAnts = obj.NRxAnts;
-            % Cross-check the PUSCH layering against the channel geometry
+
+            % Cross-check the PUSCH layering against the channel geometry.
             validateNumLayers(tmp);
+
+            % Cross-check that grid size and PRB allocation are compatible.
+            obj.checkPRBSetandGrid();
+
+            % Cross-check that SCS and CP are compatible.
+            obj.checkSCSandCP();
+
+            % Cross-check that we are not testing both decoders when HARQ is enabled.
+            obj.checkHARQandDecType();
         end
 
         function stepImpl(obj, SNRIn, nFrames)
@@ -576,19 +591,23 @@ classdef PUSCHBLER < matlab.System
 
             quickSim = obj.QuickSimulation;
 
+            % DM-RS over data amplitude gain.
+            betaDMRS = sqrt(2);
+
             if useSRSDecoder
                 srsDemodulatePUSCH = srsMEX.phy.srsPUSCHDemodulator;
+                srsChannelEstimate = srsMEX.phy.srsMultiPortChannelEstimator;
             end
 
             % %%% Simulation loop.
 
-            for snrIdx = 1:numel(SNRIn)    % comment out for parallel computing
+            for snrIdx = 1:numel(SNRIn)
 
                 % Reset the random number generator so that each SNR point will
                 % experience the same noise realization.
                 rng('default');
 
-                obj.DecodeULSCH.reset();        % Reset decoder at the start of each SNR point
+                obj.DecodeULSCH.reset();        % Reset decoder at the start of each SNR point.
                 pathFilters = [];
 
                 % Create PUSCH object configured for the non-codebook transmission
@@ -620,13 +639,13 @@ classdef PUSCHBLER < matlab.System
                 % when the correlation is strong for practical synchronization.
                 offset = 0;
 
-                % Loop over the entire waveform length
+                % Loop over the entire waveform length.
                 for nslot = 0:NSlots-1
 
                     % Update the carrier slot numbers for new slot.
                     carrier.NSlot = nslot;
 
-                    % HARQ processing
+                    % HARQ processing.
                     %
                     % Create HARQ ID for the SRS decoder.
                     % Set the HARQ ID.
@@ -644,9 +663,6 @@ classdef PUSCHBLER < matlab.System
                         end
                         % The SRS decoder must be reset explicitely in any case.
                         obj.DecodeULSCHsrs.resetCRCS(harqBufID);
-
-                        % Increment counter of transmitted transport blocks.
-                        totalBlocks(snrIdx) = totalBlocks(snrIdx) + 1;
                     end
 
                     % Encode the UL-SCH transport block.
@@ -676,7 +692,7 @@ classdef PUSCHBLER < matlab.System
 
                     % Implementation-specific PUSCH DM-RS MIMO precoding and mapping.
                     % The first DM-RS creation includes codebook based MIMO precoding if applicable.
-                    dmrsSymbols = nrPUSCHDMRS(carrier, pusch);
+                    dmrsSymbols = nrPUSCHDMRS(carrier, pusch) * betaDMRS;
                     dmrsIndices = nrPUSCHDMRSIndices(carrier, pusch);
                     for p = 1:size(dmrsSymbols, 2)
                         [~, dmrsAntIndices] = nrExtractResources(dmrsIndices(:, p), puschGrid);
@@ -695,7 +711,7 @@ classdef PUSCHBLER < matlab.System
                     txWaveform = [txWaveform; zeros(maxChDelay, size(txWaveform, 2))]; %#ok<AGROW>
                     [rxWaveform, pathGains, sampleTimes] = obj.Channel(txWaveform);
 
-                    % Add AWGN to the received time domain waveform
+                    % Add AWGN to the received time domain waveform.
                     % Normalize noise power by the IFFT size used in OFDM modulation,
                     % as the OFDM modulator applies this normalization to the
                     % transmitted waveform. Also normalize by the number of receive
@@ -766,8 +782,6 @@ classdef PUSCHBLER < matlab.System
                         % which are created by specifying the non-codebook transmission
                         % scheme.
                         dmrsLayerSymbols = nrPUSCHDMRS(carrier, puschNonCodebook);
-                        [estChannelGrid, noiseEst] = nrChannelEstimate(carrier, rxGrid, ...
-                            dmrsLayerIndices, dmrsLayerSymbols, 'CDMLengths', pusch.DMRS.CDMLengths);
                     end
 
                     % Display EVM per layer, per slot and per RB. Reference symbols for
@@ -784,6 +798,11 @@ classdef PUSCHBLER < matlab.System
                     blkerrBoth = false;
 
                     if useMATLABDecoder
+                        if (~perfectChannelEstimator)
+                            [estChannelGrid, noiseEst] = nrChannelEstimate(carrier, rxGrid, ...
+                                dmrsLayerIndices, dmrsLayerSymbols * betaDMRS, 'CDMLengths', pusch.DMRS.CDMLengths);
+                        end
+
                         % Get PUSCH resource elements from the received grid.
                         [puschRx, puschHest] = nrExtractResources(puschIndices, rxGrid, estChannelGrid);
 
@@ -813,12 +832,22 @@ classdef PUSCHBLER < matlab.System
 
                         % Store values to calculate throughput and BLER.
                         simThroughput(snrIdx) = simThroughput(snrIdx) + (~blkerr * trBlkSize);
-                        simBLER(snrIdx) = simBLER(snrIdx) + (isLastRetransmission && any(decbits ~= trBlk));
+                        isCountBLER = (isLastRetransmission || ~blkerr);
+                        simBLER(snrIdx) = simBLER(snrIdx) + (isCountBLER && any(decbits ~= trBlk));
 
                         blkerrBoth = blkerr;
                     end
 
                     if useSRSDecoder
+                        if (~perfectChannelEstimator)
+                            [estChannelGrid, noiseEst] = srsChannelEstimate(rxGrid, pusch.SymbolAllocation, ...
+                                dmrsLayerIndices, dmrsLayerSymbols, ...
+                                'CyclicPrefix', carrier.CyclicPrefix, ...
+                                'SubcarrierSpacing', carrier.SubcarrierSpacing, ...
+                                'PortIndices', (0:nRxAnts-1)', ...
+                                'BetaScaling', betaDMRS);
+                        end
+
                         ulschLLRsInt8 = int8(srsDemodulatePUSCH(rxGrid, estChannelGrid, noiseEst, pusch, ...
                             puschIndices, dmrsLayerIndices, 0:nRxAnts-1));
 
@@ -829,7 +858,8 @@ classdef PUSCHBLER < matlab.System
 
                         % Store values to calculate throughput and BLER.
                         simThroughputSRS(snrIdx) = simThroughputSRS(snrIdx) + (statsSRS.CRCOK * trBlkSize);
-                        simBLERSRS(snrIdx) = simBLERSRS(snrIdx) + (isLastRetransmission && any(decbitsSRS ~= srsTest.helpers.bitPack(trBlk)));
+                        isCountBLER = (isLastRetransmission || statsSRS.CRCOK);
+                        simBLERSRS(snrIdx) = simBLERSRS(snrIdx) + (isCountBLER && any(decbitsSRS ~= srsTest.helpers.bitPack(trBlk)));
 
                         blkerrBoth = blkerrBoth || (~statsSRS.CRCOK);
                     end
@@ -837,7 +867,14 @@ classdef PUSCHBLER < matlab.System
                     % Increase total number of transmitted information bits.
                     maxThroughput(snrIdx) = maxThroughput(snrIdx) + trBlkSize;
 
-                    % Update current process with CRC error and advance to next process
+                    % If the block was received correctly or if it's the last
+                    % restransmission, increment counter of transmitted transport blocks.
+                    if (~blkerrBoth || isLastRetransmission)
+                        totalBlocks(snrIdx) = totalBlocks(snrIdx) + 1;
+                    end
+
+                    % Update current process with CRC error and advance to
+                    % next process.
                     procstatus = updateAndAdvance(harqEntity, blkerrBoth, trBlkSize, puschBitCapacity);
                     if (displaySimulationInformation)
                         fprintf('\n(%3.2f%%) NSlot=%d, %s', 100*(nslot+1)/NSlots, nslot, procstatus);
@@ -912,7 +949,10 @@ classdef PUSCHBLER < matlab.System
             switch property
                 case 'DMRSTypeAPosition'
                     flag = (obj.MappingType == 'B');
-                case {'DelaySpread', 'MaximumDopplerShift'}
+                case 'DelaySpread'
+                    flag = strcmp(obj.DelayProfile, 'AWGN') || strcmp(obj.DelayProfile, 'TDLA30') ...
+                        || strcmp(obj.DelayProfile, 'TDLB100') || strcmp(obj.DelayProfile, 'TDLC300');
+                case 'MaximumDopplerShift'
                     flag = strcmp(obj.DelayProfile, 'AWGN');
                 case {'ThroughputMATLABCtr', 'MissedBlocksMATLABCtr'}
                     flag = isempty(obj.SNRrange) || strcmp(obj.DecoderType, 'srs');
@@ -936,13 +976,31 @@ classdef PUSCHBLER < matlab.System
         end
 
         function groups = getPropertyGroups(obj)
-            props = properties(obj);
+
             results = {'SNRrange', 'MaxThroughputCtr', 'ThroughputMATLABCtr', 'ThroughputSRSCtr', ...
                 'TotalBlocksCtr', 'MissedBlocksMATLABCtr', 'MissedBlocksSRSCtr', 'TBS', ...
                 'MaxThroughput', 'ThroughputMATLAB', 'ThroughputSRS', 'BlockErrorRateMATLAB', ...
                 'BlockErrorRateSRS'};
 
-            confProps = setdiff(props, results);
+            confProps = {...
+                ... Generic.
+                'NCellID', 'RNTI', ...
+                ... Resource grid.
+                'SubcarrierSpacing', 'CyclicPrefix', 'NSizeGrid', ...
+                ... Allocation.
+                'PRBSet', 'SymbolAllocation', 'MappingType', ...
+                ... DM-RS.
+                'DMRSConfigurationType', 'DMRSLength', 'DMRSAdditionalPosition', 'DMRSTypeAPosition', ...
+                ... Modulation and coding.
+                'MCSTable', 'MCSIndex', 'Modulation', 'TargetCodeRate', ...
+                ... Antennas and layers.
+                'NRxAnts', 'NTxAnts', 'NumLayers', ...
+                ... Channel model.
+                'DelayProfile', 'DelaySpread', 'MaximumDopplerShift', 'PerfectChannelEstimator', ...
+                ... HARQ.
+                'EnableHARQ', ...
+                ... Other simulation details.
+                'DecoderType', 'QuickSimulation', 'DisplaySimulationInformation', 'DisplayDiagnostics'};
             groups = matlab.mixin.util.PropertyGroup(confProps, 'Configuration');
 
             resProps = {};
@@ -1033,7 +1091,7 @@ function mixedArray = joinArrays(arrayA, arrayB, removeFromA, outputOrder)
 end
 
 function validateNumLayers(simParameters)
-%Validate the number of layers, relative to the antenna geometry
+%Validate the number of layers, relative to the antenna geometry.
 
     numlayers = simParameters.PUSCH.NumLayers;
     ntxants = simParameters.NTxAnts;
@@ -1045,7 +1103,7 @@ function validateNumLayers(simParameters)
     end
 
     % Display a warning if the maximum possible rank of the channel equals
-    % the number of layers
+    % the number of layers.
     if (numlayers > 2) && (numlayers == min(ntxants, nrxants))
         warning(['The maximum possible rank of the channel, given by %s, is equal to NumLayers (%d).' ...
             ' This may result in a decoding failure under some channel conditions.' ...
@@ -1056,7 +1114,7 @@ function validateNumLayers(simParameters)
 end
 
 function plotLayerEVM(NSlots, nslot, pusch, siz, puschIndices, puschSymbols, puschEq)
-%Plot EVM information
+%Plot EVM information.
 
     persistent slotEVM;
     persistent rbEVM

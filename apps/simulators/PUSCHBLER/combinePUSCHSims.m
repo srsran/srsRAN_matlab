@@ -7,11 +7,18 @@
 %   FILES is an array of strings, e.g. ["my_file1.mat", "my_file2.mat"]. Each
 %   file in FILES must contain one and only one *locked* PUSCHBLER object.
 %
-%   TABLESRS = combinePUSCHSims(FILES) returns a table with a summary of the
+%   The file names in FILE can be followed by a parameter/value pair specifying
+%   the type of throughput plot, either 'absolute' or 'relative' (default 'absolute'), e.g.
+%   combinePUSCHSims(FILES, 'TPType', 'relative')
+%
+%   TABLESRS = combinePUSCHSims(___) returns a table with a summary of the
 %   simulations using the SRS PUSCH decoder.
 %
-%   [TABLESRS, TABLEMATLAB] = combinePUSCHSims(FILES) also returns a summary
+%   [TABLESRS, TABLEMATLAB] = combinePUSCHSims(___) also returns a summary
 %   table for the simulations using the MATLAB PUSCH decoder.
+%
+%   [TABLESRS, TABLEMATLAB, FIGS] = combinePUSCHSims(___) also returns a 2x1
+%   array of the created axes objects.
 %
 %   Example
 %      D = dir('my_file*.mat');
@@ -35,9 +42,10 @@
 %   A copy of the BSD 2-Clause License can be found in the LICENSE
 %   file in the top-level directory of this distribution.
 
-function [tableSRS, tableMATLAB] = combinePUSCHSims(files)
+function [tableSRS, tableMATLAB, figs] = combinePUSCHSims(files, opt)
     arguments
         files (1,:) string
+        opt.TPType (1, :) string {mustBeMember(opt.TPType, {'absolute', 'relative'})} = 'absolute'
     end
 
     returnMATLAB = false;
@@ -96,8 +104,11 @@ function [tableSRS, tableMATLAB] = combinePUSCHSims(files)
             hasMATLAB = true;
             blerMATLAB = puschsim.BlockErrorRateMATLAB;
 
-            plot(tpFig, SNRrange, puschsim.ThroughputMATLAB / puschsim.MaxThroughput, ...
-                '-', 'LineWidth', 1, 'Color', [0 0.4500 0.7400]);
+            tp = puschsim.ThroughputMATLAB;
+            if strcmp(opt.TPType, 'relative')
+                tp = tp / puschsim.MaxThroughput * 100;
+            end
+            plot(tpFig, SNRrange, tp, '-', 'LineWidth', 1, 'Color', [0 0.4500 0.7400]);
             semilogy(blerFig, puschsim.SNRrange, blerMATLAB, ...
                 '-', 'LineWidth', 1, 'Color', [0 0.4500 0.7400]);
 
@@ -109,8 +120,12 @@ function [tableSRS, tableMATLAB] = combinePUSCHSims(files)
         if ~strcmp(puschsim.DecoderType, 'matlab')
             hasSRS = true;
             blerSRS = puschsim.BlockErrorRateSRS;
-            plot(tpFig, SNRrange, puschsim.ThroughputSRS / puschsim.MaxThroughput, ...
-                '-', 'LineWidth', 1, 'Color', [0.8500 0.3250 0.0980]);
+
+            tp = puschsim.ThroughputSRS;
+            if strcmp(opt.TPType, 'relative')
+                tp = tp / puschsim.MaxThroughput * 100;
+            end
+            plot(tpFig, SNRrange, tp, '-', 'LineWidth', 1, 'Color', [0.8500 0.3250 0.0980]);
             semilogy(blerFig, puschsim.SNRrange, blerSRS, ...
                 '-', 'LineWidth', 1, 'Color', [0.8500 0.3250 0.0980]);
             if returnSRS
@@ -129,13 +144,21 @@ function [tableSRS, tableMATLAB] = combinePUSCHSims(files)
     end
 
     xlabel(tpFig, 'SNR [dB]');
-    ylabel(tpFig, 'Throughput %');
+    if strcmp(opt.TPType, 'relative')
+        ylabel(tpFig, 'Throughput %');
+    else
+        ylabel(tpFig, 'Throughput Mbps');
+    end
     grid(tpFig, 'ON');
     legend(tpFig, lineLegend);
     xlabel(blerFig, 'SNR [dB]');
     ylabel(blerFig, 'BLER');
     grid(blerFig, 'ON');
     legend(blerFig, lineLegend);
+
+    if nargout == 3
+        figs = [tpFig; blerFig];
+    end
 
 end % of function [tableSRS, tableMATLAB] = combinePUSCHSims(files)
 
