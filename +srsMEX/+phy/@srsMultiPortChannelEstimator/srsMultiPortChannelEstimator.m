@@ -22,7 +22,7 @@
 %   [H, NVAR, EXTRA] = step(..., NAME, VALUE, ...) specifies additional options as
 %   NAME, VALUE pairs:
 %
-%   'PortIndices'         - Column vector of Rx port indices (default is [0])
+%   'PortIndices'         - Column vector of Rx port indices (default is [0]).
 %   'CyclicPrefix'        - Cyclic prefix, either 'normal' (default) or 'extended'.
 %   'SubcarrierSpacing'   - Subcarrier spacing in kHz, either 15 (default) or 30.
 %   'HoppingIndex'        - First OFDM symbol after intraslot frequency hopping (default

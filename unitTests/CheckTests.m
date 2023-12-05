@@ -261,7 +261,7 @@ classdef CheckTests < matlab.unittest.TestCase
             end
 
         end % of function runVectorTest(obj, testName)
-    end % of methods (Test, TestTags = {'testmex'})
+    end % of methods (Test, TestTags = {'mex code'})
 end % of classdef CheckTests
 
 %hasDataFile Checks whether a test has an associated data file.
@@ -284,4 +284,6 @@ function flag = hasDataFile(workDir, blockVal)
         end
         line = fgetl(fff);
     end
+
+    fclose(fff);
 end
