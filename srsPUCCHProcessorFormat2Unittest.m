@@ -231,9 +231,9 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
                 nofHarqAck, nofSR, nofCSIPart1, nofCSIPart2, maxCodeRate)
         %testvectorGenerationCases Generates a test vector for the given
         %   Symbol allocation, HARQ-ACK, SR, CSI Part 1 and CSI Part 2 payload
-        %   sizes in number of bits, and the maximum code rate. the Cell ID,
+        %   sizes in number of bits, and the maximum code rate. The Cell ID,
         %   NID, NID0 and RNTI are randomly generated. The number of allocated
-        %   PRB is determined based on the UCI payload size and maximum code
+        %   PRBs is determined based on the UCI payload size and maximum code
         %   rate.
 
             import srsLib.phy.upper.channel_modulation.srsDemodulator
@@ -395,6 +395,74 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
 
         end % of function testvectorGenerationCases
     end % of methods (Test, TestTags = {'testvector'})
+
+    methods (Test, TestTags = {'testmex'})
+        function mexTest(testCase, SymbolAllocation, nofHarqAck, nofSR, nofCSIPart1, ...
+                nofCSIPart2, maxCodeRate)
+        %mexTest  Tests the mex wrapper of the srsRAN PUCCH processor for Format 2.
+        %   mexTest(OBJ, SymbolAllocation,  nofHarqAck, nofSR, nofCSIPart1, nofCSIPart2,
+        %   maxCodeRate) runs a short simulation with a PUCCH transmission specified by
+        %   the symbol allocation, the number of bits in the HARQ-ACK, SR, CSI Part 1
+        %   and CSI Part 2 payloads, and the maximum code rate. The Cell ID,
+        %   NID, NID0 and RNTI are randomly generated. The number of allocated
+        %   PRBs is determined based on the UCI payload size and maximum code
+        %   rate.
+
+            testCase.setupsimulation(SymbolAllocation, nofHarqAck, nofSR, nofCSIPart1, ...
+                nofCSIPart2, maxCodeRate);
+
+            % Define some aliases.
+            carrier = testCase.Carrier;
+            pucch = testCase.PUCCH;
+            numRxPorts = testCase.NumRxPorts;
+
+            [grid, payloads] = createTxGrid(carrier, pucch, ...
+                nofHarqAck, nofSR, nofCSIPart1, nofCSIPart2);
+
+            UCIPayload = payloads.UCIPayload;
+            harqAckPayload = payloads.harqAckPayload;
+            SRPayload = payloads.SRPayload;
+            CSI1Payload = payloads.CSI1Payload;
+            CSI2Payload = payloads.CSI2Payload;
+
+            % Init received signals.
+            rxGrid = nrResourceGrid(carrier, numRxPorts, "OutputDataType", "single");
+
+            % Noise variance.
+            snrdB = 30;
+            noiseStdDev = 10 ^ (-snrdB / 20);
+
+            gridDims = size(grid);
+
+            % Iterate each receive port.
+            for iRxPort = 1:numRxPorts
+                % Create some noise samples.
+                normNoise = (randn(gridDims) + 1i * randn(gridDims)) / sqrt(2);
+
+                % Generate channel estimates as a phase rotation in the
+                % frequency domain.
+                estimates = exp(1i * linspace(0, 2 * pi, gridDims(1))') * ones(1, gridDims(2));
+
+                % Create noisy modulated symbols.
+                rxGrid(:, :, iRxPort) = estimates .* grid + (noiseStdDev * normNoise);
+            end
+
+            pucchProcessor = srsMEX.phy.srsPUCCHProcessor();
+
+            message = pucchProcessor(rxGrid, pucch, carrier, 'NumHARQAck', nofHarqAck, ...
+                'NumSR', nofSR, 'NumCSIPart1', nofCSIPart1, 'NumCSIPart2', nofCSIPart2);
+
+            assertTrue(testCase, message.isValid, 'The PUCCH Processor should return a valid message.');
+            assertEqual(testCase, message.HARQAckPayload, int8(harqAckPayload), ...
+                'The HARQ payload doesn''t match.');
+            assertEqual(testCase, message.SRPayload, int8(SRPayload), ...
+                'The SR payload doesn''t match.');
+            assertEqual(testCase, message.CSI1Payload, int8(CSI1Payload), ...
+                'The CSI1 payload doesn''t match.');
+            assertEqual(testCase, message.CSI2Payload, int8(CSI2Payload), ...
+                'The CSI2 payload doesn''t match.');
+        end % of function mexTest(testCase, SymbolAllocation, nofHarqAck, nofSR, nofCSIPart1, ...
+    end % of methods (Test, TestTags = {'testmex'}}
 end % of classdef srsPUCCHProcessorFormat2Unittest
 
 %Generates a PUCCH Format 2 resource grid (Tx side). Also returns the transmitted
