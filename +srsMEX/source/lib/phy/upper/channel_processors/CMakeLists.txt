@@ -53,3 +53,21 @@ set_target_properties(pusch_demodulator_mex
     PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/../+phy/@srsPUSCHDemodulator"
 )
+
+matlab_add_mex(
+    NAME pucch_processor_mex
+    SRC  pucch_processor_mex.cpp
+    R2018a
+)
+
+target_link_libraries(pucch_processor_mex
+    srsran_matlab::resource_grid
+    srsran::srsran_channel_processors
+    srsran::srsran_channel_equalizer
+    srsran::srsran_phy_support
+)
+
+set_target_properties(pucch_processor_mex
+    PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/../+phy/@srsPUCCHProcessor"
+)
