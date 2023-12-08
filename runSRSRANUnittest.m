@@ -1,11 +1,14 @@
-%runSRSRANUnittest Main SRSRAN test interface.
+%runSRSRANUnittest Main srsRAN test interface.
 %   runSRSRANUnittest(BLOCKNAME, 'testvector') generates test vectors for the
-%   SRSRAN block BLOCKNAME. The resulting test vectores are stored in the folder
+%   srsRAN block BLOCKNAME. The resulting test vectores are stored in the folder
 %   'testvector_outputs' in the current directory. Example:
 %      runSRSRANUnittest('modulation_mapper', 'testvector')
 %
-%   runSRSRANUnittest(BLOCKNAME, 'srsPHYvalidation') tests the SRSRAN block
+%   runSRSRANUnittest(BLOCKNAME, 'testmex') tests the srsRAN block
 %   BLOCKNAME by running a MEX version of it.
+%
+%   runSRSRANUnittest(..., RandomShuffle=true) runs the tests using the 'shuffle'
+%   random generator initialization instead of 'default'.
 %
 %   runSRSRANUnittest('all', ...) runs all the tests of the specified type.
 %
@@ -27,10 +30,11 @@
 %   A copy of the BSD 2-Clause License can be found in the LICENSE
 %   file in the top-level directory of this distribution.
 
-function test = runSRSRANUnittest(blockName, testType)
+function test = runSRSRANUnittest(blockName, testType, opt)
     arguments
-        blockName char {mustBeSRSBlock}
-        testType  char {mustBeMember(testType, {'testvector', 'testmex'})}
+        blockName          char   {mustBeSRSBlock}
+        testType           char   {mustBeMember(testType, {'testvector', 'testmex'})}
+        opt.RandomShuffle logical {mustBeNumericOrLogical} = false
     end
 
     import matlab.unittest.TestSuite
@@ -38,7 +42,7 @@ function test = runSRSRANUnittest(blockName, testType)
 
     % define the absolute output paths
     outputPath = [pwd '/testvector_outputs'];
-    extParams = Parameter.fromData('outputPath', {outputPath});
+    extParams = Parameter.fromData('outputPath', {outputPath}, 'RandomDefault', {~opt.RandomShuffle});
 
     if ~strcmp(blockName, 'all')
         unittestClass = name2Class(blockName);
