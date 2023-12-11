@@ -100,7 +100,7 @@ function [tableSRS, tableMATLAB, figs] = combinePUSCHSims(files, opt)
 
         SNRrange = puschsim.SNRrange;
         desiredBLER = 1e-2;
-        if ~strcmp(puschsim.DecoderType, 'srs')
+        if ~strcmp(puschsim.ImplementationType, 'srs')
             hasMATLAB = true;
             blerMATLAB = puschsim.BlockErrorRateMATLAB;
 
@@ -117,7 +117,7 @@ function [tableSRS, tableMATLAB, figs] = combinePUSCHSims(files, opt)
                 tableMATLAB(iFile, :) = createTableEntry(puschsim, targetSNR);
             end
         end
-        if ~strcmp(puschsim.DecoderType, 'matlab')
+        if ~strcmp(puschsim.ImplementationType, 'matlab')
             hasSRS = true;
             blerSRS = puschsim.BlockErrorRateSRS;
 

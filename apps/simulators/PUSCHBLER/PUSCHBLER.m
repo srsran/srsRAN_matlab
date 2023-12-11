@@ -78,7 +78,7 @@
 %   MaximumDopplerShift          - Maximum Doppler shift in hertz (TDL delay profiles only).
 %   EnableHARQ                   - HARQ flag: true for enabling retransmission with
 %                                  RV sequence [0, 2, 3, 1], false for no retransmissions.
-%   DecoderType                  - PUSCH decoder type ('matlab', 'srs' (requires mex), 'both')
+%   ImplementationType           - PUSCH implementation type ('matlab', 'srs' (requires mex), 'both')
 %   QuickSimulation              - Quick-simulation flag: set to true to stop
 %                                  each point after 100 failed transport blocks (tunable).
 %
@@ -179,8 +179,8 @@ classdef PUSCHBLER < matlab.System
         MaximumDopplerShift (1, 1) double {mustBeReal, mustBeNonnegative} = 0
         %HARQ flag: true for enabling retransmission with RV sequence [0, 2, 3, 1], false for no retransmissions.
         EnableHARQ (1, 1) logical = false
-        %PUSCH decoder type ('matlab', 'srs' (requires mex), 'both').
-        DecoderType (1, :) char {mustBeMember(DecoderType, {'matlab', 'srs', 'both'})} = 'matlab'
+        %PUSCH implementation type ('matlab', 'srs' (requires mex), 'both').
+        ImplementationType (1, :) char {mustBeMember(ImplementationType, {'matlab', 'srs', 'both'})} = 'matlab'
     end % of properties (Nontunable)
 
     properties % Tunable
@@ -263,7 +263,7 @@ classdef PUSCHBLER < matlab.System
         end
 
         function checkHARQandDecType(obj)
-            if (obj.EnableHARQ && strcmp(obj.DecoderType, 'both'))
+            if (obj.EnableHARQ && strcmp(obj.ImplementationType, 'both'))
                 error('Cannot run both decoders when HARQ is enabled.');
             end
         end
@@ -333,10 +333,10 @@ classdef PUSCHBLER < matlab.System
                 return;
             end
 
-            decoderType = obj.DecoderType;
+            implementationType = obj.ImplementationType;
 
-            plotMATLABDecoder = (strcmp(decoderType, 'matlab') || strcmp(decoderType, 'both'));
-            plotSRSDecoder = (strcmp(decoderType, 'srs') || strcmp(decoderType, 'both'));
+            plotMATLABDecoder = (strcmp(implementationType, 'matlab') || strcmp(implementationType, 'both'));
+            plotSRSDecoder = (strcmp(implementationType, 'srs') || strcmp(implementationType, 'both'));
 
             titleString = sprintf('NRB=%d / SCS=%dkHz / %s %d/1024', ...
                 obj.NSizeGrid, obj.SubcarrierSpacing, obj.Modulation, ...
@@ -565,7 +565,7 @@ classdef PUSCHBLER < matlab.System
             carrier = obj.Carrier;
             pusch = obj.PUSCH;
             puschextra = obj.PUSCHExtension;
-            decoderType = obj.DecoderType;
+            implementationType = obj.ImplementationType;
             nRxAnts = obj.NRxAnts;
             nTxAnts = obj.NTxAnts;
             trBlkSize = obj.TBS;
@@ -578,8 +578,8 @@ classdef PUSCHBLER < matlab.System
             displayDiagnostics = obj.DisplayDiagnostics;
             displaySimulationInformation = obj.DisplaySimulationInformation;
 
-            useMATLABDecoder = (strcmp(decoderType, 'matlab') || strcmp(decoderType, 'both'));
-            useSRSDecoder = (strcmp(decoderType, 'srs') || strcmp(decoderType, 'both'));
+            useMATLABDecoder = (strcmp(implementationType, 'matlab') || strcmp(implementationType, 'both'));
+            useSRSDecoder = (strcmp(implementationType, 'srs') || strcmp(implementationType, 'both'));
 
             % Array to store the simulation throughput and BLER for all SNR points.
             simThroughput = zeros(length(SNRIn), 1);
@@ -955,9 +955,9 @@ classdef PUSCHBLER < matlab.System
                 case 'MaximumDopplerShift'
                     flag = strcmp(obj.DelayProfile, 'AWGN');
                 case {'ThroughputMATLABCtr', 'MissedBlocksMATLABCtr'}
-                    flag = isempty(obj.SNRrange) || strcmp(obj.DecoderType, 'srs');
+                    flag = isempty(obj.SNRrange) || strcmp(obj.ImplementationType, 'srs');
                 case {'ThroughputSRSCtr', 'MissedBlocksSRSCtr'}
-                    flag = isempty(obj.SNRrange) || strcmp(obj.DecoderType, 'matlab');
+                    flag = isempty(obj.SNRrange) || strcmp(obj.ImplementationType, 'matlab');
                 case {'SNRrange', 'MaxThroughputCtr', 'TotalBlocksCtr'}
                     flag = isempty(obj.SNRrange);
                 case {'Modulation', 'TargetCodeRate'}
@@ -967,9 +967,9 @@ classdef PUSCHBLER < matlab.System
                 case {'TBS', 'MaxThroughput'}
                     flag = isempty(obj.TBS) || ~obj.isLocked;
                 case {'ThroughputMATLAB', 'BlockErrorRateMATLAB'}
-                    flag = isempty(obj.ThroughputMATLABCtr) || strcmp(obj.DecoderType, 'srs');
+                    flag = isempty(obj.ThroughputMATLABCtr) || strcmp(obj.ImplementationType, 'srs');
                 case {'ThroughputSRS', 'BlockErrorRateSRS'}
-                    flag = isempty(obj.ThroughputSRSCtr) || strcmp(obj.DecoderType, 'matlab');
+                    flag = isempty(obj.ThroughputSRSCtr) || strcmp(obj.ImplementationType, 'matlab');
                 otherwise
                     flag = false;
             end
@@ -1000,7 +1000,7 @@ classdef PUSCHBLER < matlab.System
                 ... HARQ.
                 'EnableHARQ', ...
                 ... Other simulation details.
-                'DecoderType', 'QuickSimulation', 'DisplaySimulationInformation', 'DisplayDiagnostics'};
+                'ImplementationType', 'QuickSimulation', 'DisplaySimulationInformation', 'DisplayDiagnostics'};
             groups = matlab.mixin.util.PropertyGroup(confProps, 'Configuration');
 
             resProps = {};
@@ -1077,6 +1077,11 @@ classdef PUSCHBLER < matlab.System
 
             % Load all public properties.
             loadObjectImpl@matlab.System(obj, s, wasInUse);
+
+            % For back-compatibility with previous versions.
+            if isfield(s, 'DecoderType')
+                obj.ImplementationType = s.DecoderType;
+            end
         end % function loadObjectImpl(obj, s, wasInUse)
 
     end % of methods (Access = protected)

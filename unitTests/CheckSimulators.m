@@ -142,7 +142,7 @@ classdef CheckSimulators < matlab.unittest.TestCase
             obj.assertThat('../../../+srsMEX/+phy/@srsPUSCHDemodulator/pusch_demodulator_mex.mexa64', IsFile, ...
                 'Could not find PUSCH demodulator mex executable.');
 
-            pp.DecoderType = 'srs';
+            pp.ImplementationType = 'srs';
             snrs = -5.6:0.2:-4.8;
             try
                 pp(snrs, 100)
