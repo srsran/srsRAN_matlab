@@ -86,11 +86,6 @@ private:
 
   /// A pointer to the actual PUSCH decoder.
   std::unique_ptr<srsran::pusch_demodulator> demodulator = create_pusch_demodulator();
-
-  /// Temporal list of PUSCH RE coordinates.
-  srsran::static_vector<srsran::resource_grid_coordinate,
-                        srsran::MAX_NOF_PRBS * srsran::NRE * srsran::NOF_OFDM_SYM_PER_SLOT_NORMAL_CP>
-      pusch_coordinates_list;
 };
 
 std::unique_ptr<srsran::pusch_demodulator> create_pusch_demodulator()

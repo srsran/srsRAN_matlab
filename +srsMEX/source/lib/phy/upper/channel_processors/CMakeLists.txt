@@ -47,7 +47,12 @@ matlab_add_mex(
     R2018a
 )
 
-target_link_libraries(pusch_demodulator_mex srsran::srsran_channel_processors srsran::srsran_channel_equalizer srsran::srsran_channel_precoder)
+target_link_libraries(pusch_demodulator_mex
+    srsran_matlab::resource_grid
+    srsran::srsran_channel_processors
+    srsran::srsran_channel_equalizer
+    srsran::srsran_channel_precoder
+)
 
 set_target_properties(pusch_demodulator_mex
     PROPERTIES
