@@ -76,8 +76,8 @@ classdef srsPBCHModulatorUnittest < srsTest.srsBlockUnittest
         Lmax = {8}
     end % of properties (TestParameter)
 
-    properties (Constant, Hidden)
-        randomizeTestvector = randperm(1008)
+    properties (Hidden)
+        randomizeTestvector
     end
 
     methods (Access = protected)
@@ -89,6 +89,10 @@ classdef srsPBCHModulatorUnittest < srsTest.srsBlockUnittest
         function addTestDefinitionToHeaderFile(obj, fileID)
         %addTestDefinitionToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
             addTestDefinitionToHeaderFilePHYchproc(obj, fileID);
+        end
+
+        function initializeClassImpl(obj)
+            obj.randomizeTestvector = randperm(1008);
         end
     end % of methods (Access = protected)
 

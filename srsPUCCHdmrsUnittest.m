@@ -79,9 +79,11 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
 
     end % of properties (TestParameter)
 
-    properties(Constant, Hidden)
-        randomizeTestvector = randperm(1008)
+    properties(Hidden)
+        randomizeTestvector
+    end % of properties(Hidden)
 
+    properties(Constant, Hidden)
         %PHY-layer cell ID (0...1007).
         NCellID = num2cell(0:1007)
 
@@ -96,7 +98,7 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
 
         %Number of symbols per slot considering normal cyclic prefix.
         numSlotSymbols = 14;
-    end
+    end % of properties(Constant, Hidden)
 
     methods (Access = protected)
         function addTestIncludesToHeaderFile(obj, fileID)
@@ -111,6 +113,10 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
             fprintf(fileID, ...
                 'file_vector<resource_grid_reader_spy::expected_entry_t> symbols;\n');
             fprintf(fileID, '};\n');
+        end
+
+        function initializeClassImpl(obj)
+            obj.randomizeTestvector = randperm(1008);
         end
     end % of methods (Access = protected)
 

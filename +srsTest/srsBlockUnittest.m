@@ -146,6 +146,8 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
 
             obj.headerFileID = obj.createHeaderFile;
 
+            obj.initializeClassImpl();
+
             % Add teardown steps, in reverse order (it's a LIFO stack).
             obj.addTeardown(@rng, orig);
 
@@ -443,6 +445,13 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
             end
         end
     end % of methods (Access = private)
+
+    methods (Access = protected)
+        function initializeClassImpl(obj)
+            % By default, do nothing. Each derived class may add its extra
+            % initialization steps.
+        end
+    end % of methods (Access = protected)
 
     methods (Static, Access = protected)
         function addTestToHeaderFile(fileID, testEntryString)

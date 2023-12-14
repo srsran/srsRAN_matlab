@@ -61,9 +61,8 @@ classdef srsPDSCHdmrsUnittest < srsTest.srsBlockUnittest
         srsBlockType = 'phy/upper/signal_processors'
     end
 
-    properties (Constant, Hidden)
-        norNCellID = 1008
-        randomizeTestvector = randperm(srsPDSCHdmrsUnittest.norNCellID);
+    properties (Hidden)
+        randomizeTestvector
     end
 
     properties (ClassSetupParameter)
@@ -101,6 +100,10 @@ classdef srsPDSCHdmrsUnittest < srsTest.srsBlockUnittest
         function addTestDefinitionToHeaderFile(obj, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
             addTestDefinitionToHeaderFilePHYsigproc(obj, fileID);
+        end
+
+        function initializeClassImpl(obj)
+            obj.randomizeTestvector = randperm(1008);
         end
     end % of methods (Access = protected)
 

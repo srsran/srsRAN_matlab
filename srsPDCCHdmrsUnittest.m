@@ -89,10 +89,10 @@ classdef srsPDCCHdmrsUnittest < srsTest.srsBlockUnittest
         AggregationLevel= {1, 2, 4, 8, 16}
     end % of properties (TestParameter)
 
-    properties(Constant, Hidden)
-        randomizeTestvector = randperm(1008)
-        randomizeSlotNum0 = randi([1, 10], 1, 1008)
-        randomizeSlotNum1 = randi([1, 20], 1, 1008)
+    properties(Hidden)
+        randomizeTestvector
+        randomizeSlotNum0
+        randomizeSlotNum1
     end
 
     methods (Access = protected)
@@ -108,7 +108,19 @@ classdef srsPDCCHdmrsUnittest < srsTest.srsBlockUnittest
             fprintf(fileID, '\n');
             addTestDefinitionToHeaderFilePHYsigproc(obj, fileID);
         end
+
+        function initializeClassImpl(obj)
+            obj.randomizeTestvector = randperm(1008);
+            obj.randomizeSlotNum0 = randi([1, 10], 1, 1008);
+            obj.randomizeSlotNum1 = randi([1, 20], 1, 1008);
+        end
     end % of methods (Access = protected)
+
+    methods (TestClassSetup)
+        function createRandomVector(obj)
+            obj.randomizeTestvector = randperm(1008);
+        end
+    end
 
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, numerology, Duration, CCEREGMapping, AggregationLevel)
