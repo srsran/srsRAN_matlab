@@ -159,7 +159,7 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
 
   // Build the boolean mask of OFDM symbols carrying DM-RS.
   const TypedArray<bool> dmrs_pos_in = in_dem_cfg["DMRSSymbPos"];
-  std::copy(dmrs_pos_in.cbegin(), dmrs_pos_in.cend(), demodulator_config.dmrs_symb_pos.begin());
+  demodulator_config.dmrs_symb_pos   = bounded_bitset<MAX_NSYMB_PER_SLOT>(dmrs_pos_in.begin(), dmrs_pos_in.end());
 
   // DM-RS configuration type.
   demodulator_config.dmrs_config_type = matlab_to_srs_dmrs_type(in_dem_cfg["DMRSConfigType"][0]);
