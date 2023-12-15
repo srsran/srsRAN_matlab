@@ -419,7 +419,6 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
             [grid, payloads] = createTxGrid(carrier, pucch, ...
                 nofHarqAck, nofSR, nofCSIPart1, nofCSIPart2);
 
-            UCIPayload = payloads.UCIPayload;
             harqAckPayload = payloads.harqAckPayload;
             SRPayload = payloads.SRPayload;
             CSI1Payload = payloads.CSI1Payload;

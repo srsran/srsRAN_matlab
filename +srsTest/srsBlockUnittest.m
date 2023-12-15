@@ -447,7 +447,7 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
     end % of methods (Access = private)
 
     methods (Access = protected)
-        function initializeClassImpl(obj)
+        function initializeClassImpl(obj) %#ok<MANU>
             % By default, do nothing. Each derived class may add its extra
             % initialization steps.
         end
