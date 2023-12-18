@@ -97,6 +97,8 @@ classdef PUCCHBLER < matlab.System
     properties (Constant)
         %Number of transmit antennas.
         NTxAnts = 1
+        %Maximum number of UCI bits.
+        MaxUCIBits = 1706
     end % of constant properties
 
     properties (Nontunable)
@@ -124,16 +126,24 @@ classdef PUCCHBLER < matlab.System
         Modulation (1, :) char {mustBeMember(Modulation, {'BPSK', 'pi/2-BPSK', 'QPSK'})} = 'QPSK'
         %PUCCH Format (2, 3).
         PUCCHFormat double {mustBeInteger, mustBeInRange(PUCCHFormat, 2, 3)} = 2
-        %Number of UCI information bits.
-        NumUCIBits double {mustBeInteger, mustBeGreaterThan(NumUCIBits, 2)} = 4
+        %Frequency hopping ('intraSlot', 'interSlot', 'either')
+        FrequencyHopping  {mustBeMember(FrequencyHopping, {'intraSlot', 'interSlot', 'neither'})} = 'neither'
+        %Number of HARQ-ACK bits.
+        NumACKBits double {mustBeInteger, mustBeInRange(NumACKBits, 0, 1706)} = 4
+        %Number of SR bits.
+        NumSRBits double {mustBeInteger, mustBeInRange(NumSRBits, 0, 4)} = 0
+        %Number of CSI Part 1 bits.
+        NumCSI1Bits double {mustBeInteger, mustBeInRange(NumCSI1Bits, 0, 1706)} = 0
+        %Number of CSI Part 2 bits.
+        NumCSI2Bits double {mustBeInteger, mustBeInRange(NumCSI2Bits, 0, 1706)} = 0
         %Channel delay profile ('AWGN'(no delay), 'TDL-A'(Indoor hotspot model)).
         DelayProfile (1, :) char {mustBeMember(DelayProfile, {'AWGN', 'TDL-C', 'TDLC300'})} = 'AWGN'
         %TDL-A delay profile only: Delay spread in seconds.
         DelaySpread (1, 1) double {mustBeReal, mustBeNonnegative} = 300e-9
         %TDL-A delay profile only: Maximum Doppler shift in hertz.
         MaximumDopplerShift (1, 1) double {mustBeReal, mustBeNonnegative} = 100
-        %PUCCH implementation type ('matlab').
-        ImplementationType (1, :) char {mustBeMember(ImplementationType, {'matlab'})} = 'matlab'
+        %PUCCH implementation type ('matlab', 'srs', 'both').
+        ImplementationType (1, :) char {mustBeMember(ImplementationType, {'matlab', 'srs', 'both'})} = 'matlab'
     end % of properties (Nontunable)
 
     properties % Tunable
@@ -148,13 +158,17 @@ classdef PUCCHBLER < matlab.System
         SNRrange = []
         %Counter of transmitted UCI messages.
         TotalBlocksCtr = []
-        %Counter of missed UCI messages.
+        %Counter of missed UCI messages for MATLAB PUCCH.
         MissedBlocksMATLABCtr = []
+        %Counter of missed UCI messages for SRS PUCCH.
+        MissedBlocksSRSCtr = []
     end % of properties (SetAccess = private)
 
     properties (Dependent)
         %Block error rate (MATLAB case).
         BlockErrorRateMATLAB
+        %Block error rate (SRS case).
+        BlockErrorRateSRS
     end % of properties (Dependable)
 
     properties (Access = private, Hidden)
@@ -185,6 +199,27 @@ classdef PUCCHBLER < matlab.System
             end
         end
 
+        function checkImplementationandChEstPerf(obj)
+            if (~strcmp(obj.ImplementationType, 'matlab') && obj.PerfectChannelEstimator)
+                error('Perfect channel estimation only works with ImplementationType=''matlab''.');
+            end
+        end
+
+        function checkImplementationFormatandHopping(obj)
+            if (~strcmp(obj.ImplementationType, 'matlab') && ~strcmp(obj.FrequencyHopping, 'neither'))
+                error('Intra- or inter-slot frequency hopping only works with ImplementationType=''matlab''.');
+            end
+        end
+
+        function checkUCIBits(obj)
+            totalBits = obj.NumACKBits + obj.NumSRBits + obj.NumCSI1Bits + obj.NumCSI2Bits;
+            if ((totalBits < 3) || (totalBits > obj.MaxUCIBits))
+                error(['The total number of UCI bits should be between 3 and 1706,' ...
+                    'provided %d (HARQ-ACK: %d, SR: %d, CSI Part1: %d, CSI Part2: %d).'], ...
+                totalBits, obj.NumACKBits, obj.NumSRBits, obj.NumCSI1Bits, obj.NumCSI2Bits)
+            end
+        end
+
     end % of methods (Access = private)
 
     methods % public
@@ -211,6 +246,10 @@ classdef PUCCHBLER < matlab.System
 
         function bler = get.BlockErrorRateMATLAB(obj)
             bler = obj.MissedBlocksMATLABCtr ./ obj.TotalBlocksCtr;
+        end
+
+        function bler = get.BlockErrorRateSRS(obj)
+            bler = obj.MissedBlocksSRSCtr ./ obj.TotalBlocksCtr;
         end
 
         function plot(obj)
@@ -275,8 +314,10 @@ classdef PUCCHBLER < matlab.System
             end
             obj.PUCCH.PRBSet = obj.PRBSet;
             obj.PUCCH.SymbolAllocation = obj.SymbolAllocation;
-            obj.PUCCH.FrequencyHopping = "intraSlot";
-            obj.PUCCH.SecondHopStartPRB = (obj.NSizeGrid-1) - (numel(obj.PRBSet)-1);
+            obj.PUCCH.FrequencyHopping = obj.FrequencyHopping;
+            if ~strcmp(obj.FrequencyHopping, 'neither')
+                obj.PUCCH.SecondHopStartPRB = (obj.NSizeGrid-1) - (numel(obj.PRBSet)-1);
+            end
             obj.PUCCH.NID = [];
             obj.PUCCH.RNTI = obj.RNTI;
 
@@ -316,6 +357,9 @@ classdef PUCCHBLER < matlab.System
         function validatePropertiesImpl(obj)
             obj.checkPUCCHandSymbolAll();
             obj.checkPRBSetandGrid();
+            obj.checkImplementationandChEstPerf();
+            obj.checkUCIBits();
+            obj.checkImplementationFormatandHopping();
         end % of function validatePropertiesImpl(obj)
 
         function stepImpl(obj, SNRIn, nFrames)
@@ -341,18 +385,27 @@ classdef PUCCHBLER < matlab.System
             % Take copies of channel-level parameters to simplify subsequent parameter referencing.
             carrier = obj.Carrier;
             pucch = obj.PUCCH;
+            implementationType = obj.ImplementationType;
             nTxAnts = obj.NTxAnts;
             nRxAnts = obj.NRxAnts;
-            ouci = obj.NumUCIBits;
+            ouci = obj.NumACKBits + obj.NumSRBits + obj.NumCSI1Bits + obj.NumCSI2Bits;
             nFFT = obj.Nfft;
             symbolsPerSlot = obj.Carrier.SymbolsPerSlot;
             slotsPerFrame = obj.Carrier.SlotsPerFrame;
             perfectChannelEstimator = obj.PerfectChannelEstimator;
             displaySimulationInformation = obj.DisplaySimulationInformation;
 
+            useMATLABpucch = (strcmp(implementationType, 'matlab') || strcmp(implementationType, 'both'));
+            useSRSpucch = (strcmp(implementationType, 'srs') || strcmp(implementationType, 'both'));
+
+            if useSRSpucch
+                processPUCCHsrs = srsMEX.phy.srsPUCCHProcessor;
+            end
+
             quickSim = obj.QuickSimulation;
 
             blerUCI = zeros(numel(SNRIn), 1);
+            blerUCIsrs = zeros(numel(SNRIn), 1);
             totalBlocks = zeros(length(SNRIn), 1);
 
             for snrIdx = 1:numel(SNRIn)
@@ -368,6 +421,11 @@ classdef PUCCHBLER < matlab.System
 
                 % Get operating SNR value.
                 SNRdB = SNRIn(snrIdx);
+                fprintf(['\nSimulating transmission scheme MIMO (%dx%d) and SCS=%dkHz with ', ...
+                    '%s channel at %gdB SNR for %d 10ms frame(s)\n'], ...
+                    nTxAnts, nRxAnts, carrier.SubcarrierSpacing, ...
+                    obj.DelayProfile, SNRdB, nFrames);
+
 
                 % Get total number of slots in the simulation period.
                 NSlots = nFrames*slotsPerFrame;
@@ -432,31 +490,13 @@ classdef PUCCHBLER < matlab.System
                     noise = N0*complex(randn(size(rxWaveform)), randn(size(rxWaveform)));
                     rxWaveform = rxWaveform + noise;
 
-                    % Perform synchronization.
-                    if perfectChannelEstimator == 1
-                        % For perfect synchronization, use the information provided by
-                        % the channel to find the strongest multipath component.
+                    if (perfectChannelEstimator)
+                        % Perfect synchronization. Use information provided by the
+                        % channel to find the strongest multipath component.
                         pathFilters = getPathFilters(obj.Channel);
                         [offset, ~] = nrPerfectTimingEstimate(pathGains, pathFilters);
-                    else
-                        % For practical synchronization, correlate the received
-                        % waveform with the PUCCH DM-RS to give timing offset estimate
-                        % t and correlation magnitude mag. The function hSkipWeakTimingOffset
-                        % is used to update the receiver timing offset. If the correlation
-                        % peak in mag is weak, the current timing estimate t is ignored
-                        % and the previous estimate offset is used.
-                        [t, mag] = nrTimingEstimate(carrier, rxWaveform, dmrsIndices, dmrsSymbols);
-                        offset = hSkipWeakTimingOffset(offset, t, mag);
-
-                        % Display a warning if the estimated timing offset exceeds the
-                        % maximum channel delay.
-                        if offset > maxChDelay
-                            warning(['Estimated timing offset (%d) is greater than the maximum channel delay (%d).' ...
-                                ' This will result in a decoding failure. This may be caused by low SNR,' ...
-                                ' or not enough DM-RS symbols to synchronize successfully.'], offset, maxChDelay);
-                        end
+                        rxWaveform = rxWaveform(1+offset:end, :);
                     end
-                    rxWaveform = rxWaveform(1+offset:end,:);
 
                     % Perform OFDM demodulation on the received data to recreate the
                     % resource grid. Include zero padding in the event that practical
@@ -467,53 +507,75 @@ classdef PUCCHBLER < matlab.System
                         rxGrid = cat(2, rxGrid, zeros(K, symbolsPerSlot-L, R));
                     end
 
-                    % Perform channel estimation.
-                    if perfectChannelEstimator == 1
-                        % For perfect channel estimation, use the value of the path
-                        % gains provided by the channel.
-                        estChannelGrid = nrPerfectChannelEstimate(carrier, pathGains, pathFilters, offset, sampleTimes);
+                    if useMATLABpucch
+                        % Perform channel estimation.
+                        if perfectChannelEstimator == 1
+                            % For perfect channel estimation, use the value of the path
+                            % gains provided by the channel.
+                            estChannelGrid = nrPerfectChannelEstimate(carrier, pathGains, pathFilters, offset, sampleTimes);
 
-                        % Get the perfect noise estimate (from the noise realization).
-                        noiseGrid = nrOFDMDemodulate(carrier, noise(1+offset:end,:));
-                        noiseEst = var(noiseGrid(:));
+                            % Get the perfect noise estimate (from the noise realization).
+                            noiseGrid = nrOFDMDemodulate(carrier, noise(1+offset:end,:));
+                            noiseEst = var(noiseGrid(:));
 
-                        % Apply MIMO deprecoding to estChannelGrid to give an
-                        % estimate per transmission layer.
-                        K = size(estChannelGrid, 1);
-                        estChannelGrid = reshape(estChannelGrid, K*symbolsPerSlot*nRxAnts, nTxAnts);
-                        estChannelGrid = estChannelGrid*F.';
-                        estChannelGrid = reshape(estChannelGrid, K, symbolsPerSlot, nRxAnts, []);
-                    else
-                        % For practical channel estimation, use PUCCH DM-RS.
-                        [estChannelGrid, noiseEst] = nrChannelEstimate(carrier, rxGrid, dmrsIndices, dmrsSymbols);
+                            % Apply MIMO deprecoding to estChannelGrid to give an
+                            % estimate per transmission layer.
+                            K = size(estChannelGrid, 1);
+                            estChannelGrid = reshape(estChannelGrid, K*symbolsPerSlot*nRxAnts, nTxAnts);
+                            estChannelGrid = estChannelGrid*F.';
+                            estChannelGrid = reshape(estChannelGrid, K, symbolsPerSlot, nRxAnts, []);
+                        else
+                            % For practical channel estimation, use PUCCH DM-RS.
+                            [estChannelGrid, noiseEst] = nrChannelEstimate(carrier, rxGrid, dmrsIndices, dmrsSymbols);
+                        end
+
+                        % Get PUCCH REs from received grid and estimated channel grid.
+                        [pucchRx, pucchHest] = nrExtractResources(pucchIndices, rxGrid, estChannelGrid);
+
+                        % Perform equalization.
+                        pucchEq = nrEqualizeMMSE(pucchRx, pucchHest, noiseEst);
+
+                        % Decode PUCCH symbols.
+                        uciLLRs = nrPUCCHDecode(carrier, pucch, ouci, pucchEq, noiseEst);
+
+                        % Decode UCI.
+                        decucibits = nrUCIDecode(uciLLRs{1}, ouci);
+
+                        % Store values to calculate BLER.
+                        blerUCI(snrIdx) = blerUCI(snrIdx) + (~isequal(decucibits, uci));
                     end
 
-                    % Get PUCCH REs from received grid and estimated channel grid.
-                    [pucchRx, pucchHest] = nrExtractResources(pucchIndices, rxGrid, estChannelGrid);
+                    if useSRSpucch
+                        msg = processPUCCHsrs(rxGrid, pucch, carrier, ...
+                            NumHARQAck=obj.NumACKBits, ...
+                            NumSR=obj.NumSRBits, ...
+                            NumCSIPart1=obj.NumCSI1Bits, ...
+                            NumCSIPart2=obj.NumCSI2Bits);
 
-                    % Perform equalization.
-                    pucchEq = nrEqualizeMMSE(pucchRx, pucchHest, noiseEst);
+                        decucibitssrs = [msg.HARQAckPayload; msg.SRPayload; msg.CSI1Payload; msg.CSI2Payload];
+                        blerUCIsrs(snrIdx) = blerUCIsrs(snrIdx) + (~(isequal(decucibitssrs, uci)));
+                    end
 
-                    % Decode PUCCH symbols.
-                    uciLLRs = nrPUCCHDecode(carrier, pucch, ouci, pucchEq, noiseEst);
-
-                    % Decode UCI.
-                    decucibits = nrUCIDecode(uciLLRs{1}, ouci);
-
-                    % Store values to calculate BLER.
-                    blerUCI(snrIdx) = blerUCI(snrIdx) + (~isequal(decucibits, uci));
                     totalBlocks(snrIdx) = totalBlocks(snrIdx) + 1;
 
                     % To speed the simulation up, we stop after 100 missed transport blocks.
-                    if quickSim && (blerUCI(snrIdx) >= 100)
+                    if quickSim && (~useMATLABpucch || (blerUCI(snrIdx) >= 100)) && (~useSRSpucch || (blerUCIsrs(snrIdx) >= 100))
                         break;
                     end
                 end
 
                 % Display results dynamically.
+                usedFrames = round((nslot + 1) / carrier.SlotsPerFrame);
                 if displaySimulationInformation == 1
-                    fprintf(['UCI BLER of PUCCH Format ' num2str(obj.PUCCHFormat) ' for ' num2str(nFrames) ...
-                        ' frame(s) at SNR ' num2str(SNRIn(snrIdx)) ' dB: ' num2str(blerUCI(snrIdx)/totalBlocks(snrIdx)) '\n'])
+                    if useMATLABpucch
+                        fprintf(['UCI BLER of PUCCH Format ' num2str(obj.PUCCHFormat) ' for ' num2str(usedFrames) ...
+                            ' frame(s) at SNR ' num2str(SNRIn(snrIdx)) ' dB: ' num2str(blerUCI(snrIdx)/totalBlocks(snrIdx)) '\n'])
+                    end
+                    if useSRSpucch
+                        fprintf('SRS - ');
+                        fprintf(['UCI BLER of PUCCH Format ' num2str(obj.PUCCHFormat) ' for ' num2str(usedFrames) ...
+                            ' frame(s) at SNR ' num2str(SNRIn(snrIdx)) ' dB: ' num2str(blerUCIsrs(snrIdx)/totalBlocks(snrIdx)) '\n'])
+                    end
                 end
             end % of for snrIdx = 1:numel(snrIn)
 
@@ -524,6 +586,7 @@ classdef PUCCHBLER < matlab.System
 
             obj.TotalBlocksCtr = joinArrays(obj.TotalBlocksCtr, totalBlocks, repeatedIdx, sortedIdx);
             obj.MissedBlocksMATLABCtr = joinArrays(obj.MissedBlocksMATLABCtr, blerUCI, repeatedIdx, sortedIdx);
+            obj.MissedBlocksSRSCtr = joinArrays(obj.MissedBlocksSRSCtr, blerUCIsrs, repeatedIdx, sortedIdx);
 
         end % of function stepImpl(obj, SNRIn, nFrames)
 
@@ -535,6 +598,7 @@ classdef PUCCHBLER < matlab.System
             obj.SNRrange = [];
             obj.TotalBlocksCtr = [];
             obj.MissedBlocksMATLABCtr = [];
+            obj.MissedBlocksSRSCtr = [];
         end % of function resetImpl(obj)
 
         function releaseImpl(obj)
@@ -548,10 +612,16 @@ classdef PUCCHBLER < matlab.System
                     flag = strcmp(obj.DelayProfile, 'AWGN') || strcmp(obj.DelayProfile, 'TDLC300');
                 case 'Modulation'
                     flag = (obj.PUCCHFormat == 2);
-                case {'SNRrange', 'TotalBlocksCtr', 'MissedBlocksMATLABCtr'}
+                case {'SNRrange', 'TotalBlocksCtr'}
                     flag = isempty(obj.SNRrange);
+                case 'MissedBlocksMATLABCtr'
+                    flag = isempty(obj.SNRrange) || strcmp(obj.ImplementationType, 'srs');
+                case 'MissedBlocksSRSCtr'
+                    flag = isempty(obj.SNRrange) || strcmp(obj.ImplementationType, 'matlab');
                 case 'BlockErrorRateMATLAB'
-                    flag = isempty(obj.MissedBlocksMATLABCtr);
+                    flag = isempty(obj.MissedBlocksMATLABCtr) || strcmp(obj.ImplementationType, 'srs');
+                case 'BlockErrorRateSRS'
+                    flag = isempty(obj.MissedBlocksSRSCtr) || strcmp(obj.ImplementationType, 'matlab');
                 otherwise
                     flag = false;
             end
@@ -565,7 +635,8 @@ classdef PUCCHBLER < matlab.System
                 ... Resource grid.
                 'SubcarrierSpacing', 'NSizeGrid', ...
                 ... PUCCH.
-                'PUCCHFormat', 'PRBSet', 'SymbolAllocation', 'Modulation', 'NumUCIBits', ...
+                'PUCCHFormat', 'PRBSet', 'SymbolAllocation', 'Modulation', 'FrequencyHopping', ...
+                'NumACKBits', 'NumSRBits', 'NumCSI1Bits', 'NumCSI2Bits', ...
                 ... Antennas and layers.
                 'NRxAnts', 'NTxAnts', ...
                 ... Channel model.
@@ -574,7 +645,8 @@ classdef PUCCHBLER < matlab.System
                 'ImplementationType', 'QuickSimulation', 'DisplaySimulationInformation'};
             groups = matlab.mixin.util.PropertyGroup(confProps, 'Configuration');
 
-            results = {'SNRrange', 'TotalBlocksCtr', 'MissedBlocksMATLABCtr', 'BlockErrorRateMATLAB'};
+            results = {'SNRrange', 'TotalBlocksCtr', 'MissedBlocksMATLABCtr', 'MissedBlocksSRSCtr', ...
+                'BlockErrorRateMATLAB', 'BlockErrorRateSRS'};
             resProps = {};
             for i = 1:numel(results)
                 tt = results{i};
