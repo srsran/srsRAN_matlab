@@ -1,4 +1,4 @@
-%srsBlockUnittest Unit test template for SRSRAN blocks (Abstract class).
+%srsBlockUnittest Unit test template for srsRAN blocks (Abstract class).
 %   Common functionalities shared by all SRS unit tests. Derives from
 %   'matlab.unittest.TestCase'.
 %
@@ -92,8 +92,15 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
         outputPath (1, 1) cell {mustBeText(outputPath)}
     end % of properties (Abstract, ClassSetupParameter)
 
+    properties (ClassSetupParameter)
+        %Flag for initializing the random generator with the default seed (true)
+        %   or with one based on the current time (false).
+        %   Non-expert users are advised against changing this flag.
+        RandomDefault = {true}
+    end
+
     properties (Hidden)
-        %Path of the tested block relative to the SRSRAN include root folder,
+        %Path of the tested block relative to the srsRAN include root folder,
         %in guard format (e.g., all capitals and with underscores).
         pathInRepo    (1, :) char
 
@@ -107,15 +114,8 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
         RngSeed
     end % of properties (Hidden)
 
-    properties (Hidden, Constant)
-        %Flag for initializing the random generator with the default seed (true)
-        %   or with one based on the current time (false).
-        %   Non-expert users are advised against changing this flag.
-        RandomDefault = true
-    end
-
     methods (TestClassSetup)
-        function initializeClass(obj, outputPath)
+        function initializeClass(obj, outputPath, RandomDefault)
         %initializeClass Test class setup
         %   Creates the temporary working folder, defines its teardown, and creates the
         %   header file for the test vectors. Initializes the random generator.
@@ -131,7 +131,7 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
             % Get current random generator state.
             orig = rng;
 
-            if obj.RandomDefault
+            if RandomDefault
                 % Initialize the random generator to its default state for reproducible
                 % results.
                 rng('default');
@@ -145,6 +145,8 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
             obj.RngSeed = curr.Seed;
 
             obj.headerFileID = obj.createHeaderFile;
+
+            obj.initializeClassImpl();
 
             % Add teardown steps, in reverse order (it's a LIFO stack).
             obj.addTeardown(@rng, orig);
@@ -443,6 +445,13 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
             end
         end
     end % of methods (Access = private)
+
+    methods (Access = protected)
+        function initializeClassImpl(obj) %#ok<MANU>
+            % By default, do nothing. Each derived class may add its extra
+            % initialization steps.
+        end
+    end % of methods (Access = protected)
 
     methods (Static, Access = protected)
         function addTestToHeaderFile(fileID, testEntryString)

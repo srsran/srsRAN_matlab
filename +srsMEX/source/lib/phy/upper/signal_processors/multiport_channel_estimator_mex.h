@@ -29,7 +29,7 @@
 #include <memory>
 
 /// Factory method for a single port channel estimator.
-static std::unique_ptr<srsran::port_channel_estimator> create_port_channel_estimator();
+inline std::unique_ptr<srsran::port_channel_estimator> create_port_channel_estimator();
 
 /// Implements a SIMO channel estimator leveraging srsRAN \c port_channel_estimator.
 class MexFunction : public srsran_mex_dispatcher
@@ -91,7 +91,7 @@ private:
   std::unique_ptr<srsran::port_channel_estimator> estimator = create_port_channel_estimator();
 };
 
-static std::unique_ptr<srsran::port_channel_estimator> create_port_channel_estimator()
+std::unique_ptr<srsran::port_channel_estimator> create_port_channel_estimator()
 {
   using namespace srsran;
   std::shared_ptr<dft_processor_factory>          dft_factory = create_dft_processor_factory_fftw_slow();

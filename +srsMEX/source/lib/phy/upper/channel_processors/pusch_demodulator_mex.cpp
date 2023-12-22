@@ -20,6 +20,7 @@
 #include "pusch_demodulator_mex.h"
 #include "srsran_matlab/support/factory_functions.h"
 #include "srsran_matlab/support/matlab_to_srs.h"
+#include "srsran_matlab/support/resource_grid.h"
 #include "srsran_matlab/support/to_span.h"
 #include "srsran/adt/optional.h"
 #include "srsran/phy/support/resource_grid_writer.h"
@@ -158,7 +159,7 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
 
   // Build the boolean mask of OFDM symbols carrying DM-RS.
   const TypedArray<bool> dmrs_pos_in = in_dem_cfg["DMRSSymbPos"];
-  std::copy(dmrs_pos_in.cbegin(), dmrs_pos_in.cend(), demodulator_config.dmrs_symb_pos.begin());
+  demodulator_config.dmrs_symb_pos   = bounded_bitset<MAX_NSYMB_PER_SLOT>(dmrs_pos_in.begin(), dmrs_pos_in.end());
 
   // DM-RS configuration type.
   demodulator_config.dmrs_config_type = matlab_to_srs_dmrs_type(in_dem_cfg["DMRSConfigType"][0]);
@@ -180,45 +181,10 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
 
   unsigned nof_rx_ports = demodulator_config.rx_ports.size();
 
-  // Get the PUSCH grid indices.
-  const TypedArray<double> in_grid_indices_array = in_dem_cfg["PUSCHIndices"];
-
-  // Number of received symbols per antenna port.
-  unsigned nof_rx_symbols_port = in_grid_indices_array.getNumberOfElements() / 3;
-
-  pusch_coordinates_list.clear();
-
-  // Put elements in the grid for the selected port.
-  for (unsigned i_re = 0; i_re != nof_rx_symbols_port; ++i_re) {
-    pusch_coordinates_list.emplace_back(/* symbol */ static_cast<uint16_t>(in_grid_indices_array[i_re][1]),
-                                        /* subcarrier */ static_cast<uint16_t>(in_grid_indices_array[i_re][0]));
-  }
-
-  // Prepare the resource grid.
-  std::unique_ptr<resource_grid> grid =
-      create_resource_grid(demodulator_config.rb_mask.size() * NRE,
-                           demodulator_config.start_symbol_index + demodulator_config.nof_symbols,
-                           demodulator_config.rx_ports.size());
+  // Read the resource grid from inputs[1].
+  std::unique_ptr<resource_grid> grid = read_resource_grid(inputs[1]);
   if (!grid) {
     mex_abort("Cannot create resource grid.");
-  }
-
-  // Write zeros in grid.
-  grid->set_all_zero();
-
-  // Get the PUSCH data.
-  const TypedArray<cf_t> in_data_cft_array = inputs[1];
-
-  if (in_data_cft_array.getNumberOfElements() != in_grid_indices_array.getNumberOfElements() * nof_rx_ports / 3) {
-    mex_abort("The number of PUSCH symbols per port {} and the number of PUSCH coordinates {} do not match.",
-              in_data_cft_array.getNumberOfElements() / nof_rx_ports,
-              in_grid_indices_array.getNumberOfElements() / 3);
-  }
-
-  span<const cf_t> in_data_cft_view = to_span(in_data_cft_array);
-  for (unsigned i_port = 0; i_port != nof_rx_ports; ++i_port) {
-    grid->get_writer().put(i_port, pusch_coordinates_list, in_data_cft_view.first(nof_rx_symbols_port));
-    in_data_cft_view = in_data_cft_view.last(in_data_cft_view.size() - nof_rx_symbols_port);
   }
 
   // Get the channel estimates.
@@ -235,7 +201,7 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
   // Get the noise variance.
   float noise_var = static_cast<float>(static_cast<TypedArray<double>>(inputs[3])[0]);
 
-  // Number of channel Resource Elements per receive port.
+  // Number of channel resource elements per receive port.
   unsigned nof_ch_re_port = in_ce_cft_array.getNumberOfElements() / ce_dims.nof_rx_ports;
 
   // Set estimated channel.
@@ -253,9 +219,8 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
   }
 
   // Compute expected soft output bit number.
-  unsigned bits_per_symbol = srsran::get_bits_per_symbol(demodulator_config.modulation);
+  unsigned nof_expected_soft_output_bits = in_dem_cfg["NumOutputLLR"][0];
 
-  unsigned                   nof_expected_soft_output_bits = nof_rx_symbols_port * bits_per_symbol;
   TypedArray<int8_t>         out       = factory.createArray<int8_t>({nof_expected_soft_output_bits, 1});
   span<log_likelihood_ratio> soft_bits = to_span<int8_t, log_likelihood_ratio>(out);
   pusch_codeword_buffer_spy  sch_data(soft_bits);

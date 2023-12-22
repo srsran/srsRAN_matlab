@@ -21,12 +21,10 @@
 /// \brief Multiport channel estimator MEX definition.
 
 #include "multiport_channel_estimator_mex.h"
-#include "srsran_matlab/support/factory_functions.h"
 #include "srsran_matlab/support/matlab_to_srs.h"
+#include "srsran_matlab/support/resource_grid.h"
 #include "srsran_matlab/support/to_span.h"
 #include "srsran/phy/support/resource_grid_writer.h"
-#include <memory>
-#include <numeric>
 
 using namespace matlab::data;
 using namespace srsran;
@@ -103,20 +101,13 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
 
   cfg.scaling = static_cast<float>(in_cfg["BetaScaling"][0]);
 
-  const TypedArray<cf_t> in_grid         = inputs[1];
-  const ArrayDimensions  grid_dims       = in_grid.getDimensions();
-  unsigned               nof_subcarriers = grid_dims[0];
-  unsigned               nof_symbols     = grid_dims[1];
-  unsigned               nof_rx_ports    = 1;
-  if (grid_dims.size() == 3) {
-    nof_rx_ports = grid_dims[2];
-  }
-
-  std::unique_ptr<resource_grid> grid = create_resource_grid(nof_subcarriers, nof_symbols, nof_rx_ports);
+  // Read the resource grid from inputs[1].
+  std::unique_ptr<resource_grid> grid = read_resource_grid(inputs[1]);
   if (!grid) {
     mex_abort("Cannot create resource grid.");
   }
 
+  unsigned                 nof_rx_ports     = grid->get_writer().get_nof_ports();
   const TypedArray<double> in_port_indices  = in_cfg["PortIndices"];
   unsigned                 nof_port_indices = in_port_indices.getNumberOfElements();
   if (nof_port_indices != nof_rx_ports) {
@@ -127,19 +118,7 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
     cfg.rx_ports[i_port] = static_cast<unsigned>(in_port_indices[i_port]);
   }
 
-  span<const cf_t> grid_view = to_span(in_grid);
-
-  unsigned remaining_res = in_grid.getNumberOfElements();
-  for (unsigned i_port = 0; i_port != nof_rx_ports; ++i_port) {
-    for (unsigned i_symbol = 0; i_symbol != nof_symbols; ++i_symbol) {
-      span<const cf_t> symbol_view = grid_view.first(nof_subcarriers);
-      remaining_res -= nof_subcarriers;
-      grid_view = grid_view.last(remaining_res);
-
-      grid->get_writer().put(i_port, i_symbol, 0, symbol_view);
-    }
-  }
-
+  // Read the DM-RS.
   const TypedArray<cf_t> in_pilots = inputs[3];
 
   unsigned nof_pilot_res     = dmrs_pattern.rb_mask.count() * dmrs_pattern.re_pattern.count();

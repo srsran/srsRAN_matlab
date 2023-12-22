@@ -62,9 +62,8 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
         srsBlockType = 'phy/upper/signal_processors'
     end
 
-    properties (Constant, Hidden)
-        norNCellID = 1008
-        randomizeTestvector = randperm(srsPUSCHdmrsUnittest.norNCellID);
+    properties (Hidden)
+        randomizeTestvector
     end
 
     properties (ClassSetupParameter)
@@ -119,6 +118,10 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
             fprintf(fileID, '  file_vector<resource_grid_reader_spy::expected_entry_t> rx_symbols;\n');
             fprintf(fileID, '  file_vector<resource_grid_reader_spy::expected_entry_t> ch_estimates;\n');
             fprintf(fileID, '};\n');
+        end
+
+        function initializeClassImpl(obj)
+            obj.randomizeTestvector = randperm(1008);
         end
     end % of methods (Access = protected)
 

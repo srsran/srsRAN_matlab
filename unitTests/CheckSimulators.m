@@ -81,6 +81,10 @@ classdef CheckSimulators < matlab.unittest.TestCase
             snr = -14.2;
             pp.IgnoreCFO = true;
 
+            % Disable verbose PRACH detector warnings.
+            prachwarn = warning('query', 'srsran_matlab:srsPRACHdetector');
+            warning('off', 'srsran_matlab:srsPRACHdetector');
+
             % Run detection test.
             try
                 pp(snr, 100)
@@ -106,6 +110,9 @@ classdef CheckSimulators < matlab.unittest.TestCase
                 obj.assertFail(['PRACHPERF could not run because of exception: ', ...
                     ME.message]);
             end
+
+            % Restore verbose PRACH detector warnings.
+            warning(prachwarn);
 
             obj.assertEqual(pp.SNRrange, snr, 'Wrong SNR range.');
             obj.assertEqual(pp.Occasions, 100, 'Wrong number of occasions.');
@@ -135,7 +142,7 @@ classdef CheckSimulators < matlab.unittest.TestCase
             obj.assertThat('../../../+srsMEX/+phy/@srsPUSCHDemodulator/pusch_demodulator_mex.mexa64', IsFile, ...
                 'Could not find PUSCH demodulator mex executable.');
 
-            pp.DecoderType = 'srs';
+            pp.ImplementationType = 'srs';
             snrs = -5.6:0.2:-4.8;
             try
                 pp(snrs, 100)

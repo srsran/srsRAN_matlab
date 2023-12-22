@@ -87,9 +87,9 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
         AggregationLevel= {1, 2, 4, 8, 16}
     end
 
-    properties (Constant, Hidden)
-        randomizeTestvector = randperm(srsPDCCHModulatorUnittest.nofNCellID)
-        randomizeSlot = randi([1, 10], 1, srsPDCCHModulatorUnittest.nofNCellID)
+    properties (Hidden)
+        randomizeTestvector
+        randomizeSlot
     end
 
     methods (Access = protected)
@@ -104,6 +104,11 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
             fprintf(fileID, 'static const precoding_configuration default_precoding = precoding_configuration::make_wideband(make_single_port());\n');
             fprintf(fileID, '\n');
             addTestDefinitionToHeaderFilePHYchproc(obj, fileID);
+        end
+
+        function initializeClassImpl(obj)
+            obj.randomizeTestvector = randperm(srsPDCCHModulatorUnittest.nofNCellID);
+            obj.randomizeSlot = randi([1, 10], 1, srsPDCCHModulatorUnittest.nofNCellID);
         end
     end % of methods (Access = protected)
 

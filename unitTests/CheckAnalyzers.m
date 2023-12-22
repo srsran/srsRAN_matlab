@@ -143,7 +143,7 @@ classdef CheckAnalyzers < matlab.unittest.TestCase
             obj.assertEqual(pusch.NID, 1, 'Wrong PUSCH scrambling identity.');
             obj.assertEqual(pusch.RNTI, 17921, 'Wrong radio network temporary identifier.');
             obj.assertEqual(pusch.NRAPID, [], 'Wrong random access preamble index.');
-            obj.assertEqual(pusch.EnablePTRS, 0, 'Wrong enable PT-RS flag.');
+            obj.assertEqual(double(pusch.EnablePTRS), 0, 'Wrong enable PT-RS flag.');
             obj.assertEqual(pusch.DMRS.CustomSymbolSet, [2 7 11], 'Wrong DM-RS OFDM symbol locations.');
             obj.assertEqual(pusch.DMRS.DMRSConfigurationType, 1, 'Wrong DM-RS configuration type.');
             obj.assertEqual(pusch.DMRS.NIDNSCID, 1, 'Wrong DM-RS scrambling identities for CP-OFDM.');

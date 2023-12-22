@@ -25,7 +25,7 @@ target_link_libraries(prach_detector_mex srsran::srsran_channel_processors srsra
 
 set_target_properties(prach_detector_mex
     PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/../../+srsMEX/+phy/@srsPRACHDetector"
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/../+phy/@srsPRACHDetector"
 )
 
 matlab_add_mex(
@@ -38,7 +38,7 @@ target_link_libraries(pusch_decoder_mex srsran::srsran_channel_processors)
 
 set_target_properties(pusch_decoder_mex
     PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/../../+srsMEX/+phy/@srsPUSCHDecoder"
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/../+phy/@srsPUSCHDecoder"
 )
 
 matlab_add_mex(
@@ -47,9 +47,32 @@ matlab_add_mex(
     R2018a
 )
 
-target_link_libraries(pusch_demodulator_mex srsran::srsran_channel_processors srsran::srsran_channel_equalizer srsran::srsran_channel_precoder)
+target_link_libraries(pusch_demodulator_mex
+    srsran_matlab::resource_grid
+    srsran::srsran_channel_processors
+    srsran::srsran_channel_equalizer
+    srsran::srsran_channel_precoder
+)
 
 set_target_properties(pusch_demodulator_mex
     PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/../../+srsMEX/+phy/@srsPUSCHDemodulator"
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/../+phy/@srsPUSCHDemodulator"
+)
+
+matlab_add_mex(
+    NAME pucch_processor_mex
+    SRC  pucch_processor_mex.cpp
+    R2018a
+)
+
+target_link_libraries(pucch_processor_mex
+    srsran_matlab::resource_grid
+    srsran::srsran_channel_processors
+    srsran::srsran_channel_equalizer
+    srsran::srsran_phy_support
+)
+
+set_target_properties(pucch_processor_mex
+    PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/../+phy/@srsPUCCHProcessor"
 )

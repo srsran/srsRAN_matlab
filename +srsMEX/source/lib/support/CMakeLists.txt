@@ -15,18 +15,9 @@
 # file in the top-level directory of this distribution.
 #
 
-matlab_add_mex(
-    NAME multiport_channel_estimator_mex
-    SRC multiport_channel_estimator_mex.cpp
-    R2018a
-)
-
-target_link_libraries(multiport_channel_estimator_mex
-    srsran_matlab::resource_grid
-    srsran::srsran_signal_processors
-)
-
-set_target_properties(multiport_channel_estimator_mex
-    PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/../+phy/@srsMultiPortChannelEstimator"
-)
+add_library(resource_grid SHARED resource_grid.cpp)
+target_include_directories(resource_grid PUBLIC ${Matlab_INCLUDE_DIRS})
+target_link_libraries(resource_grid
+    PRIVATE srsran::srsran_channel_precoder
+            srsran::srsran_signal_processors)
+add_library(srsran_matlab::resource_grid ALIAS resource_grid)

@@ -90,9 +90,9 @@ classdef srsSSBProcessorUnittest < srsTest.srsBlockUnittest
         SFN = num2cell(0:1023)
     end % of properties (TestParameter)
 
-    properties (Constant, Hidden)
-        randomizeTestvector = randperm(1008)
-        randomizeSFN = randperm(1024)
+    properties (Hidden)
+        randomizeTestvector
+        randomizeSFN
     end
 
     methods (Access = protected)
@@ -108,6 +108,11 @@ classdef srsSSBProcessorUnittest < srsTest.srsBlockUnittest
             fprintf(fileID, ...
                 'file_vector<resource_grid_writer_spy::expected_entry_t> symbols;\n');
             fprintf(fileID, '};\n');
+        end
+
+        function initializeClassImpl(obj)
+            obj.randomizeTestvector = randperm(1008);
+            obj.randomizeSFN = randperm(1024);
         end
     end % of methods (Access = protected)
 

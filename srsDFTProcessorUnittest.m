@@ -1,5 +1,5 @@
 %srsDFTProcessorUnittest Unit tests for DFT processor functions.
-%   This class implements unit tests for the DFT processor functions using 
+%   This class implements unit tests for the DFT processor functions using
 %   the matlab.unittest framework. The simplest use consists in creating an
 %   object with
 %       testCase = srsDFTProcessorUnittest
@@ -67,7 +67,7 @@ classdef srsDFTProcessorUnittest < srsTest.srsBlockUnittest
     properties (TestParameter)
         %DFT size.
         DFTsize = {128, 256, 384, 512, 768, 1024, 1536, 2048, 3072, 4096, ...
-	     4608, 6144, 9216, 12288, 18432, 24576, 36864, 49152}
+            4608, 6144, 9216, 12288, 18432, 24576, 36864, 49152}
 
         %DFT direction flag ('direct', 'inverse').
         direction = {'direct', 'inverse'}
@@ -95,7 +95,7 @@ classdef srsDFTProcessorUnittest < srsTest.srsBlockUnittest
         function testvectorGenerationCases(testCase, DFTsize, direction)
         %testvectorGenerationCases Generates a test vector for the given DFTsize
         %   and direction.
-        
+
             import srsTest.helpers.writeComplexFloatFile
 
             % Generate a unique test ID.

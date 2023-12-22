@@ -78,8 +78,8 @@ classdef srsPBCHdmrsUnittest < srsTest.srsBlockUnittest
         nHF = {0, 1}
     end % of properties (TestParameter)
 
-    properties (Constant, Hidden)
-        randomizeTestvector = randperm(1008)
+    properties (Hidden)
+        randomizeTestvector
     end
 
     methods (Access = protected)
@@ -91,6 +91,10 @@ classdef srsPBCHdmrsUnittest < srsTest.srsBlockUnittest
         function addTestDefinitionToHeaderFile(obj, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
             addTestDefinitionToHeaderFilePHYsigproc(obj, fileID);
+        end
+
+        function initializeClassImpl(obj)
+            obj.randomizeTestvector = randperm(1008);
         end
     end % methods (Access = protected)
 

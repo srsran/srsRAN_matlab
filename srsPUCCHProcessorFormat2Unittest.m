@@ -67,6 +67,18 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
         outputPath = {['testPUCCHProcessorFormat2', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
     end
 
+    properties (Constant, Hidden)
+        %Number of Rx antenna ports.
+        NumRxPorts = 4;
+    end
+
+    properties (Hidden)
+        %Carrier configuration object.
+        Carrier
+        %PUCCH Format 2 configuration object.
+        PUCCH
+    end
+
     properties (TestParameter)
 
         %Symbols allocated to the PUCCH transmission. The symbol allocation is described
@@ -79,13 +91,13 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
 
         %Number of bits of the SR payload (0...4).
         nofSR = {0, 1};
-        
+
         %Number of bits of the CSI Part 1 payload.
         nofCSIPart1 = {0, 4, 6};
-        
+
         %Number of bits of the CSI Part 2 payload.
         nofCSIPart2 = {0};
-        
+
         %Maximum code rate, from TS38.311 Section 6.3.2, PUCCH-config
         %   information element (0.08, 0.15, 0.25, 0.35, 0.45, 0.6, 0.8).
         maxCodeRate = {0.08, 0.15, 0.25, 0.35, 0.45, 0.6};
@@ -94,7 +106,7 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
     methods (Access = protected)
         function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
-           
+
             fprintf(fileID, '#include "../../support/resource_grid_test_doubles.h"\n');
             fprintf(fileID, '#include "srsran/phy/upper/channel_processors/pucch_processor.h"\n');
             fprintf(fileID, '#include "srsran/support/file_vector.h"\n');
@@ -102,7 +114,7 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
 
         function addTestDefinitionToHeaderFile(~, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
-           
+
             fprintf(fileID, 'struct context_t {\n');
             fprintf(fileID, '  unsigned                               grid_nof_prb;\n');
             fprintf(fileID, '  unsigned                               grid_nof_symbols;\n');
@@ -121,26 +133,13 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
         end
     end % of methods (Access = protected)
 
-    methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(testCase, SymbolAllocation, ...
+    methods (Access = private)
+        function setupsimulation(testCase, SymbolAllocation, ...
                 nofHarqAck, nofSR, nofCSIPart1, nofCSIPart2, maxCodeRate)
-        %testvectorGenerationCases Generates a test vector for the given
-        %   Symbol allocation, HARQ-ACK, SR, CSI Part 1 and CSI Part 2 payload
-        %   sizes in number of bits, and the maximum code rate. the Cell ID,
-        %   NID, NID0 and RNTI are randomly generated. The number of allocated
-        %   PRB is determined based on the UCI payload size and maximum code
-        %   rate.
+        % Sets secondary simulation variables and MATLAB NR configuration objects.
 
-            import srsLib.phy.upper.channel_modulation.srsDemodulator
-            import srsLib.phy.upper.equalization.srsChannelEqualizer
-            import srsTest.helpers.writeUint8File
             import srsLib.phy.helpers.srsConfigureCarrier
             import srsLib.phy.helpers.srsConfigurePUCCH
-            import srsTest.helpers.matlab2srsCyclicPrefix
-            import srsTest.helpers.writeResourceGridEntryFile
-
-            % Generate a unique test ID.
-            testID = testCase.generateTestID;
 
             % Generate random cell ID.
             NCellID = randi([0, 1007]);
@@ -158,7 +157,7 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
             CyclicPrefix = 'normal';
 
             % No frequency hopping.
-            FrequencyHopping = 'neither';        
+            FrequencyHopping = 'neither';
 
             % QPSK modulation has 2 bit per symbol.
             modulationOrder = 2;
@@ -166,26 +165,9 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
             % Number of RE within a PUCCH Format 2 RB used for control data.
             dataREFormat2 = 8;
 
-            % Fix number of receive ports.
-            NumRxPorts = 4;
-
             % UCI payload size.
             nofUCIBits = nofHarqAck + nofSR + nofCSIPart1 + nofCSIPart2;
-            
-            % Generate UCI payload.
-            harqAckPayload = randi([0, 1], nofHarqAck, 1);
-            SRPayload = randi([0, 1], nofSR, 1);
-            CSI1Payload = randi([0, 1], nofCSIPart1, 1);
-            CSI2Payload = randi([0, 1], nofCSIPart2, 1);
 
-            % For now, UCI multiplexing, applicable to UCI payloads contaning
-            % CSI reports of two parts, is not considered. Therefore, all
-            % UCI fields are appended into a single UCI segment.
-            UCIPayload = [harqAckPayload; SRPayload; CSI1Payload; CSI2Payload];
-
-            assert(length(UCIPayload) == nofUCIBits, ...
-                'srsran_matlab:srsPUCCHProcessorFormat2Unittest', 'Wrong UCI payload length');
-            
             % CRC bits added before coding.
             nofCRCBits = 0;
             if (nofUCIBits >= 12 && nofUCIBits < 20)
@@ -196,7 +178,7 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
 
             % Number of bits of the code block.
             nofCodeBlockBits = nofUCIBits + nofCRCBits;
-            
+
             % Number of PRB used. It is obtained by computing the number
             % of bits in a codeword if the maximum code rate is used. The
             % obtained codeword length is used to derive the minimum number
@@ -204,18 +186,16 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
             % resource.
             PRBNum = ceil(nofCodeBlockBits / ...
                 (maxCodeRate * modulationOrder * dataREFormat2 * SymbolAllocation(2)));
-            
+
             % Skip test cases where the UCI codeword does not fit into the
             % PUCCH Format 2 resources.
-            if (PRBNum > 16)
-                return;
-            end
+            assumeLessThanOrEqual(testCase, PRBNum, 16, 'UCI codeword won''t fit in the PUCCH Format 2 resources.');
 
             % Maximum resource grid size.
             MaxGridSize = 275;
 
             % Resource grid starts at CRB0.
-            NStartGrid = 0;                    
+            NStartGrid = 0;
 
             % BWP start relative to CRB0.
             NStartBWP = randi([0, MaxGridSize - PRBNum]);
@@ -229,59 +209,73 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
 
             % Fit resource grid size to the BWP.
             NSizeGrid = NStartBWP + NSizeBWP;
-            
+
             % PRB set assigned to PUCCH Format 2 within the BWP.
             % Each element within the PRB set indicates the location of a
             % Resource Block relative to the BWP starting PRB.
-            PRBSet = PRBStart : (PRBStart + PRBNum - 1);  
+            PRBSet = PRBStart : (PRBStart + PRBNum - 1);
 
             % Configure the carrier according to the test parameters.
-            carrier = srsConfigureCarrier(NCellID, NSizeGrid, ...
+            testCase.Carrier = srsConfigureCarrier(NCellID, NSizeGrid, ...
                 NStartGrid, CyclicPrefix);
 
-            % Create resource grid.
-            grid = nrResourceGrid(carrier, "OutputDataType", "single");
-            gridDims = size(grid);
-          
             % Configure the PUCCH Format 2
-            pucch = srsConfigurePUCCH(2, NStartBWP, NSizeBWP, SymbolAllocation, ... 
-                 PRBSet, FrequencyHopping, NID, NID0, RNTI);         
+            testCase.PUCCH = srsConfigurePUCCH(2, NStartBWP, NSizeBWP, SymbolAllocation, ...
+                 PRBSet, FrequencyHopping, NID, NID0, RNTI);
+        end % of function setupsimulation(testCase, SymbolAllocation, ...
 
-            % Get the PUCCH control data indices.
-            [pucchDataIdices, info] = nrPUCCHIndices(carrier, pucch);
+    end % methods (Access = private)
 
-            % Derive the actual UCI codeword length from the radio
-            % resources. This is used for rate matching.
-            CodeWordLength = info.G;
+    methods (Test, TestTags = {'testvector'})
+        function testvectorGenerationCases(testCase, SymbolAllocation, ...
+                nofHarqAck, nofSR, nofCSIPart1, nofCSIPart2, maxCodeRate)
+        %testvectorGenerationCases Generates a test vector for the given
+        %   Symbol allocation, HARQ-ACK, SR, CSI Part 1 and CSI Part 2 payload
+        %   sizes in number of bits, and the maximum code rate. The Cell ID,
+        %   NID, NID0 and RNTI are randomly generated. The number of allocated
+        %   PRBs is determined based on the UCI payload size and maximum code
+        %   rate.
 
-            % Encode UCI payload.
-            uciCW = nrUCIEncode(UCIPayload, CodeWordLength);
+            import srsLib.phy.upper.channel_modulation.srsDemodulator
+            import srsLib.phy.upper.equalization.srsChannelEqualizer
+            import srsTest.helpers.writeUint8File
+            import srsTest.helpers.matlab2srsCyclicPrefix
+            import srsTest.helpers.writeResourceGridEntryFile
 
-            % Modulate PUCCH Format 2.
-            grid(pucchDataIdices) = nrPUCCH2(uciCW, NID, RNTI);
+            % Generate a unique test ID.
+            testID = testCase.generateTestID;
 
-            assert(length(pucchDataIdices) * modulationOrder == CodeWordLength, ...
-                'srsran_matlab:srsPUCCHProcessorFormat2Unittest', ...
-                'UCI codeword length and number of PUCCH F2 RE are not consistent');
-         
-            % Get the DM-RS indices.
-            pucchDmrsIndices = nrPUCCHDMRSIndices(carrier, pucch);
-            
-            % Generate and map the DM-RS sequence.
-            grid(pucchDmrsIndices) = nrPUCCHDMRS(carrier, pucch, "OutputDataType", "single");
+            testCase.setupsimulation(SymbolAllocation, nofHarqAck, nofSR, nofCSIPart1, ...
+                nofCSIPart2, maxCodeRate);
+
+            % Define some aliases.
+            carrier = testCase.Carrier;
+            pucch = testCase.PUCCH;
+            numRxPorts = testCase.NumRxPorts;
+
+            [grid, payloads, pucchDataIndices, pucchDmrsIndices] = createTxGrid(carrier, pucch, ...
+                nofHarqAck, nofSR, nofCSIPart1, nofCSIPart2);
+
+            UCIPayload = payloads.UCIPayload;
+            harqAckPayload = payloads.harqAckPayload;
+            SRPayload = payloads.SRPayload;
+            CSI1Payload = payloads.CSI1Payload;
+            CSI2Payload = payloads.CSI2Payload;
 
             % Init received signals.
-            rxGrid = nrResourceGrid(carrier, NumRxPorts, "OutputDataType", "single");
-            dataChEsts = complex(nan(length(pucchDataIdices), NumRxPorts));
-            rxSymbols = complex(nan(length(pucchDataIdices), NumRxPorts));
-            
+            rxGrid = nrResourceGrid(carrier, numRxPorts, "OutputDataType", "single");
+            dataChEsts = complex(nan(length(pucchDataIndices), numRxPorts));
+            rxSymbols = complex(nan(length(pucchDataIndices), numRxPorts));
+
             % Noise variance.
             snrdB = 30;
             noiseStdDev = 10 ^ (-snrdB / 20);
             noiseVar = noiseStdDev.^2;
 
+            gridDims = size(grid);
+
             % Iterate each receive port.
-            for iRxPort = 1:NumRxPorts
+            for iRxPort = 1:numRxPorts
                 % Create some noise samples.
                 normNoise = (randn(gridDims) + 1i * randn(gridDims)) / sqrt(2);
 
@@ -293,12 +287,11 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
                 rxGrid(:, :, iRxPort) = estimates .* grid + (noiseStdDev * normNoise);
 
                 % Extract PUCCH symbols from the received grid.
-                rxSymbols(:, iRxPort) = rxGrid(pucchDataIdices);
+                rxSymbols(:, iRxPort) = rxGrid(pucchDataIndices);
 
                 % Extract perfect channel estimates corresponding to the PUCCH.
-                dataChEsts(:, iRxPort) = estimates(pucchDataIdices);
+                dataChEsts(:, iRxPort) = estimates(pucchDataIndices);
             end
-
             % Equalize channel symbols.
             [eqSymbols, eqNoiseVars] = srsChannelEqualizer(rxSymbols, dataChEsts, 'ZF', noiseVar, 1);
 
@@ -306,8 +299,8 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
             schSoftBits = srsDemodulator(eqSymbols(:), 'QPSK', eqNoiseVars(:));
 
             % Scrambling sequence for PUCCH.
-            [scSequence, ~] = nrPUCCHPRBS(NID, RNTI, length(schSoftBits));
-            
+            [scSequence, ~] = nrPUCCHPRBS(pucch.NID, pucch.RNTI, length(schSoftBits));
+
             % Encode the scrambling sequence into the sign, so it can be
             % used with soft bits.
             scSequence = -(scSequence * 2) + 1;
@@ -316,6 +309,7 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
             schSoftBits = schSoftBits .* scSequence;
 
             % Decode UCI message to check for errors.
+            nofUCIBits = nofHarqAck + nofSR + nofCSIPart1 + nofCSIPart2;
             rxUCIPayload = nrUCIDecode(schSoftBits, nofUCIBits);
 
             assert(isequal(rxUCIPayload, UCIPayload), ...
@@ -323,14 +317,14 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
                 'Decoded UCI payload has errors');
 
             % Extract the elements of interest from the grid.
-            nofRePort = length(pucchDataIdices) + length(pucchDmrsIndices);
-            rxGridSymbols = complex(nan(1, NumRxPorts * nofRePort));
-            rxGridIndexes = complex(nan(NumRxPorts * nofRePort, 3));
+            nofRePort = length(pucchDataIndices) + length(pucchDmrsIndices);
+            rxGridSymbols = complex(nan(1, numRxPorts * nofRePort));
+            rxGridIndexes = complex(nan(numRxPorts * nofRePort, 3));
             onePortindexes = [nrPUCCHIndices(carrier, pucch, 'IndexStyle','subscript', 'IndexBase','0based'); ...
                     nrPUCCHDMRSIndices(carrier, pucch, 'IndexStyle','subscript', 'IndexBase','0based')];
-            for iRxPort = 0:(NumRxPorts - 1)
+            for iRxPort = 0:(numRxPorts - 1)
                 offset = iRxPort * nofRePort;
-                rxGridSymbols(offset + (1:nofRePort)) = [rxGrid(pucchDataIdices); rxGrid(pucchDmrsIndices)];
+                rxGridSymbols(offset + (1:nofRePort)) = [rxGrid(pucchDataIndices); rxGrid(pucchDmrsIndices)];
 
                 indexes = onePortindexes;
                 indexes(:,3) = iRxPort;
@@ -355,8 +349,8 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
             testCase.saveDataFile('_test_csi2', testID, @writeUint8File, CSI2Payload);
 
             % Reception port list.
-            portsString = ['{' num2str(0:(NumRxPorts-1), "%d,") '}'];
-            
+            portsString = ['{' num2str(0:(numRxPorts-1), "%d,") '}'];
+
             % Slot configuration.
             slotConfig = {log2(carrier.SubcarrierSpacing/15), carrier.NSlot};
 
@@ -369,28 +363,28 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
                 slotConfig, ...          % slot
                 cyclicPrefixStr, ...     % cp
                 portsString, ...         % rx_ports
-                NSizeBWP, ...            % bwp_size_rb
-                NStartBWP, ...           % bwp_start_rb
-                PRBStart, ...            % starting_prb
+                pucch.NSizeBWP, ...      % bwp_size_rb
+                pucch.NStartBWP, ...     % bwp_start_rb
+                pucch.PRBSet(1), ...     % starting_prb
                 {}, ...                  % second_hop_prb
-                PRBNum, ...              % nof_prb
+                numel(pucch.PRBSet), ... % nof_prb
                 SymbolAllocation(1), ... % start_symbol_index
                 SymbolAllocation(2), ... % nof_symbols
-                RNTI, ...                % rnti
-                NID, ...                 % n_id
-                NID0, ...                % n_id_0
+                pucch.RNTI, ...          % rnti
+                pucch.NID, ...           % n_id
+                pucch.NID0, ...          % n_id_0
                 nofHarqAck, ...          % nof_harq_ack
                 nofSR, ...               % nof_sr
                 nofCSIPart1, ...         % nof_csi_part1
                 nofCSIPart2, ...         % nof_csi_part2
-		    };
+                };
 
             % Generate test case context.
             testCaseContext = { ...
-                NSizeGrid, ...              % grid_nof_prb
+                carrier.NSizeGrid, ...      % grid_nof_prb
                 carrier.SymbolsPerSlot, ... % grid_nof_symbols
                 pucchF2Config, ...          % config
-		    };
+                };
 
             % Generate the test case entry.
             testCaseString = testCase.testCaseToString(testID, testCaseContext, true, ...
@@ -401,4 +395,119 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
 
         end % of function testvectorGenerationCases
     end % of methods (Test, TestTags = {'testvector'})
+
+    methods (Test, TestTags = {'testmex'})
+        function mexTest(testCase, SymbolAllocation, nofHarqAck, nofSR, nofCSIPart1, ...
+                nofCSIPart2, maxCodeRate)
+        %mexTest  Tests the mex wrapper of the srsRAN PUCCH processor for Format 2.
+        %   mexTest(OBJ, SymbolAllocation,  nofHarqAck, nofSR, nofCSIPart1, nofCSIPart2,
+        %   maxCodeRate) runs a short simulation with a PUCCH transmission specified by
+        %   the symbol allocation, the number of bits in the HARQ-ACK, SR, CSI Part 1
+        %   and CSI Part 2 payloads, and the maximum code rate. The Cell ID,
+        %   NID, NID0 and RNTI are randomly generated. The number of allocated
+        %   PRBs is determined based on the UCI payload size and maximum code
+        %   rate.
+
+            testCase.setupsimulation(SymbolAllocation, nofHarqAck, nofSR, nofCSIPart1, ...
+                nofCSIPart2, maxCodeRate);
+
+            % Define some aliases.
+            carrier = testCase.Carrier;
+            pucch = testCase.PUCCH;
+            numRxPorts = testCase.NumRxPorts;
+
+            [grid, payloads] = createTxGrid(carrier, pucch, ...
+                nofHarqAck, nofSR, nofCSIPart1, nofCSIPart2);
+
+            harqAckPayload = payloads.harqAckPayload;
+            SRPayload = payloads.SRPayload;
+            CSI1Payload = payloads.CSI1Payload;
+            CSI2Payload = payloads.CSI2Payload;
+
+            % Init received signals.
+            rxGrid = nrResourceGrid(carrier, numRxPorts, "OutputDataType", "single");
+
+            % Noise variance.
+            snrdB = 30;
+            noiseStdDev = 10 ^ (-snrdB / 20);
+
+            gridDims = size(grid);
+
+            % Iterate each receive port.
+            for iRxPort = 1:numRxPorts
+                % Create some noise samples.
+                normNoise = (randn(gridDims) + 1i * randn(gridDims)) / sqrt(2);
+
+                % Generate channel estimates as a phase rotation in the
+                % frequency domain.
+                estimates = exp(1i * linspace(0, 2 * pi, gridDims(1))') * ones(1, gridDims(2));
+
+                % Create noisy modulated symbols.
+                rxGrid(:, :, iRxPort) = estimates .* grid + (noiseStdDev * normNoise);
+            end
+
+            pucchProcessor = srsMEX.phy.srsPUCCHProcessor();
+
+            message = pucchProcessor(rxGrid, pucch, carrier, 'NumHARQAck', nofHarqAck, ...
+                'NumSR', nofSR, 'NumCSIPart1', nofCSIPart1, 'NumCSIPart2', nofCSIPart2);
+
+            assertTrue(testCase, message.isValid, 'The PUCCH Processor should return a valid message.');
+            assertEqual(testCase, message.HARQAckPayload, int8(harqAckPayload), ...
+                'The HARQ payload doesn''t match.');
+            assertEqual(testCase, message.SRPayload, int8(SRPayload), ...
+                'The SR payload doesn''t match.');
+            assertEqual(testCase, message.CSI1Payload, int8(CSI1Payload), ...
+                'The CSI1 payload doesn''t match.');
+            assertEqual(testCase, message.CSI2Payload, int8(CSI2Payload), ...
+                'The CSI2 payload doesn''t match.');
+        end % of function mexTest(testCase, SymbolAllocation, nofHarqAck, nofSR, nofCSIPart1, ...
+    end % of methods (Test, TestTags = {'testmex'}}
 end % of classdef srsPUCCHProcessorFormat2Unittest
+
+%Generates a PUCCH Format 2 resource grid (Tx side). Also returns the transmitted
+%   payloads, and the indices of data and DM-RS.
+function [TxGrid, payloads, pucchDataIndices, pucchDmrsIndices] = createTxGrid(carrier, pucch, ...
+        nofHarqAck, nofSR, nofCSIPart1, nofCSIPart2)
+
+    % Get the PUCCH control data indices.
+    [pucchDataIndices, info] = nrPUCCHIndices(carrier, pucch);
+
+    % Derive the actual UCI codeword length from the radio
+    % resources. This is used for rate matching.
+    CodeWordLength = info.G;
+
+    % QPSK modulation has 2 bit per symbol.
+    modulationOrder = 2;
+    assert(length(pucchDataIndices) * modulationOrder == CodeWordLength, ...
+        'srsran_matlab:srsPUCCHProcessorFormat2Unittest', ...
+        'UCI codeword length and number of PUCCH F2 RE are not consistent');
+
+    % Generate UCI payload.
+    harqAckPayload = randi([0, 1], nofHarqAck, 1);
+    SRPayload = randi([0, 1], nofSR, 1);
+    CSI1Payload = randi([0, 1], nofCSIPart1, 1);
+    CSI2Payload = randi([0, 1], nofCSIPart2, 1);
+
+    % For now, UCI multiplexing, applicable to UCI payloads contaning
+    % CSI reports of two parts, is not considered. Therefore, all
+    % UCI fields are appended into a single UCI segment.
+    UCIPayload = [harqAckPayload; SRPayload; CSI1Payload; CSI2Payload];
+
+    % Encode UCI payload.
+    uciCW = nrUCIEncode(UCIPayload, CodeWordLength);
+
+    % Create resource grid.
+    TxGrid = nrResourceGrid(carrier, "OutputDataType", "single");
+
+    % Modulate PUCCH Format 2.
+    TxGrid(pucchDataIndices) = nrPUCCH2(uciCW, pucch.NID, pucch.RNTI);
+
+    % Get the DM-RS indices.
+    pucchDmrsIndices = nrPUCCHDMRSIndices(carrier, pucch);
+
+    % Generate and map the DM-RS sequence.
+    TxGrid(pucchDmrsIndices) = nrPUCCHDMRS(carrier, pucch, "OutputDataType", "single");
+
+    payloads = struct('UCIPayload', UCIPayload, 'harqAckPayload', harqAckPayload, ...
+        'SRPayload', SRPayload, 'CSI1Payload', CSI1Payload, 'CSI2Payload', CSI2Payload);
+end
