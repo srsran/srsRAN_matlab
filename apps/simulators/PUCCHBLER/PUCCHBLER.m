@@ -64,17 +64,23 @@
 %   DelaySpread                  - Delay spread in seconds (TDL-C delay profile only).
 %   MaximumDopplerShift          - Maximum Doppler shift in hertz (TDL-C and TDLC300 delay profile only)
 %   ImplementationType           - PUCCH implementation type ('matlab' only).
+%   TestType                     - Test type ('Detection', 'False Alarm').
 %   QuickSimulation              - Quick-simulation flag: set to true to stop
 %                                  each point after 100 failed transport blocks (tunable).
 %
 %   When the simulation is over, the object allows access to the following
-%   results properties.
+%   results properties (depending on TestType).
 %
-%   SNRrange              - Simulated SNR range in dB.
-%   TotalBlocksCtr        - Counter of newly transmitted transport blocks (ignoring repetitions).
-%   MissedBlocksMATLABCtr - Counter of missed transport blocks, after all
-%                           allowed retransmissions (MATLAB case).
-%   BlockErrorRateMATLAB  - Transport block error (or missed detection) rate (MATLAB case).
+%   SNRrange                  - Simulated SNR range in dB.
+%   TotalBlocksCtr            - Counter of transmitted UCI blocks.
+%   MissedBlocksMATLABCtr     - Counter of missed UCI blocks (MATLAB case).
+%   MissedBlocksSRSCtr        - Counter of missed UCI blocks (SRS case).
+%   BlockErrorRateMATLAB      - UCI block error (or missed detection) rate (MATLAB case).
+%   BlockErrorRateSRS         - UCI block error (or missed detection) rate (SRS case).
+%   FalseBlocksMATLABCtr      - Counter of falsely detected UCI blocks (MATLAB case).
+%   FalseBlocksSRSCtr         - Counter of falsely detected UCI blocks (SRS case).
+%   FalseDetectionRateMATLAB  - False detection rate of UCI blocks (MATLAB case).
+%   FalseDetectionRateSRS     - False detection rate of UCI blocks (SRS case).
 %
 %   Remark: The simulation loop is heavily based on the <a href="https://www.mathworks.com/help/5g/ug/nr-pucch-block-error-rate.html">NR PUCCH Block Error Rate</a> MATLAB example by MathWorks.
 
@@ -144,6 +150,9 @@ classdef PUCCHBLER < matlab.System
         MaximumDopplerShift (1, 1) double {mustBeReal, mustBeNonnegative} = 100
         %PUCCH implementation type ('matlab', 'srs', 'both').
         ImplementationType (1, :) char {mustBeMember(ImplementationType, {'matlab', 'srs', 'both'})} = 'matlab'
+        %Test type.
+        %   Possible values are ('Detection', 'False Alarm'). Default is 'Detection'.
+        TestType (1, :) char {mustBeMember(TestType, {'Detection', 'False Alarm'})} = 'Detection'
     end % of properties (Nontunable)
 
     properties % Tunable
@@ -162,13 +171,21 @@ classdef PUCCHBLER < matlab.System
         MissedBlocksMATLABCtr = []
         %Counter of missed UCI messages for SRS PUCCH.
         MissedBlocksSRSCtr = []
+        %Counter of falsely detected UCI blocks (MATLAB case).
+        FalseBlocksMATLABCtr = []
+        %Counter of falsely detected UCI blocks (SRS case).
+        FalseBlocksSRSCtr = []
     end % of properties (SetAccess = private)
 
     properties (Dependent)
-        %Block error rate (MATLAB case).
+        %UCI block error rate (MATLAB case).
         BlockErrorRateMATLAB
-        %Block error rate (SRS case).
+        %UCI block error rate (SRS case).
         BlockErrorRateSRS
+        %False detection rate of UCI blocks (MATLAB case).
+        FalseDetectionRateMATLAB
+        %False detection rate of UCI blocks (SRS case).
+        FalseDetectionRateSRS
     end % of properties (Dependable)
 
     properties (Access = private, Hidden)
@@ -181,6 +198,11 @@ classdef PUCCHBLER < matlab.System
         %Channel system object.
         Channel
     end % of properties (Access = private, Hidden)
+
+    properties (Access = private, Dependent, Hidden)
+        %Boolean flag test type: true if strcmp(TestType, 'Detection'), false otherwise.
+        isDetectionTest
+    end % of properties (Access = private, Dependent, Hidden)
 
     methods (Access = private)
 
@@ -251,12 +273,52 @@ classdef PUCCHBLER < matlab.System
             obj.PRBSet = value;
         end
 
+        function isDT = get.isDetectionTest(obj)
+            isDT = strcmp(obj.TestType, 'Detection');
+        end
+
         function bler = get.BlockErrorRateMATLAB(obj)
+            if ~obj.isDetectionTest
+                warning('off', 'backtrace');
+                warning('The BlockErrorRateMATLAB property is inactive when TestType == ''False Alarm''.');
+                warning('on', 'backtrace');
+                bler = [];
+                return
+            end
             bler = obj.MissedBlocksMATLABCtr ./ obj.TotalBlocksCtr;
         end
 
         function bler = get.BlockErrorRateSRS(obj)
+            if ~obj.isDetectionTest
+                warning('off', 'backtrace');
+                warning('The BlockErrorRateSRS property is inactive when TestType == ''False Alarm''.');
+                warning('on', 'backtrace');
+                bler = [];
+                return
+            end
             bler = obj.MissedBlocksSRSCtr ./ obj.TotalBlocksCtr;
+        end
+
+        function fdr = get.FalseDetectionRateMATLAB(obj)
+            if obj.isDetectionTest
+                warning('off', 'backtrace');
+                warning('The FalseDetectionRateMATLAB property is inactive when TestType == ''Detection''.');
+                warning('on', 'backtrace');
+                fdr = [];
+                return
+            end
+            fdr = obj.FalseBlocksMATLABCtr ./ obj.TotalBlocksCtr;
+        end
+
+        function fdr = get.FalseDetectionRateSRS(obj)
+            if obj.isDetectionTest
+                warning('off', 'backtrace');
+                warning('The FalseDetectionRateSRS property is inactive when TestType == ''Detection''.');
+                warning('on', 'backtrace');
+                fdr = [];
+                return
+            end
+            fdr = obj.FalseBlocksSRSCtr ./ obj.TotalBlocksCtr;
         end
 
         function plot(obj)
@@ -272,25 +334,35 @@ classdef PUCCHBLER < matlab.System
             plotMATLAB = (strcmp(implementationType, 'matlab') || strcmp(implementationType, 'both'));
             plotSRS = (strcmp(implementationType, 'srs') || strcmp(implementationType, 'both'));
 
-            titleString = sprintf('PUCCH F%d / NRB=%d / SCS=%dkHz', ...
-                obj.PUCCHFormat, obj.SymbolAllocation(2), obj.SubcarrierSpacing);
+            titleString = sprintf('PUCCH F%d / SCS=%dkHz / %d UCI bits', obj.PUCCHFormat, ...
+                obj.SubcarrierSpacing, obj.NumACKBits + obj.NumSRBits + obj.NumCSI1Bits + obj.NumCSI2Bits);
             legendstrings = {};
+
+            if obj.isDetectionTest
+                ydataMATLAB = obj.MissedBlocksMATLABCtr;
+                ydataSRS = obj.MissedBlocksSRSCtr;
+                yLab = 'BLER';
+            else
+                ydataMATLAB = obj.FalseBlocksMATLABCtr;
+                ydataSRS = obj.FalseBlocksSRSCtr;
+                yLab = 'False Det. Rate';
+            end
 
             figure;
             set(gca, "YScale", "log")
             if plotMATLAB
-                semilogy(obj.SNRrange, obj.MissedBlocksMATLABCtr ./ obj.TotalBlocksCtr, 'o-.', ...
+                semilogy(obj.SNRrange, ydataMATLAB ./ obj.TotalBlocksCtr, 'o-.', ...
                     'LineWidth', 1)
                 legendstrings{end + 1} = 'MATLAB';
             end
             if plotSRS
                 hold on;
-                semilogy(obj.SNRrange, obj.MissedBlocksSRSCtr ./ obj.TotalBlocksCtr, '^-.', ...
+                semilogy(obj.SNRrange, ydataSRS ./ obj.TotalBlocksCtr, '^-.', ...
                     'LineWidth', 1, 'Color', [0.8500 0.3250 0.0980])
                 legendstrings{end + 1} = 'SRS';
                 hold off;
             end
-            xlabel('SNR (dB)'); ylabel('BLER'); grid on; legend(legendstrings);
+            xlabel('SNR (dB)'); ylabel(yLab); grid on; legend(legendstrings);
             title(titleString);
         end % of function plot()
 
@@ -402,6 +474,7 @@ classdef PUCCHBLER < matlab.System
             slotsPerFrame = obj.Carrier.SlotsPerFrame;
             perfectChannelEstimator = obj.PerfectChannelEstimator;
             displaySimulationInformation = obj.DisplaySimulationInformation;
+            isDetectTest = obj.isDetectionTest;
 
             useMATLABpucch = (strcmp(implementationType, 'matlab') || strcmp(implementationType, 'both'));
             useSRSpucch = (strcmp(implementationType, 'srs') || strcmp(implementationType, 'both'));
@@ -496,7 +569,12 @@ classdef PUCCHBLER < matlab.System
                     SNR = 10^(SNRdB/20);
                     N0 = 1/(sqrt(2.0*nRxAnts*nFFT)*SNR);
                     noise = N0*complex(randn(size(rxWaveform)), randn(size(rxWaveform)));
-                    rxWaveform = rxWaveform + noise;
+
+                    if isDetectTest
+                        rxWaveform = rxWaveform + noise;
+                    else
+                        rxWaveform = noise;
+                    end
 
                     if (perfectChannelEstimator)
                         % Perfect synchronization. Use information provided by the
@@ -546,11 +624,15 @@ classdef PUCCHBLER < matlab.System
                         % Decode PUCCH symbols.
                         uciLLRs = nrPUCCHDecode(carrier, pucch, ouci, pucchEq, noiseEst);
 
-                        % Decode UCI.
-                        decucibits = nrUCIDecode(uciLLRs{1}, ouci);
+                        if isDetectTest
+                            % Decode UCI.
+                            decucibits = nrUCIDecode(uciLLRs{1}, ouci);
 
-                        % Store values to calculate BLER.
-                        blerUCI(snrIdx) = blerUCI(snrIdx) + (~isequal(decucibits, uci));
+                            % Store values to calculate BLER.
+                            blerUCI(snrIdx) = blerUCI(snrIdx) + (~isequal(decucibits, uci));
+                        else
+                            blerUCI(snrIdx) = blerUCI(snrIdx) + (~isempty(uciLLRs{1}));
+                        end
                     end
 
                     if useSRSpucch
@@ -560,8 +642,12 @@ classdef PUCCHBLER < matlab.System
                             NumCSIPart1=obj.NumCSI1Bits, ...
                             NumCSIPart2=obj.NumCSI2Bits);
 
-                        decucibitssrs = [msg.HARQAckPayload; msg.SRPayload; msg.CSI1Payload; msg.CSI2Payload];
-                        blerUCIsrs(snrIdx) = blerUCIsrs(snrIdx) + (~(isequal(decucibitssrs, uci)));
+                        if isDetectTest
+                            decucibitssrs = [msg.HARQAckPayload; msg.SRPayload; msg.CSI1Payload; msg.CSI2Payload];
+                            blerUCIsrs(snrIdx) = blerUCIsrs(snrIdx) + (~(isequal(decucibitssrs, uci)));
+                        else
+                            blerUCIsrs(snrIdx) = blerUCI(snrIdx) + msg.isValid;
+                        end
                     end
 
                     totalBlocks(snrIdx) = totalBlocks(snrIdx) + 1;
@@ -575,13 +661,19 @@ classdef PUCCHBLER < matlab.System
                 % Display results dynamically.
                 usedFrames = round((nslot + 1) / carrier.SlotsPerFrame);
                 if displaySimulationInformation == 1
+                    if isDetectTest
+                        message = 'UCI BLER of PUCCH Format ';
+                    else
+                        message = 'UCI false detection rate of PUCCH Format ';
+                    end
+
                     if useMATLABpucch
-                        fprintf(['UCI BLER of PUCCH Format ' num2str(obj.PUCCHFormat) ' for ' num2str(usedFrames) ...
+                        fprintf([message num2str(obj.PUCCHFormat) ' for ' num2str(usedFrames) ...
                             ' frame(s) at SNR ' num2str(SNRIn(snrIdx)) ' dB: ' num2str(blerUCI(snrIdx)/totalBlocks(snrIdx)) '\n'])
                     end
                     if useSRSpucch
                         fprintf('SRS - ');
-                        fprintf(['UCI BLER of PUCCH Format ' num2str(obj.PUCCHFormat) ' for ' num2str(usedFrames) ...
+                        fprintf([message num2str(obj.PUCCHFormat) ' for ' num2str(usedFrames) ...
                             ' frame(s) at SNR ' num2str(SNRIn(snrIdx)) ' dB: ' num2str(blerUCIsrs(snrIdx)/totalBlocks(snrIdx)) '\n'])
                     end
                 end
@@ -593,8 +685,13 @@ classdef PUCCHBLER < matlab.System
             [obj.SNRrange, sortedIdx] = sort([obj.SNRrange SNRIn]);
 
             obj.TotalBlocksCtr = joinArrays(obj.TotalBlocksCtr, totalBlocks, repeatedIdx, sortedIdx);
-            obj.MissedBlocksMATLABCtr = joinArrays(obj.MissedBlocksMATLABCtr, blerUCI, repeatedIdx, sortedIdx);
-            obj.MissedBlocksSRSCtr = joinArrays(obj.MissedBlocksSRSCtr, blerUCIsrs, repeatedIdx, sortedIdx);
+            if isDetectTest
+                obj.MissedBlocksMATLABCtr = joinArrays(obj.MissedBlocksMATLABCtr, blerUCI, repeatedIdx, sortedIdx);
+                obj.MissedBlocksSRSCtr = joinArrays(obj.MissedBlocksSRSCtr, blerUCIsrs, repeatedIdx, sortedIdx);
+            else
+                obj.FalseBlocksMATLABCtr = joinArrays(obj.FalseBlocksMATLABCtr, blerUCI, repeatedIdx, sortedIdx);
+                obj.FalseBlocksSRSCtr = joinArrays(obj.FalseBlocksSRSCtr, blerUCIsrs, repeatedIdx, sortedIdx);
+            end
 
         end % of function stepImpl(obj, SNRIn, nFrames)
 
@@ -607,6 +704,8 @@ classdef PUCCHBLER < matlab.System
             obj.TotalBlocksCtr = [];
             obj.MissedBlocksMATLABCtr = [];
             obj.MissedBlocksSRSCtr = [];
+            obj.FalseBlocksMATLABCtr = [];
+            obj.FalseBlocksSRSCtr = [];
         end % of function resetImpl(obj)
 
         function releaseImpl(obj)
@@ -623,13 +722,21 @@ classdef PUCCHBLER < matlab.System
                 case {'SNRrange', 'TotalBlocksCtr'}
                     flag = isempty(obj.SNRrange);
                 case 'MissedBlocksMATLABCtr'
-                    flag = isempty(obj.SNRrange) || strcmp(obj.ImplementationType, 'srs');
+                    flag = isempty(obj.SNRrange) || ~obj.isDetectionTest || strcmp(obj.ImplementationType, 'srs');
                 case 'MissedBlocksSRSCtr'
-                    flag = isempty(obj.SNRrange) || strcmp(obj.ImplementationType, 'matlab');
+                    flag = isempty(obj.SNRrange) || ~obj.isDetectionTest || strcmp(obj.ImplementationType, 'matlab');
                 case 'BlockErrorRateMATLAB'
-                    flag = isempty(obj.MissedBlocksMATLABCtr) || strcmp(obj.ImplementationType, 'srs');
+                    flag = isempty(obj.MissedBlocksMATLABCtr) || ~obj.isDetectionTest || strcmp(obj.ImplementationType, 'srs');
                 case 'BlockErrorRateSRS'
-                    flag = isempty(obj.MissedBlocksSRSCtr) || strcmp(obj.ImplementationType, 'matlab');
+                    flag = isempty(obj.MissedBlocksSRSCtr) || ~obj.isDetectionTest || strcmp(obj.ImplementationType, 'matlab');
+                case 'FalseBlocksMATLABCtr'
+                    flag = isempty(obj.SNRrange) || obj.isDetectionTest || strcmp(obj.ImplementationType, 'srs');
+                case 'FalseBlocksSRSCtr'
+                    flag = isempty(obj.SNRrange) || obj.isDetectionTest || strcmp(obj.ImplementationType, 'matlab');
+                case 'FalseDetectionRateMATLAB'
+                    flag = isempty(obj.SNRrange) || obj.isDetectionTest || strcmp(obj.ImplementationType, 'srs');
+                case 'FalseDetectionRateSRS'
+                    flag = isempty(obj.SNRrange) || obj.isDetectionTest || strcmp(obj.ImplementationType, 'matlab');
                 otherwise
                     flag = false;
             end
@@ -650,11 +757,12 @@ classdef PUCCHBLER < matlab.System
                 ... Channel model.
                 'DelayProfile', 'DelaySpread', 'MaximumDopplerShift', 'PerfectChannelEstimator', ...
                 ... Other simulation details.
-                'ImplementationType', 'QuickSimulation', 'DisplaySimulationInformation'};
+                'ImplementationType', 'TestType', 'QuickSimulation', 'DisplaySimulationInformation'};
             groups = matlab.mixin.util.PropertyGroup(confProps, 'Configuration');
 
             results = {'SNRrange', 'TotalBlocksCtr', 'MissedBlocksMATLABCtr', 'MissedBlocksSRSCtr', ...
-                'BlockErrorRateMATLAB', 'BlockErrorRateSRS'};
+                'BlockErrorRateMATLAB', 'BlockErrorRateSRS', 'FalseBlocksMATLABCtr', 'FalseBlocksSRSCtr', ...
+                'FalseDetectionRateMATLAB', 'FalseDetectionRateSRS'};
             resProps = {};
             for i = 1:numel(results)
                 tt = results{i};
@@ -684,6 +792,9 @@ classdef PUCCHBLER < matlab.System
                 s.SNRrange = obj.SNRrange;
                 s.TotalBlocksCtr = obj.TotalBlocksCtr;
                 s.MissedBlocksMATLABCtr = obj.MissedBlocksMATLABCtr;
+                s.MissedBlocksSRSCtr = obj.MissedBlocksSRSCtr;
+                s.FalseBlocksMATLABCtr = obj.FalseBlocksMATLABCtr;
+                s.FalseBlocksSRSCtr = obj.FalseBlocksSRSCtr;
             end
         end % of function s = saveObjectImpl(obj)
 
@@ -701,6 +812,9 @@ classdef PUCCHBLER < matlab.System
                 obj.SNRrange = s.SNRrange;
                 obj.TotalBlocksCtr = s.TotalBlocksCtr;
                 obj.MissedBlocksMATLABCtr = s.MissedBlocksMATLABCtr;
+                obj.MissedBlocksSRSCtr = s.MissedBlocksSRSCtr;
+                obj.FalseBlocksMATLABCtr = s.FalseBlocksMATLABCtr;
+                obj.FalseBlocksSRSCtr = s.FalseBlocksSRSCtr;
             end
 
             % Load all public properties.
