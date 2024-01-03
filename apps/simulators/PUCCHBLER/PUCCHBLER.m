@@ -184,7 +184,7 @@ classdef PUCCHBLER < matlab.System
 
     methods (Access = private)
 
-        function checkPUCCHandSymbolAll(obj)
+        function checkPUCCHandSymbolAllocation(obj)
             if ((obj.PUCCHFormat == 2) && (obj.SymbolAllocation(2) > 2))
                 error('PUCCH Format2 only allows the allocation of 1 or 2 OFDM symbols - requested %d.', obj.SymbolAllocation(2));
             end
@@ -192,6 +192,13 @@ classdef PUCCHBLER < matlab.System
                 error('PUCCH Format3 requires the allocation of at least 4 OFDM symbols - requested %d.', obj.SymbolAllocation(2));
             end
         end % of function checkPUCCHandSymbolAll(obj)
+
+        function checkPUCCHandPRBs(obj)
+            nPRBs = numel(obj.PRBSet);
+            if ((obj.PUCCHFormat == 2) && ((nPRBs < 1) || (nPRBs > 16)))
+                error ('PUCCH Format 2 requires a number of allocated PRBs between 1 and 16, given %d.', nPRBs);
+            end
+        end
 
         function checkPRBSetandGrid(obj)
             if (max(obj.PRBSet) > obj.NSizeGrid - 1)
@@ -355,7 +362,8 @@ classdef PUCCHBLER < matlab.System
         end % function setupImpl(obj)
 
         function validatePropertiesImpl(obj)
-            obj.checkPUCCHandSymbolAll();
+            obj.checkPUCCHandSymbolAllocation();
+            obj.checkPUCCHandPRBs();
             obj.checkPRBSetandGrid();
             obj.checkImplementationandChEstPerf();
             obj.checkUCIBits();
