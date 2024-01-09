@@ -26,9 +26,9 @@
 #include "srsran_matlab/support/memento.h"
 #include "srsran/phy/upper/channel_processors/pusch/factories.h"
 #include "srsran/phy/upper/channel_processors/pusch/pusch_decoder.h"
-#include "srsran/phy/upper/rx_softbuffer.h"
-#include "srsran/phy/upper/rx_softbuffer_pool.h"
-#include "srsran/phy/upper/unique_rx_softbuffer.h"
+#include "srsran/phy/upper/rx_buffer.h"
+#include "srsran/phy/upper/rx_buffer_pool.h"
+#include "srsran/phy/upper/unique_rx_buffer.h"
 
 #include <memory>
 
@@ -47,10 +47,10 @@ class MexFunction : public srsran_mex_dispatcher
   public:
     /// \brief Creator.
     ///
-    /// The memento object consists of the pointer to the \c rx_softbuffer_pool used by the PUSCH decoder to store and
+    /// The memento object consists of the pointer to the \c rx_buffer_pool used by the PUSCH decoder to store and
     /// combine LLRs from different retransmissions as well as segment data corresponding to decoded codeblocks that
     /// pass the CRC checksum.
-    explicit pusch_memento(std::unique_ptr<srsran::rx_softbuffer_pool> p) : pool(std::move(p)){};
+    explicit pusch_memento(std::unique_ptr<srsran::rx_buffer_pool> p) : pool(std::move(p)){};
 
     /// \brief Gets a softbuffer from the softbuffer pool stored in the memento.
     ///
@@ -60,11 +60,11 @@ class MexFunction : public srsran_mex_dispatcher
     /// \param[in] id              Softbuffer identifier (UE RNTI and HARQ process ID).
     /// \param[in] nof_codeblocks  Number of codeblocks forming the codeword (or, equivalently, the transport block).
     /// \return A pointer to the identified softbuffer.
-    srsran::unique_rx_softbuffer retrieve_softbuffer(const srsran::trx_buffer_identifier& id, unsigned nof_codeblocks);
+    srsran::unique_rx_buffer retrieve_softbuffer(const srsran::trx_buffer_identifier& id, unsigned nof_codeblocks);
 
   private:
     /// Pointer to the softbuffer pool stored in the memento.
-    std::unique_ptr<srsran::rx_softbuffer_pool> pool;
+    std::unique_ptr<srsran::rx_buffer_pool> pool;
   };
 
 public:
@@ -93,7 +93,7 @@ private:
   /// \param[in] id              The softbuffer identifier (UE RNTI and HARQ process ID).
   /// \param[in] nof_codeblocks  The number of codeblocks in the current codeword.
   /// \return A pointer to the requested softbuffer from the softbuffer pool associated to the given memento identifier.
-  srsran::unique_rx_softbuffer
+  srsran::unique_rx_buffer
   retrieve_softbuffer(uint64_t key, const srsran::trx_buffer_identifier& id, unsigned nof_codeblocks);
 
   /// Checks that outputs/inputs arguments match the requirements of method_step().
