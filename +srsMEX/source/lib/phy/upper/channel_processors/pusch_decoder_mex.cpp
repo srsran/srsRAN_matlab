@@ -26,6 +26,7 @@
 #include "srsran/phy/upper/channel_processors/pusch/pusch_decoder_notifier.h"
 #include "srsran/phy/upper/channel_processors/pusch/pusch_decoder_result.h"
 #include "srsran/phy/upper/rx_softbuffer_pool.h"
+#include "srsran/phy/upper/trx_buffer_identifier.h"
 #include "srsran/ran/modulation_scheme.h"
 #include "srsran/support/units.h"
 #include "fmt/format.h"
@@ -56,14 +57,14 @@ private:
 
 } // namespace
 
-unique_rx_softbuffer MexFunction::pusch_memento::retrieve_softbuffer(const rx_softbuffer_identifier& id,
-                                                                     const unsigned                  nof_codeblocks)
+unique_rx_softbuffer MexFunction::pusch_memento::retrieve_softbuffer(const trx_buffer_identifier& id,
+                                                                     const unsigned               nof_codeblocks)
 {
-  return pool->reserve_softbuffer({}, id, nof_codeblocks);
+  return pool->reserve({}, id, nof_codeblocks);
 }
 
 unique_rx_softbuffer
-MexFunction::retrieve_softbuffer(uint64_t key, const rx_softbuffer_identifier& id, const unsigned nof_codeblocks)
+MexFunction::retrieve_softbuffer(uint64_t key, const trx_buffer_identifier& id, const unsigned nof_codeblocks)
 {
   std::shared_ptr<memento> mem = storage.get_memento(key);
   if (!mem) {
@@ -73,11 +74,8 @@ MexFunction::retrieve_softbuffer(uint64_t key, const rx_softbuffer_identifier& i
   auto                 pusch_mem  = std::dynamic_pointer_cast<pusch_memento>(storage.get_memento(key));
   unique_rx_softbuffer softbuffer = pusch_mem->retrieve_softbuffer(id, nof_codeblocks);
   if (!softbuffer.is_valid()) {
-    mex_abort("Cannot retrieve softbuffer with key {}, buffer ID ({}, {}) and nr. of codeblocks {}.",
-              key,
-              id.rnti,
-              id.harq_ack_id,
-              nof_codeblocks);
+    mex_abort(
+        "Cannot retrieve softbuffer with key {}, buffer ID ({}) and nr. of codeblocks {}.", key, id, nof_codeblocks);
   }
   return softbuffer;
 }
@@ -165,18 +163,15 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
   }
   units::bytes tbs_bytes = tbs.round_up_to_bytes();
 
-  in_struct_array                    = inputs[5];
-  Struct                   in_buf_id = in_struct_array[0];
-  rx_softbuffer_identifier buf_id    = {};
-  buf_id.harq_ack_id                 = in_buf_id["HARQProcessID"][0];
-  buf_id.rnti                        = in_buf_id["RNTI"][0];
+  in_struct_array                 = inputs[5];
+  Struct                in_buf_id = in_struct_array[0];
+  trx_buffer_identifier buf_id(in_buf_id["RNTI"][0], in_buf_id["HARQProcessID"][0]);
 
   unsigned nof_codeblocks       = in_buf_id["NumCodeblocks"][0];
   unsigned nof_codeblocks_check = ldpc::compute_nof_codeblocks(tbs, cfg.base_graph);
   if (nof_codeblocks != nof_codeblocks_check) {
-    mex_abort("Softbuffer ({}, {}) requested with {} codeblocks, but the codeword has {} codeblocks.",
-              buf_id.rnti,
-              buf_id.harq_ack_id,
+    mex_abort("Softbuffer ({}) requested with {} codeblocks, but the codeword has {} codeblocks.",
+              buf_id,
               nof_codeblocks,
               nof_codeblocks_check);
   }
@@ -224,11 +219,9 @@ void MexFunction::method_reset_crcs(ArgumentList outputs, ArgumentList inputs)
     mex_abort("Input 'buf_id' must be a scalar structure.");
   }
 
-  StructArray              in_struct_array = inputs[2];
-  Struct                   in_buf_id       = in_struct_array[0];
-  rx_softbuffer_identifier buf_id          = {};
-  buf_id.harq_ack_id                       = in_buf_id["HARQProcessID"][0];
-  buf_id.rnti                              = in_buf_id["RNTI"][0];
+  StructArray           in_struct_array = inputs[2];
+  Struct                in_buf_id       = in_struct_array[0];
+  trx_buffer_identifier buf_id(in_buf_id["RNTI"][0], in_buf_id["HARQProcessID"][0]);
 
   unsigned nof_codeblocks = in_buf_id["NumCodeblocks"][0];
 

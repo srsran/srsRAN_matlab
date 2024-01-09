@@ -60,8 +60,7 @@ class MexFunction : public srsran_mex_dispatcher
     /// \param[in] id              Softbuffer identifier (UE RNTI and HARQ process ID).
     /// \param[in] nof_codeblocks  Number of codeblocks forming the codeword (or, equivalently, the transport block).
     /// \return A pointer to the identified softbuffer.
-    srsran::unique_rx_softbuffer retrieve_softbuffer(const srsran::rx_softbuffer_identifier& id,
-                                                     unsigned                                nof_codeblocks);
+    srsran::unique_rx_softbuffer retrieve_softbuffer(const srsran::trx_buffer_identifier& id, unsigned nof_codeblocks);
 
   private:
     /// Pointer to the softbuffer pool stored in the memento.
@@ -95,7 +94,7 @@ private:
   /// \param[in] nof_codeblocks  The number of codeblocks in the current codeword.
   /// \return A pointer to the requested softbuffer from the softbuffer pool associated to the given memento identifier.
   srsran::unique_rx_softbuffer
-  retrieve_softbuffer(uint64_t key, const srsran::rx_softbuffer_identifier& id, unsigned nof_codeblocks);
+  retrieve_softbuffer(uint64_t key, const srsran::trx_buffer_identifier& id, unsigned nof_codeblocks);
 
   /// Checks that outputs/inputs arguments match the requirements of method_step().
   void check_step_outputs_inputs(matlab::mex::ArgumentList outputs, matlab::mex::ArgumentList inputs);
