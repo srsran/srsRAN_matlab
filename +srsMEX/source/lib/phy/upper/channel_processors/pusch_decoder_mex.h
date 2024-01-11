@@ -50,7 +50,7 @@ class MexFunction : public srsran_mex_dispatcher
     /// The memento object consists of the pointer to the \c rx_buffer_pool used by the PUSCH decoder to store and
     /// combine LLRs from different retransmissions as well as segment data corresponding to decoded codeblocks that
     /// pass the CRC checksum.
-    explicit pusch_memento(std::unique_ptr<srsran::rx_buffer_pool> p) : pool(std::move(p)){};
+    explicit pusch_memento(std::unique_ptr<srsran::rx_buffer_pool_controller> p) : pool(std::move(p)){};
 
     /// \brief Gets a softbuffer from the softbuffer pool stored in the memento.
     ///
@@ -64,7 +64,7 @@ class MexFunction : public srsran_mex_dispatcher
 
   private:
     /// Pointer to the softbuffer pool stored in the memento.
-    std::unique_ptr<srsran::rx_buffer_pool> pool;
+    std::unique_ptr<srsran::rx_buffer_pool_controller> pool;
   };
 
 public:

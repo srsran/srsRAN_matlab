@@ -60,7 +60,7 @@ private:
 unique_rx_buffer MexFunction::pusch_memento::retrieve_softbuffer(const trx_buffer_identifier& id,
                                                                  const unsigned               nof_codeblocks)
 {
-  return pool->reserve({}, id, nof_codeblocks);
+  return pool->get_pool().reserve({}, id, nof_codeblocks);
 }
 
 unique_rx_buffer
@@ -127,7 +127,7 @@ void MexFunction::method_new(ArgumentList outputs, ArgumentList inputs)
   Struct      softbuffer_conf      = in_struct[0];
   pool_config.max_codeblock_size   = softbuffer_conf["MaxCodeblockSize"][0];
   pool_config.nof_buffers          = softbuffer_conf["MaxSoftbuffers"][0];
-  pool_config.max_nof_codeblocks   = softbuffer_conf["MaxCodeblocks"][0];
+  pool_config.nof_codeblocks       = softbuffer_conf["MaxCodeblocks"][0];
   pool_config.expire_timeout_slots = softbuffer_conf["ExpireTimeoutSlots"][0];
 
   std::shared_ptr<memento> mem = std::make_shared<pusch_memento>(create_rx_buffer_pool(pool_config));
