@@ -727,25 +727,8 @@ classdef PUSCHBLER < matlab.System
                         % channel to find the strongest multipath component.
                         pathFilters = getPathFilters(obj.Channel);
                         [offset, ~] = nrPerfectTimingEstimate(pathGains, pathFilters);
-                    else
-                        % Practical synchronization. Correlate the received waveform
-                        % with the PUSCH DM-RS to give timing offset estimate 't' and
-                        % correlation magnitude 'mag'. The function
-                        % hSkipWeakTimingOffset is used to update the receiver timing
-                        % offset. If the correlation peak in 'mag' is weak, the current
-                        % timing estimate 't' is ignored and the previous estimate
-                        % 'offset' is used.
-                        [t, mag] = nrTimingEstimate(carrier, rxWaveform, dmrsIndices, dmrsSymbols);
-                        offset = hSkipWeakTimingOffset(offset, t, mag);
-                        % Display a warning if the estimated timing offset exceeds the
-                        % maximum channel delay.
-                        if offset > maxChDelay
-                            warning(['Estimated timing offset (%d) is greater than the maximum channel delay (%d).' ...
-                                ' This will result in a decoding failure. This may be caused by low SNR,' ...
-                                ' or not enough DM-RS symbols to synchronize successfully.'], offset, maxChDelay);
-                        end
+                        rxWaveform = rxWaveform(1+offset:end, :);
                     end
-                    rxWaveform = rxWaveform(1+offset:end, :);
 
                     % Perform OFDM demodulation on the received data to recreate the
                     % resource grid, including padding in the event that practical
