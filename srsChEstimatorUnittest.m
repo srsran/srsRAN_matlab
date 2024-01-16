@@ -65,13 +65,15 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
         % Number of resource elements in a RB and OFDM symbols in a slot.
         NRE = 12
         nSymbolsSlot = 14
+    end % of properties (Hidden, Constant)
 
+    properties (Hidden, SetAccess=private)
         % Fix BWP size and start as well as the frame number, since they
         % are irrelevant for the test.
         NSizeBWP = 51
         NStartBWP = 1
-        NSizeGrid = srsChEstimatorUnittest.NSizeBWP + srsChEstimatorUnittest.NStartBWP
-    end % of properties (Hidden, Constant)
+        NSizeGrid = 52 % srsChEstimatorUnittest.NSizeBWP + srsChEstimatorUnittest.NStartBWP
+    end % of properties (Hidden, SetAccess=private)
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'port_channel_estimator' tests will be erased).
@@ -411,12 +413,15 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
 
     methods % public
         function [mse, noiseEst, rsrpEst, epreEst, crlb] = characterize(obj, configuration, ...
-                FrequencyHopping, channelType, snrValues, nRuns)
+                FrequencyHopping, channelType, delay, scs, snrValues, nRuns, sizeBWP)
         %characterize - Draw the empircical MSE performance curve of the estimator.
-        %   MSE = characterize(OBJ, CONFIGURATION, FREQUENCYHOPPING, CHANNELTYPE, SNRVALUES, NRUNS) returns
-        %   the empirical mean squared error of the channel estimation after NRUNS simulations
-        %   and for all SNRVALUES. CONFIGURATION and FREQUENCYHOPPING provide the physicaly
-        %   channel configuration and CHANNELTYPE specifies the simulated channel model.
+        %   MSE = characterize(OBJ, CONFIGURATION, FREQUENCYHOPPING, CHANNELTYPE, DELAY, SCS, SNRVALUES, NRUNS)
+        %   returns the empirical mean squared error of the channel estimation after NRUNS simulations
+        %   and for all SNRVALUES. CONFIGURATION and FREQUENCYHOPPING provide the physical
+        %   channel configuration and CHANNELTYPE, DELAY and SCS specify the simulated channel model.
+        %
+        %   MSE = characterize(..., BWP) also changes the BWP size (expressed as a number of RBs).
+        %   The default BWP size is 51.
         %
         %   [MSE, NOISEEST, RSRPEST, EPREEST, CRLB] = characterize(...) also returns the
         %   estimates of noise variance, RSRP and EPRE for all runs and all SNR values,
@@ -432,12 +437,27 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                 obj (1, 1) srsChEstimatorUnittest
                 configuration (1, 1) struct {mustBeConfiguration}
                 FrequencyHopping (1, :) char {mustBeMember(FrequencyHopping, {'neither', 'intraSlot'})}
-                channelType (1, :) char {mustBeMember(channelType, {'pure-delay', 'TDL-A'})}
+                channelType (1, :) char {mustBeMember(channelType, {'pure-delay', ...
+                    'TDL-A', 'TDL-B', 'TDL-C', 'TDL-D', 'TDL-E', ...
+                    'TDLA30', 'TDLB100', 'TDLC300', 'TDLC60'})}
+                delay
+                scs (1, 1) double {mustBeMember(scs, [15, 30])}
                 snrValues double {mustBeReal, mustBeVector}
                 nRuns (1, 1) double {mustBeNonnegative, mustBeInteger}
+                sizeBWP (1, 1) double = NaN
             end
 
             import srsLib.phy.upper.signal_processors.srsChannelEstimator
+
+            if ~isempty(delay)
+                validateattributes(delay, 'double', {'nonnegative'});
+            end
+
+            if ~isnan(sizeBWP)
+                validateattributes(sizeBWP, 'double', {'positive', 'integer', '<=', 273});
+                obj.NSizeBWP = sizeBWP;
+                obj.NSizeGrid = obj.NStartBWP + obj.NSizeBWP;
+            end
 
             % Cannot do frequency hopping if the entire BWP is allocated or if using a single OFDM symbol.
             assert(~(((configuration.nPRBs == obj.NSizeBWP) || (configuration.symbolAllocation(2) == 1)) ...
@@ -450,12 +470,12 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             % Configure carrier.
             carrier = nrCarrierConfig;
             carrier.CyclicPrefix = 'Normal';
-            carrier.SubcarrierSpacing = 15; % kHz
+            carrier.SubcarrierSpacing = scs; % kHz
             carrier.NSlot = 0;
             carrier.NSizeGrid = obj.NSizeGrid;
 
             waveformInfo = nrOFDMInfo(carrier);
-            channel = configureChannel(channelType, waveformInfo.SampleRate, ...
+            channel = configureChannel(channelType, delay, waveformInfo.SampleRate, ...
                 carrier.SubcarrierSpacing);
 
             % Configure each hop.
@@ -474,7 +494,12 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
 
             transmittedWF = nrOFDMModulate(carrier, transmittedRG);
 
-            mse = zeros(length(snrValues), 1);
+            nEstSCS = hop1.nPRBs * obj.NRE;
+            if ~isempty(hop2.maskPRBs)
+                nEstSCS = nEstSCS * 2;
+            end
+
+            mse = zeros(length(snrValues), nEstSCS);
             noiseEst = zeros(length(snrValues), nRuns);
             rsrpEst = zeros(length(snrValues), nRuns);
             epreEst = zeros(length(snrValues), nRuns);
@@ -512,9 +537,38 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                     pathFilters = channel.getPathFilters();
                     channelTrue = nrPerfectChannelEstimate(carrier, pathGains, pathFilters, 0, sampleTimes);
 
-                    estErrors = channelEst(channelEst ~= 0) - channelTrue(channelEst ~= 0);
+                    % Just for debugging/analysis purposes: set to true to visualize
+                    % the effect of channel and channel estimation on a random QAM
+                    % points.
+                    if false
+                        whatSCS = (channelEst(:,1+hop1.startSymbol) ~= 0); %#ok<UNRCH>
+                        nSCS = sum(whatSCS);
+                        % Create some random QAM points.
+                        fakeSymbols = srsTest.helpers.randmod('256QAM', [nSCS, 50]);
 
-                    mse(iSNR) = mse(iSNR) + sum(abs(estErrors).^2) / length(estErrors) / nRuns;
+                        % Apply the true channel and ZF-equalize with the estimated channel (SC-wise).
+                        rr = diag(channelTrue(whatSCS, 1) ./ channelEst(whatSCS, 1)) * fakeSymbols;
+
+                        % Split edge and middle points, to visualize the difference in
+                        % the estimation performance.
+                        rrEdge = rr([1:24, end-23:end], :);
+                        rrMiddle = rr(25:end-24, :);
+                        plot(real(rrEdge(:)), imag(rrEdge(:)), 'rx', real(rrMiddle(:)), imag(rrMiddle(:)), 'bx')
+                        pause
+                    end
+
+                    scsIdx = obj.NRE * hop1.PRBstart + (1: obj.NRE * hop1.nPRBs);
+                    estErrors = channelEst(scsIdx, hop1.CHsymbols) - channelTrue(scsIdx, hop1.CHsymbols);
+                    SQestErrors = sum(abs(estErrors).^2, 2);
+                    if ~isempty(hop2.maskPRBs)
+                        scsIdx = obj.NRE * hop2.PRBstart + (1: obj.NRE * hop2.nPRBs);
+                        estErrors2 = channelEst(scsIdx, hop2.CHsymbols) - channelTrue(scsIdx, hop2.CHsymbols);
+                        SQestErrors2 = sum(abs(estErrors2).^2, 2);
+                    else
+                        SQestErrors2 = [];
+                    end
+
+                    mse(iSNR, :) = mse(iSNR, :) + [SQestErrors; SQestErrors2]' / nRuns;
                 end
             end
 
@@ -618,7 +672,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
     end % of methods (Access = private)
 end % of classdef srsChEstimatorUnittest
 
-function channel = configureChannel(chModel, SampleRate, SubcarrierSpacing)
+function channel = configureChannel(chModel, delay, SampleRate, SubcarrierSpacing)
     channel = nrTDLChannel;
     channel.NumTransmitAntennas = 1;
     channel.NumReceiveAntennas = 1;
@@ -627,13 +681,21 @@ function channel = configureChannel(chModel, SampleRate, SubcarrierSpacing)
     channel.RandomStream = 'Global stream';
     if strcmp(chModel, 'pure-delay')
         channel.DelayProfile = 'Custom';
-        % Random delay, at most one fourth of the cyclic prefix length.
-        channel.PathDelays = rand() * 0.018 / SubcarrierSpacing / 1000;
+        if isempty(delay)
+            % Random delay, at most one fourth of the cyclic prefix length.
+            channel.PathDelays = rand() * 0.018 / SubcarrierSpacing / 1000;
+        else
+            channel.PathDelays = delay;
+        end
         channel.AveragePathGains = 0;
         channel.FadingDistribution = 'Rayleigh';
-    elseif strcmp(chModel, 'TDL-A')
-        channel.DelayProfile = 'TDL-A';
-        channel.DelaySpread = 30e-9;
+    elseif ismember(chModel, {'TDL-A', 'TDL-B', 'TDL-C', 'TDL-D', 'TDL-E'})
+        channel.DelayProfile = chModel;
+        if ~isempty(delay)
+            channel.DelaySpread = delay;
+        end
+    elseif ismember(chModel, {'TDLA30', 'TDLB100', 'TDLC300', 'TDLC60'})
+        channel.DelayProfile = chModel;
     else
         error('srsgnb_matlab:srsChEstimatorUnittest:configureChannel', ...
             'Unknown channel model %s', chModel);
@@ -649,7 +711,7 @@ function mustBeConfiguration(a)
     end
     mustBeScalarOrEmpty(a.nPRBs);
     mustBeInteger(a.nPRBs);
-    mustBeInRange(a.nPRBs, 1, 51);
+    mustBeInRange(a.nPRBs, 1, 273);
 
     if ~isfield(a, 'symbolAllocation')
         eidType = 'srsChEstimatorUnittest:characterize';
