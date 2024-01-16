@@ -8,7 +8,7 @@
 %   RG = srsResourceGridAnalyzer(...) also returns a matrix RG with the complex-
 %   valued samples of the resource grid (rows are subcarriers, columns are symbols).
 
-%   Copyright 2021-2023 Software Radio Systems Limited
+%   Copyright 2021-2024 Software Radio Systems Limited
 %
 %   This file is part of srsRAN-matlab.
 %

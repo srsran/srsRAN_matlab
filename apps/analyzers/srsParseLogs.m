@@ -52,7 +52,7 @@
 %     rsrp=+22.2dB
 %     t_align=0.1us
 
-%   Copyright 2021-2023 Software Radio Systems Limited
+%   Copyright 2021-2024 Software Radio Systems Limited
 %
 %   This file is part of srsRAN-matlab.
 %

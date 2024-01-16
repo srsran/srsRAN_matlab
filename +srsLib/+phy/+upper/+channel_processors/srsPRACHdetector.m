@@ -13,7 +13,7 @@
 %   respectively. It also returns the valuse of the detecion metric (normalized
 %   with respect to the detection threshold) and the signal RSSI (in dB).
 
-%   Copyright 2021-2023 Software Radio Systems Limited
+%   Copyright 2021-2024 Software Radio Systems Limited
 %
 %   This file is part of srsRAN-matlab.
 %

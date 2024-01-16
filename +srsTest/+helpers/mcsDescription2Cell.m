@@ -3,7 +3,7 @@
 %   MCSDESCR = mcsDescription2Cell(MODULATION, TARGETCODERATE) generates a
 %   cell containing the modulation as string and a scaled target code rate.
 
-%   Copyright 2021-2023 Software Radio Systems Limited
+%   Copyright 2021-2024 Software Radio Systems Limited
 %
 %   This file is part of srsRAN-matlab.
 %

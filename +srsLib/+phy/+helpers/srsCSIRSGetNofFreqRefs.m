@@ -3,7 +3,7 @@
 %   reference values to map the CSI-RS signal, according to the Row entry
 %   ROW of the CSI-RS location table in TS 38.211 Table 7.4.1.5.3-1.
 
-%   Copyright 2021-2023 Software Radio Systems Limited
+%   Copyright 2021-2024 Software Radio Systems Limited
 %
 %   This file is part of srsRAN-matlab.
 %

@@ -3,7 +3,7 @@
 %   Gets the first configuration index CONFIGURATIONINDEX in a configurations table 
 %   selected by the duplex mode DUPLEXMODE with the given preamble format PREAMBLEFORMAT.
 
-%   Copyright 2021-2023 Software Radio Systems Limited
+%   Copyright 2021-2024 Software Radio Systems Limited
 %
 %   This file is part of srsRAN-matlab.
 %

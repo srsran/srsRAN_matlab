@@ -3,7 +3,7 @@
 %   complex symbols SYMBOLS and its related indices INDICES, emulating a fully
 %   allocated resource grid for a given carrier CARRIER and a given port PORTIDX.
 
-%   Copyright 2021-2023 Software Radio Systems Limited
+%   Copyright 2021-2024 Software Radio Systems Limited
 %
 %   This file is part of srsRAN-matlab.
 %
