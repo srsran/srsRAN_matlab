@@ -260,9 +260,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
 
             EstimatorConfig.DMRSSymbolMask = obj.DMRSsymbols;
             EstimatorConfig.DMRSREmask = obj.DMRSREmask;
-            EstimatorConfig.nPilotsNoiseAvg = sum(obj.DMRSREmask);
             EstimatorConfig.scs = 15000;
-            EstimatorConfig.useFilter = true;
             [channelEst, noiseEst, rsrp, epre, timeAlignment] = srsChannelEstimator(receivedRG, ...
                 pilots, betaDMRS, hop1, hop2, EstimatorConfig);
 
@@ -381,9 +379,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
 
             EstimatorConfig.DMRSSymbolMask = obj.DMRSsymbols;
             EstimatorConfig.DMRSREmask = obj.DMRSREmask;
-            EstimatorConfig.nPilotsNoiseAvg = sum(obj.DMRSREmask);
             EstimatorConfig.scs = 15000;
-            EstimatorConfig.useFilter = true;
             [channelEst, noiseEst, rsrp, epre, timeAlignment] = srsChannelEstimator(receivedRG, ...
                 pilots, betaDMRS, hop1, hop2, EstimatorConfig);
 
@@ -509,7 +505,6 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             EstimatorConfig.DMRSREmask = obj.DMRSREmask;
             EstimatorConfig.nPilotsNoiseAvg = sum(obj.DMRSREmask);
             EstimatorConfig.scs = 15000;
-            EstimatorConfig.useFilter = true;
 
             for iRun = 1:nRuns
                 reset(channel);
