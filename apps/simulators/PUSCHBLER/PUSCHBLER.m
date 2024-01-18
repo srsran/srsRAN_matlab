@@ -79,6 +79,7 @@
 %   EnableHARQ                   - HARQ flag: true for enabling retransmission with
 %                                  RV sequence [0, 2, 3, 1], false for no retransmissions.
 %   ImplementationType           - PUSCH implementation type ('matlab', 'srs' (requires mex), 'both')
+%   SRSEstimatorType             - Implementation of the SRS channel estimator ('MEX', 'noMEX')
 %   QuickSimulation              - Quick-simulation flag: set to true to stop
 %                                  each point after 100 failed transport blocks (tunable).
 %
@@ -181,6 +182,10 @@ classdef PUSCHBLER < matlab.System
         EnableHARQ (1, 1) logical = false
         %PUSCH implementation type ('matlab', 'srs' (requires mex), 'both').
         ImplementationType (1, :) char {mustBeMember(ImplementationType, {'matlab', 'srs', 'both'})} = 'matlab'
+        %Implementation of the SRS channel estimator ('MEX', 'noMEX').
+        %   Only applies if ImplementationType is set to 'srs' or 'both') and PerfectChannelEstimator
+        %   is set to false.
+        SRSEstimatorType (1, :) char {mustBeMember(SRSEstimatorType, {'MEX', 'noMEX'})} = 'MEX'
     end % of properties (Nontunable)
 
     properties % Tunable
@@ -596,7 +601,7 @@ classdef PUSCHBLER < matlab.System
 
             if useSRSDecoder
                 srsDemodulatePUSCH = srsMEX.phy.srsPUSCHDemodulator;
-                srsChannelEstimate = srsMEX.phy.srsMultiPortChannelEstimator;
+                srsChannelEstimate = srsMEX.phy.srsMultiPortChannelEstimator(obj.SRSEstimatorType);
             end
 
             % %%% Simulation loop.
@@ -953,6 +958,8 @@ classdef PUSCHBLER < matlab.System
                     flag = isempty(obj.ThroughputMATLABCtr) || strcmp(obj.ImplementationType, 'srs');
                 case {'ThroughputSRS', 'BlockErrorRateSRS'}
                     flag = isempty(obj.ThroughputSRSCtr) || strcmp(obj.ImplementationType, 'matlab');
+                case 'SRSEstimatorType'
+                    flag = strcmp(obj.ImplementationType, 'matlab') || obj.PerfectChannelEstimator;
                 otherwise
                     flag = false;
             end
@@ -983,7 +990,8 @@ classdef PUSCHBLER < matlab.System
                 ... HARQ.
                 'EnableHARQ', ...
                 ... Other simulation details.
-                'ImplementationType', 'QuickSimulation', 'DisplaySimulationInformation', 'DisplayDiagnostics'};
+                'ImplementationType', 'SRSEstimatorType', ...
+                'QuickSimulation', 'DisplaySimulationInformation', 'DisplayDiagnostics'};
             groups = matlab.mixin.util.PropertyGroup(confProps, 'Configuration');
 
             resProps = {};
