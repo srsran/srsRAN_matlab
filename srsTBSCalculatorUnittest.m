@@ -65,7 +65,7 @@ classdef srsTBSCalculatorUnittest < srsTest.srsBlockUnittest
         srsBlock = 'tbs_calculator'
 
         %Type of the tested block.
-        srsBlockType = 'scheduler/support'
+        srsBlockType = 'ran/sch'
     end
 
     properties (ClassSetupParameter)
@@ -118,7 +118,7 @@ classdef srsTBSCalculatorUnittest < srsTest.srsBlockUnittest
         function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
 
-            fprintf(fileID, '#include "lib/scheduler/support/tbs_calculator.h"\n');
+            fprintf(fileID, '#include "srsran/ran/sch/tbs_calculator.h"\n');
             fprintf(fileID, '#include <vector>\n');
         end
 
