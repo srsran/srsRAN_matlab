@@ -1,10 +1,13 @@
-%srsrMultiportChannelEstimator estimates a SIMO channel.
+%srsMultiportChannelEstimator estimates a SIMO channel.
 %   User-friendly interface for estimating a single-input multiple-output (SIMO)
 %   channel via the MEX static method multiport_channel_estimator_mex, which
 %   calls srsRAN port_channel_estimator for each port and combines the outputs.
 %
 %   CHESTIMATOR = srsMultiPortChannelEstimator creates the SIMO channel estimator
 %   object CHESTIMATOR.
+%
+%   CHESTIMATOR = srsMultiPortChannelEstimator('noMEX') creates a SIMO channel estimator
+%   that is implemented in MATLAB exclusively, without recurring to the MEX.
 %
 %   srsMultiPortChannelEstimator Methods:
 %
@@ -45,6 +48,23 @@
 %   file in the top-level directory of this distribution.
 
 classdef srsMultiPortChannelEstimator < matlab.System
+    properties (Hidden, Access = private)
+        stepMethod
+    end
+
+    methods
+        function obj = srsMultiPortChannelEstimator(type)
+            arguments
+                type (1, :) char {mustBeMember(type, {'MEX', 'noMEX'})} = 'MEX'
+            end
+
+            if strcmp(type, 'MEX')
+                obj.stepMethod = @stepMEX;
+            else
+                obj.stepMethod = @stepPLAIN;
+            end
+        end
+    end % of public methods
 
     methods (Access = protected)
         function [channelEst, noiseEst, extra] ...
@@ -65,6 +85,15 @@ classdef srsMultiPortChannelEstimator < matlab.System
             assert(symbolAllocation(1) < 14, 'First allocated symbol out of range.');
             lastSymbol = sum(symbolAllocation) - 1;
             assert(lastSymbol < 14, 'Last allocated symbol out of range.');
+
+            [channelEst, noiseEst, extra] = obj.stepMethod(obj, rxGrid, symbolAllocation, refInd, refSym, config);
+        end
+    end
+
+    methods (Access = private)
+        function [channelEst, noiseEst, extra] ...
+                = stepMEX(obj, rxGrid, symbolAllocation, refInd, refSym, config)
+        % Implementation of the step method that uses the MEX.
 
             sz = size(rxGrid);
             pilotMask = false(sz(1:2));
@@ -118,7 +147,116 @@ classdef srsMultiPortChannelEstimator < matlab.System
             extra.SINR = infoOut.SINR;
             extra.TimeAlignment = infoOut.TimeAlignment;
 
-        end % of function stepImpl(obj, rxGrid, refInd, refSym, varargin)
+        end % of function stepMEX(obj, rxGrid, refInd, refSym, varargin)
+
+        function [channelEst, noiseEst, extra] ...
+                = stepPLAIN(~, rxGrid, symbolAllocation, refInd, refSym, config)
+        % Implementation of the step method that uses SRS matlab implementation.
+
+            import srsLib.phy.upper.signal_processors.srsChannelEstimator
+
+            % Build hop configuration structures.
+            gridsize = size(rxGrid);
+            totalRBs = gridsize(1) / 12;
+            [pSCS, pSyms] = ind2sub(gridsize(1:2), refInd);
+
+            DMRSsymbols = false(14, 1);
+            DMRSsymbols(unique(pSyms)) = true;
+
+            nDMRSsymbols = sum(DMRSsymbols);
+            pilots = reshape(refSym, [], nDMRSsymbols);
+
+            pSCS = reshape(pSCS, [], nDMRSsymbols);
+            nPRBs = ceil((pSCS(end, 1) - pSCS(1, 1)) / 12);
+
+            nRBpilots = length(pSCS(:, 1)) / nPRBs;
+            DMRSREmask = false(12, 1);
+            DMRSREmask(mod(pSCS(1:nRBpilots, 1) - 1, 12) + 1) = true;
+
+            maskPRBs = false(totalRBs, 1);
+            maskPRBs(unique(ceil(pSCS(:, 1) / 12))) = true;
+
+            hop1 = struct(...
+                'DMRSsymbols', DMRSsymbols, ...
+                'DMRSREmask', DMRSREmask, ...
+                'PRBstart', ceil(pSCS(1, 1) / 12) - 1, ...
+                'nPRBs', nPRBs, ...
+                'maskPRBs', maskPRBs, ...
+                'startSymbol', symbolAllocation(1), ...
+                'nAllocatedSymbols', symbolAllocation(2));
+
+            hop2 = struct(...
+                'DMRSsymbols', [], ...
+                'DMRSREmask', [], ...
+                'PRBstart', [], ...
+                'nPRBs', [], ...
+                'maskPRBs', [], ...
+                'startSymbol', [], ...
+                'nAllocatedSymbols', []);
+
+            configNew = struct(...
+                'DMRSREmask', DMRSREmask, ...
+                'DMRSSymbolMask', DMRSsymbols, ...
+                'scs', config.SubcarrierSpacing * 1000);
+
+            hopIndex = config.HoppingIndex;
+            if ~isempty(hopIndex)
+                hop2 = hop1;
+
+                hop1.DMRSsymbols(hopIndex+1:end) = false;
+                hop1.nAllocatedSymbols = hopIndex - hop1.startSymbol;
+
+                hop2.DMRSsymbols(1:hopIndex) = false;
+                hop2.PRBstart = ceil(pSCS(1, end) / 12) - 1;
+                hop2.maskPRBs(:) = false;
+                hop2.maskPRBs(unique(ceil(pSCS(:, end) / 12))) = true;
+                hop2.startSymbol = hopIndex;
+                hop2.nAllocatedSymbols = hop2.nAllocatedSymbols - hop1.nAllocatedSymbols;
+            end
+
+            % Check the number of Rx antenna ports.
+            nPorts = 1;
+            if length(gridsize) == 3
+                nPorts = gridsize(3);
+            end
+
+            channelEst = nan(gridsize);
+            if nPorts == 1
+                extra = struct('RSRP', 0, 'EPRE', 0, 'SINR', 0, 'TimeAlignment', 0);
+            else
+                extra(nPorts + 1) = struct('RSRP', 0, 'EPRE', 0, 'SINR', 0, 'TimeAlignment', 0);
+            end
+
+            % Set up tracking of average metrics across ports.
+            noiseEst = 0;
+            rsrp = 0;
+            epre = 0;
+            ta = 0;
+
+            for iPort = 1:nPorts
+                [channelEst(:, :, iPort), noiseEstTmp, rsrpTmp, epreTmp, taTmp] = ...
+                    srsChannelEstimator(rxGrid(:, :, iPort), pilots, config.BetaScaling, hop1, hop2, configNew);
+
+                noiseEst = noiseEst + noiseEstTmp / nPorts;
+                rsrp = rsrp + rsrpTmp / nPorts;
+                epre = epre + epreTmp / nPorts;
+                ta = ta + taTmp / nPorts;
+
+                extra(iPort).RSRP = rsrpTmp;
+                extra(iPort).EPRE = epreTmp;
+                extra(iPort).SINR = rsrpTmp / config.BetaScaling^2 / noiseEstTmp;
+                extra(iPort).TimeAlignment = taTmp;
+            end
+
+            % If multiple ports, also report the average metrics.
+            if nPorts > 1
+                extra(end).RSRP = rsrp;
+                extra(end).EPRE = epre;
+                extra(end).SINR = nan; % Global SINR is meaningless here.
+                extra(end).TimeAlignment = ta;
+            end
+        end % of function stepPLAIN(obj, rxGrid, refInd, refSym, varargin)
+
     end % of methods (Access = protected)
 
     methods (Access = private, Static)
