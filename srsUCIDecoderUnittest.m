@@ -78,7 +78,7 @@ classdef srsUCIDecoderUnittest < srsTest.srsBlockUnittest
 
             fprintf(fileID, '#include "srsran/phy/upper/channel_processors/uci/uci_decoder.h"\n');
             fprintf(fileID, '#include "srsran/phy/upper/log_likelihood_ratio.h"\n');
-            fprintf(fileID, '#include "srsran/ran/modulation_scheme.h"\n');
+            fprintf(fileID, '#include "srsran/ran/sch/modulation_scheme.h"\n');
             fprintf(fileID, '#include "srsran/support/file_vector.h"\n');
         end
 
