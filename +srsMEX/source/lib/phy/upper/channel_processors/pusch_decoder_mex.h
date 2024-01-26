@@ -187,6 +187,8 @@ std::unique_ptr<srsran::pusch_decoder> create_pusch_decoder()
   pusch_decoder_factory_sw_config.decoder_factory   = ldpc_decoder_factory;
   pusch_decoder_factory_sw_config.dematcher_factory = ldpc_rate_dematcher_factory;
   pusch_decoder_factory_sw_config.segmenter_factory = segmenter_rx_factory;
+  pusch_decoder_factory_sw_config.nof_prb           = MAX_RB;
+  pusch_decoder_factory_sw_config.nof_layers        = pusch_constants::MAX_NOF_LAYERS;
   std::shared_ptr<pusch_decoder_factory> pusch_decoder_factory =
       create_pusch_decoder_factory_sw(pusch_decoder_factory_sw_config);
 
