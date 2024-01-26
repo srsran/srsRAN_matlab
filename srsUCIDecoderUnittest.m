@@ -66,10 +66,13 @@ classdef srsUCIDecoderUnittest < srsTest.srsBlockUnittest
         %Length in bits of the UCI message. Four different cases are covered: single
         %   UCI bit (1), two UCI bits (2), length between 3 and 11 UCI bits (3-11)
         %   and length between 12 and 1706 UCI bits (12-1706).
-        A = [num2cell(1:12) {19, 20, 200, 500, 1000, 1706}]
+        A = [num2cell(1:12) {19, 20, 200, 1706}]
 
         %Modulation scheme.
         Modulation = {'pi/2-BPSK', 'QPSK', '16QAM', '64QAM', '256QAM'}
+
+        %Code rate.
+        Rate= {0.1, 2/3}
     end
 
     methods (Access = protected)
@@ -93,12 +96,14 @@ classdef srsUCIDecoderUnittest < srsTest.srsBlockUnittest
             fprintf(fileID, '  file_vector<log_likelihood_ratio> llr;\n');
             fprintf(fileID, '};\n');
         end
+
     end % of methods (Access = protected)
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(testCase, A, Modulation)
+
+        function testvectorGenerationCases(testCase, A, Modulation, Rate)
         %testvectorGenerationCases Generates a test vector for the given A and
-        %   Modulation. Other parameters (e.g., E) are generated randomly.
+        %   Modulation and Rate. Other parameters (e.g., E) are generated randomly.
 
             import srsLib.phy.helpers.srsGetBitsSymbol
             import srsLib.phy.helpers.srsModulationFromMatlab
@@ -111,20 +116,26 @@ classdef srsUCIDecoderUnittest < srsTest.srsBlockUnittest
             % Set randomized values.
             UCIbits = randi([0 1], A, 1);
 
+            % Get the number of bits per symbol
+            bitsSymbol = srsGetBitsSymbol(Modulation);
+            
             % The length of the rate-matched UCI codeword, E, depends on A 
             % and on the modulation scheme (maximum length = 8192).
             minE = A + 1;
-            maxE = 8192;
+            maxE = floor(8192 / bitsSymbol) * bitsSymbol;
 
             % For sequence sizes in {12,..., 19} bits there will be 6 CRC
             % bits, for longer sequences there will be 11 CRC bits.
+            % If A > 2 and < 12 assign a minE of 24 in order to be able to decode it.
             L = 0;
             if A > 19
                 L = 11;
             elseif A > 11
                 L = 6;
+            elseif A > 2
+                minE = 24;
             end
-            
+
             % If a second polar code codeblock is used, the maximum number
             % of rate matched bits is doubled.
             if A > 1013
@@ -133,19 +144,17 @@ classdef srsUCIDecoderUnittest < srsTest.srsBlockUnittest
             end
             minE  = minE + L;
 
-            % Select a number of rate macthed bits between the minimum and
-            % the maximum.
-            E = randi([minE maxE]);
-
+            % Select a number of rate macthed bits without exceeding the maximum. 
+            E = min(maxE, max(minE, ceil((A + L) / Rate)));
+    
             % Round the number of rate macthed bits to the number of bits
             % per symbol.
-            bitsSymbol = srsGetBitsSymbol(Modulation);
-            E = floor(E / bitsSymbol) * bitsSymbol;
+            E = ceil(E / bitsSymbol) * bitsSymbol;
 
             % Set up an SNR that can challenge the decoder.
             snrdB = 25;
             nVar = 10 ^ (-snrdB / 10);
-
+            
             % Encode the UCI bits.
             UCICodeWord = nrUCIEncode(UCIbits, E, Modulation);
 
@@ -170,6 +179,7 @@ classdef srsUCIDecoderUnittest < srsTest.srsBlockUnittest
 
                 % Check if the message is decoded.
                 decodedOk = (sum(xor(UCIbits, decodedUCIBits)) == 0);
+           
             end
 
             % Clip and quantize the LLRs.
