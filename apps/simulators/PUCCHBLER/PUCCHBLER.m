@@ -296,7 +296,7 @@ classdef PUCCHBLER < matlab.System
                 end
             end
 
-            if (obj.PUCCHFormat == 2) && (obj.(totalBits < 3) || (totalBits > obj.MaxUCIBits))
+            if (obj.PUCCHFormat == 2) && ((totalBits < 3) || (totalBits > obj.MaxUCIBits))
                 error(['For PUCCH Format2, the total number of UCI bits should be between 3 and 1706. ' ...
                     'Provided %d (HARQ-ACK: %d, SR: %d, CSI Part1: %d, CSI Part2: %d).'], ...
                 totalBits, obj.NumACKBits, obj.NumSRBits, obj.NumCSI1Bits, obj.NumCSI2Bits);
@@ -757,7 +757,7 @@ classdef PUCCHBLER < matlab.System
                                 % Store values to calculate BLER.
                                 blerUCI(snrIdx) = blerUCI(snrIdx) + (~isequal(decucibits, uci));
                             end
-                        else
+                        else % false alarm test
                             if (obj.PUCCHFormat == 1)
                                 % False ACK.
                                 falseACK(snrIdx) = falseACK(snrIdx) + sum(uciLLRs{1});
@@ -765,8 +765,8 @@ classdef PUCCHBLER < matlab.System
                             else
                                 blerUCI(snrIdx) = blerUCI(snrIdx) + (~isempty(uciLLRs{1}));
                             end
-                        end
-                    end
+                        end % if isDetectTest
+                    end % if useMATLABpucch
 
                     if useSRSpucch
                         msg = processPUCCHsrs(rxGrid, pucch, carrier, ...
@@ -779,9 +779,9 @@ classdef PUCCHBLER < matlab.System
                             decucibitssrs = [msg.HARQAckPayload; msg.SRPayload; msg.CSI1Payload; msg.CSI2Payload];
                             blerUCIsrs(snrIdx) = blerUCIsrs(snrIdx) + (~(isequal(decucibitssrs, uci)));
                         else
-                            blerUCIsrs(snrIdx) = blerUCI(snrIdx) + msg.isValid;
+                            blerUCIsrs(snrIdx) = blerUCIsrs(snrIdx) + msg.isValid;
                         end
-                    end
+                    end % if useSRSpucch
 
                     totalBlocks(snrIdx) = totalBlocks(snrIdx) + 1;
 
@@ -790,7 +790,6 @@ classdef PUCCHBLER < matlab.System
                     else
                         isSimOver = (~useMATLABpucch || (blerUCI(snrIdx) >= 100)) && (~useSRSpucch || (blerUCIsrs(snrIdx) >= 100));
                     end
-
 
                     % To speed the simulation up, we stop after 100 missed transport blocks.
                     if quickSim && isSimOver
