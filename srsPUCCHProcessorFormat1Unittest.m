@@ -108,187 +108,46 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
         %testvectorGenerationCases Generates a test vector for the given numerology, format and frequency hopping,
         %  while using a random NCellID, random NSlot and random symbol and PRB length.
 
-            import srsLib.phy.helpers.srsConfigureCarrier
-            import srsLib.phy.helpers.srsConfigurePUCCH
-            import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.matlab2srsCyclicPrefix
+            import srsTest.helpers.writeResourceGridEntryFile
 
             % Generate a unique test ID by looking at the number of files
             % generated so far.
             testID = testCase.generateTestID;
 
-            % Use a unique NCellIDLoc, NSlotLoc for each test.
-            NCellIDLoc = randi([0, 1007]);
+            [rxGrid, ack, ack2, configuration] = generateSimData(numerology, intraSlotFreqHopping, SymbolAllocation, ackSize);
 
-            % Use a random slot number from the allowed range.
-            NSlotLoc = randi([0, 10 * pow2(numerology) - 1]);
-
-            % Fixed parameter values.
-            NStartBWP = 1;
-            NSizeBWP = 51;
-            NSizeGrid = NStartBWP + NSizeBWP;
-            NStartGrid = 0;
-            CyclicPrefix = 'normal';
-            GroupHopping = 'neither';
-            FrequencyHopping = 'neither';
-            SecondHopStartPRB = 0;
-            NumRxPorts = 4;
-
-            % Random frame number.
-            NFrame = randi([0, 1023]);
-
-            % Random initial cyclic shift for the first PUCCH.
-            InitialCyclicShift1 = randi([0, 11]);
-
-            % Random initial cyclic shift for the second PUCCH. Make sure
-            % it does not coincide with the first instance.
-            InitialCyclicShift2 = InitialCyclicShift1;
-            while InitialCyclicShift2 == InitialCyclicShift1
-                InitialCyclicShift2 = randi([0, 11]);
+            NumRxPorts = 1;
+            if ndims(rxGrid) == 3
+                NumRxPorts = size(rxGrid, 3);
             end
 
+            pucchDataIndices = configuration.pucchDataIndices;
+            pucchDmrsIndices = configuration.pucchDmrsIndices;
+            carrier = configuration.carrier;
+            pucch1 = configuration.pucch1;
+            pucch2 = configuration.pucch2;
+            NSizeBWP = configuration.NSizeBWP;
+            NStartBWP = configuration.NStartBWP;
 
-            % Random start PRB index and length in number of PRBs.
-            PRBSet  = randi([0, NSizeBWP - 1]);
-
-            % When intraslot frequency hopping is disabled, the OCCI value
-            % must be less than the floor of half of the number of OFDM
-            % symbols allocated for the PUCCH.
-            if ~intraSlotFreqHopping
-                OCCI = randi([0, (floor(SymbolAllocation(2) / 2) - 1)]);
-            else
-                % When intraslot frequency hopping is enabled, the OCCI
-                % value must be less than the floor of one-fourth of the
-                % number of OFDM symbols allocated for the PUCCH. 
-                maxOCCindex = floor(SymbolAllocation(2) / 4) - 1;
-                if maxOCCindex == 0
-                    OCCI = 0;
-                else
-                    OCCI = randi([0, maxOCCindex]);
-                end
-            end
-
-            % Randomly select SecondHopStartPRB if intra-slot frequency
-            % hopping is enabled.
-            if intraSlotFreqHopping
-                SecondHopStartPRB = randi([0, NSizeBWP - 1]);
-                % Set respective MATLAB parameter.
-                FrequencyHopping   = 'intraSlot';
-            end
-
-            % Configure the carrier according to the test parameters.
-            SubcarrierSpacing = 15 * (2 .^ numerology);
-            carrier = srsConfigureCarrier(NCellIDLoc, ...
-                SubcarrierSpacing, NSizeGrid, NStartGrid, ...
-                NSlotLoc, NFrame, CyclicPrefix);
-
-            % Configure the PUCCH according to the test parameters.
-            pucch1 = srsConfigurePUCCH(1, SymbolAllocation, PRBSet,...
-                FrequencyHopping, GroupHopping, SecondHopStartPRB, ...
-                OCCI, NStartBWP, NSizeBWP);
-            pucch1.InitialCyclicShift = InitialCyclicShift1;
-            
-            pucch2 = srsConfigurePUCCH(1, SymbolAllocation, PRBSet,...
-                FrequencyHopping, GroupHopping, SecondHopStartPRB, ...
-                OCCI, NStartBWP, NSizeBWP);
-            pucch2.InitialCyclicShift = InitialCyclicShift2;
-
-            % Create resource grid.
-            grid = nrResourceGrid(carrier, "OutputDataType", "single");
-            gridDims = size(grid);
-
-            ack = randi([0, 1], ackSize, 1);
-            ack2 = randi([0, 1], ackSize, 1);
-            sr = [];
-
-            if ackSize == 0
-                sr = 1;
-            end
-
-             % Get the PUCCH control data indices.
-            pucchDataIdices = nrPUCCHIndices(carrier, pucch1);
-
-            % Modulate PUCCH Format 1.
-            FrequencyHopping = 'disabled';
-            if strcmp(pucch1.FrequencyHopping, 'intraSlot')
-                FrequencyHopping = 'enabled';
-            end
-
-            pucchData1 = nrPUCCH1(ack, sr, pucch1.SymbolAllocation, ...
-                carrier.CyclicPrefix, carrier.NSlot, carrier.NCellID, ...
-                pucch1.GroupHopping, pucch1.InitialCyclicShift, FrequencyHopping, ...
-                pucch1.OCCI, "OutputDataType", "single");
-
-            pucchData2 = nrPUCCH1(ack2, sr, pucch2.SymbolAllocation, ...
-                carrier.CyclicPrefix, carrier.NSlot, carrier.NCellID, ...
-                pucch2.GroupHopping, pucch2.InitialCyclicShift, FrequencyHopping, ...
-                pucch2.OCCI, "OutputDataType", "single");
-
-            grid(pucchDataIdices) = pucchData1 + pucchData2;
-
-            % Get the DM-RS indices.
-            pucchDmrsIndices = nrPUCCHDMRSIndices(carrier, pucch1);
-            
-            % Generate and map the DM-RS sequence.
-            puschDmrs1 = nrPUCCHDMRS(carrier, pucch1, "OutputDataType", "single");
-            puschDmrs2 = nrPUCCHDMRS(carrier, pucch2, "OutputDataType", "single");
-            grid(pucchDmrsIndices) = puschDmrs1 + puschDmrs2;
-
-            % Init received signals.
-            rxGrid = nrResourceGrid(carrier, NumRxPorts, "OutputDataType", "single");
-            dataChEsts = zeros(length(pucchDataIdices), NumRxPorts);
-            rxSymbols = zeros(length(pucchDataIdices), NumRxPorts);
-            
-            % Noise variance.
-            snrdB = 30;
-            noiseStdDev = 10 ^ (-snrdB / 20);
-
-            % Carrier Frequency offset.
-            cfoHz = 400;
-
-            % Modulate baseband signal.
-            [baseband, OfdmInfo] = nrOFDMModulate(grid, carrier.SubcarrierSpacing, carrier.NSlot);
-
-            % Apply carrier frequency offset in time domain.
-            timeSeconds = (0:(length(baseband) - 1)) / OfdmInfo.SampleRate;
-            basebandWithCfo = baseband .* transpose(exp(2i * pi * timeSeconds * cfoHz));
-
-            % Demodulate baseband signal.
-            gridWithCfo = nrOFDMDemodulate(carrier, basebandWithCfo);
-            
-            % Iterate each receive port.
-            for iRxPort = 1:NumRxPorts
-                % Create some noise samples.
-                normNoise = (randn(gridDims) + 1i * randn(gridDims)) / sqrt(2);
-
-                % Generate channel estimates as a phase rotation in the
-                % frequency domain.
-                estimates = exp(1i * linspace(0, 2 * pi, gridDims(1))') * ones(1, gridDims(2));
-
-                % Create noisy modulated symbols.
-                rxGrid(:, :, iRxPort) = estimates .* gridWithCfo + (noiseStdDev * normNoise);
-
-                % Extract PUCCH symbols from the received grid.
-                rxSymbols(:, iRxPort) = rxGrid(pucchDataIdices);
-
-                % Extract perfect channel estimates corresponding to the PUCCH.
-                dataChEsts(:, iRxPort) = estimates(pucchDataIdices);
-            end
+            CyclicPrefix = carrier.CyclicPrefix;
 
             % Extract the elements of interest from the grid.
-            nofRePort = length(pucchDataIdices) + length(pucchDmrsIndices);
+            nofRePort = length(pucchDataIndices) + length(pucchDmrsIndices);
             rxGridSymbols = complex(nan(1, NumRxPorts * nofRePort));
             rxGridIndexes = complex(nan(NumRxPorts * nofRePort, 3));
+
             onePortindexes = [nrPUCCHIndices(carrier, pucch1, 'IndexStyle','subscript', 'IndexBase','0based'); ...
                     nrPUCCHDMRSIndices(carrier, pucch1, 'IndexStyle','subscript', 'IndexBase','0based')];
+
             for iRxPort = 0:(NumRxPorts - 1)
                 offset = iRxPort * nofRePort;
-                rxGridSymbols(offset + (1:nofRePort)) = [rxGrid(pucchDataIdices); rxGrid(pucchDmrsIndices)];
+                rxGridSymbols(offset + (1:nofRePort)) = [rxGrid(pucchDataIndices); rxGrid(pucchDmrsIndices)];
 
-                indexes = onePortindexes;
-                indexes(:,3) = iRxPort;
+                indices = onePortindexes;
+                indices(:,3) = iRxPort;
 
-                rxGridIndexes(offset + (1:nofRePort), :) = indexes;
+                rxGridIndexes(offset + (1:nofRePort), :) = indices;
             end
 
             % Write each complex symbol, along with its associated index,
@@ -372,3 +231,172 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
         end % of function testvectorGenerationCases
     end % of methods (Test, TestTags = {'testvector'})
 end % of classdef srsPUCCHProcessorFormat1Unittest
+
+%Generates simulation data (ACKS, Rx side resource grid, configurations).
+function [rxGrid, ack, ack2, configuration] = generateSimData(numerology, intraSlotFreqHopping, SymbolAllocation, ackSize)
+    import srsLib.phy.helpers.srsConfigureCarrier
+    import srsLib.phy.helpers.srsConfigurePUCCH
+
+    % Use a unique NCellIDLoc, NSlotLoc for each test.
+    NCellIDLoc = randi([0, 1007]);
+
+    % Use a random slot number from the allowed range.
+    NSlotLoc = randi([0, 10 * pow2(numerology) - 1]);
+
+    % Fixed parameter values.
+    NStartBWP = 1;
+    NSizeBWP = 51;
+    NSizeGrid = NStartBWP + NSizeBWP;
+    NStartGrid = 0;
+    CyclicPrefix = 'normal';
+    GroupHopping = 'neither';
+    FrequencyHopping = 'neither';
+    SecondHopStartPRB = 0;
+    NumRxPorts = 4;
+
+    % Random frame number.
+    NFrame = randi([0, 1023]);
+
+    % Random initial cyclic shift for the first PUCCH.
+    InitialCyclicShift1 = randi([0, 11]);
+
+    % Random initial cyclic shift for the second PUCCH. Make sure
+    % it does not coincide with the first instance.
+    InitialCyclicShift2 = InitialCyclicShift1;
+    while InitialCyclicShift2 == InitialCyclicShift1
+        InitialCyclicShift2 = randi([0, 11]);
+    end
+
+
+    % Random start PRB index and length in number of PRBs.
+    PRBSet  = randi([0, NSizeBWP - 1]);
+
+    % When intraslot frequency hopping is disabled, the OCCI value
+    % must be less than the floor of half of the number of OFDM
+    % symbols allocated for the PUCCH.
+    if ~intraSlotFreqHopping
+        OCCI = randi([0, (floor(SymbolAllocation(2) / 2) - 1)]);
+    else
+        % When intraslot frequency hopping is enabled, the OCCI
+        % value must be less than the floor of one-fourth of the
+        % number of OFDM symbols allocated for the PUCCH.
+        maxOCCindex = floor(SymbolAllocation(2) / 4) - 1;
+        if maxOCCindex == 0
+            OCCI = 0;
+        else
+            OCCI = randi([0, maxOCCindex]);
+        end
+    end
+
+    % Randomly select SecondHopStartPRB if intra-slot frequency
+    % hopping is enabled.
+    if intraSlotFreqHopping
+        SecondHopStartPRB = randi([0, NSizeBWP - 1]);
+        % Set respective MATLAB parameter.
+        FrequencyHopping   = 'intraSlot';
+    end
+
+    % Configure the carrier according to the test parameters.
+    SubcarrierSpacing = 15 * (2 .^ numerology);
+    carrier = srsConfigureCarrier(NCellIDLoc, ...
+        SubcarrierSpacing, NSizeGrid, NStartGrid, ...
+        NSlotLoc, NFrame, CyclicPrefix);
+
+    % Configure the PUCCH according to the test parameters.
+    pucch1 = srsConfigurePUCCH(1, SymbolAllocation, PRBSet,...
+        FrequencyHopping, GroupHopping, SecondHopStartPRB, ...
+        OCCI, NStartBWP, NSizeBWP);
+    pucch1.InitialCyclicShift = InitialCyclicShift1;
+
+    pucch2 = srsConfigurePUCCH(1, SymbolAllocation, PRBSet,...
+        FrequencyHopping, GroupHopping, SecondHopStartPRB, ...
+        OCCI, NStartBWP, NSizeBWP);
+    pucch2.InitialCyclicShift = InitialCyclicShift2;
+
+    % Create resource grid.
+    grid = nrResourceGrid(carrier, "OutputDataType", "single");
+    gridDims = size(grid);
+
+    ack = randi([0, 1], ackSize, 1);
+    ack2 = randi([0, 1], ackSize, 1);
+    sr = [];
+
+    if ackSize == 0
+        sr = 1;
+    end
+
+    % Get the PUCCH control data indices.
+    pucchDataIndices = nrPUCCHIndices(carrier, pucch1);
+
+    % Modulate PUCCH Format 1.
+    FrequencyHopping = 'disabled';
+    if strcmp(pucch1.FrequencyHopping, 'intraSlot')
+        FrequencyHopping = 'enabled';
+    end
+
+    pucchData1 = nrPUCCH1(ack, sr, pucch1.SymbolAllocation, ...
+        carrier.CyclicPrefix, carrier.NSlot, carrier.NCellID, ...
+        pucch1.GroupHopping, pucch1.InitialCyclicShift, FrequencyHopping, ...
+        pucch1.OCCI, "OutputDataType", "single");
+
+    pucchData2 = nrPUCCH1(ack2, sr, pucch2.SymbolAllocation, ...
+        carrier.CyclicPrefix, carrier.NSlot, carrier.NCellID, ...
+        pucch2.GroupHopping, pucch2.InitialCyclicShift, FrequencyHopping, ...
+        pucch2.OCCI, "OutputDataType", "single");
+
+    grid(pucchDataIndices) = pucchData1 + pucchData2;
+
+    % Get the DM-RS indices.
+    pucchDmrsIndices = nrPUCCHDMRSIndices(carrier, pucch1);
+
+    % Generate and map the DM-RS sequence.
+    puschDmrs1 = nrPUCCHDMRS(carrier, pucch1, "OutputDataType", "single");
+    puschDmrs2 = nrPUCCHDMRS(carrier, pucch2, "OutputDataType", "single");
+    grid(pucchDmrsIndices) = puschDmrs1 + puschDmrs2;
+
+    % Modulate baseband signal.
+    [baseband, OfdmInfo] = nrOFDMModulate(grid, carrier.SubcarrierSpacing, carrier.NSlot);
+
+    % Noise variance.
+    snrdB = 30;
+    noiseStdDev = 10 ^ (-snrdB / 20);
+
+    % Carrier Frequency offset.
+    cfoHz = 400;
+
+    % Apply carrier frequency offset in time domain.
+    timeSeconds = (0:(length(baseband) - 1)) / OfdmInfo.SampleRate;
+    basebandWithCfo = baseband .* transpose(exp(2i * pi * timeSeconds * cfoHz));
+
+    % Demodulate baseband signal.
+    gridWithCfo = nrOFDMDemodulate(carrier, basebandWithCfo);
+
+    % Init received signals.
+    dataChEsts = zeros(length(pucchDataIndices), NumRxPorts);
+    rxGrid = nrResourceGrid(carrier, NumRxPorts, "OutputDataType", "single");
+
+    % Iterate each receive port.
+    for iRxPort = 1:NumRxPorts
+        % Create some noise samples.
+        normNoise = (randn(gridDims) + 1i * randn(gridDims)) / sqrt(2);
+
+        % Generate channel coefficients as a phase rotation in the
+        % frequency domain.
+        channel = exp(1i * linspace(0, 2 * pi, gridDims(1))') * ones(1, gridDims(2));
+
+        % Create noisy modulated symbols.
+        rxGrid(:, :, iRxPort) = channel .* gridWithCfo + (noiseStdDev * normNoise);
+
+        % Perfect channel estimation: save channel coefficients.
+        dataChEsts(:, iRxPort) = channel(pucchDataIndices);
+    end
+
+    configuration = struct();
+    configuration.pucchDataIndices = pucchDataIndices;
+    configuration.pucchDmrsIndices = pucchDmrsIndices;
+    configuration.carrier = carrier;
+    configuration.pucch1 = pucch1;
+    configuration.pucch2 = pucch2;
+    configuration.NSizeBWP = NSizeBWP;
+    configuration.NStartBWP = NStartBWP;
+end
