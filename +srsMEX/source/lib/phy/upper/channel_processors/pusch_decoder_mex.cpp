@@ -58,13 +58,16 @@ private:
 } // namespace
 
 unique_rx_buffer MexFunction::pusch_memento::retrieve_softbuffer(const trx_buffer_identifier& id,
-                                                                 const unsigned               nof_codeblocks)
+                                                                 unsigned                     nof_codeblocks,
+                                                                 bool                         is_new_data)
 {
-  return pool->get_pool().reserve({}, id, nof_codeblocks);
+  return pool->get_pool().reserve({}, id, nof_codeblocks, is_new_data);
 }
 
-unique_rx_buffer
-MexFunction::retrieve_softbuffer(uint64_t key, const trx_buffer_identifier& id, const unsigned nof_codeblocks)
+unique_rx_buffer MexFunction::retrieve_softbuffer(uint64_t                     key,
+                                                  const trx_buffer_identifier& id,
+                                                  unsigned                     nof_codeblocks,
+                                                  bool                         is_new_data)
 {
   std::shared_ptr<memento> mem = storage.get_memento(key);
   if (!mem) {
@@ -72,7 +75,7 @@ MexFunction::retrieve_softbuffer(uint64_t key, const trx_buffer_identifier& id, 
   }
 
   auto             pusch_mem  = std::dynamic_pointer_cast<pusch_memento>(storage.get_memento(key));
-  unique_rx_buffer softbuffer = pusch_mem->retrieve_softbuffer(id, nof_codeblocks);
+  unique_rx_buffer softbuffer = pusch_mem->retrieve_softbuffer(id, nof_codeblocks, is_new_data);
   if (!softbuffer.is_valid()) {
     mex_abort(
         "Cannot retrieve softbuffer with key {}, buffer ID ({}) and nr. of codeblocks {}.", key, id, nof_codeblocks);
@@ -178,7 +181,7 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
 
   uint64_t key = static_cast<TypedArray<uint64_t>>(inputs[1])[0];
 
-  unique_rx_buffer    softbuffer = retrieve_softbuffer(key, buf_id, nof_codeblocks);
+  unique_rx_buffer    softbuffer = retrieve_softbuffer(key, buf_id, nof_codeblocks, cfg.new_data);
   TypedArray<uint8_t> out        = factory.createArray<uint8_t>({tbs_bytes.value(), 1});
   span<uint8_t>       rx_tb      = to_span(out);
 
@@ -227,7 +230,11 @@ void MexFunction::method_reset_crcs(ArgumentList outputs, ArgumentList inputs)
 
   uint64_t key = static_cast<TypedArray<uint64_t>>(inputs[1])[0];
 
-  unique_rx_buffer rm_buffer = retrieve_softbuffer(key, buf_id, nof_codeblocks);
+  // We reset the CRCs before new transmissions, not in between retransmissions.
+  bool is_new_data = true;
+
+  // Retrieve the softbuffer and reset its CRC flags.
+  unique_rx_buffer rm_buffer = retrieve_softbuffer(key, buf_id, nof_codeblocks, is_new_data);
   rm_buffer.get().reset_codeblocks_crc();
 }
 

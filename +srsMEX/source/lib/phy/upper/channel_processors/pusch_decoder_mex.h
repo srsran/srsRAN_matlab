@@ -59,8 +59,11 @@ class MexFunction : public srsran_mex_dispatcher
     /// softbuffer or create a new one.
     /// \param[in] id              Softbuffer identifier (UE RNTI and HARQ process ID).
     /// \param[in] nof_codeblocks  Number of codeblocks forming the codeword (or, equivalently, the transport block).
+    /// \param[in] is_new_data     Boolean flag: true if the softbuffer is requested for a new transmission, false if
+    ///                            it is for a retransmission.
     /// \return A pointer to the identified softbuffer.
-    srsran::unique_rx_buffer retrieve_softbuffer(const srsran::trx_buffer_identifier& id, unsigned nof_codeblocks);
+    srsran::unique_rx_buffer
+    retrieve_softbuffer(const srsran::trx_buffer_identifier& id, unsigned nof_codeblocks, bool is_new_data);
 
   private:
     /// Pointer to the softbuffer pool stored in the memento.
@@ -92,9 +95,11 @@ private:
   /// \param[in] key             The PUSCH memento identifier.
   /// \param[in] id              The softbuffer identifier (UE RNTI and HARQ process ID).
   /// \param[in] nof_codeblocks  The number of codeblocks in the current codeword.
+  /// \param[in] is_new_data     Boolean flag: true if the softbuffer is requested for a new transmission, false if
+  ///                            it is for a retransmission.
   /// \return A pointer to the requested softbuffer from the softbuffer pool associated to the given memento identifier.
   srsran::unique_rx_buffer
-  retrieve_softbuffer(uint64_t key, const srsran::trx_buffer_identifier& id, unsigned nof_codeblocks);
+  retrieve_softbuffer(uint64_t key, const srsran::trx_buffer_identifier& id, unsigned nof_codeblocks, bool is_new_data);
 
   /// Checks that outputs/inputs arguments match the requirements of method_step().
   void check_step_outputs_inputs(matlab::mex::ArgumentList outputs, matlab::mex::ArgumentList inputs);
