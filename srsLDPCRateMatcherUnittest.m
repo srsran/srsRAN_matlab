@@ -40,7 +40,7 @@
 %
 %   See also matlab.unittest, nrLDPCEncode.
 
-%   Copyright 2021-2023 Software Radio Systems Limited
+%   Copyright 2021-2024 Software Radio Systems Limited
 %
 %   This file is part of srsRAN-matlab.
 %
@@ -100,7 +100,7 @@ classdef srsLDPCRateMatcherUnittest < srsTest.srsBlockUnittest
         %addTestIncludesToHeaderFile(OBJ, FILEID) adds include directives to
         %   the header file pointed by FILEID, which describes the test vectors.
 
-            fprintf(fileID, '#include "srsran/ran/modulation_scheme.h"\n');
+            fprintf(fileID, '#include "srsran/ran/sch/modulation_scheme.h"\n');
             fprintf(fileID, '#include "srsran/support/file_vector.h"\n');
         end
 

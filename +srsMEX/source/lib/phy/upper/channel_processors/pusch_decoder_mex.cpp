@@ -1,6 +1,6 @@
 /*
  *
- * Copyright 2021-2023 Software Radio Systems Limited
+ * Copyright 2021-2024 Software Radio Systems Limited
  *
  * This file is part of srsRAN-matlab.
  *
@@ -27,7 +27,7 @@
 #include "srsran/phy/upper/channel_processors/pusch/pusch_decoder_result.h"
 #include "srsran/phy/upper/rx_buffer_pool.h"
 #include "srsran/phy/upper/trx_buffer_identifier.h"
-#include "srsran/ran/modulation_scheme.h"
+#include "srsran/ran/sch/modulation_scheme.h"
 #include "srsran/support/units.h"
 #include "fmt/format.h"
 
@@ -58,13 +58,16 @@ private:
 } // namespace
 
 unique_rx_buffer MexFunction::pusch_memento::retrieve_softbuffer(const trx_buffer_identifier& id,
-                                                                 const unsigned               nof_codeblocks)
+                                                                 unsigned                     nof_codeblocks,
+                                                                 bool                         is_new_data)
 {
-  return pool->reserve({}, id, nof_codeblocks);
+  return pool->get_pool().reserve({}, id, nof_codeblocks, is_new_data);
 }
 
-unique_rx_buffer
-MexFunction::retrieve_softbuffer(uint64_t key, const trx_buffer_identifier& id, const unsigned nof_codeblocks)
+unique_rx_buffer MexFunction::retrieve_softbuffer(uint64_t                     key,
+                                                  const trx_buffer_identifier& id,
+                                                  unsigned                     nof_codeblocks,
+                                                  bool                         is_new_data)
 {
   std::shared_ptr<memento> mem = storage.get_memento(key);
   if (!mem) {
@@ -72,7 +75,7 @@ MexFunction::retrieve_softbuffer(uint64_t key, const trx_buffer_identifier& id, 
   }
 
   auto             pusch_mem  = std::dynamic_pointer_cast<pusch_memento>(storage.get_memento(key));
-  unique_rx_buffer softbuffer = pusch_mem->retrieve_softbuffer(id, nof_codeblocks);
+  unique_rx_buffer softbuffer = pusch_mem->retrieve_softbuffer(id, nof_codeblocks, is_new_data);
   if (!softbuffer.is_valid()) {
     mex_abort(
         "Cannot retrieve softbuffer with key {}, buffer ID ({}) and nr. of codeblocks {}.", key, id, nof_codeblocks);
@@ -127,7 +130,7 @@ void MexFunction::method_new(ArgumentList outputs, ArgumentList inputs)
   Struct      softbuffer_conf      = in_struct[0];
   pool_config.max_codeblock_size   = softbuffer_conf["MaxCodeblockSize"][0];
   pool_config.nof_buffers          = softbuffer_conf["MaxSoftbuffers"][0];
-  pool_config.max_nof_codeblocks   = softbuffer_conf["MaxCodeblocks"][0];
+  pool_config.nof_codeblocks       = softbuffer_conf["MaxCodeblocks"][0];
   pool_config.expire_timeout_slots = softbuffer_conf["ExpireTimeoutSlots"][0];
 
   std::shared_ptr<memento> mem = std::make_shared<pusch_memento>(create_rx_buffer_pool(pool_config));
@@ -178,7 +181,7 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
 
   uint64_t key = static_cast<TypedArray<uint64_t>>(inputs[1])[0];
 
-  unique_rx_buffer    softbuffer = retrieve_softbuffer(key, buf_id, nof_codeblocks);
+  unique_rx_buffer    softbuffer = retrieve_softbuffer(key, buf_id, nof_codeblocks, cfg.new_data);
   TypedArray<uint8_t> out        = factory.createArray<uint8_t>({tbs_bytes.value(), 1});
   span<uint8_t>       rx_tb      = to_span(out);
 
@@ -227,7 +230,11 @@ void MexFunction::method_reset_crcs(ArgumentList outputs, ArgumentList inputs)
 
   uint64_t key = static_cast<TypedArray<uint64_t>>(inputs[1])[0];
 
-  unique_rx_buffer rm_buffer = retrieve_softbuffer(key, buf_id, nof_codeblocks);
+  // We reset the CRCs before new transmissions, not in between retransmissions.
+  bool is_new_data = true;
+
+  // Retrieve the softbuffer and reset its CRC flags.
+  unique_rx_buffer rm_buffer = retrieve_softbuffer(key, buf_id, nof_codeblocks, is_new_data);
   rm_buffer.get().reset_codeblocks_crc();
 }
 

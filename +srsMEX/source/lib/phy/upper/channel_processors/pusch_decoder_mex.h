@@ -1,6 +1,6 @@
 /*
  *
- * Copyright 2021-2023 Software Radio Systems Limited
+ * Copyright 2021-2024 Software Radio Systems Limited
  *
  * This file is part of srsRAN-matlab.
  *
@@ -50,7 +50,7 @@ class MexFunction : public srsran_mex_dispatcher
     /// The memento object consists of the pointer to the \c rx_buffer_pool used by the PUSCH decoder to store and
     /// combine LLRs from different retransmissions as well as segment data corresponding to decoded codeblocks that
     /// pass the CRC checksum.
-    explicit pusch_memento(std::unique_ptr<srsran::rx_buffer_pool> p) : pool(std::move(p)){};
+    explicit pusch_memento(std::unique_ptr<srsran::rx_buffer_pool_controller> p) : pool(std::move(p)){};
 
     /// \brief Gets a softbuffer from the softbuffer pool stored in the memento.
     ///
@@ -59,12 +59,15 @@ class MexFunction : public srsran_mex_dispatcher
     /// softbuffer or create a new one.
     /// \param[in] id              Softbuffer identifier (UE RNTI and HARQ process ID).
     /// \param[in] nof_codeblocks  Number of codeblocks forming the codeword (or, equivalently, the transport block).
+    /// \param[in] is_new_data     Boolean flag: true if the softbuffer is requested for a new transmission, false if
+    ///                            it is for a retransmission.
     /// \return A pointer to the identified softbuffer.
-    srsran::unique_rx_buffer retrieve_softbuffer(const srsran::trx_buffer_identifier& id, unsigned nof_codeblocks);
+    srsran::unique_rx_buffer
+    retrieve_softbuffer(const srsran::trx_buffer_identifier& id, unsigned nof_codeblocks, bool is_new_data);
 
   private:
     /// Pointer to the softbuffer pool stored in the memento.
-    std::unique_ptr<srsran::rx_buffer_pool> pool;
+    std::unique_ptr<srsran::rx_buffer_pool_controller> pool;
   };
 
 public:
@@ -92,9 +95,11 @@ private:
   /// \param[in] key             The PUSCH memento identifier.
   /// \param[in] id              The softbuffer identifier (UE RNTI and HARQ process ID).
   /// \param[in] nof_codeblocks  The number of codeblocks in the current codeword.
+  /// \param[in] is_new_data     Boolean flag: true if the softbuffer is requested for a new transmission, false if
+  ///                            it is for a retransmission.
   /// \return A pointer to the requested softbuffer from the softbuffer pool associated to the given memento identifier.
   srsran::unique_rx_buffer
-  retrieve_softbuffer(uint64_t key, const srsran::trx_buffer_identifier& id, unsigned nof_codeblocks);
+  retrieve_softbuffer(uint64_t key, const srsran::trx_buffer_identifier& id, unsigned nof_codeblocks, bool is_new_data);
 
   /// Checks that outputs/inputs arguments match the requirements of method_step().
   void check_step_outputs_inputs(matlab::mex::ArgumentList outputs, matlab::mex::ArgumentList inputs);
@@ -187,6 +192,8 @@ std::unique_ptr<srsran::pusch_decoder> create_pusch_decoder()
   pusch_decoder_factory_sw_config.decoder_factory   = ldpc_decoder_factory;
   pusch_decoder_factory_sw_config.dematcher_factory = ldpc_rate_dematcher_factory;
   pusch_decoder_factory_sw_config.segmenter_factory = segmenter_rx_factory;
+  pusch_decoder_factory_sw_config.nof_prb           = MAX_RB;
+  pusch_decoder_factory_sw_config.nof_layers        = pusch_constants::MAX_NOF_LAYERS;
   std::shared_ptr<pusch_decoder_factory> pusch_decoder_factory =
       create_pusch_decoder_factory_sw(pusch_decoder_factory_sw_config);
 

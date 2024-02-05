@@ -4,7 +4,7 @@
 %   formatted to match the 'file_vector<resource_grid_spy::entry_t>' structures
 %   used by the SRSRAN.
 
-%   Copyright 2021-2023 Software Radio Systems Limited
+%   Copyright 2021-2024 Software Radio Systems Limited
 %
 %   This file is part of srsRAN-matlab.
 %

@@ -11,7 +11,7 @@
 %   PRACHthresholds(FILENAME, FORMAT) only runs the simulations for the given
 %   PRACH format.
 
-%   Copyright 2021-2023 Software Radio Systems Limited
+%   Copyright 2021-2024 Software Radio Systems Limited
 %
 %   This file is part of srsRAN-matlab.
 %

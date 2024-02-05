@@ -4,7 +4,7 @@
 %   a bottom grid value POINTAOFFSET and an SSB offset SSBOFFSET. Note that
 %   SSBFIRSTSUBCARRIERINDEX is relative to POINTAOFFSET.
 
-%   Copyright 2021-2023 Software Radio Systems Limited
+%   Copyright 2021-2024 Software Radio Systems Limited
 %
 %   This file is part of srsRAN-matlab.
 %

@@ -1,6 +1,6 @@
 /*
  *
- * Copyright 2021-2023 Software Radio Systems Limited
+ * Copyright 2021-2024 Software Radio Systems Limited
  *
  * This file is part of srsRAN-matlab.
  *
@@ -26,7 +26,7 @@
 #include "srsran/phy/support/resource_grid_writer.h"
 #include "srsran/phy/upper/channel_processors/pusch/pusch_codeword_buffer.h"
 #include "srsran/phy/upper/channel_processors/pusch/pusch_demodulator_notifier.h"
-#include "srsran/ran/modulation_scheme.h"
+#include "srsran/ran/sch/modulation_scheme.h"
 
 using matlab::mex::ArgumentList;
 using namespace matlab::data;

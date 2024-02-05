@@ -33,7 +33,7 @@
 %
 %   See also matlab.unittest, nrUCIDecode.
 
-%   Copyright 2021-2023 Software Radio Systems Limited
+%   Copyright 2021-2024 Software Radio Systems Limited
 %
 %   This file is part of srsRAN-matlab.
 %
@@ -76,7 +76,7 @@ classdef srsShortBlockDetectorUnittest < srsTest.srsBlockUnittest
         %   the header file pointed by FILEID, which describes the test vectors.
 
             fprintf(fileID, '#include "srsran/support/file_vector.h"\n');
-            fprintf(fileID, '#include "srsran/ran/modulation_scheme.h"\n');
+            fprintf(fileID, '#include "srsran/ran/sch/modulation_scheme.h"\n');
             fprintf(fileID, '#include "srsran/phy/upper/log_likelihood_ratio.h"\n');
         end
 

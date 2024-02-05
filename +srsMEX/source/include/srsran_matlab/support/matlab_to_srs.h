@@ -1,6 +1,6 @@
 /*
  *
- * Copyright 2021-2023 Software Radio Systems Limited
+ * Copyright 2021-2024 Software Radio Systems Limited
  *
  * This file is part of srsRAN-matlab.
  *
@@ -24,10 +24,10 @@
 
 #include "srsran/phy/upper/dmrs_mapping.h"
 #include "srsran/ran/cyclic_prefix.h"
-#include "srsran/ran/ldpc_base_graph.h"
-#include "srsran/ran/modulation_scheme.h"
 #include "srsran/ran/prach/prach_format_type.h"
 #include "srsran/ran/prach/restricted_set_config.h"
+#include "srsran/ran/sch/ldpc_base_graph.h"
+#include "srsran/ran/sch/modulation_scheme.h"
 #include "srsran/ran/subcarrier_spacing.h"
 #include "srsran/support/error_handling.h"
 #include "srsran/support/srsran_assert.h"
