@@ -31,13 +31,17 @@
 %   testvectorGenerationCases - Generates a test vector according to the provided
 %                               parameters.
 %
+%   srsPUCCHProcessorFormat1Unittest Methods (Test, TestTags = {'testmex'}):
+%
+%   mexTest  - Testes the MEX-based implementation of the PUCCH Format 1 processor.
+%
 %   srsPUCCHProcessorFormat1Unittest Methods (Access = protected):
 %
 %   addTestIncludesToHeaderFile     - Adds include directives to the test header file.
 %   addTestDefinitionToHeaderFile   - Adds details (e.g., type/variable declarations)
 %                                     to the test header file.
 %
-%   See also matlab.unittest, nrPUCCHDMRS.
+%   See also matlab.unittest, nrPUCCHDMRS, nrPUCCHDecode, nrPUCCH1Config.
 
 %   Copyright 2021-2024 Software Radio Systems Limited
 %
@@ -230,6 +234,57 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
             testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);
         end % of function testvectorGenerationCases
     end % of methods (Test, TestTags = {'testvector'})
+
+    methods (Test, TestTags = {'testmex'})
+        function mexTest(testCase, numerology, intraSlotFreqHopping, SymbolAllocation, ackSize)
+        %mexTest Tests the mex wrapper of the srsRAN PUCCH processor for Format 1.
+        %   mexTest(testCase, numerology, intraSlotFreqHopping, SymbolAllocation, ackSize)
+        %   runs a short simulation with a PUCCH transmission specified by the given
+        %   numerology, frequency hopping, symbol allocation and ACK size.
+
+            import srsMEX.phy.srsPUCCHProcessor
+
+            [rxGrid, ack1, ack2, configuration] = generateSimData(numerology, intraSlotFreqHopping, SymbolAllocation, ackSize);
+
+            srspucch = srsPUCCHProcessor;
+
+            uci1 = srspucch(rxGrid, configuration.pucch1, configuration.carrier, NumHARQAck=ackSize);
+            uci2 = srspucch(rxGrid, configuration.pucch2, configuration.carrier, NumHARQAck=ackSize);
+
+            % Messages should be valid.
+            assertTrue(testCase, uci1.isValid, 'The first PUCCH is invalid.');
+            assertTrue(testCase, uci2.isValid, 'The second PUCCH is invalid.');
+
+            % SR fields should be empty.
+            assertEmpty(testCase, uci1.SRPayload, 'The first PUCCH has a nonempty SR field.');
+            assertEmpty(testCase, uci2.SRPayload, 'The second PUCCH has a nonempty SR field.');
+
+            % CSI Part1 and Part2 should be empty.
+            assertEmpty(testCase, uci1.CSI1Payload, 'The first PUCCH has a nonempty CSI Part 1 field.');
+            assertEmpty(testCase, uci2.CSI1Payload, 'The second PUCCH has a nonempty CSI Part 1 field.');
+            assertEmpty(testCase, uci1.CSI2Payload, 'The first PUCCH has a nonempty CSI Part 2 field.');
+            assertEmpty(testCase, uci2.CSI2Payload, 'The second PUCCH has a nonempty CSI Part 2 field.');
+
+            % ACKs should be of the given size.
+            assertLength(testCase, uci1.HARQAckPayload, ackSize, 'The first PUCCH has the wrong number of ACK bits.');
+            assertLength(testCase, uci2.HARQAckPayload, ackSize, 'The second PUCCH has the wrong number of ACK bits.');
+
+            % Check the ACK content.
+            assertEqual(testCase, uci1.HARQAckPayload, int8(ack1), 'Detection error in the first PUCCH.');
+            assertEqual(testCase, uci2.HARQAckPayload, int8(ack2), 'Detection error in the second PUCCH.');
+
+            % Alter the first PUCCH with a wrong initialy cyclic shift.
+            configuration.pucch1.InitialCyclicShift = mod(configuration.pucch1.InitialCyclicShift + 1, 12);
+            if (configuration.pucch1.InitialCyclicShift == configuration.pucch2.InitialCyclicShift)
+                configuration.pucch1.InitialCyclicShift = mod(configuration.pucch1.InitialCyclicShift + 1, 12);
+            end
+
+            % This should result in an invalid message.
+            uciWrong = srspucch(rxGrid, configuration.pucch1, configuration.carrier, NumHARQAck=ackSize);
+            assertFalse(testCase, uciWrong.isValid, 'The altered PUCCH should be invalid.');
+        end
+    end % of methods (Test, TestTags = {'testmex'})
+
 end % of classdef srsPUCCHProcessorFormat1Unittest
 
 %Generates simulation data (ACKS, Rx side resource grid, configurations).
