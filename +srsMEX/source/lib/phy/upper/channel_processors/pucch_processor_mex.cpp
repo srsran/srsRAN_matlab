@@ -61,13 +61,61 @@ TypedArray<uint8_t> MexFunction::fill_message_fields(span<const uint8_t> field)
   return factory.createArray({nof_bits, 1}, field.begin(), field.end());
 }
 
-void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
+static pucch_processor::format1_configuration populate_f1_configuration(const Struct& in_cfg)
 {
-  check_step_outputs_inputs(outputs, inputs);
+  // Create a PUCCH F1 configuration object.
+  pucch_processor::format1_configuration cfg = {};
 
-  StructArray  in_cfg_array = inputs[2];
-  const Struct in_cfg       = in_cfg_array[0];
+  cfg.context = srsran::nullopt;
 
+  // Set the slot point.
+  unsigned scs_kHz    = static_cast<unsigned>(in_cfg["SubcarrierSpacing"][0]);
+  unsigned slot_count = static_cast<unsigned>(in_cfg["NSlot"][0]);
+  cfg.slot            = {matlab_to_srs_subcarrier_spacing(scs_kHz), slot_count};
+
+  // Set the cyclic prefix.
+  const CharArray in_cp = in_cfg["CP"];
+  cfg.cp                = matlab_to_srs_cyclic_prefix(in_cp.toAscii());
+
+  // Set the port indices.
+  unsigned nof_ports = static_cast<unsigned>(in_cfg["NRxPorts"][0]);
+  cfg.ports.clear();
+  for (unsigned i_port = 0; i_port != nof_ports; ++i_port) {
+    cfg.ports.push_back(i_port);
+  }
+
+  // Set the BWP.
+  cfg.bwp_size_rb  = static_cast<unsigned>(in_cfg["NSizeBWP"][0]);
+  cfg.bwp_start_rb = static_cast<unsigned>(in_cfg["NStartBWP"][0]);
+
+  // Set the frequency allocation.
+  cfg.starting_prb   = static_cast<unsigned>(in_cfg["StartPRB"][0]);
+  cfg.second_hop_prb = srsran::nullopt;
+  if (!in_cfg["SecondHopStartPRB"].isEmpty()) {
+    cfg.second_hop_prb = static_cast<unsigned>(in_cfg["SecondHopStartPRB"][0]);
+  }
+
+  // Set the time allocation.
+  cfg.start_symbol_index = static_cast<unsigned>(in_cfg["StartSymbolIndex"][0]);
+  cfg.nof_symbols        = static_cast<unsigned>(in_cfg["NumOFDMSymbols"][0]);
+
+  // Set the scrambling identifier.
+  cfg.n_id = static_cast<unsigned>(in_cfg["NID"][0]);
+
+  // Set the lengths of UCI fields.
+  cfg.nof_harq_ack = static_cast<unsigned>(in_cfg["NumHARQAck"][0]);
+
+  // Set the initial cyclic shift.
+  cfg.initial_cyclic_shift = static_cast<unsigned>(in_cfg["InitialCyclicShift"][0]);
+
+  // Set the time domain orthogonal cyclic code.
+  cfg.time_domain_occ = static_cast<unsigned>(in_cfg["OCCI"][0]);
+
+  return cfg;
+}
+
+static pucch_processor::format2_configuration populate_f2_configuration(const Struct& in_cfg)
+{
   // Create a PUCCH F2 configuration object.
   pucch_processor::format2_configuration cfg = {};
 
@@ -120,10 +168,12 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
   cfg.nof_csi_part1 = static_cast<unsigned>(in_cfg["NumCSIPart1"][0]);
   cfg.nof_csi_part2 = static_cast<unsigned>(in_cfg["NumCSIPart2"][0]);
 
-  // Ensure the provided configuration is valid.
-  if (!validator->is_valid(cfg)) {
-    mex_abort("The provided PUCCH configuration is invalid.");
-  }
+  return cfg;
+}
+
+void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
+{
+  check_step_outputs_inputs(outputs, inputs);
 
   // Read the resource grid from inputs[1].
   std::unique_ptr<resource_grid> grid = read_resource_grid(inputs[1]);
@@ -131,16 +181,57 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
     mex_abort("Cannot create resource grid.");
   }
 
-  unsigned nof_grid_ports = grid->get_writer().get_nof_ports();
-  if (nof_ports != nof_grid_ports) {
-    mex_abort(
-        "Field NRxPorts in the configuration structure and the number of resource grid ports do not match: {} vs. {}.",
-        nof_ports,
-        nof_grid_ports);
-  }
+  // Read the configuration structure.
+  StructArray  in_cfg_array = inputs[2];
+  const Struct in_cfg       = in_cfg_array[0];
 
-  // Run the PUCCH processor.
-  pucch_processor_result result = processor->process(grid->get_reader(), cfg);
+  // Prepare result container.
+  pucch_processor_result result;
+
+  unsigned pucch_format = static_cast<unsigned>(in_cfg["Format"][0]);
+
+  if (pucch_format == 1) {
+    const pucch_processor::format1_configuration cfg = populate_f1_configuration(in_cfg);
+
+    // Ensure the provided configuration is valid.
+    if (!validator->is_valid(cfg)) {
+      mex_abort("The provided PUCCH configuration is invalid.");
+    }
+
+    unsigned nof_conf_grid_ports = cfg.ports.size();
+    unsigned nof_grid_ports      = grid->get_writer().get_nof_ports();
+    if (nof_conf_grid_ports != nof_grid_ports) {
+      mex_abort("Field NRxPorts in the configuration structure and the number of resource grid ports do not match: {} "
+                "vs. {}.",
+                nof_conf_grid_ports,
+                nof_grid_ports);
+    }
+
+    // Run the PUCCH processor.
+    result = processor->process(grid->get_reader(), cfg);
+
+  } else if (pucch_format == 2) {
+    const pucch_processor::format2_configuration cfg = populate_f2_configuration(in_cfg);
+
+    // Ensure the provided configuration is valid.
+    if (!validator->is_valid(cfg)) {
+      mex_abort("The provided PUCCH configuration is invalid.");
+    }
+
+    unsigned nof_conf_grid_ports = cfg.ports.size();
+    unsigned nof_grid_ports      = grid->get_writer().get_nof_ports();
+    if (nof_conf_grid_ports != nof_grid_ports) {
+      mex_abort("Field NRxPorts in the configuration structure and the number of resource grid ports do not match: {} "
+                "vs. {}.",
+                nof_conf_grid_ports,
+                nof_grid_ports);
+    }
+
+    // Run the PUCCH processor.
+    result = processor->process(grid->get_reader(), cfg);
+  } else {
+    mex_abort("Unsupported or unkown PUCCH Format {}", pucch_format);
+  }
 
   CharArray           status        = factory.createCharArray(srsran::to_string(result.message.get_status()));
   TypedArray<uint8_t> harq_ack_bits = fill_message_fields(result.message.get_harq_ack_bits());
