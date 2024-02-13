@@ -205,10 +205,22 @@ classdef srsSRSEstimatorUnittest < srsTest.srsBlockUnittest
             H = complex(nan(NumRxPorts, NumSRSPorts));
             for Nr = 1:NumRxPorts
                 for Nt = 1:NumSRSPorts
-                    H(Nr, Nt) = randn(1, 2) * [1; 1i] / sqrt(2);
+                    H(Nr, Nt) = exp(2i * pi * rand());
                     rxGrid(:, :, Nr) = rxGrid(:, :, Nr) + H(Nr, Nt) * txGrid(:, :, Nt);
                 end
             end
+
+            % Maximum time aligment that we expect in seconds.
+            MaxTimeAligment = 16 / (2048 * 1000 * carrier.SubcarrierSpacing);
+
+            % Select random time aligment.
+            TimeAligment = (2 * rand() - 1) * MaxTimeAligment;
+
+            % Create time aligment frequency shift.
+            FreqResponse = exp(-2i * pi * (0:NumSubcarriers - 1).' * TimeAligment * 1000 * carrier.SubcarrierSpacing);
+
+            % Apply frequency response in all the received grid.
+            rxGrid = rxGrid .* repmat(FreqResponse, 1, NumOfdmSymbols, NumRxPorts);
 
             % Prepare receive symbols indices. Combine all transmit ports.
             symbolIndices(:, 3) = 0;
@@ -257,7 +269,7 @@ classdef srsSRSEstimatorUnittest < srsTest.srsBlockUnittest
                 NumSRSPorts,... % nof_tx_ports
                 };
 
-            tAlignStr = sprintf('phy_time_unit::from_seconds(%f)', 0);
+            tAlignStr = sprintf('%.9f', TimeAligment);
 
             srsResourceCell = {...
                 NumSRSPortsStr,...    % nof_antenna_ports
