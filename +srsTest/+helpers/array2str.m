@@ -24,7 +24,7 @@ function outputString = array2str(inputArray)
     end
 
     if any(~isreal(inputArray))
-        fmt = 'cf_t(%f,%f)';
+        fmt = 'cf_t(%f, %f)';
         inputArray = reshape([real(inputArray).'; imag(inputArray).'], [], 1);
     elseif any(mod(inputArray,1) > 0)
         fmt = '%.3f';

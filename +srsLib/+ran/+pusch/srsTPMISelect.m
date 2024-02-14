@@ -1,13 +1,13 @@
 %srsTPMISelect Selects a transmission precoding matrix indicator for PUSCH transmissions.
 %
-%   INFO = srsTPMISelect(H) selects the best transmit precoding matrix
-%   indicators (TPMIs) for the given channel matrix H of size N-by-M, where
-%   N is the number of receive ports and M is the number of transmit ports.
-%   The output INFO is a structure array of size min(N, M) providing, for
-%   each possible transmission layer, the best TPMI and the resulting
-%   estimated SINR.
+%   INFO = srsTPMISelect(H, NoiseVar) selects the best transmit precoding
+%   matrix indicators (TPMIs) for the given channel matrix H and noise
+%   variance NoiseVar. H is an N-by-M array, where N is the number of
+%   receive ports and M is the number of transmit ports. The output INFO is
+%   a structure array of size min(N, M) providing, for each possible
+%   transmission layer, the best TPMI and the resulting estimated SINR.
 %
-%   See also nrPDCCHSpace.
+%   See also nrPUSCHCodebook.
 
 %   Copyright 2021-2024 Software Radio Systems Limited
 %
@@ -32,8 +32,8 @@ NumTxPorts = size(H, 2);
 % Extract number of receive ports.
 NumRxPorts = size(H, 1);
 
-% The maximum supported of layers is the minimum of the number of transmit
-% and receive ports.
+% The maximum number of supported layers is the minimum between the number
+% of transmit and receive ports.
 MaxNumLayers = min(NumRxPorts, NumTxPorts);
 
 % Initialize function outputs.
@@ -72,21 +72,21 @@ end
 
 function N = getCodebookSize(NumPorts, NumLayers)
 
-if (NumPorts == 2) && (NumLayers == 1)
-    N = 6;
-elseif (NumPorts == 4) && (NumLayers == 1)
-    N = 28;
-elseif (NumPorts == 2) && (NumLayers == 2)
-    N = 2;
-elseif (NumPorts == 4) && (NumLayers == 2)
-    N = 22;
-elseif (NumPorts == 4) && (NumLayers == 3)
-    N = 7;
-elseif (NumPorts == 4) && (NumLayers == 4)
-    N = 4;
-else
-    error('Invalid number of ports (i.e., %d) and layers (i.e., %d)', NumPorts, NumLayers);
-end
+    if (NumPorts == 2) && (NumLayers == 1)
+        N = 6;
+    elseif (NumPorts == 4) && (NumLayers == 1)
+        N = 28;
+    elseif (NumPorts == 2) && (NumLayers == 2)
+        N = 2;
+    elseif (NumPorts == 4) && (NumLayers == 2)
+        N = 22;
+    elseif (NumPorts == 4) && (NumLayers == 3)
+        N = 7;
+    elseif (NumPorts == 4) && (NumLayers == 4)
+        N = 4;
+    else
+        error('Invalid number of ports (i.e., %d) and layers (i.e., %d)', NumPorts, NumLayers);
+    end
 
 end
 
