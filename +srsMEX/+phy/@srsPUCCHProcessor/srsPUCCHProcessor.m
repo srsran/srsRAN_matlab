@@ -89,6 +89,9 @@ classdef srsPUCCHProcessor < matlab.System
             nid = carrierConfig.NCellID;
 
             if isa(pucchConfig, 'nrPUCCH1Config')
+                if ~isempty(pucchConfig.HoppingID)
+                    nid = pucchConfig.HoppingID;
+                end
                 mexConfig = struct(...
                     'Format', 1, ...
                     'SubcarrierSpacing', carrierConfig.SubcarrierSpacing, ...
