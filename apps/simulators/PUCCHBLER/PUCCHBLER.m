@@ -1,4 +1,4 @@
-%PUCCHBLER PUCCH block error rate simulator.
+%PUCCHBLER PUCCH performance simulator.
 %   PUCCHSIM = PUCCHBLER creates a PUCCH simulator object, PUCCHSIM. This object
 %   simulates a PUCCH transmission according to the specified setup (see list of
 %   PUCCHBLER properties below) and measures the detection probability or the
@@ -46,7 +46,7 @@
 %
 %   PUCCHBLER properties (all nontunable, unless otherwise specified):
 %
-%   NTxAnts                      - Number of transmit antennas.
+%   NTxAnts                      - Number of transmit antennas (currently fixed to 1).
 %   NRxAnts                      - Number of receive antennas.
 %   PerfectChannelEstimator      - Perfect channel estimation flag.
 %   DisplaySimulationInformation - Flag for displaying simulation information.
@@ -56,17 +56,21 @@
 %   PRBSet                       - PUCCH allocated PRBs (specify as an array, e.g. 0:51).
 %   SymbolAllocation             - PUCCH OFDM symbol allocation.
 %   RNTI                         - Radio network temporary identifier (0...65535).
-%   PUCCHFormat                  - PUCCH format (2, 3).
-%   Modulation                   - Modulation scheme (inactive if "PUCCHFormat == 2").
-%   NumUCIBits                   - Number of UCI information bits.
+%   PUCCHFormat                  - PUCCH format (1, 2, 3).
+%   FrequencyHopping             - Frequency hopping ('intraSlot', 'interSlot', 'either')
+%   Modulation                   - Modulation scheme (inactive if "PUCCHFormat ~= 3").
+%   NumACKBits                   - Number of HARQ-ACK bits.
+%   NumSRBits                    - Number of SR bits.
+%   NumCSI1Bits                  - Number of CSI Part 1 bits.
+%   NumCSI2Bits                  - Number of CSI Part 2 bits.
 %   DelayProfile                 - Channel delay profile ('AWGN'(no delay, no Doppler),
 %                                  'TDL-C'(rural scenario), 'TDLC300' (simplified rural scenario)).
 %   DelaySpread                  - Delay spread in seconds (TDL-C delay profile only).
-%   MaximumDopplerShift          - Maximum Doppler shift in hertz (TDL-C and TDLC300 delay profile only)
-%   ImplementationType           - PUCCH implementation type ('matlab' only).
+%   MaximumDopplerShift          - Maximum Doppler shift in hertz (TDL-C and TDLC300 delay profile only).
+%   ImplementationType           - PUCCH implementation type ('matlab', 'srs' or 'both').
 %   TestType                     - Test type ('Detection', 'False Alarm').
 %   QuickSimulation              - Quick-simulation flag: set to true to stop
-%                                  each point after 100 failed transport blocks (tunable).
+%                                  each point after 100 errors (tunable).
 %
 %   When the simulation is over, the object allows access to the following
 %   results properties (depending on TestType).
@@ -81,13 +85,19 @@
 %   FalseBlocksSRSCtr            - Counter of falsely detected UCI blocks (PUCCH Format 2 or 3, SRS case).
 %   FalseDetectionRateMATLAB     - False detection rate of UCI blocks (PUCCH Format 2 or 3, MATLAB case).
 %   FalseDetectionRateSRS        - False detection rate of UCI blocks (PUCCH Format 2 or 3, SRS case).
-%   TransmittedACKsMATLABCtr     - Counter of tranmsitted ACK bits (PUCCH Format 1, MATLAB case).
-%   TransmittedNACKsMATLABCtr    - Counter of transmitted NACKs (or ACK "occasions" in 'False Alarm' tests - PUCCH Format 1, MATLAB case).
+%   TransmittedACKsCtr           - Counter of tranmsitted ACK bits (PUCCH Format 1).
+%   TransmittedNACKsCtr          - Counter of transmitted NACKs (or ACK "occasions" in 'False Alarm' tests -
+%                                  PUCCH Format 1).
 %   MissedACKsMATLABCtr          - Counter of missed ACK bits (PUCCH Format 1, MATLAB case).
+%   MissedACKsSRSCtr             - Counter of missed ACK bits (PUCCH Format 1, SRS case).
 %   FalseACKsMATLABCtr           - Counter of false ACK bits (PUCCH Format 1, MATLAB case).
+%   FalseACKsSRSCtr              - Counter of false ACK bits (PUCCH Format 1, SRS case).
 %   FalseACKDetectionRateMATLAB  - False ACK detection rate (PUCCH Format 1, MATLAB case).
+%   FalseACKDetectionRateSRS     - False ACK detection rate (PUCCH Format 1, SRS case).
 %   NACK2ACKDetectionRateMATLAB  - NACK-to-ACK detection rate (PUCCH Format 1, MATLAB case).
+%   NACK2ACKDetectionRateSRS     - NACK-to-ACK detection rate (PUCCH Format 1, SRS case).
 %   ACKDetectionRateMATLAB       - ACK Detection rate (PUCCH Format 1, MATLAB case).
+%   ACKDetectionRateSRS          - ACK Detection rate (PUCCH Format 1, SRS case).
 %
 %   Remark: The simulation loop is heavily based on the <a href="https://www.mathworks.com/help/5g/ug/nr-pucch-block-error-rate.html">NR PUCCH Block Error Rate</a> MATLAB example by MathWorks.
 
@@ -149,11 +159,11 @@ classdef PUCCHBLER < matlab.System
         NumCSI1Bits double {mustBeInteger, mustBeInRange(NumCSI1Bits, 0, 1706)} = 0
         %Number of CSI Part 2 bits.
         NumCSI2Bits double {mustBeInteger, mustBeInRange(NumCSI2Bits, 0, 1706)} = 0
-        %Channel delay profile ('AWGN'(no delay), 'TDL-A'(Indoor hotspot model)).
+        %Channel delay profile ('AWGN'(no delay), 'TDL-C'(rural scenario), 'TDLC300' (simplified rural scenario)).
         DelayProfile (1, :) char {mustBeMember(DelayProfile, {'AWGN', 'TDL-C', 'TDLC300'})} = 'AWGN'
-        %TDL-A delay profile only: Delay spread in seconds.
+        %Delay spread in seconds (TDL-C delay profile only).
         DelaySpread (1, 1) double {mustBeReal, mustBeNonnegative} = 300e-9
-        %TDL-A delay profile only: Maximum Doppler shift in hertz.
+        %Maximum Doppler shift in hertz (TDL-C and TDLC300 delay profile only).
         MaximumDopplerShift (1, 1) double {mustBeReal, mustBeNonnegative} = 100
         %PUCCH implementation type ('matlab', 'srs', 'both').
         ImplementationType (1, :) char {mustBeMember(ImplementationType, {'matlab', 'srs', 'both'})} = 'matlab'
@@ -165,7 +175,7 @@ classdef PUCCHBLER < matlab.System
     properties % Tunable
         %Flag for displaying simulation information.
         DisplaySimulationInformation (1, 1) logical = false
-        %Quick-simulation flag: set to true to stop each point after 100 failed transport blocks.
+        %Quick-simulation flag: set to true to stop each point after 100 errors.
         QuickSimulation (1, 1) logical = true
     end % of properties Tunable
 
@@ -183,33 +193,46 @@ classdef PUCCHBLER < matlab.System
         %Counter of falsely detected UCI blocks (SRS case).
         FalseBlocksSRSCtr = []
         %Counter of tranmsitted ACK bits.
-        TransmittedACKsMATLABCtr = []
+        TransmittedACKsCtr = []
         %Counter of transmitted NACKs (or ACK "occasions" in 'False Alarm' tests).
-        TransmittedNACKsMATLABCtr = []
+        TransmittedNACKsCtr = []
         %Counter of missed ACK bits (MATLAB case).
         MissedACKsMATLABCtr = []
+        %Counter of missed ACK bits (SRS case).
+        MissedACKsSRSCtr = []
         %Counter of false ACK bits (MATLAB case).
         FalseACKsMATLABCtr = []
+        %Counter of false ACK bits (SRS case).
+        FalseACKsSRSCtr = []
     end % of properties (SetAccess = private)
 
     properties (Dependent)
-        %UCI block error rate (MATLAB case).
+        %UCI block error rate (for PUCCH F2/F3, MATLAB case).
         BlockErrorRateMATLAB
-        %UCI block error rate (SRS case).
+        %UCI block error rate (for PUCCH F2/F3, SRS case).
         BlockErrorRateSRS
-        %False detection rate of UCI blocks (MATLAB case).
+        %False detection rate of UCI blocks (for PUCCH F2/F3, MATLAB case).
         FalseDetectionRateMATLAB
-        %False detection rate of UCI blocks (SRS case).
+        %False detection rate of UCI blocks (for PUCCH F2/F3, SRS case).
         FalseDetectionRateSRS
         %False ACK detection rate (for PUCCH F1, MATLAB case).
         %   Probability of detecting an ACK when the input is only noise (or DTX).
         FalseACKDetectionRateMATLAB
+        %False ACK detection rate (for PUCCH F1, SRS case).
+        %   Probability of detecting an ACK when the input is only noise (or DTX).
+        FalseACKDetectionRateSRS
         %NACK-to-ACK detection rate (for PUCCH F1, MATLAB case).
         %   Probability of detecting an ACK when a NACK is transmitted.
         NACK2ACKDetectionRateMATLAB
+        %NACK-to-ACK detection rate (for PUCCH F1, SRS case).
+        %   Probability of detecting an ACK when a NACK is transmitted.
+        NACK2ACKDetectionRateSRS
         %ACK Detection rate (for PUCCH F1, MATLAB case).
         %   Probability of detecting an ACK when the ACK is transmitted.
         ACKDetectionRateMATLAB
+        %ACK Detection rate (for PUCCH F1, SRS case).
+        %   Probability of detecting an ACK when the ACK is transmitted.
+        ACKDetectionRateSRS
     end % of properties (Dependable)
 
     properties (Access = private, Hidden)
@@ -221,6 +244,14 @@ classdef PUCCHBLER < matlab.System
         PUCCH
         %Channel system object.
         Channel
+        %Handle to a function for updating MATLAB stats.
+        updateStats
+        %Handle to a function for updating SRS stats.
+        updateStatsSRS
+        %Handle to a function for printing MATLAB simulation info.
+        printMessages
+        %Handle to a function for printing SRS simulation info.
+        printMessagesSRS
     end % of properties (Access = private, Hidden)
 
     properties (Access = private, Dependent, Hidden)
@@ -276,8 +307,8 @@ classdef PUCCHBLER < matlab.System
         end
 
         function checkImplementationandFormat(obj)
-            if (~strcmp(obj.ImplementationType, 'matlab') && (obj.PUCCHFormat ~= 2))
-                error('PUCCH formats other than Format2 only work with ImplementationType=''matlab''.');
+            if (~strcmp(obj.ImplementationType, 'matlab') && (obj.PUCCHFormat > 2))
+                error('PUCCH formats other than Format1 and Format2 only work with ImplementationType=''matlab''.');
             end
         end
 
@@ -383,7 +414,18 @@ classdef PUCCHBLER < matlab.System
                 fdr = [];
                 return
             end
-            fdr = obj.FalseACKsMATLABCtr ./ obj.TransmittedNACKsMATLABCtr;
+            fdr = obj.FalseACKsMATLABCtr ./ obj.TransmittedNACKsCtr;
+        end
+
+        function fdr = get.FalseACKDetectionRateSRS(obj)
+            if obj.isDetectionTest
+                warning('off', 'backtrace');
+                warning('The FalseACKDetectionRateSRS property is inactive when TestType == ''Detection''.');
+                warning('on', 'backtrace');
+                fdr = [];
+                return
+            end
+            fdr = obj.FalseACKsSRSCtr ./ obj.TransmittedNACKsCtr;
         end
 
         function n2a = get.NACK2ACKDetectionRateMATLAB(obj)
@@ -394,7 +436,18 @@ classdef PUCCHBLER < matlab.System
                 n2a = [];
                 return
             end
-            n2a = obj.FalseACKsMATLABCtr ./ obj.TransmittedNACKsMATLABCtr;
+            n2a = obj.FalseACKsMATLABCtr ./ obj.TransmittedNACKsCtr;
+        end
+
+        function n2a = get.NACK2ACKDetectionRateSRS(obj)
+            if ~obj.isDetectionTest
+                warning('off', 'backtrace');
+                warning('The NACK2ACKDetectionRateSRS property is inactive when TestType == ''False Alarm''.');
+                warning('on', 'backtrace');
+                n2a = [];
+                return
+            end
+            n2a = obj.FalseACKsSRSCtr ./ obj.TransmittedNACKsCtr;
         end
 
         function ackd = get.ACKDetectionRateMATLAB(obj)
@@ -405,9 +458,19 @@ classdef PUCCHBLER < matlab.System
                 ackd = [];
                 return
             end
-            ackd = 1 - obj.MissedACKsMATLABCtr ./ obj.TransmittedACKsMATLABCtr;
+            ackd = 1 - obj.MissedACKsMATLABCtr ./ obj.TransmittedACKsCtr;
         end
 
+        function ackd = get.ACKDetectionRateSRS(obj)
+            if ~obj.isDetectionTest
+                warning('off', 'backtrace');
+                warning('The ACKDetectionRateSRS property is inactive when TestType == ''False Alarm''.');
+                warning('on', 'backtrace');
+                ackd = [];
+                return
+            end
+            ackd = 1 - obj.MissedACKsSRSCtr ./ obj.TransmittedACKsCtr;
+        end
 
         function plot(obj)
         %Display the measured throughput and BLER.
@@ -417,41 +480,12 @@ classdef PUCCHBLER < matlab.System
                 return;
             end
 
-            implementationType = obj.ImplementationType;
-
-            plotMATLAB = (strcmp(implementationType, 'matlab') || strcmp(implementationType, 'both'));
-            plotSRS = (strcmp(implementationType, 'srs') || strcmp(implementationType, 'both'));
-
-            titleString = sprintf('PUCCH F%d / SCS=%dkHz / %d UCI bits', obj.PUCCHFormat, ...
-                obj.SubcarrierSpacing, obj.NumACKBits + obj.NumSRBits + obj.NumCSI1Bits + obj.NumCSI2Bits);
-            legendstrings = {};
-
-            if obj.isDetectionTest
-                ydataMATLAB = obj.MissedBlocksMATLABCtr;
-                ydataSRS = obj.MissedBlocksSRSCtr;
-                yLab = 'BLER';
+            if (obj.PUCCHFormat == 1)
+                plotF1(obj);
             else
-                ydataMATLAB = obj.FalseBlocksMATLABCtr;
-                ydataSRS = obj.FalseBlocksSRSCtr;
-                yLab = 'False Det. Rate';
+                plotF2(obj);
             end
 
-            figure;
-            set(gca, "YScale", "log")
-            if plotMATLAB
-                semilogy(obj.SNRrange, ydataMATLAB ./ obj.TotalBlocksCtr, 'o-.', ...
-                    'LineWidth', 1)
-                legendstrings{end + 1} = 'MATLAB';
-            end
-            if plotSRS
-                hold on;
-                semilogy(obj.SNRrange, ydataSRS ./ obj.TotalBlocksCtr, '^-.', ...
-                    'LineWidth', 1, 'Color', [0.8500 0.3250 0.0980])
-                legendstrings{end + 1} = 'SRS';
-                hold off;
-            end
-            xlabel('SNR (dB)'); ylabel(yLab); grid on; legend(legendstrings);
-            title(titleString);
         end % of function plot()
 
     end % of methods public
@@ -527,6 +561,20 @@ classdef PUCCHBLER < matlab.System
             end
 
             obj.Channel = channel;
+
+            % Set helper function handles.
+            if (obj.PUCCHFormat == 1)
+                obj.updateStats = @updateStatsF1;
+                obj.updateStatsSRS = @updateStatsSRSF1;
+                obj.printMessages = @printMessagesF1;
+                obj.printMessagesSRS = @printMessagesSRSF1;
+            else
+                obj.updateStats = @updateStatsF2;
+                obj.updateStatsSRS = @updateStatsSRSF2;
+                obj.printMessages = @printMessagesF2;
+                obj.printMessagesSRS = @printMessagesSRSF2;
+            end
+
         end % function setupImpl(obj)
 
         function validatePropertiesImpl(obj)
@@ -584,13 +632,21 @@ classdef PUCCHBLER < matlab.System
 
             totalBlocks = zeros(length(SNRIn), 1);
             if (obj.PUCCHFormat == 1)
-                missedACK = zeros(numel(SNRIn), 1);
-                falseACK = zeros(numel(SNRIn), 1);
-                nACKs = zeros(numel(SNRIn), 1);
-                nNACKs = zeros(numel(SNRIn), 1);
+                stats = struct(...
+                    'missedACK', zeros(numel(SNRIn), 1), ...
+                    'falseACK', zeros(numel(SNRIn), 1), ...
+                    'nACKs', zeros(numel(SNRIn), 1), ...
+                    'nNACKs', zeros(numel(SNRIn), 1), ...
+                    'missedACKSRS', zeros(numel(SNRIn), 1), ...
+                    'falseACKSRS', zeros(numel(SNRIn), 1), ...
+                    'nACKsSRS', zeros(numel(SNRIn), 1), ...
+                    'nNACKsSRS', zeros(numel(SNRIn), 1) ...
+                    );
             else
-                blerUCI = zeros(numel(SNRIn), 1);
-                blerUCIsrs = zeros(numel(SNRIn), 1);
+                stats = struct(...
+                    'blerUCI', zeros(numel(SNRIn), 1), ...
+                    'blerUCIsrs', zeros(numel(SNRIn), 1) ...
+                );
             end
 
             for snrIdx = 1:numel(SNRIn)
@@ -730,42 +786,10 @@ classdef PUCCHBLER < matlab.System
                         % Perform equalization.
                         pucchEq = nrEqualizeMMSE(pucchRx, pucchHest, noiseEst);
 
-                        % Decode PUCCH symbols. For Format1, uciLLRS are hard, not soft, bits.
-                        uciLLRs = nrPUCCHDecode(carrier, pucch, ouci, pucchEq, noiseEst);
+                        % Decode PUCCH symbols. uciRx are hard bits for PUCCH F1 and soft bits for PUCCH F2.
+                        uciRx = nrPUCCHDecode(carrier, pucch, ouci, pucchEq, noiseEst);
 
-                        if isDetectTest
-                            if (obj.PUCCHFormat == 1)
-                                % If MATLAB's PUCCH decoder was able to detect a PUCCH and
-                                % uciLLRs contains the resulting bits.
-                                if ~isempty(uciLLRs{1})
-                                    % NACK to ACK.
-                                    falseACK(snrIdx) = falseACK(snrIdx) + sum(~uci & uciLLRs{1});
-                                    nNACKs(snrIdx) = nNACKs(snrIdx) + sum(~uci);
-                                    % Missed ACK.
-                                    missedACK(snrIdx) = missedACK(snrIdx) + sum(uci & ~uciLLRs{1});
-                                    nACKs(snrIdx) = nACKs(snrIdx) + sum(uci);
-                                else
-                                    % Missed ACK. Here, uciLLRs is empty (MATLAB's PUCCH decoder failed
-                                    % to detect) and all ACKs are lost.
-                                    missedACK(snrIdx) = missedACK(snrIdx) + sum(uci);
-                                    nACKs(snrIdx) = nACKs(snrIdx) + sum(uci);
-                                end
-                            else
-                                % Decode UCI.
-                                decucibits = nrUCIDecode(uciLLRs{1}, ouci);
-
-                                % Store values to calculate BLER.
-                                blerUCI(snrIdx) = blerUCI(snrIdx) + (~isequal(decucibits, uci));
-                            end
-                        else % false alarm test
-                            if (obj.PUCCHFormat == 1)
-                                % False ACK.
-                                falseACK(snrIdx) = falseACK(snrIdx) + sum(uciLLRs{1});
-                                nNACKs(snrIdx) = nNACKs(snrIdx) + obj.NumACKBits;
-                            else
-                                blerUCI(snrIdx) = blerUCI(snrIdx) + (~isempty(uciLLRs{1}));
-                            end
-                        end % if isDetectTest
+                        stats = obj.updateStats(stats, uci, uciRx, ouci, obj.NumACKBits, isDetectTest, snrIdx);
                     end % if useMATLABpucch
 
                     if useSRSpucch
@@ -775,20 +799,17 @@ classdef PUCCHBLER < matlab.System
                             NumCSIPart1=obj.NumCSI1Bits, ...
                             NumCSIPart2=obj.NumCSI2Bits);
 
-                        if isDetectTest
-                            decucibitssrs = [msg.HARQAckPayload; msg.SRPayload; msg.CSI1Payload; msg.CSI2Payload];
-                            blerUCIsrs(snrIdx) = blerUCIsrs(snrIdx) + (~(isequal(decucibitssrs, uci)));
-                        else
-                            blerUCIsrs(snrIdx) = blerUCIsrs(snrIdx) + msg.isValid;
-                        end
+                            stats = obj.updateStatsSRS(stats, uci, msg, isDetectTest, snrIdx);
                     end % if useSRSpucch
 
                     totalBlocks(snrIdx) = totalBlocks(snrIdx) + 1;
 
                     if (obj.PUCCHFormat == 1)
-                        isSimOver = (falseACK(snrIdx) >= 100) && (~isDetectTest || (isDetectTest && (missedACK(snrIdx) >= 100)));
+                        isSimOverMATLAB = (stats.falseACK(snrIdx) >= 100) && (~isDetectTest || (isDetectTest && (stats.missedACK(snrIdx) >= 100)));
+                        isSimOverSRS = (stats.falseACKSRS(snrIdx) >= 100) && (~isDetectTest || (isDetectTest && (stats.missedACKSRS(snrIdx) >= 100)));
+                        isSimOver = isSimOverMATLAB && isSimOverSRS;
                     else
-                        isSimOver = (~useMATLABpucch || (blerUCI(snrIdx) >= 100)) && (~useSRSpucch || (blerUCIsrs(snrIdx) >= 100));
+                        isSimOver = (~useMATLABpucch || (stats.blerUCI(snrIdx) >= 100)) && (~useSRSpucch || (stats.blerUCIsrs(snrIdx) >= 100));
                     end
 
                     % To speed the simulation up, we stop after 100 missed transport blocks.
@@ -800,32 +821,11 @@ classdef PUCCHBLER < matlab.System
                 % Display results dynamically.
                 usedFrames = round((nslot + 1) / carrier.SlotsPerFrame);
                 if displaySimulationInformation == 1
-                    if (obj.PUCCHFormat == 1)
-                        if isDetectTest
-                            fprintf(['PUCCH Format 1 - NACK to ACK rate for %d frame(s) at ', ...
-                                'SNR %.1f dB: %g\n'], usedFrames, SNRIn(snrIdx), falseACK(snrIdx)/nNACKs(snrIdx));
-                            fprintf(['PUCCH Format 1 - ACK missed detection rate for %d frame(s) at ', ...
-                                'SNR %.1f dB: %g\n'], usedFrames, SNRIn(snrIdx), missedACK(snrIdx)/nACKs(snrIdx));
-                        else
-                            fprintf(['PUCCH Format 1 - false ACK detection rate for %d frame(s) at ', ...
-                                'SNR %.1f dB: %g\n'], usedFrames, SNRIn(snrIdx), falseACK(snrIdx)/nNACKs(snrIdx));
-                        end
-                    else
-                        if isDetectTest
-                            message = 'UCI BLER of PUCCH Format ';
-                        else
-                            message = 'UCI false detection rate of PUCCH Format ';
-                        end
-
-                        if useMATLABpucch
-                            fprintf([message num2str(obj.PUCCHFormat) ' for ' num2str(usedFrames) ...
-                                ' frame(s) at SNR ' num2str(SNRIn(snrIdx)) ' dB: ' num2str(blerUCI(snrIdx)/totalBlocks(snrIdx)) '\n'])
-                        end
-                        if useSRSpucch
-                            fprintf('SRS - ');
-                            fprintf([message num2str(obj.PUCCHFormat) ' for ' num2str(usedFrames) ...
-                                ' frame(s) at SNR ' num2str(SNRIn(snrIdx)) ' dB: ' num2str(blerUCIsrs(snrIdx)/totalBlocks(snrIdx)) '\n'])
-                        end
+                    if useMATLABpucch
+                        obj.printMessages(stats, usedFrames, totalBlocks, SNRIn, isDetectTest, snrIdx);
+                    end
+                    if useSRSpucch
+                        obj.printMessagesSRS(stats, usedFrames, totalBlocks, SNRIn, isDetectTest, snrIdx);
                     end
                 end % of if displaySimulationInformation == 1
             end % of for snrIdx = 1:numel(snrIn)
@@ -836,21 +836,23 @@ classdef PUCCHBLER < matlab.System
             [obj.SNRrange, sortedIdx] = sort([obj.SNRrange SNRIn]);
 
             if (obj.PUCCHFormat == 1)
-                obj.TransmittedNACKsMATLABCtr = joinArrays(obj.TransmittedNACKsMATLABCtr, nNACKs, repeatedIdx, sortedIdx);
-                obj.FalseACKsMATLABCtr = joinArrays(obj.FalseACKsMATLABCtr, falseACK, repeatedIdx, sortedIdx);
+                obj.TransmittedNACKsCtr = joinArrays(obj.TransmittedNACKsCtr, stats.nNACKs, repeatedIdx, sortedIdx);
+                obj.FalseACKsMATLABCtr = joinArrays(obj.FalseACKsMATLABCtr, stats.falseACK, repeatedIdx, sortedIdx);
+                obj.FalseACKsSRSCtr = joinArrays(obj.FalseACKsSRSCtr, stats.falseACKSRS, repeatedIdx, sortedIdx);
 
                 if isDetectTest
-                    obj.TransmittedACKsMATLABCtr = joinArrays(obj.TransmittedACKsMATLABCtr, nACKs, repeatedIdx, sortedIdx);
-                    obj.MissedACKsMATLABCtr = joinArrays(obj.MissedACKsMATLABCtr, missedACK, repeatedIdx, sortedIdx);
+                    obj.TransmittedACKsCtr = joinArrays(obj.TransmittedACKsCtr, stats.nACKs, repeatedIdx, sortedIdx);
+                    obj.MissedACKsMATLABCtr = joinArrays(obj.MissedACKsMATLABCtr, stats.missedACK, repeatedIdx, sortedIdx);
+                    obj.MissedACKsSRSCtr = joinArrays(obj.MissedACKsSRSCtr, stats.missedACKSRS, repeatedIdx, sortedIdx);
                 end
             else
                 obj.TotalBlocksCtr = joinArrays(obj.TotalBlocksCtr, totalBlocks, repeatedIdx, sortedIdx);
                 if isDetectTest
-                    obj.MissedBlocksMATLABCtr = joinArrays(obj.MissedBlocksMATLABCtr, blerUCI, repeatedIdx, sortedIdx);
-                    obj.MissedBlocksSRSCtr = joinArrays(obj.MissedBlocksSRSCtr, blerUCIsrs, repeatedIdx, sortedIdx);
+                    obj.MissedBlocksMATLABCtr = joinArrays(obj.MissedBlocksMATLABCtr, stats.blerUCI, repeatedIdx, sortedIdx);
+                    obj.MissedBlocksSRSCtr = joinArrays(obj.MissedBlocksSRSCtr, stats.blerUCIsrs, repeatedIdx, sortedIdx);
                 else
-                    obj.FalseBlocksMATLABCtr = joinArrays(obj.FalseBlocksMATLABCtr, blerUCI, repeatedIdx, sortedIdx);
-                    obj.FalseBlocksSRSCtr = joinArrays(obj.FalseBlocksSRSCtr, blerUCIsrs, repeatedIdx, sortedIdx);
+                    obj.FalseBlocksMATLABCtr = joinArrays(obj.FalseBlocksMATLABCtr, stats.blerUCI, repeatedIdx, sortedIdx);
+                    obj.FalseBlocksSRSCtr = joinArrays(obj.FalseBlocksSRSCtr, stats.blerUCIsrs, repeatedIdx, sortedIdx);
                 end
             end
 
@@ -867,9 +869,16 @@ classdef PUCCHBLER < matlab.System
             obj.MissedBlocksSRSCtr = [];
             obj.FalseBlocksMATLABCtr = [];
             obj.FalseBlocksSRSCtr = [];
+            obj.TransmittedACKsCtr = [];
+            obj.TransmittedNACKsCtr = [];
+            obj.MissedACKsMATLABCtr = [];
+            obj.MissedACKsSRSCtr = [];
+            obj.FalseACKsMATLABCtr = [];
+            obj.FalseACKsSRSCtr = [];
         end % of function resetImpl(obj)
 
         function releaseImpl(obj)
+            obj.resetImpl();
             % Release internal system objects.
             release(obj.Channel);
         end % of function releaseImpl(obj)
@@ -879,6 +888,8 @@ classdef PUCCHBLER < matlab.System
             switch property
                 case 'DelaySpread'
                     flag = strcmp(obj.DelayProfile, 'AWGN') || strcmp(obj.DelayProfile, 'TDLC300');
+                case 'MaximumDopplerShift'
+                    flag = strcmp(obj.DelayProfile, 'AWGN');
                 case 'Modulation'
                     flag = ((obj.PUCCHFormat == 1) || (obj.PUCCHFormat == 2));
                 case {'SNRrange', 'TotalBlocksCtr'}
@@ -899,7 +910,7 @@ classdef PUCCHBLER < matlab.System
                     flag = isempty(obj.SNRrange) || isFormat1 || obj.isDetectionTest || strcmp(obj.ImplementationType, 'srs');
                 case 'FalseDetectionRateSRS'
                     flag = isempty(obj.SNRrange) || isFormat1 || obj.isDetectionTest || strcmp(obj.ImplementationType, 'matlab');
-                case 'TransmittedACKsMATLABCtr'
+                case 'TransmittedACKsCtr'
                     flag = isempty(obj.SNRrange) || ~isFormat1 || ~obj.isDetectionTest;
                 case 'TransmittedNACKsCtr'
                     flag = isempty(obj.SNRrange) || ~isFormat1;
@@ -909,6 +920,12 @@ classdef PUCCHBLER < matlab.System
                     flag = isempty(obj.SNRrange) || ~isFormat1 || ~obj.isDetectionTest || strcmp(obj.ImplementationType, 'srs');
                 case {'FalseACKsMATLABCtr', 'FalseACKDetectionRateMATLAB'}
                     flag = isempty(obj.SNRrange) || ~isFormat1 || obj.isDetectionTest || strcmp(obj.ImplementationType, 'srs');
+                case 'NACK2ACKDetectionRateSRS'
+                    flag = isempty(obj.SNRrange) || ~isFormat1 || ~obj.isDetectionTest || strcmp(obj.ImplementationType, 'matlab');
+                case {'MissedACKsSRSCtr', 'ACKDetectionRateSRS'}
+                    flag = isempty(obj.SNRrange) || ~isFormat1 || ~obj.isDetectionTest || strcmp(obj.ImplementationType, 'matlab');
+                case {'FalseACKsSRSCtr', 'FalseACKDetectionRateSRS'}
+                    flag = isempty(obj.SNRrange) || ~isFormat1 || obj.isDetectionTest || strcmp(obj.ImplementationType, 'matlab');
                 otherwise
                     flag = false;
             end
@@ -934,9 +951,11 @@ classdef PUCCHBLER < matlab.System
 
             results = {'SNRrange', 'TotalBlocksCtr', 'MissedBlocksMATLABCtr', 'MissedBlocksSRSCtr', ...
                 'BlockErrorRateMATLAB', 'BlockErrorRateSRS', 'FalseBlocksMATLABCtr', 'FalseBlocksSRSCtr', ...
-                'FalseDetectionRateMATLAB', 'FalseDetectionRateSRS', 'TransmittedACKsMATLABCtr', ...
+                'FalseDetectionRateMATLAB', 'FalseDetectionRateSRS', 'TransmittedACKsCtr', ...
                 'TransmittedNACKsCtr', 'MissedACKsMATLABCtr', 'FalseACKsMATLABCtr', ...
-                'FalseACKDetectionRateMATLAB', 'NACK2ACKDetectionRateMATLAB', 'ACKDetectionRateMATLAB'};
+                'MissedACKsSRSCtr', 'FalseACKsSRSCtr', ...
+                'FalseACKDetectionRateMATLAB', 'NACK2ACKDetectionRateMATLAB', 'ACKDetectionRateMATLAB', ...
+                'FalseACKDetectionRateSRS', 'NACK2ACKDetectionRateSRS', 'ACKDetectionRateSRS'};
             resProps = {};
             for i = 1:numel(results)
                 tt = results{i};
@@ -962,6 +981,12 @@ classdef PUCCHBLER < matlab.System
                 % Save FFT size.
                 s.Nfft = obj.Nfft;
 
+                % Save handlers to helper functions.
+                s.updateStats = obj.updateStats;
+                s.updateStatsSRS = obj.updateStatsSRS;
+                s.printMessages = obj.printMessages;
+                s.printMessagesSRS = obj.printMessagesSRS;
+
                 % Save counters.
                 s.SNRrange = obj.SNRrange;
                 s.TotalBlocksCtr = obj.TotalBlocksCtr;
@@ -969,10 +994,12 @@ classdef PUCCHBLER < matlab.System
                 s.MissedBlocksSRSCtr = obj.MissedBlocksSRSCtr;
                 s.FalseBlocksMATLABCtr = obj.FalseBlocksMATLABCtr;
                 s.FalseBlocksSRSCtr = obj.FalseBlocksSRSCtr;
-                s.TransmittedACKsMATLABCtr = obj.TransmittedACKsMATLABCtr;
+                s.TransmittedACKsCtr = obj.TransmittedACKsCtr;
                 s.TransmittedNACKsCtr = obj.TransmittedNACKsCtr;
                 s.MissedACKsMATLABCtr = obj.MissedACKsMATLABCtr;
                 s.FalseACKsMATLABCtr = obj.FalseACKsMATLABCtr;
+                s.MissedACKsSRSCtr = obj.MissedACKsSRSCtr;
+                s.FalseACKsSRSCtr = obj.FalseACKsSRSCtr;
             end
         end % of function s = saveObjectImpl(obj)
 
@@ -986,6 +1013,12 @@ classdef PUCCHBLER < matlab.System
                 % Load FFT size.
                 obj.Nfft = s.Nfft;
 
+                % Load handlers to helper functions.
+                obj.updateStats = s.updateStats;
+                obj.updateStatsSRS = s.updateStatsSRS;
+                obj.printMessages = s.printMessages;
+                obj.printMessagesSRS = s.printMessagesSRS;
+
                 % Load counters.
                 obj.SNRrange = s.SNRrange;
                 obj.TotalBlocksCtr = s.TotalBlocksCtr;
@@ -993,10 +1026,12 @@ classdef PUCCHBLER < matlab.System
                 obj.MissedBlocksSRSCtr = s.MissedBlocksSRSCtr;
                 obj.FalseBlocksMATLABCtr = s.FalseBlocksMATLABCtr;
                 obj.FalseBlocksSRSCtr = s.FalseBlocksSRSCtr;
-                obj.TransmittedACKsMATLABCtr = s.TransmittedACKsMATLABCtr;
+                obj.TransmittedACKsCtr = s.TransmittedACKsCtr;
                 obj.TransmittedNACKsCtr = s.TransmittedNACKsCtr;
                 obj.MissedACKsMATLABCtr = s.MissedACKsMATLABCtr;
                 obj.FalseACKsMATLABCtr = s.FalseACKsMATLABCtr;
+                obj.MissedACKsSRSCtr = s.MissedACKsSRSCtr;
+                obj.FalseACKsSRSCtr = s.FalseACKsSRSCtr;
             end
 
             % Load all public properties.
@@ -1013,3 +1048,213 @@ function mixedArray = joinArrays(arrayA, arrayB, removeFromA, outputOrder)
     mixedArray = mixedArray(outputOrder);
 end
 
+function stats = updateStatsF1(stats, uci, uciRx, ~, NumACKBits, isDetectTest, snrIdx)
+    if isDetectTest
+        % If MATLAB's PUCCH decoder was able to detect a PUCCH and
+        % uciRx contains the resulting bits.
+        if ~isempty(uciRx{1})
+            % NACK to ACK.
+            stats.falseACK(snrIdx) = stats.falseACK(snrIdx) + sum(~uci & uciRx{1});
+            stats.nNACKs(snrIdx) = stats.nNACKs(snrIdx) + sum(~uci);
+            % Missed ACK.
+            stats.missedACK(snrIdx) = stats.missedACK(snrIdx) + sum(uci & ~uciRx{1});
+            stats.nACKs(snrIdx) = stats.nACKs(snrIdx) + sum(uci);
+        else
+            % Missed ACK. Here, uciRx is empty (MATLAB's PUCCH decoder failed
+            % to detect) and all ACKs are lost.
+            stats.missedACK(snrIdx) = stats.missedACK(snrIdx) + sum(uci);
+            stats.nACKs(snrIdx) = stats.nACKs(snrIdx) + sum(uci);
+        end
+    else % false alarm test
+        % False ACK.
+        stats.falseACK(snrIdx) = stats.falseACK(snrIdx) + sum(uciRx{1});
+        stats.nNACKs(snrIdx) = stats.nNACKs(snrIdx) + NumACKBits;
+    end % if isDetectTest
+end
+
+function stats = updateStatsF2(stats, uci, uciRx, ouci, ~, isDetectTest, snrIdx)
+    if isDetectTest
+        % Decode UCI.
+        decucibits = nrUCIDecode(uciRx{1}, ouci);
+
+        % Store values to calculate BLER.
+        stats.blerUCI(snrIdx) = stats.blerUCI(snrIdx) + (~isequal(decucibits, uci));
+    else % false alarm test
+        stats.blerUCI(snrIdx) = stats.blerUCI(snrIdx) + (~isempty(uciRx{1}));
+    end % if isDetectTest
+end
+
+function stats = updateStatsSRSF1(stats, uci, msg, isDetectTest, snrIdx)
+    uciRxSRS = msg.HARQAckPayload;
+    if isDetectTest
+        % If SRS's PUCCH decoder was able to detect a PUCCH.
+        if msg.isValid
+            % NACK to ACK.
+            stats.falseACKSRS(snrIdx) = stats.falseACKSRS(snrIdx) + sum(~uci & uciRxSRS);
+            stats.nNACKsSRS(snrIdx) = stats.nNACKsSRS(snrIdx) + sum(~uci);
+            % Missed ACK.
+            stats.missedACKSRS(snrIdx) = stats.missedACKSRS(snrIdx) + sum(uci & ~uciRxSRS);
+            stats.nACKsSRS(snrIdx) = stats.nACKsSRS(snrIdx) + sum(uci);
+        else
+            % Missed ACK. Here, SRS's PUCCH decoder failed
+            % to detect and all ACKs are lost.
+            stats.missedACKSRS(snrIdx) = stats.missedACKSRS(snrIdx) + sum(uci);
+            stats.nACKsSRS(snrIdx) = stats.nACKsSRS(snrIdx) + sum(uci);
+        end
+    else % false alarm test
+        % False ACK.
+        if msg.isValid
+            stats.falseACKSRS(snrIdx) = stats.falseACKSRS(snrIdx) + sum(uciRxSRS);
+        end
+        stats.nNACKsSRS(snrIdx) = stats.nNACKsSRS(snrIdx) + length(uciRxSRS);
+    end
+end
+
+function stats = updateStatsSRSF2(stats, uci, msg, isDetectTest, snrIdx)
+    if isDetectTest
+        decucibitssrs = [msg.HARQAckPayload; msg.SRPayload; msg.CSI1Payload; msg.CSI2Payload];
+        stats.blerUCIsrs(snrIdx) = stats.blerUCIsrs(snrIdx) + (~(isequal(decucibitssrs, uci)));
+    else % false alarm test
+        stats.blerUCIsrs(snrIdx) = stats.blerUCIsrs(snrIdx) + msg.isValid;
+    end
+end
+
+function printMessagesF1(stats, usedFrames, ~, SNRIn, isDetectTest, snrIdx)
+    if isDetectTest
+        fprintf(['PUCCH Format 1 - NACK to ACK rate for %d frame(s) at ', ...
+            'SNR %.1f dB: %g\n'], usedFrames, SNRIn(snrIdx), stats.falseACK(snrIdx)/stats.nNACKs(snrIdx));
+        fprintf(['PUCCH Format 1 - ACK missed detection rate for %d frame(s) at ', ...
+            'SNR %.1f dB: %g\n'], usedFrames, SNRIn(snrIdx), stats.missedACK(snrIdx)/stats.nACKs(snrIdx));
+    else
+        fprintf(['PUCCH Format 1 - false ACK detection rate for %d frame(s) at ', ...
+            'SNR %.1f dB: %g\n'], usedFrames, SNRIn(snrIdx), stats.falseACK(snrIdx)/stats.nNACKs(snrIdx));
+    end
+end
+
+function printMessagesF2(stats, usedFrames, totalBlocks, SNRIn, isDetectTest, snrIdx)
+    if isDetectTest
+        message = 'UCI BLER of PUCCH Format 2';
+    else
+        message = 'UCI false detection rate of PUCCH Format 2';
+    end
+
+    fprintf([message ' for ' num2str(usedFrames) ...
+        ' frame(s) at SNR ' num2str(SNRIn(snrIdx)) ' dB: ' num2str(stats.blerUCI(snrIdx)/totalBlocks(snrIdx)) '\n'])
+end
+
+function printMessagesSRSF1(stats, usedFrames, ~, SNRIn, isDetectTest, snrIdx)
+    if isDetectTest
+        fprintf(['SRS - PUCCH Format 1 - NACK to ACK rate for %d frame(s) at ', ...
+            'SNR %.1f dB: %g\n'], usedFrames, SNRIn(snrIdx), stats.falseACKSRS(snrIdx)/stats.nNACKs(snrIdx));
+        fprintf(['SRS - PUCCH Format 1 - ACK missed detection rate for %d frame(s) at ', ...
+            'SNR %.1f dB: %g\n'], usedFrames, SNRIn(snrIdx), stats.missedACKSRS(snrIdx)/stats.nACKs(snrIdx));
+    else
+        fprintf(['SRS - PUCCH Format 1 - false ACK detection rate for %d frame(s) at ', ...
+            'SNR %.1f dB: %g\n'], usedFrames, SNRIn(snrIdx), stats.falseACKSRS(snrIdx)/stats.nNACKs(snrIdx));
+    end
+end
+
+function printMessagesSRSF2(stats, usedFrames, totalBlocks, SNRIn, isDetectTest, snrIdx)
+    if isDetectTest
+        message = 'UCI BLER of PUCCH Format 2';
+    else
+        message = 'UCI false detection rate of PUCCH Format 2';
+    end
+
+    fprintf('SRS - ');
+    fprintf([message ' for ' num2str(usedFrames) ...
+        ' frame(s) at SNR ' num2str(SNRIn(snrIdx)) ' dB: ' num2str(stats.blerUCIsrs(snrIdx)/totalBlocks(snrIdx)) '\n'])
+end
+
+function plotF1(obj)
+    implementationType = obj.ImplementationType;
+
+    plotMATLAB = (strcmp(implementationType, 'matlab') || strcmp(implementationType, 'both'));
+    plotSRS = (strcmp(implementationType, 'srs') || strcmp(implementationType, 'both'));
+
+    titleString = sprintf('PUCCH F%d / SCS=%dkHz / %d ACK bits', obj.PUCCHFormat, ...
+        obj.SubcarrierSpacing, obj.NumACKBits);
+    legendstrings = {};
+
+    falseACKMATLAB = obj.FalseACKsMATLABCtr;
+    falseACKSRS = obj.FalseACKsSRSCtr;
+    if obj.isDetectionTest
+        missedACKMATLAB = obj.MissedACKsMATLABCtr;
+        missedACKSRS = obj.MissedACKsSRSCtr;
+    end
+
+    figure;
+    set(gca, "YScale", "log")
+    if plotMATLAB
+        semilogy(obj.SNRrange, obj.FalseACKsMATLABCtr ./ obj.TransmittedNACKsCtr, 'o-.', ...
+            'LineWidth', 1, 'Color', [0 0.4470 0.7410]);
+        if obj.isDetectionTest
+            legendstrings{end + 1} = 'MATLAB - NACK to ACK';
+
+            hold on;
+            semilogy(obj.SNRrange, obj.MissedACKsMATLABCtr ./ obj.TransmittedACKsCtr, 'square:', ...
+                'LineWidth', 1, 'Color', [0 0.4470 0.7410]);
+            legendstrings{end + 1} = 'MATLAB - Missed ACK';
+            hold off;
+        else
+            legendstrings{end + 1} = 'MATLAB - False ACK';
+        end
+    end
+
+    if plotSRS
+        hold on;
+        semilogy(obj.SNRrange, obj.FalseACKsSRSCtr ./ obj.TransmittedNACKsCtr, 'o-.', ...
+            'LineWidth', 1, 'Color', [0.8500 0.3250 0.0980]);
+        if obj.isDetectionTest
+            legendstrings{end + 1} = 'SRS - NACK to ACK';
+
+            semilogy(obj.SNRrange, obj.MissedACKsSRSCtr ./ obj.TransmittedACKsCtr, 'square:', ...
+                'LineWidth', 1, 'Color', [0.8500 0.3250 0.0980]);
+            legendstrings{end + 1} = 'SRS - Missed ACK';
+        else
+            legendstrings{end + 1} = 'SRS - False ACK';
+        end
+        hold off;
+    end
+
+    xlabel('SNR (dB)'); ylabel('Probability'); grid on; legend(legendstrings);
+    title(titleString);
+end
+
+function plotF2(obj)
+    implementationType = obj.ImplementationType;
+
+    plotMATLAB = (strcmp(implementationType, 'matlab') || strcmp(implementationType, 'both'));
+    plotSRS = (strcmp(implementationType, 'srs') || strcmp(implementationType, 'both'));
+
+    titleString = sprintf('PUCCH F%d / SCS=%dkHz / %d UCI bits', obj.PUCCHFormat, ...
+        obj.SubcarrierSpacing, obj.NumACKBits + obj.NumSRBits + obj.NumCSI1Bits + obj.NumCSI2Bits);
+    legendstrings = {};
+
+    if obj.isDetectionTest
+        ydataMATLAB = obj.MissedBlocksMATLABCtr;
+        ydataSRS = obj.MissedBlocksSRSCtr;
+        yLab = 'BLER';
+    else
+        ydataMATLAB = obj.FalseBlocksMATLABCtr;
+        ydataSRS = obj.FalseBlocksSRSCtr;
+        yLab = 'False Det. Rate';
+    end
+
+    figure;
+    set(gca, "YScale", "log")
+    if plotMATLAB
+        semilogy(obj.SNRrange, ydataMATLAB ./ obj.TotalBlocksCtr, 'o-.', ...
+            'LineWidth', 1)
+        legendstrings{end + 1} = 'MATLAB';
+    end
+    if plotSRS
+        hold on;
+        semilogy(obj.SNRrange, ydataSRS ./ obj.TotalBlocksCtr, '^-.', ...
+            'LineWidth', 1, 'Color', [0.8500 0.3250 0.0980])
+        legendstrings{end + 1} = 'SRS';
+        hold off;
+    end
+    xlabel('SNR (dB)'); ylabel(yLab); grid on; legend(legendstrings);
+    title(titleString);
+end
