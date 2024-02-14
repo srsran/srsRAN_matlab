@@ -1176,13 +1176,6 @@ function plotF1(obj)
         obj.SubcarrierSpacing, obj.NumACKBits);
     legendstrings = {};
 
-    falseACKMATLAB = obj.FalseACKsMATLABCtr;
-    falseACKSRS = obj.FalseACKsSRSCtr;
-    if obj.isDetectionTest
-        missedACKMATLAB = obj.MissedACKsMATLABCtr;
-        missedACKSRS = obj.MissedACKsSRSCtr;
-    end
-
     figure;
     set(gca, "YScale", "log")
     if plotMATLAB

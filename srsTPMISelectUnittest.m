@@ -96,9 +96,13 @@ classdef srsTPMISelectUnittest < srsTest.srsBlockUnittest
 
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, NumTxPorts, ...
-                NumRxPorts, Repetition)
+                NumRxPorts, Repetition) %#ok<INUSD>
         %testvectorGenerationCases Generates a test vector given the
-        %   combinations of NumTxPorts, NumRxPorts and Repetition.
+        %   combinations of NumTxPorts, NumRxPorts.
+        %
+        %   Remark: Input Repetition is used just as a placeholder for repeating
+        %   several tests with the same configuration - it does not affect the
+        %   execution in any other way.
 
             import srsLib.ran.pusch.srsTPMISelect
             import srsTest.helpers.cellarray2str
