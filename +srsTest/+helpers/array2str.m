@@ -23,11 +23,16 @@ function outputString = array2str(inputArray)
         return;
     end
 
-    if any(mod(inputArray,1) > 0)
+    tail = 1;
+    if any(~isreal(inputArray))
+        fmt = 'cf_t(%f, %f)';
+        inputArray = reshape([real(inputArray).'; imag(inputArray).'], [], 1);
+        tail = 2;
+    elseif any(mod(inputArray,1) > 0)
         fmt = '%.3f';
     else
         fmt = '%d';
     end
-    inputArray = inputArray(:)'; % ensure it's a row
-    outputString = [num2str(inputArray(1:end-1), [fmt, ', ']), ' ', num2str(inputArray(end), fmt)];
-  end
+    inputArray = inputArray(:).'; % ensure it's a row
+    outputString = [num2str(inputArray(1:end-tail), [fmt, ', ']), ' ', num2str(inputArray(end-tail+1:end), fmt)];
+end

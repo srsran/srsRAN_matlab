@@ -130,7 +130,7 @@ classdef CheckAnalyzers < matlab.unittest.TestCase
             obj.assertEqual(pusch.MappingType, 'A', 'Wrong mapping type.');
             obj.assertEqual(pusch.SymbolAllocation, [0 14], 'Wrong OFDM symbol allocation.');
             obj.assertEqual(pusch.PRBSet, 4:270, 'Wrong PRB set.');
-            obj.assertEqual(pusch.TransformPrecoding, 0, 'Wrong transform precoding.');
+            obj.assertEqual(double(pusch.TransformPrecoding), 0, 'Wrong transform precoding.');
             obj.assertEqual(pusch.TransmissionScheme, 'nonCodebook', 'Wrong transmission scheme.');
             obj.assertEqual(pusch.NumAntennaPorts, 1, 'Wrong number of antenna ports.');
             obj.assertEqual(pusch.TPMI, 0, 'Wrong transmitted precoding matrix indicator.');
