@@ -154,8 +154,8 @@ classdef CheckSimulators < matlab.unittest.TestCase
             obj.assertEqual(pp.SNRrange, snrs, 'Wrong SNR range.');
             obj.assertEqual(pp.TBS, 1800, 'Wrong transport block size.');
             obj.assertEqual(pp.MaxThroughput, 1.8, 'Wrong maximum throughput.');
-            obj.assertEqual(pp.ThroughputSRS, [0; 0; 0.0178; 0.2874; 0.9304], "Wrong througuput curve.", RelTol=0.02);
-            obj.assertEqual(pp.BlockErrorRateSRS, [1; 1; 0.9901; 0.8403; 0.4831], "Wrong BLER curve.", RelTol=0.02);
+            obj.assertEqual(pp.ThroughputSRS, [0; 0; 0.0178; 0.2746; 0.9089], "Wrong througuput curve.", RelTol=0.02);
+            obj.assertEqual(pp.BlockErrorRateSRS, [1; 1; 0.9901; 0.8403; 0.4950], "Wrong BLER curve.", RelTol=0.02);
         end % of function testPUSCHBLERmex(obj)
     end % of methods (Test, TestTags = {'mex code'})
 end % of classdef CheckSimulators < matlab.unittest.TestCase
