@@ -19,7 +19,6 @@
 %
 %   NCellID          - PHY-layer cell ID (0...1007).
 %   NSlot            - Slot index (0...19).
-%   RNTI             - Radio network temporary ID (0...65535).
 %   numerology       - Defines the subcarrier spacing (0, 1).
 %   Duration         - CORESET duration (1, 2, 3).
 %   CCEREGMapping    - CCE-to-REG mapping ('interleaved', 'noninteleaved').
@@ -72,9 +71,6 @@ classdef srsPDCCHdmrsUnittest < srsTest.srsBlockUnittest
 
         %Slot index (0...19).
         NSlot = num2cell(0:19)
-
-        %Radio network temporary ID (0...65535).
-        RNTI = num2cell(0:65535)
 
         %Defines the subcarrier spacing (0, 1).
         numerology = {0, 1}
