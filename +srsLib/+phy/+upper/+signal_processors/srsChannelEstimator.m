@@ -62,10 +62,12 @@ function [channelEstRG, noiseEst, rsrp, epre, timeAlignment] = srsChannelEstimat
 
     scs = config.scs;
 
-    processHop(hop1, pilots(:, 1:nPilotSymbolsHop1));
+    smoothing = 'filter';
+
+    processHop(hop1, pilots(:, 1:nPilotSymbolsHop1), smoothing);
 
     if ~isempty(hop2.DMRSsymbols)
-        processHop(hop2, pilots(:, (nPilotSymbolsHop1 + 1):end));
+        processHop(hop2, pilots(:, (nPilotSymbolsHop1 + 1):end), smoothing);
     end
 
     nDMRSsymbols = sum(config.DMRSSymbolMask);
@@ -83,7 +85,7 @@ function [channelEstRG, noiseEst, rsrp, epre, timeAlignment] = srsChannelEstimat
 
     %     Nested functions
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    function processHop(hop_, pilots_)
+    function processHop(hop_, pilots_, smoothing_)
     %Processes the DM-RS corresponding to a single hop.
 
         % Create a mask for all subcarriers carrying DM-RS.
@@ -103,20 +105,30 @@ function [channelEstRG, noiseEst, rsrp, epre, timeAlignment] = srsChannelEstimat
         % TODO: at this point, we should compute a metric for signal detection.
         % detectMetricNum = detectMetricNum + norm(recXpilots_, 'fro')^2;
 
-        if (hop_.nPRBs > 1)
-            nPils_ = 2 * sum(hop_.DMRSREmask);
-        else
-            nPils_ = sum(hop_.DMRSREmask);
+        switch smoothing_
+            case 'mean'
+                estimatedChannelP_ = ones(size(estimatedChannelP_)) * mean(estimatedChannelP_);
+            case 'filter'
+                % Denoising with RC filter.
+                rcFilter_ = getRCfilter(12/sum(config.DMRSREmask), min(3, sum(maskPRBs_)));
+
+                if sum(maskPRBs_) > 1
+                    nPils_ = min(12, floor(length(rcFilter_) / 2));
+                else
+                    nPils_ = sum(config.DMRSREmask);
+                end
+
+                % Create some virtual pilots on both sides of the allocated band.
+                vPilsBegin_ = createVirtualPilots(estimatedChannelP_(1:nPils_), nPils_);
+                vPilsEnd_ = createVirtualPilots(estimatedChannelP_(end:-1:end-nPils_+1), nPils_);
+
+                tmp_ = conv([vPilsBegin_; estimatedChannelP_; flipud(vPilsEnd_)], rcFilter_, "same");
+                estimatedChannelP_ = tmp_(nPils_+1:end-nPils_);
+            case 'none'
+                % estimatedChannelP_ is passed forward.
+            otherwise
+                error('Unknown smoothing strategy %s.', smoothing_);
         end
-
-        % Create some virtual pilots on both sides of the allocated band.
-        vPilsBegin_ = createVirtualPilots(estimatedChannelP_(1:nPils_), nPils_);
-        vPilsEnd_ = createVirtualPilots(estimatedChannelP_(end:-1:end-nPils_+1), nPils_);
-
-        % Denoising with RC filter.
-        rcFilter_ = getRCfilter(12/sum(config.DMRSREmask), min(3, sum(maskPRBs_)));
-        tmp_ = conv([vPilsBegin_; estimatedChannelP_; flipud(vPilsEnd_)], rcFilter_, "same");
-        estimatedChannelP_ = tmp_(nPils_+1:end-nPils_);
 
         % Estimate time alignment.
         estChannelSC_ = zeros(length(maskREs_), 1);
