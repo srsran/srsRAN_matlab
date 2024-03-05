@@ -86,6 +86,11 @@ classdef srsMultiPortChannelEstimator < matlab.System
             lastSymbol = sum(symbolAllocation) - 1;
             assert(lastSymbol < 14, 'Last allocated symbol out of range.');
 
+            if ~isempty(config.HoppingIndex)
+                validateattributes(config.HoppingIndex, {'double'}, ...
+                    {'scalar', 'integer', '>', symbolAllocation(1), '<=', lastSymbol}, mfilename('class'));
+            end
+
             [channelEst, noiseEst, extra] = obj.stepMethod(obj, rxGrid, symbolAllocation, refInd, refSym, config);
         end
     end
@@ -111,9 +116,6 @@ classdef srsMultiPortChannelEstimator < matlab.System
             end
 
             if ~isempty(config.HoppingIndex)
-                validateattributes(config.HoppingIndex, {'double'}, ...
-                    {'scalar', 'integer', '>', symbolAllocation(1), '<=', lastSymbol}, mfilename('class'));
-
                 % DM-RS RB mask for second hop (if it exists).
                 firstDMRSSymbol2 = find(config.Symbols(config.HoppingIndex+1:end), 1) + config.HoppingIndex;
                 config.RBMask2 = false(nRBs, 1);
