@@ -130,9 +130,11 @@ create_pucch_processor()
       create_low_papr_sequence_generator_sw_factory();
   std::shared_ptr<low_papr_sequence_collection_factory> lpapr_collection_factory =
       create_low_papr_sequence_collection_sw_factory(lpapr_generator_factory);
-  std::shared_ptr<dft_processor_factory>          dft_factory = create_dft_processor_factory_fftw_slow();
+  std::shared_ptr<dft_processor_factory>            dft_factory = create_dft_processor_factory_fftw_slow();
+  std::shared_ptr<time_alignment_estimator_factory> ta_est_factory =
+      create_time_alignment_estimator_dft_factory(dft_factory);
   std::shared_ptr<port_channel_estimator_factory> estimator_factory =
-      create_port_channel_estimator_factory_sw(dft_factory);
+      create_port_channel_estimator_factory_sw(ta_est_factory);
   std::shared_ptr<dmrs_pucch_estimator_factory> dmrs_factory =
       create_dmrs_pucch_estimator_factory_sw(prg_factory, lpapr_collection_factory, estimator_factory);
 
