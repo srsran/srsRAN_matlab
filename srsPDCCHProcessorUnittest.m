@@ -129,7 +129,7 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
         % Generate random parameters.
         testCellID = randi([0, 1007]);
         NSlot = randi([0, 9]);
-        RNTI = randi([0, 65535]);
+        RNTI = randi([0, 65519]);
         maxAllowedStartSymbol = 14 - Duration;
         StartSymbolWithinSlot = randi([1 maxAllowedStartSymbol]);
         if strcmp(CCEREGMapping, 'interleaved')

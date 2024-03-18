@@ -114,7 +114,7 @@ classdef srsPDCCHCandidatesUeUnittest < srsTest.srsBlockUnittest
 
         % Select random parameters.
         CoresetId = randi([1, 11]);
-        rnti = randi([1, 65535]);
+        rnti = randi([1, 65519]);
         slotNum = randi([0, 159]);
 
         import srsTest.helpers.cellarray2str

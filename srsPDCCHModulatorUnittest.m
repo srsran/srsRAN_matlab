@@ -133,7 +133,7 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
             % Use a unique nCellID, nSlot and RNTI for each test.
             testCellID = testCase.randomizeTestvector(testID + 1) - 1;
             NSlot = testCase.randomizeSlot(testID + 1);
-            RNTI = randi([0, 65535]);
+            RNTI = randi([0, 65519]);
             maxAllowedStartSymbol = 14 - Duration;
             startSymbolIndex = randi([1, maxAllowedStartSymbol]);
             if strcmp(CCEREGMapping, 'interleaved')

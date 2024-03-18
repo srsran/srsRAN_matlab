@@ -26,6 +26,7 @@ function outputString = array2str(inputArray)
     tail = 1;
     if any(~isreal(inputArray))
         fmt = 'cf_t(%f, %f)';
+        inputArray = inputArray(:); % ensure it's a row
         inputArray = reshape([real(inputArray).'; imag(inputArray).'], [], 1);
         tail = 2;
     elseif any(mod(inputArray,1) > 0)

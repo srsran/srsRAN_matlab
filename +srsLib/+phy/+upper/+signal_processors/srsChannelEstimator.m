@@ -12,11 +12,9 @@
 %   HOP1       - Configuration of the first intraSlot frequency hop (see below)
 %   HOP2       - Configuration of the second intraSlot frequency hop (see below)
 %   CONFIG     - General configuration (struct with fields DMRSREmask, pattern
-%                of REs carrying DM-RS inside a DM-RS dedicated PRB,
-%                nPilotsNoiseAvg, number of pilots used for noise averaging, scs,
-%                subcarrier spacing in hertz, and useFilter, a boolean flag to
-%                activate the LP-filtering of the LS estimates of the channel
-%                coefficients)
+%                of REs carrying DM-RS inside a DM-RS dedicated PRB, DMRSSymbolMask,
+%                pattern of OFDM symbols carrying DM-RS across both hops, and scs,
+%                subcarrier spacing in hertz).
 %
 %   Each hop is configured by a struct with fields
 %   DMRSsymbols       - OFDM symbols carrying DM-RS in the first hop (logical mask)
@@ -28,8 +26,6 @@
 %                       start of the hop
 %   nAllocatedSymbols - Number of OFDM symbols allocated to the PUxCH transmission
 %                       in the hop
-%   CHsymbols         - OFDM symbols allocated to the PUxCH transmission in the
-%                       hop (logical mask)
 %
 %   Outputs:
 %   CHANNELESTRG   - Estimated channel coefficients organized in a resource grid
@@ -55,11 +51,6 @@
 %   file in the top-level directory of this distribution.
 
 function [channelEstRG, noiseEst, rsrp, epre, timeAlignment] = srsChannelEstimator(receivedRG, pilots, betaDMRS, hop1, hop2, config)
-    if isfield(config, 'useFilter')
-        useLegacyEst = ~config.useFilter;
-    else
-        useLegacyEst = true;
-    end
 
     channelEstRG = zeros(size(receivedRG));
     noiseEst = 0;
@@ -71,10 +62,12 @@ function [channelEstRG, noiseEst, rsrp, epre, timeAlignment] = srsChannelEstimat
 
     scs = config.scs;
 
-    processHop(hop1, pilots(:, 1:nPilotSymbolsHop1));
+    smoothing = 'filter';
+
+    processHop(hop1, pilots(:, 1:nPilotSymbolsHop1), smoothing);
 
     if ~isempty(hop2.DMRSsymbols)
-        processHop(hop2, pilots(:, (nPilotSymbolsHop1 + 1):end));
+        processHop(hop2, pilots(:, (nPilotSymbolsHop1 + 1):end), smoothing);
     end
 
     nDMRSsymbols = sum(config.DMRSSymbolMask);
@@ -83,14 +76,7 @@ function [channelEstRG, noiseEst, rsrp, epre, timeAlignment] = srsChannelEstimat
     rsrp = rsrp / nPilots;
     epre = epre / nPilots;
 
-    if useLegacyEst
-        noiseEst = noiseEst / (nPilots - hop1.nPRBs * sum(config.DMRSREmask) / config.nPilotsNoiseAvg);
-        if (size(pilots, 2) < 3) || ~isempty(hop2.DMRSsymbols)
-            noiseEst = epre * 10^(-3);
-        end
-    else
-        noiseEst = noiseEst / (nPilots - 1);
-    end
+    noiseEst = noiseEst / (nPilots - 1);
 
     if ~isempty(hop2.DMRSsymbols)
         timeAlignment = timeAlignment / 2;
@@ -99,7 +85,7 @@ function [channelEstRG, noiseEst, rsrp, epre, timeAlignment] = srsChannelEstimat
 
     %     Nested functions
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    function processHop(hop_, pilots_)
+    function processHop(hop_, pilots_, smoothing_)
     %Processes the DM-RS corresponding to a single hop.
 
         % Create a mask for all subcarriers carrying DM-RS.
@@ -119,14 +105,29 @@ function [channelEstRG, noiseEst, rsrp, epre, timeAlignment] = srsChannelEstimat
         % TODO: at this point, we should compute a metric for signal detection.
         % detectMetricNum = detectMetricNum + norm(recXpilots_, 'fro')^2;
 
-        if ~useLegacyEst
-            [rcFilter_, correction_] = getRCfilter(12/sum(config.DMRSREmask), min(3, sum(maskPRBs_)));
+        switch smoothing_
+            case 'mean'
+                estimatedChannelP_ = ones(size(estimatedChannelP_)) * mean(estimatedChannelP_);
+            case 'filter'
+                % Denoising with RC filter.
+                rcFilter_ = getRCfilter(12/sum(config.DMRSREmask), min(3, sum(maskPRBs_)));
 
-            est2_ = conv(estimatedChannelP_, rcFilter_, "same");
-            nCorr_ = length(correction_);
-            est2_(1:nCorr_) = est2_(1:nCorr_) .* correction_;
-            est2_(end:-1:end-nCorr_+1) = est2_(end:-1:end-nCorr_+1) .* correction_;
-            estimatedChannelP_ = est2_;
+                if sum(maskPRBs_) > 1
+                    nPils_ = min(12, floor(length(rcFilter_) / 2));
+                else
+                    nPils_ = sum(config.DMRSREmask);
+                end
+
+                % Create some virtual pilots on both sides of the allocated band.
+                vPilsBegin_ = createVirtualPilots(estimatedChannelP_(1:nPils_), nPils_);
+                vPilsEnd_ = createVirtualPilots(estimatedChannelP_(end:-1:end-nPils_+1), nPils_);
+
+                tmp_ = conv([vPilsBegin_; estimatedChannelP_; flipud(vPilsEnd_)], rcFilter_, "same");
+                estimatedChannelP_ = tmp_(nPils_+1:end-nPils_);
+            case 'none'
+                % estimatedChannelP_ is passed forward.
+            otherwise
+                error('Unknown smoothing strategy %s.', smoothing_);
         end
 
         % Estimate time alignment.
@@ -144,17 +145,8 @@ function [channelEstRG, noiseEst, rsrp, epre, timeAlignment] = srsChannelEstimat
         end
         timeAlignment = timeAlignment + iMax_ / fftSize_ / scs;
 
-        if useLegacyEst
-            % To estimate the noise, we assume the channel is constant over a small number
-            % of adjacent subcarriers.
-            estChannelRB_ = mean(reshape(estimatedChannelP_, config.nPilotsNoiseAvg, []), 1).';
-            estChannelAvg_ = kron(estChannelRB_, ones(config.nPilotsNoiseAvg, 1));
-            noiseEst = noiseEst + norm(receivedPilots_ - betaDMRS * pilots_ ...
-                .* repmat(estChannelAvg_, 1, nDMRSsymbols_), 'fro')^2;
-        else
-            noiseEst = noiseEst + norm(receivedPilots_ - betaDMRS * pilots_ ...
-                .* repmat(estimatedChannelP_, 1, nDMRSsymbols_), 'fro')^2;
-        end
+        noiseEst = noiseEst + norm(receivedPilots_ - betaDMRS * pilots_ ...
+            .* repmat(estimatedChannelP_, 1, nDMRSsymbols_), 'fro')^2;
         rsrp = rsrp + betaDMRS^2 * norm(estimatedChannelP_)^2 * nDMRSsymbols_;
 
         % The other subcarriers are linearly interpolated.
@@ -200,4 +192,27 @@ function [rcFilter, correction] = getRCfilter(stride, nRBs)
     rcFilter = rcFilter / sum(rcFilter);
     tmp = cumsum(rcFilter);
     correction = 1./tmp(ceil(length(tmp)/2):end-1);
+end
+
+function virtualPilots = createVirtualPilots(inPilots, nVirtuals)
+%Creates a nVirtual virtual pilots by extrapolation from inPilots. Extrapolation
+%   is done linearly in both modulus and phase.
+    nPilots = length(inPilots);
+    x = 0:nPilots-1;
+    mx = mean(x);
+    normx = norm(x)^2;
+    y = abs(inPilots);
+    my = mean(y);
+    a = (x * y - nPilots * mx * my) / (normx - nPilots * mx^2);
+    b = my - a * mx;
+
+    virtualPilots = a * (-nVirtuals:-1)' + b;
+
+    y = angle(inPilots);
+    y = unwrap(y);
+    my = mean(y);
+    a = (x * y - nPilots * mx * my) / (normx - nPilots * mx^2);
+    b = my - a*mx;
+
+    virtualPilots = virtualPilots .* exp(1j * (a * (-nVirtuals:-1)' + b));
 end

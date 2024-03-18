@@ -72,13 +72,15 @@
 %                                  (1(single symbol), 2(double symbol)).
 %   DMRSAdditionalPosition       - Additional DM-RS symbol positions (0...3).
 %   DMRSConfigurationType        - DM-RS configuration type (1, 2).
-%   DelayProfile                 - Channel delay profile ('AWGN'(no delay, no Doppler),
-%                                  'TDL-A', 'TDLA30', 'TDL-B', 'TDLB100', 'TDL-C', 'TDLC300').
-%   DelaySpread                  - Delay spread in seconds (TDL-{A,B,C} delay profiles only).
+%   DelayProfile                 - Channel delay profile ('AWGN'(no delay, no Doppler), 'single-tap'
+%                                  (only one tap, no Doppler), 'TDL-A', 'TDLA30', 'TDL-B', 'TDLB100',
+%                                  'TDL-C', 'TDLC300').
+%   DelaySpread                  - Delay spread in seconds (single-tap and TDL-{A,B,C} delay profiles only).
 %   MaximumDopplerShift          - Maximum Doppler shift in hertz (TDL delay profiles only).
 %   EnableHARQ                   - HARQ flag: true for enabling retransmission with
 %                                  RV sequence [0, 2, 3, 1], false for no retransmissions.
 %   ImplementationType           - PUSCH implementation type ('matlab', 'srs' (requires mex), 'both')
+%   SRSEstimatorType             - Implementation of the SRS channel estimator ('MEX', 'noMEX')
 %   QuickSimulation              - Quick-simulation flag: set to true to stop
 %                                  each point after 100 failed transport blocks (tunable).
 %
@@ -171,9 +173,12 @@ classdef PUSCHBLER < matlab.System
         DMRSConfigurationType (1, 1) double {mustBeReal, mustBeMember(DMRSConfigurationType, [1, 2])} = 1
         %Channel delay profile ('AWGN'(no delay), 'TDL-A', 'TDLA30' 'TDL-B', 'TDLB100',
         %   'TDL-C', 'TDLC300').
-        DelayProfile (1, :) char {mustBeMember(DelayProfile, {'AWGN', 'TDL-A', 'TDLA30', ...
+        DelayProfile (1, :) char {mustBeMember(DelayProfile, {'AWGN', 'single-tap', 'TDL-A', 'TDLA30', ...
             'TDL-B', 'TDLB100', 'TDL-C', 'TDLC300'})} = 'AWGN'
-        %TDL-{A,B,C} delay profiles only: Delay spread in seconds.
+        %Delay spread in seconds.
+        %   Tap delay for 'single-tap' profile.
+        %   Delay spread for 'TDL-A', 'TDL-B' and 'TDL-C', as defined by the 3GPP model.
+        %   Does not apply for the simplified models 'TDLA30', 'TDLB100' and 'TDLC300'.
         DelaySpread (1, 1) double {mustBeReal, mustBeNonnegative} = 30e-9
         %TDL delay profiles only: Maximum Doppler shift in hertz.
         MaximumDopplerShift (1, 1) double {mustBeReal, mustBeNonnegative} = 0
@@ -181,6 +186,10 @@ classdef PUSCHBLER < matlab.System
         EnableHARQ (1, 1) logical = false
         %PUSCH implementation type ('matlab', 'srs' (requires mex), 'both').
         ImplementationType (1, :) char {mustBeMember(ImplementationType, {'matlab', 'srs', 'both'})} = 'matlab'
+        %Implementation of the SRS channel estimator ('MEX', 'noMEX').
+        %   Only applies if ImplementationType is set to 'srs' or 'both') and PerfectChannelEstimator
+        %   is set to false.
+        SRSEstimatorType (1, :) char {mustBeMember(SRSEstimatorType, {'MEX', 'noMEX'})} = 'MEX'
     end % of properties (Nontunable)
 
     properties % Tunable
@@ -469,6 +478,11 @@ classdef PUSCHBLER < matlab.System
                 channel.MaximumDopplerShift = 0;
                 channel.PathDelays = 0;
                 channel.AveragePathGains = 0;
+            elseif strcmp(obj.DelayProfile, 'single-tap')
+                channel.DelayProfile = 'custom';
+                channel.MaximumDopplerShift = 0;
+                channel.PathDelays = obj.DelaySpread;
+                channel.AveragePathGains = 0;
             else
                 channel.MaximumDopplerShift = obj.MaximumDopplerShift;
                 channel.DelayProfile = obj.DelayProfile;
@@ -596,7 +610,7 @@ classdef PUSCHBLER < matlab.System
 
             if useSRSDecoder
                 srsDemodulatePUSCH = srsMEX.phy.srsPUSCHDemodulator;
-                srsChannelEstimate = srsMEX.phy.srsMultiPortChannelEstimator;
+                srsChannelEstimate = srsMEX.phy.srsMultiPortChannelEstimator(obj.SRSEstimatorType);
             end
 
             % %%% Simulation loop.
@@ -953,6 +967,8 @@ classdef PUSCHBLER < matlab.System
                     flag = isempty(obj.ThroughputMATLABCtr) || strcmp(obj.ImplementationType, 'srs');
                 case {'ThroughputSRS', 'BlockErrorRateSRS'}
                     flag = isempty(obj.ThroughputSRSCtr) || strcmp(obj.ImplementationType, 'matlab');
+                case 'SRSEstimatorType'
+                    flag = strcmp(obj.ImplementationType, 'matlab') || obj.PerfectChannelEstimator;
                 otherwise
                     flag = false;
             end
@@ -983,7 +999,8 @@ classdef PUSCHBLER < matlab.System
                 ... HARQ.
                 'EnableHARQ', ...
                 ... Other simulation details.
-                'ImplementationType', 'QuickSimulation', 'DisplaySimulationInformation', 'DisplayDiagnostics'};
+                'ImplementationType', 'SRSEstimatorType', ...
+                'QuickSimulation', 'DisplaySimulationInformation', 'DisplayDiagnostics'};
             groups = matlab.mixin.util.PropertyGroup(confProps, 'Configuration');
 
             resProps = {};
