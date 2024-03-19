@@ -269,7 +269,7 @@ classdef srsSRSEstimatorUnittest < srsTest.srsBlockUnittest
                 NumSRSPorts,... % nof_tx_ports
                 };
 
-            tAlignStr = sprintf('%.9f', TimeAligment);
+            tAlignStr = sprintf('{%.9f}', TimeAligment);
 
             srsResourceCell = {...
                 NumSRSPortsStr,...    % nof_antenna_ports
