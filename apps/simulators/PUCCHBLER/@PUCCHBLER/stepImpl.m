@@ -61,14 +61,12 @@ function stepImpl(obj, SNRIn, nFrames)
     totalBlocks = zeros(length(SNRIn), 1);
     if (obj.PUCCHFormat == 1)
         stats = struct(...
-            'missedACK', zeros(numel(SNRIn), 1), ...
-            'falseACK', zeros(numel(SNRIn), 1), ...
-            'nACKs', zeros(numel(SNRIn), 1), ...
-            'nNACKs', zeros(numel(SNRIn), 1), ...
-            'missedACKSRS', zeros(numel(SNRIn), 1), ...
-            'falseACKSRS', zeros(numel(SNRIn), 1), ...
-            'nACKsSRS', zeros(numel(SNRIn), 1), ...
-            'nNACKsSRS', zeros(numel(SNRIn), 1) ...
+            'missedACK', zeros(numel(SNRIn), 1), ...    % number of MATLAB missed ACKs
+            'falseACK', zeros(numel(SNRIn), 1), ...     % number of MATLAB false ACKs
+            'missedACKSRS', zeros(numel(SNRIn), 1), ... % number of SRS missed ACKs
+            'falseACKSRS', zeros(numel(SNRIn), 1), ...  % number of SRS false ACKs
+            'nACKs', zeros(numel(SNRIn), 1), ...        % number of transmitted ACKs
+            'nNACKs', zeros(numel(SNRIn), 1) ...        % number of transmitted NACKs (or "emtpy" bits in false alarm tests)
             );
     else
         stats = struct(...
@@ -120,6 +118,12 @@ function stepImpl(obj, SNRIn, nFrames)
         if (obj.PUCCHFormat == 1)
             % For Format1, no encoding.
             codedUCI = uci;
+            if isDetectTest
+                stats.nACKs(snrIdx) = stats.nACKs(snrIdx) + sum(uci);
+                stats.nNACKs(snrIdx) = stats.nNACKs(snrIdx) + sum(~uci);
+            else
+                stats.nNACKs(snrIdx) = stats.nNACKs(snrIdx) + ouci;
+            end
         else
             % Perform UCI encoding.
             codedUCI = nrUCIEncode(uci, pucchIndicesInfo.G);
