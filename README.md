@@ -39,7 +39,8 @@ The development of *srsRAN-matlab* closely follows all new features of the srsRA
 |     842e0293    |     32dae89e   |
 |     b37e6ee5    |     50fe9623   |
 |     b93615b7    |     bcf941b3   |
-|     latest      |     4d9f2232   |
+|     85bb333e    |     4d9f2232   |
+|     latest      |     2f90c8b6   |
 
 ### Contents
 
