@@ -91,6 +91,8 @@ function unittestClass = name2Class(name)
             unittestClass = ?srsLDPCRateMatcherUnittest;
         case 'ldpc_segmenter'
             unittestClass = ?srsLDPCSegmenterUnittest;
+        case 'low_papr_sequence_generator'
+            unittestClass = ?srsLowPAPRSequenceUnittest;
         case 'modulation_mapper'
             unittestClass = ?srsModulationMapperUnittest;
         case 'nzp_csi_rs_generator'
