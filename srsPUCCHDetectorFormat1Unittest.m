@@ -126,9 +126,6 @@ classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
         %testvectorGenerationCases generates a test vector for the given numerology,
         %   symbol allocation, frequency hopping, number of ACK and SR bits.
 
-            import srsLib.phy.helpers.srsConfigureCarrier
-            import srsLib.phy.helpers.srsConfigurePUCCH
-            import srsLib.phy.upper.channel_processors.srsPUCCH1
             import srsTest.helpers.matlab2srsCyclicPrefix
             import srsTest.helpers.matlab2srsPUCCHGroupHopping
             import srsTest.helpers.writeResourceGridEntryFile
@@ -136,84 +133,11 @@ classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
             % Generate a unique test ID.
             testID = obj.generateTestID('_test_received_symbols');
 
-            % Generate random cell ID and slot number.
-            NCellID = randi([0, 1007]);
+            [rxSymbols, ack, sr, channelCoefs, configuration] = ...
+                generateSimData(numerology, SymbolAllocation, FrequencyHopping, ...
+                ackSize, srSize);
 
-            if numerology == 0
-                NSlot = randi([0, 9]);
-            else
-                NSlot = randi([0, 19]);
-            end
-
-            % Fix BWP size and start as well as the frame number, since they
-            % are irrelevant for the test.
-            NSizeBWP = 51;
-            NStartBWP = 1;
-            NSizeGrid = NSizeBWP + NStartBWP;
-            NStartGrid = 0;
-            NFrame = 0;
-
-            % Cyclic prefix can only be normal in the supported numerologies.
-            CyclicPrefix = 'normal';
-
-            % Configure the carrier according to the test parameters.
-            SubcarrierSpacing = 15 * (2 .^ numerology);
-            carrier = srsConfigureCarrier(NCellID, SubcarrierSpacing, NSizeGrid, ...
-                NStartGrid, NSlot, NFrame, CyclicPrefix);
-
-            % PRB assigned to PUCCH Format 1 within the BWP.
-            PRBSet  = randi([0, NSizeBWP - 1]);
-
-            if strcmp(FrequencyHopping, 'intraSlot')
-                % When intraslot frequency hopping is enabled, the OCCI value must be less
-                % than one fourth of the number of OFDM symbols allocated for the PUCCH.
-                maxOCCindex = max([floor(SymbolAllocation(2) / 4) - 1, 0]);
-                SecondHopStartPRB = randi([1, NSizeBWP - 1]);
-                secondHopConfig = {SecondHopStartPRB};
-            else
-                % When intraslot frequency hopping is disabled, the OCCI value must be less
-                % than one half of the number of OFDM symbols allocated for the PUCCH.
-                maxOCCindex = max([floor(SymbolAllocation(2) / 2) - 1, 0]);
-                SecondHopStartPRB = 0;
-                secondHopConfig = {};
-            end % of if strcmp(FrequencyHopping, 'intraSlot')
-
-            OCCI = randi([0, maxOCCindex]);
-
-            % We don't test group hopping or sequence hopping.
-            GroupHopping = 'neither';
-
-            % The initial cyclic shift can be set randomly.
-            possibleShifts = 0:3:9;
-            InitialCyclicShift = possibleShifts(randi([1, 4]));
-
-            % Configure the PUCCH.
-            pucch = srsConfigurePUCCH(1, SymbolAllocation, PRBSet,...
-                FrequencyHopping, GroupHopping, SecondHopStartPRB, ...
-                InitialCyclicShift, OCCI);
-
-            ack = randi([0, 1], ackSize, 1);
-            sr = randi([0, 1], srSize, 1);
-
-            % Generate PUCCH Format 1 symbols.
-            [symbols, indices] = srsPUCCH1(carrier, pucch, ack, sr);
-
-            if isempty(symbols)
-                symbols = complex(zeros(size(indices,1), 1));
-            end
-
-            channelCoefs = randn(length(symbols), 2) * [1; 1j] / sqrt(2);
-            % Ensure no channel is very small.
-            channelCoefsAbs = abs(channelCoefs);
-            mask = (channelCoefsAbs < 0.1);
-            channelCoefs(mask) = channelCoefs(mask) ./ channelCoefsAbs(mask) * 0.1;
-
-            % AWGN.
-            snrdB = 20;
-            noiseVar = 10^(-snrdB/10);
-            noiseSymbols = randn(length(symbols), 2) * [1; 1j] * sqrt(noiseVar / 2);
-
-            rxSymbols = symbols .* channelCoefs + noiseSymbols;
+            indices = configuration.Indices;
 
             obj.saveDataFile('_test_received_symbols', testID, ...
                 @writeResourceGridEntryFile, rxSymbols, indices);
@@ -221,31 +145,32 @@ classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
             obj.saveDataFile('_test_ch_estimates', testID, ...
                 @writeResourceGridEntryFile, channelCoefs, indices);
 
-            cyclicPrefixConfig = matlab2srsCyclicPrefix(CyclicPrefix);
-            groupHoppingConfig = matlab2srsPUCCHGroupHopping(GroupHopping);
+            cyclicPrefixConfig = matlab2srsCyclicPrefix(configuration.CyclicPrefix);
+            groupHoppingConfig = matlab2srsPUCCHGroupHopping(configuration.GroupHopping);
 
             port = 0;
             betaPUCCH = 1;
+            pucch = configuration.PUCCH;
 
             % Generate PUCCH Format 1 configuration.
             pucchF1Config = {...
-                {numerology, NSlot},       ... % slot
-                cyclicPrefixConfig,        ... % cp
-                PRBSet,                    ... % starting_prb
-                secondHopConfig,           ... % second_hop_prb
-                pucch.SymbolAllocation(1), ... % start_symbol_index
-                pucch.SymbolAllocation(2), ... % nof_symbols
-                groupHoppingConfig,        ... % PUCCH group hopping type
-                port,                      ... % antenna port
-                betaPUCCH,                 ... % amplitude scaling factor
-                pucch.OCCI,                ... % time_domain_occ
-                pucch.InitialCyclicShift,  ... % initial_cyclic_shift
-                NCellID,                   ... % pseudorandom initializer
-                ackSize,                   ... % number of ACK bits
+                {numerology, configuration.NSlot},   ... % slot
+                cyclicPrefixConfig,                  ... % cp
+                configuration.PRBSet,                ... % starting_prb
+                configuration.SecondHopConfig,       ... % second_hop_prb
+                pucch.SymbolAllocation(1),           ... % start_symbol_index
+                pucch.SymbolAllocation(2),           ... % nof_symbols
+                groupHoppingConfig,                  ... % PUCCH group hopping type
+                port,                                ... % antenna port
+                betaPUCCH,                           ... % amplitude scaling factor
+                pucch.OCCI,                          ... % time_domain_occ
+                pucch.InitialCyclicShift,            ... % initial_cyclic_shift
+                configuration.NCellID,               ... % pseudorandom initializer
+                ackSize,                             ... % number of ACK bits
                 };
 
             % Generate the test case entry.
-            testCaseString = obj.testCaseToString(testID, {pucchF1Config, noiseVar, num2cell(sr), num2cell(ack)}, ...
+            testCaseString = obj.testCaseToString(testID, {pucchF1Config, configuration.NoiseVar, num2cell(sr), num2cell(ack)}, ...
                 false, '_test_received_symbols', '_test_ch_estimates');
 
             % Add the test to the file header.
@@ -255,3 +180,102 @@ classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
     end % of methods (Test, TestTags = {'testvector'})
 
 end % of srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
+
+%Generates simulation data (modulated symbols, ACK and SR values, channel coefficients and configuration objects).
+function [rxSymbols, ack, sr, channelCoefs, configuration] = generateSimData(numerology, ...
+        SymbolAllocation, FrequencyHopping, ackSize, srSize)
+
+    import srsLib.phy.helpers.srsConfigureCarrier
+    import srsLib.phy.helpers.srsConfigurePUCCH
+    import srsLib.phy.upper.channel_processors.srsPUCCH1
+
+    % Generate random cell ID and slot number.
+    NCellID = randi([0, 1007]);
+
+    if numerology == 0
+        NSlot = randi([0, 9]);
+    else
+        NSlot = randi([0, 19]);
+    end
+
+    % Fix BWP size and start as well as the frame number, since they
+    % are irrelevant for the test.
+    NSizeBWP = 51;
+    NStartBWP = 1;
+    NSizeGrid = NSizeBWP + NStartBWP;
+    NStartGrid = 0;
+    NFrame = 0;
+
+    % Cyclic prefix can only be normal in the supported numerologies.
+    CyclicPrefix = 'normal';
+
+    % Configure the carrier according to the test parameters.
+    SubcarrierSpacing = 15 * (2 .^ numerology);
+    carrier = srsConfigureCarrier(NCellID, SubcarrierSpacing, NSizeGrid, ...
+        NStartGrid, NSlot, NFrame, CyclicPrefix);
+
+    % PRB assigned to PUCCH Format 1 within the BWP.
+    PRBSet  = randi([0, NSizeBWP - 1]);
+
+    if strcmp(FrequencyHopping, 'intraSlot')
+        % When intraslot frequency hopping is enabled, the OCCI value must be less
+        % than one fourth of the number of OFDM symbols allocated for the PUCCH.
+        maxOCCindex = max([floor(SymbolAllocation(2) / 4) - 1, 0]);
+        SecondHopStartPRB = randi([1, NSizeBWP - 1]);
+        secondHopConfig = {SecondHopStartPRB};
+    else
+        % When intraslot frequency hopping is disabled, the OCCI value must be less
+        % than one half of the number of OFDM symbols allocated for the PUCCH.
+        maxOCCindex = max([floor(SymbolAllocation(2) / 2) - 1, 0]);
+        SecondHopStartPRB = 0;
+        secondHopConfig = {};
+    end % of if strcmp(FrequencyHopping, 'intraSlot')
+
+    OCCI = randi([0, maxOCCindex]);
+
+    % We don't test group hopping or sequence hopping.
+    GroupHopping = 'neither';
+
+    % The initial cyclic shift can be set randomly.
+    possibleShifts = 0:3:9;
+    InitialCyclicShift = possibleShifts(randi([1, 4]));
+
+    % Configure the PUCCH.
+    pucch = srsConfigurePUCCH(1, SymbolAllocation, PRBSet,...
+        FrequencyHopping, GroupHopping, SecondHopStartPRB, ...
+        InitialCyclicShift, OCCI);
+
+    ack = randi([0, 1], ackSize, 1);
+    sr = randi([0, 1], srSize, 1);
+
+    % Generate PUCCH Format 1 symbols.
+    [symbols, indices] = srsPUCCH1(carrier, pucch, ack, sr);
+
+    if isempty(symbols)
+        symbols = complex(zeros(size(indices,1), 1));
+    end
+
+    channelCoefs = randn(length(symbols), 2) * [1; 1j] / sqrt(2);
+    % Ensure no channel is very small.
+    channelCoefsAbs = abs(channelCoefs);
+    mask = (channelCoefsAbs < 0.1);
+    channelCoefs(mask) = channelCoefs(mask) ./ channelCoefsAbs(mask) * 0.1;
+
+    % AWGN.
+    snrdB = 20;
+    noiseVar = 10^(-snrdB/10);
+    noiseSymbols = randn(length(symbols), 2) * [1; 1j] * sqrt(noiseVar / 2);
+
+    rxSymbols = symbols .* channelCoefs + noiseSymbols;
+
+    configuration = struct();
+    configuration.Indices = indices;
+    configuration.CyclicPrefix = CyclicPrefix;
+    configuration.GroupHopping = GroupHopping;
+    configuration.NSlot = NSlot;
+    configuration.PRBSet = PRBSet;
+    configuration.SecondHopConfig = secondHopConfig;
+    configuration.PUCCH = pucch;
+    configuration.NCellID = NCellID;
+    configuration.NoiseVar = noiseVar;
+end

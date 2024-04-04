@@ -73,7 +73,7 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
     end
 
     properties (TestParameter)
-        %Defines the subcarrier numeorlogy (0, 1).
+        %Defines the subcarrier numerology (0, 1).
         numerology = {0, 1}
 
         %Intra-slot frequency hopping usage (inter-slot hopping is not tested).
