@@ -37,9 +37,9 @@ void MexFunction::check_step_outputs_inputs(ArgumentList outputs, ArgumentList i
     mex_abort("Wrong number of inputs: expected {}, provided {}.", NOF_INPUTS, inputs.size());
   }
 
-  if ((inputs[1].getType() != ArrayType::COMPLEX_SINGLE) || (inputs[1].getDimensions().size() < 2) ||
-      (inputs[1].getDimensions().size() > 3)) {
-    mex_abort("Input 'rxGrid' should be a 2- or 3-dimensional array of complex floats.");
+  ArrayDimensions in1_dims = inputs[1].getDimensions();
+  if ((inputs[1].getType() != ArrayType::COMPLEX_SINGLE) || (in1_dims.size() < 2) || (in1_dims.size() > 3)) {
+    mex_abort("Input 'rxGrid' should be a 2- or 3-dimensional array of complex floats, provided [{}].", in1_dims);
   }
 
   if ((inputs[2].getType() != ArrayType::DOUBLE) || (inputs[2].getNumberOfElements() != 2)) {
