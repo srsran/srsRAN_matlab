@@ -54,7 +54,7 @@ classdef srsPUCCHProcessor < matlab.System
         function uci = stepImpl(obj, rxGrid, pucchConfig, carrierConfig, uciSizes)
             arguments
                 obj                   (1, 1) srsMEX.phy.srsPUCCHProcessor
-                rxGrid            (:, 14, :) double {mustBeNumeric, mustBeResourceGrid}
+                rxGrid            (:, 14, :) double {srsTest.helpers.mustBeResourceGrid}
                 pucchConfig           (1, 1)        {mustBeA(pucchConfig, ["nrPUCCH1Config", "nrPUCCH2Config"])}
                 carrierConfig         (1, 1) nrCarrierConfig
                 uciSizes.NumHARQAck   (1, 1) double {mustBeNonnegative} = 0
@@ -173,29 +173,3 @@ classdef srsPUCCHProcessor < matlab.System
         varargout = pucch_processor_mex(varargin)
     end % of methods (Access = private, Static)
 end % of classdef srsPUCCHProcessor < matlab.System
-
-function mustBeResourceGrid(a)
-    dims = size(a);
-
-    % Check number of OFDM symbols (columns).
-    if dims(2) ~= 14
-        eidType = 'mustBeResourceGrid:wrongNumberOFDMSymbols';
-        msgType = sprintf('The resuorce grid should have 14 OFDM symbols (columns), given %d.', dims(2));
-        throwAsCaller(MException(eidType, msgType));
-    end
-
-    % Check number of REs (rows).
-    if mod(dims(1), 12) ~= 0
-        eidType = 'mustBeResourceGrid:wrongNumberREs';
-        msgType = sprintf(['The number of REs per symbol in the resuorce grid ', ...
-            'should be a multiple of 12, given %d.'], dims(1));
-        throwAsCaller(MException(eidType, msgType));
-    end
-
-    % Check the number of ports is at most 4.
-    if (numel(dims) == 3) && (dims(3) > 4)
-        eidType = 'mustBeResourceGrid:wrongNumberRxPorts';
-        msgType = sprintf('The maximum supported number of Rx ports is 4, given %d.', dims(3));
-        throwAsCaller(MException(eidType, msgType));
-    end
-end

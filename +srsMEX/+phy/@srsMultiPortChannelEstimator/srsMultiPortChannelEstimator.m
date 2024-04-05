@@ -71,7 +71,7 @@ classdef srsMultiPortChannelEstimator < matlab.System
                 = stepImpl(obj, rxGrid, symbolAllocation, refInd, refSym, config)
             arguments
                 obj                      (1, 1)     srsMEX.phy.srsMultiPortChannelEstimator
-                rxGrid                   (:, 14, :) double {mustBeNumeric}
+                rxGrid                   (:, 14, :) double {srsTest.helpers.mustBeResourceGrid}
                 symbolAllocation         (1, 2)     double {mustBeInteger, mustBeNonnegative}
                 refInd                   (:, 1)     double {mustBeInteger, mustBePositive}
                 refSym                   (:, 1)     double {mustBeNumeric}
