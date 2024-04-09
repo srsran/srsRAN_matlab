@@ -33,7 +33,7 @@
 %
 %   srsPUCCHProcessorFormat1Unittest Methods (Test, TestTags = {'testmex'}):
 %
-%   mexTest  - Testes the MEX-based implementation of the PUCCH Format 1 processor.
+%   mexTest  - Tests the MEX-based implementation of the PUCCH Format 1 processor.
 %
 %   srsPUCCHProcessorFormat1Unittest Methods (Access = protected):
 %
@@ -248,8 +248,8 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
 
             srspucch = srsPUCCHProcessor;
 
-            uci1 = srspucch(rxGrid, configuration.pucch1, configuration.carrier, NumHARQAck=ackSize);
-            uci2 = srspucch(rxGrid, configuration.pucch2, configuration.carrier, NumHARQAck=ackSize);
+            uci1 = srspucch(configuration.carrier, configuration.pucch1, rxGrid, NumHARQAck=ackSize);
+            uci2 = srspucch(configuration.carrier, configuration.pucch2, rxGrid, NumHARQAck=ackSize);
 
             % Messages should be valid.
             assertTrue(testCase, uci1.isValid, 'The first PUCCH is invalid.');
@@ -280,7 +280,7 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
             end
 
             % This should result in an invalid message.
-            uciWrong = srspucch(rxGrid, configuration.pucch1, configuration.carrier, NumHARQAck=ackSize);
+            uciWrong = srspucch(configuration.carrier, configuration.pucch1, rxGrid, NumHARQAck=ackSize);
             assertFalse(testCase, uciWrong.isValid, 'The altered PUCCH should be invalid.');
         end
     end % of methods (Test, TestTags = {'testmex'})

@@ -448,7 +448,7 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
 
             pucchProcessor = srsMEX.phy.srsPUCCHProcessor();
 
-            message = pucchProcessor(rxGrid, pucch, carrier, 'NumHARQAck', nofHarqAck, ...
+            message = pucchProcessor(carrier, pucch, rxGrid, 'NumHARQAck', nofHarqAck, ...
                 'NumSR', nofSR, 'NumCSIPart1', nofCSIPart1, 'NumCSIPart2', nofCSIPart2);
 
             assertTrue(testCase, message.isValid, 'The PUCCH Processor should return a valid message.');

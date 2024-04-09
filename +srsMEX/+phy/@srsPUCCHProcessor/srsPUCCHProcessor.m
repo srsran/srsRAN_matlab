@@ -51,12 +51,12 @@
 
 classdef srsPUCCHProcessor < matlab.System
     methods (Access = protected)
-        function uci = stepImpl(obj, rxGrid, pucchConfig, carrierConfig, uciSizes)
+        function uci = stepImpl(obj, carrierConfig, pucchConfig, rxGrid, uciSizes)
             arguments
                 obj                   (1, 1) srsMEX.phy.srsPUCCHProcessor
-                rxGrid            (:, 14, :) double {srsTest.helpers.mustBeResourceGrid}
-                pucchConfig           (1, 1)        {mustBeA(pucchConfig, ["nrPUCCH1Config", "nrPUCCH2Config"])}
                 carrierConfig         (1, 1) nrCarrierConfig
+                pucchConfig           (1, 1)        {mustBeA(pucchConfig, ["nrPUCCH1Config", "nrPUCCH2Config"])}
+                rxGrid            (:, 14, :) double {srsTest.helpers.mustBeResourceGrid}
                 uciSizes.NumHARQAck   (1, 1) double {mustBeNonnegative} = 0
                 uciSizes.NumSR        (1, 1) double {mustBeNonnegative} = 0
                 uciSizes.NumCSIPart1  (1, 1) double {mustBeNonnegative} = 0
