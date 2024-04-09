@@ -30,6 +30,10 @@
 %                               symbol allocation, frequency hopping, number of ACK
 %                               and SR bits.
 %
+%   srsPUCCHDetectorFormat1Unittest Methods (TestTags = {'testmex'}):
+%
+%   mexTest  - Tests the MEX-based implementation of the PUCCH detector for Format 1.
+%
 %   srsPUCCHDetectorFormat1Unittest Methods (Access = protected):
 %
 %   addTestIncludesToHeaderFile     - Adds include directives to the test header file.
@@ -179,6 +183,58 @@ classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
         end % of function testvectorGenerationCases(...)
     end % of methods (Test, TestTags = {'testvector'})
 
+    methods (Test, TestTags = {'testmex'})
+        function mexTest(obj, numerology, SymbolAllocation, FrequencyHopping, ackSize, srSize)
+        %mexTest Tests the mex wrapper of the srsRAN PUCCH detector for Format 1.
+        %   mexTest(testCase, numerology, SymbolAllocation, FrequencyHopping, ackSize, srSize)
+        %   runs a short simulation with a PUCCH transmission specified by the given
+        %   numerology, symbol allocation, frequency hopping, number of ACK and SR bits.
+
+            import srsMEX.phy.srsPUCCHDetector
+
+            [rxSymbols, ack, sr, channelCoefs, configuration] = ...
+                generateSimData(numerology, SymbolAllocation, FrequencyHopping, ...
+                ackSize, srSize);
+
+            % Create a PUCCH Format 1 detector.
+            srspucch = srsPUCCHDetector;
+
+            carrier = configuration.Carrier;
+
+            % Copy the received signal into a resource grid.
+            rxGrid = nrResourceGrid(carrier);
+            indices = sub2ind(size(rxGrid), configuration.Indices(:, 1) + 1, configuration.Indices(:, 2) + 1, ...
+                configuration.Indices(:, 3) + 1);
+            rxGrid(indices) = rxSymbols;
+
+            % Copy the estimated channel coefficients into a resource grid.
+            chGrid = nrResourceGrid(carrier);
+            chGrid(indices) = channelCoefs;
+
+            % Run the detector.
+            uci = srspucch(carrier, configuration.PUCCH, ackSize, rxGrid, chGrid, configuration.NoiseVar);
+
+            if (ackSize == 0)
+                if (srSize == 0)
+                    assertFalse(obj, uci.isValid, 'An empty PUCCH occasion should return an ''invalid'' UCI.');
+                    return;
+                end
+                if (sr == 1)
+                    assertTrue(obj, uci.isValid, 'A positive SR-only PUCCH should return a ''valid'' UCI.');
+                    return;
+                end
+                assertFalse(obj, uci.isValid, 'A negative SR-only PUCCH should return an ''invalid'' UCI.');
+                return;
+            end
+
+            assertTrue(obj, uci.isValid, 'An ACK-carrying PUCCH should return a ''valid'' UCI.');
+
+            assertLength(obj, uci.HARQAckPayload, ackSize, 'Wrong number of ACK bits.');
+            assertEqual(obj, uci.HARQAckPayload, int8(ack), 'HARQ-ACK bits do not match.');
+
+        end % of function mexTest(obj, numerology, SymbolAllocation, ...
+    end % of methods (Test, TestTags = {'testmex'})
+
 end % of srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
 
 %Generates simulation data (modulated symbols, ACK and SR values, channel coefficients and configuration objects).
@@ -276,6 +332,7 @@ function [rxSymbols, ack, sr, channelCoefs, configuration] = generateSimData(num
     configuration.PRBSet = PRBSet;
     configuration.SecondHopConfig = secondHopConfig;
     configuration.PUCCH = pucch;
+    configuration.Carrier = carrier;
     configuration.NCellID = NCellID;
     configuration.NoiseVar = noiseVar;
 end
