@@ -45,7 +45,7 @@
 classdef srsPUCCHDetector < matlab.System
     methods (Access = protected)
         function uci = stepImpl(obj, carrierConfig, pucchConfig, nHARQAck, rxGrid, ...
-                chEstimates, noiseVar)
+                chEstimates, noiseVars)
             arguments
                 obj                   (1, 1) srsMEX.phy.srsPUCCHDetector
                 carrierConfig         (1, 1) nrCarrierConfig
@@ -53,13 +53,16 @@ classdef srsPUCCHDetector < matlab.System
                 nHARQAck              (1, 1) double {mustBeMember(nHARQAck, 0:2)}
                 rxGrid            (:, 14, :) double {srsTest.helpers.mustBeResourceGrid}
                 chEstimates       (:, 14, :) double {srsTest.helpers.mustBeResourceGrid}
-                noiseVar              (1, 1) double {mustBeNonnegative}
+                noiseVars                    double {mustBeVector, mustBeNonnegative}
             end
 
             assert(all(size(rxGrid) == size(chEstimates)), 'srsran_matlab:srsPUCCHDetector', ...
                 'Resource grid and channel estimates sizes do not match.');
 
-            numRxPorts = 1;
+            numRxPorts = size(chEstimates, 3);
+
+            assert(length(noiseVars) == numRxPorts, 'srsran_matlab:srsPUCCHDetector', ...
+                'The number of noise variances does not match the number of Rx ports.');
 
             if ~isempty(pucchConfig.NSizeBWP)
                 nSizeBWP = pucchConfig.NSizeBWP;
@@ -99,7 +102,7 @@ classdef srsPUCCHDetector < matlab.System
                 'Beta', 1 ...
                 );
             [status, harq, sr] = obj.pucch_detector_mex('step', single(rxGrid), single(chEstimates), ...
-                single(noiseVar), mexConfig);
+                single(noiseVars), mexConfig);
 
             isvalid = strcmp(status, 'valid');
             % Because of a MEX issue with returning empty arrays, we set the bit fields to 9 as a tag to

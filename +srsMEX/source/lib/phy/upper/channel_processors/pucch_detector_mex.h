@@ -59,7 +59,7 @@ private:
   ///     (subcarriers, OFDM symbols, antenna ports).
   ///   - A channel estimate, that is a two- or three-dimensional array of complex floats with the estimated channel
   ///     coefficients (must have the same number of subcarriers, OFDM symbols, antenna ports as the resource grid).
-  ///   - The estimated noise variance as a nonnegative float.
+  ///   - The estimated noise variances as an array of nonnegative floats (one value per Rx antenna port).
   ///   - A structure that provides the PUCCH Format 1 configurations. The fields are
   ///      - \c SubcarrierSpacing, the subcarrier spacing;
   ///      - \c NSlot, slot counter (unsigned);

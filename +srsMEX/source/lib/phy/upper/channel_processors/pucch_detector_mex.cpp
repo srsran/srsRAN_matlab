@@ -55,8 +55,11 @@ void MexFunction::check_step_outputs_inputs(ArgumentList outputs, ArgumentList i
         "Inputs 'rxGrid' and 'chEstimates' should have the same size, provided [{}] and [{}].", in1_dims, in2_dims);
   }
 
-  if ((inputs[3].getType() != ArrayType::SINGLE) || (inputs[3].getNumberOfElements() > 1)) {
-    mex_abort("Input 'noiseVar' should be a scalar float.");
+  ArrayDimensions in3_dims     = inputs[3].getDimensions();
+  bool            is_in3_array = (in3_dims.size() == 2);
+  is_in3_array                 = is_in3_array && ((in3_dims[0] == 1) || (in3_dims[1] == 1));
+  if ((inputs[3].getType() != ArrayType::SINGLE) || !is_in3_array) {
+    mex_abort("Input 'noiseVars' should be a single-dimension array of floats.");
   }
 
   if ((inputs[4].getType() != ArrayType::STRUCT) || (inputs[4].getNumberOfElements() > 1)) {
@@ -139,13 +142,11 @@ static pucch_detector::format1_configuration populate_f1_configuration(const Str
   const CharArray in_cp = in_cfg["CP"];
   cfg.cp                = matlab_to_srs_cyclic_prefix(in_cp.toAscii());
 
-  // TODO(david): Set the port indices.
-  // unsigned nof_ports = static_cast<unsigned>(in_cfg["NRxPorts"][0]);
-  // cfg.ports.clear();
-  // for (unsigned i_port = 0; i_port != nof_ports; ++i_port) {
-  //   cfg.ports.push_back(i_port);
-  // }
-  cfg.port = 0;
+  unsigned nof_ports = static_cast<unsigned>(in_cfg["NRxPorts"][0]);
+  cfg.ports.clear();
+  for (unsigned i_port = 0; i_port != nof_ports; ++i_port) {
+    cfg.ports.push_back(i_port);
+  }
 
   // Set the frequency allocation.
   cfg.starting_prb   = static_cast<unsigned>(in_cfg["StartPRB"][0]);
@@ -192,10 +193,12 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
 
   read_channel_estimate(ch_est, inputs[2]);
 
-  // Get the noise variance.
-  // TODO(david): double check this when extending to multiple Rx ports.
-  float noise_var = static_cast<float>(static_cast<TypedArray<float>>(inputs[3])[0]);
-  ch_est.set_noise_variance(noise_var, 0);
+  // Get the noise variances and load them into the CSI.
+  TypedArray<float> noise_vars = inputs[3];
+
+  for (unsigned i_port = 0, nof_ports = noise_vars.getNumberOfElements(); i_port != nof_ports; ++i_port) {
+    ch_est.set_noise_variance(noise_vars[i_port], i_port);
+  }
 
   // Read the configuration structure.
   StructArray                                 in_cfg_array = inputs[4];
