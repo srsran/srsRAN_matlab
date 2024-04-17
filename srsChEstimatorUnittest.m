@@ -19,6 +19,7 @@
 %
 %   configuration     - Description of the allocated REs and DM-RS pattern.
 %   FrequencyHopping  - Frequency hopping type.
+%   CarrierOffset     - Carrier frequency offset, as a fraction of the subcarrier spacing.
 %
 %   srsChEstimatorUnittest Methods:
 %
@@ -28,6 +29,10 @@
 %
 %   testvectorGenerationCases - Generates a test vector according to the provided
 %                               parameters.
+%
+%   srsChEstimatorUnittest Methods (TestTags = {'testmex'}):
+%
+%   compareMex - Compares mex results with those from the reference estimator.
 %
 %   srsChEstimatorUnittest Methods (Access = protected):
 %
@@ -163,6 +168,9 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
         %Frequency hopping type ('neither', 'intraSlot').
         %   Note: Interslot frequency hopping is currently not considered.
         FrequencyHopping = {'neither', 'intraSlot'}
+
+        %Carrier frequency offset, as a fraction of the subcarrier spacing.
+        CarrierOffset = {0, 0.007, -0.013, 0.027}
     end % of properties (TestParameter)
 
     properties (Hidden)
@@ -197,6 +205,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             fprintf(fileID, '  float                                                   snr_est        = 0;\n');
             fprintf(fileID, '  float                                                   noise_var_est  = 0;\n');
             fprintf(fileID, '  float                                                   ta_us          = 0;\n');
+            fprintf(fileID, '  float                                                   cfo_Hz         = 0;\n');
             fprintf(fileID, '  file_vector<resource_grid_reader_spy::expected_entry_t> grid;\n');
             fprintf(fileID, '  file_vector<cf_t>                                       pilots;\n');
             fprintf(fileID, '  file_vector<resource_grid_reader_spy::expected_entry_t> estimates;\n');
@@ -205,19 +214,17 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
     end % of methods (Access = protected)
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(obj, configuration, FrequencyHopping)
+        function testvectorGenerationCases(obj, configuration, FrequencyHopping, CarrierOffset)
         %testvectorGenerationCases - Generates a test vector according to the provided
-        %   CONFIGURATION and FREQUENCYHOPPING type.
+        %   CONFIGURATION, FREQUENCYHOPPING type and CARRIEROFFSET.
 
             import srsLib.phy.upper.signal_processors.srsChannelEstimator
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.writeComplexFloatFile
 
-            % Cannot do frequency hopping if the entire BWP is allocated or if using a single OFDM symbol.
-            if ((configuration.nPRBs == obj.NSizeBWP) || (configuration.symbolAllocation(2) == 1)) ...
-                    && strcmp(FrequencyHopping, 'intraSlot')
-                return;
-            end
+            obj.assumeFalse(((configuration.nPRBs == obj.NSizeBWP) || (configuration.symbolAllocation(2) == 1)) ...
+                && strcmp(FrequencyHopping, 'intraSlot'), ...
+                'Cannot do frequency hopping if the entire BWP is allocated or if using a single OFDM symbol.');
 
             assert((sum(configuration.symbolAllocation) <= obj.nSymbolsSlot), ...
                 'srsran_matlab:srsChEstimatorUnittest', 'Time allocation exceeds slot length.');
@@ -246,8 +253,18 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             channelCoef = exp(2j * pi * rand);
             channelTF = fft([zeros(channelDelay, 1); channelCoef; zeros(5, 1)], fftSize);
             channelTF = fftshift(channelTF);
-            % We assume the channel constant over the entire slot.
+            % We assume the channel constant over the entire slot...
             channelRG = repmat(channelTF, 1, obj.nSymbolsSlot);
+            % ... but for CFO.
+            cfo = CarrierOffset; % Fraction of the SCS.
+            CPlengths = round(fftSize * 0.07) * ones(1, obj.nSymbolsSlot);
+
+            if cfo ~= 0
+                cfoFreq = [CPlengths(1) CPlengths(2:end) + fftSize];
+                cfoFreq = cumsum(cfoFreq) * cfo / fftSize;
+                cfoFreq = exp(2j * pi * cfoFreq);
+                channelRG = channelRG * diag(cfoFreq) * exp(1j * pi * ((fftSize - 1) / fftSize) * cfo);
+            end
 
             % Compute received resource grid.
             receivedRG = channelRG .* transmittedRG;
@@ -261,7 +278,9 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             EstimatorConfig.DMRSSymbolMask = obj.DMRSsymbols;
             EstimatorConfig.DMRSREmask = obj.DMRSREmask;
             EstimatorConfig.scs = 15000;
-            [channelEst, noiseEst, rsrp, epre, timeAlignment] = srsChannelEstimator(receivedRG, ...
+            EstimatorConfig.Nfft = fftSize;
+            EstimatorConfig.CyclicPrefixLengths = CPlengths;
+            [channelEst, noiseEst, rsrp, epre, timeAlignment, cfoEst] = srsChannelEstimator(receivedRG, ...
                 pilots, betaDMRS, hop1, hop2, EstimatorConfig);
 
             % TODO: The ratio of the two quantities below should give a metric that allows us
@@ -316,6 +335,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                 10 * log10(snrEst), ...
                 noiseEst, ...
                 timeAlignment * 1e6, ...
+                cfoEst, ...
                 };
 
             testCaseString = obj.testCaseToString(testID, context, false, ...
@@ -328,18 +348,16 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
     end % of methods (Test, TestTags = {'testvector'})
 
     methods (Test, TestTags = {'testmex'})
-        function compareMex(obj, configuration, FrequencyHopping)
+        function compareMex(obj, configuration, FrequencyHopping, CarrierOffset)
         %compareMex - Compare mex results with those from the reference estimator for
-        %   a given CONFIGURATION and FREQUENCYHOPPING type.
+        %   a given CONFIGURATION, FREQUENCYHOPPING type and CARRIEROFFSET.
 
             import srsLib.phy.upper.signal_processors.srsChannelEstimator
             import srsMEX.phy.srsMultiPortChannelEstimator
 
-            % Cannot do frequency hopping if the entire BWP is allocated or if using a single OFDM symbol.
-            if ((configuration.nPRBs == obj.NSizeBWP) || (configuration.symbolAllocation(2) == 1)) ...
-                    && strcmp(FrequencyHopping, 'intraSlot')
-                return;
-            end
+            obj.assumeFalse(((configuration.nPRBs == obj.NSizeBWP) || (configuration.symbolAllocation(2) == 1)) ...
+                && strcmp(FrequencyHopping, 'intraSlot'), ...
+                'Cannot do frequency hopping if the entire BWP is allocated or if using a single OFDM symbol.');
 
             assert((sum(configuration.symbolAllocation) <= obj.nSymbolsSlot), ...
                 'srsran_matlab:srsChEstimatorUnittest', 'Time allocation exceeds slot length.');
@@ -365,8 +383,18 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             channelCoef = exp(2j * pi * rand);
             channelTF = fft([zeros(channelDelay, 1); channelCoef; zeros(5, 1)], fftSize);
             channelTF = fftshift(channelTF);
-            % We assume the channel constant over the entire slot.
+            % We assume the channel constant over the entire slot...
             channelRG = repmat(channelTF, 1, obj.nSymbolsSlot);
+            % ... but for CFO.
+            cfo = CarrierOffset; % Fraction of the SCS.
+            CPlengths = round(fftSize * 0.07) * ones(1, obj.nSymbolsSlot);
+
+            if cfo ~= 0
+                cfoFreq = [CPlengths(1) CPlengths(2:end) + fftSize];
+                cfoFreq = cumsum(cfoFreq) * cfo / fftSize;
+                cfoFreq = exp(2j * pi * cfoFreq);
+                channelRG = channelRG * diag(cfoFreq) * exp(1j * pi * ((fftSize - 1) / fftSize) * cfo);
+            end
 
             % Compute received resource grid.
             receivedRG = channelRG .* transmittedRG;
@@ -380,7 +408,9 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             EstimatorConfig.DMRSSymbolMask = obj.DMRSsymbols;
             EstimatorConfig.DMRSREmask = obj.DMRSREmask;
             EstimatorConfig.scs = 15000;
-            [channelEst, noiseEst, rsrp, epre, timeAlignment] = srsChannelEstimator(receivedRG, ...
+            EstimatorConfig.Nfft = fftSize;
+            EstimatorConfig.CyclicPrefixLengths = CPlengths;
+            [channelEst, noiseEst, rsrp, epre, timeAlignment, cfoEst] = srsChannelEstimator(receivedRG, ...
                 pilots, betaDMRS, hop1, hop2, EstimatorConfig);
 
             % Cast input for the mex estimator.
@@ -408,19 +438,23 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
     end % of methods (Test, TestTags = {'testmex'})
 
     methods % public
-        function [mse, noiseEst, rsrpEst, epreEst, crlb] = characterize(obj, configuration, ...
-                FrequencyHopping, channelType, delay, scs, snrValues, nRuns, sizeBWP)
+        function [mse, noiseEst, rsrpEst, epreEst, cfoEst, crlb] = characterize(obj, configuration, ...
+                FrequencyHopping, scs, channelType, delay, doppler, cfo, snrValues, nRuns, sizeBWP)
         %characterize - Draw the empircical MSE performance curve of the estimator.
-        %   MSE = characterize(OBJ, CONFIGURATION, FREQUENCYHOPPING, CHANNELTYPE, DELAY, SCS, SNRVALUES, NRUNS)
+        %   MSE = characterize(OBJ, CONFIGURATION, FREQUENCYHOPPING, SCS, CHANNELTYPE, DELAY, DOPPLER, CFO, SNRVALUES, NRUNS)
         %   returns the empirical mean squared error of the channel estimation after NRUNS simulations
-        %   and for all SNRVALUES. CONFIGURATION and FREQUENCYHOPPING provide the physical
-        %   channel configuration and CHANNELTYPE, DELAY and SCS specify the simulated channel model.
+        %   and for all SNRVALUES. CONFIGURATION, FREQUENCYHOPPING and SCS provide the physical
+        %   channel configuration and CHANNELTYPE, DELAY, DOPPLER and CFO specify the simulated channel model.
+        %   Note: DELAY is the delay spread for the IEEE channel types, and the Path delay
+        %   for the 'pure-delay' channel type.
+        %   Note: DOPPLER is the maximum Doppler shift in hertz (effect of scattering), not to
+        %   be confused with the CFO.
         %
         %   MSE = characterize(..., BWP) also changes the BWP size (expressed as a number of RBs).
         %   The default BWP size is 51.
         %
-        %   [MSE, NOISEEST, RSRPEST, EPREEST, CRLB] = characterize(...) also returns the
-        %   estimates of noise variance, RSRP and EPRE for all runs and all SNR values,
+        %   [MSE, NOISEEST, RSRPEST, EPREEST, CFOEST, CRLB] = characterize(...) also returns the
+        %   estimates of noise variance, RSRP, EPRE and CFO for all runs and all SNR values,
         %   as well as the CRLB for the channel estimation. The CRLB is computed assuming
         %   the entire band is available for estimation, with pilots positioned with
         %   the same pattern as the DM-RS (first column) or with pilots in all REs
@@ -430,17 +464,19 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
         %   SNRVALUES is an array of SNR values in decibel.
         %   NRUNS is an integer number of simulations.
             arguments
-                obj (1, 1) srsChEstimatorUnittest
-                configuration (1, 1) struct {mustBeConfiguration}
-                FrequencyHopping (1, :) char {mustBeMember(FrequencyHopping, {'neither', 'intraSlot'})}
-                channelType (1, :) char {mustBeMember(channelType, {'pure-delay', ...
+                obj              (1, 1) srsChEstimatorUnittest
+                configuration    (1, 1) struct {mustBeConfiguration}
+                FrequencyHopping (1, :) char   {mustBeMember(FrequencyHopping, {'neither', 'intraSlot'})}
+                scs              (1, 1) double {mustBeMember(scs, [15, 30])}
+                channelType      (1, :) char   {mustBeMember(channelType, {'pure-delay', ...
                     'TDL-A', 'TDL-B', 'TDL-C', 'TDL-D', 'TDL-E', ...
                     'TDLA30', 'TDLB100', 'TDLC300', 'TDLC60'})}
-                delay
-                scs (1, 1) double {mustBeMember(scs, [15, 30])}
-                snrValues double {mustBeReal, mustBeVector}
-                nRuns (1, 1) double {mustBeNonnegative, mustBeInteger}
-                sizeBWP (1, 1) double = NaN
+                delay            (1, 1) double {mustBeReal, mustBeNonnegative}
+                doppler          (1, 1) double {mustBeReal, mustBeNonnegative}
+                cfo              (1, 1) double {mustBeReal}
+                snrValues               double {mustBeReal, mustBeVector}
+                nRuns            (1, 1) double {mustBeNonnegative, mustBeInteger}
+                sizeBWP          (1, 1) double = NaN
             end
 
             import srsLib.phy.upper.signal_processors.srsChannelEstimator
@@ -471,7 +507,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             carrier.NSizeGrid = obj.NSizeGrid;
 
             waveformInfo = nrOFDMInfo(carrier);
-            channel = configureChannel(channelType, delay, waveformInfo.SampleRate, ...
+            channel = configureChannel(channelType, delay, doppler, waveformInfo.SampleRate, ...
                 carrier.SubcarrierSpacing);
 
             % Configure each hop.
@@ -499,16 +535,29 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             noiseEst = zeros(length(snrValues), nRuns);
             rsrpEst = zeros(length(snrValues), nRuns);
             epreEst = zeros(length(snrValues), nRuns);
+            cfoEst = zeros(length(snrValues), nRuns);
 
             % Configure estimator.
             EstimatorConfig.DMRSSymbolMask = obj.DMRSsymbols;
             EstimatorConfig.DMRSREmask = obj.DMRSREmask;
             EstimatorConfig.nPilotsNoiseAvg = sum(obj.DMRSREmask);
-            EstimatorConfig.scs = 15000;
+            EstimatorConfig.scs = scs * 1000; % SCS in hertz
+            EstimatorConfig.Nfft = waveformInfo.Nfft;
+            EstimatorConfig.CyclicPrefixLengths = waveformInfo.CyclicPrefixLengths(1:14);
+            % EstimatorConfig.CFOCompensate = false; % for legacy estimator without CFO compensation.
 
             for iRun = 1:nRuns
                 reset(channel);
                 [receivedWF0, pathGains, sampleTimes] = channel(transmittedWF);
+
+                if cfo ~= 0
+                    nSamples = size(receivedWF0, 1);
+                    if (~exist('cfoPhase', 'var') || length(cfoPhase) ~= nSamples)
+                        timeIx = (0:length(receivedWF0)-1).';
+                        cfoPhase = exp(2j * pi * timeIx * cfo / waveformInfo.SampleRate);
+                    end
+                    receivedWF0 = receivedWF0 .* cfoPhase;
+                end
 
                 noise0 = randn(size(receivedWF0)) + 1j * randn(size(receivedWF0));
 
@@ -523,26 +572,37 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                     % Compute received resource grid.
                     receivedRG = nrOFDMDemodulate(carrier, receivedWF);
 
-                    [channelEst, noiseEstL, rsrpEstL, epreEstL] = srsChannelEstimator(receivedRG, pilots, betaDMRS, hop1, hop2, EstimatorConfig);
+                    [channelEst, noiseEstL, rsrpEstL, epreEstL, ~, cfoEstL] ...
+                        = srsChannelEstimator(receivedRG, pilots, betaDMRS, hop1, hop2, EstimatorConfig);
                     noiseEst(iSNR, iRun) = noiseEstL;
                     rsrpEst(iSNR, iRun) = rsrpEstL;
                     epreEst(iSNR, iRun) = epreEstL;
+                    cfoEst(iSNR, iRun) = cfoEstL;
 
                     % Get the true channel, for comparison.
                     pathFilters = channel.getPathFilters();
                     channelTrue = nrPerfectChannelEstimate(carrier, pathGains, pathFilters, 0, sampleTimes);
 
+                    if cfo ~= 0
+                        cfoNorm = cfo / scs / 1000;
+                        cfoFreq = [waveformInfo.CyclicPrefixLengths(1) waveformInfo.CyclicPrefixLengths(2:14) + waveformInfo.Nfft];
+                        cfoFreq = cumsum(cfoFreq) * cfoNorm / waveformInfo.Nfft;
+                        cfoFreq = exp(2j * pi * cfoFreq);
+                        channelTrue = channelTrue * diag(cfoFreq) * exp(1j * pi * ((waveformInfo.Nfft - 1) / waveformInfo.Nfft) * cfoNorm);
+                    end
+
                     % Just for debugging/analysis purposes: set to true to visualize
                     % the effect of channel and channel estimation on a random QAM
                     % points.
                     if false
-                        whatSCS = (channelEst(:,1+hop1.startSymbol) ~= 0); %#ok<UNRCH>
+                        whatSymbol = 1+hop1.startSymbol; %#ok<UNRCH>
+                        whatSCS = (channelEst(:, whatSymbol) ~= 0);
                         nSCS = sum(whatSCS);
                         % Create some random QAM points.
-                        fakeSymbols = srsTest.helpers.randmod('256QAM', [nSCS, 50]);
+                        fakeSymbols = srsTest.helpers.randmod('QPSK', [nSCS, 50]);
 
                         % Apply the true channel and ZF-equalize with the estimated channel (SC-wise).
-                        rr = diag(channelTrue(whatSCS, 1) ./ channelEst(whatSCS, 1)) * fakeSymbols;
+                        rr = diag(channelTrue(whatSCS, whatSymbol) ./ channelEst(whatSCS, whatSymbol)) * fakeSymbols;
 
                         % Split edge and middle points, to visualize the difference in
                         % the estimation performance.
@@ -667,11 +727,11 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
     end % of methods (Access = private)
 end % of classdef srsChEstimatorUnittest
 
-function channel = configureChannel(chModel, delay, SampleRate, SubcarrierSpacing)
+function channel = configureChannel(chModel, delay, doppler, SampleRate, SubcarrierSpacing)
     channel = nrTDLChannel;
     channel.NumTransmitAntennas = 1;
     channel.NumReceiveAntennas = 1;
-    channel.MaximumDopplerShift = 0;
+    channel.MaximumDopplerShift = doppler;
     channel.SampleRate = SampleRate;
     channel.RandomStream = 'Global stream';
     if strcmp(chModel, 'pure-delay')

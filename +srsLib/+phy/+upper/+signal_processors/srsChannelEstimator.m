@@ -1,5 +1,5 @@
 %srsChannelEstimator channel estimation.
-%   [CHANNELESTRG, NOISEEST, RSRP, EPRE, TIMEALIGNMENT] = srsChannelEstimator(RECEIVEDRG, PILOTS, BETADMRS, HOP1, HOP2, CONFIG)
+%   [CHANNELESTRG, NOISEEST, RSRP, EPRE, TIMEALIGNMENT, CFO] = srsChannelEstimator(RECEIVEDRG, PILOTS, BETADMRS, HOP1, HOP2, CONFIG)
 %   estimates the channel coefficients for the REs resulting from the provided
 %   configuration (see below) from the observations in the resource grid RECEIVEDRG.
 %   The transmission is assumed to be single-layer.
@@ -34,6 +34,7 @@
 %   EPRE           - Average receive-side energy per reference-signal resource
 %                    element (including noise)
 %   TIMEALIGNMENT  - Time alignment estimation (delay of the strongest tap)
+%   CFO            - Carrier Frequency Offset
 
 %   Copyright 2021-2024 Software Radio Systems Limited
 %
@@ -50,13 +51,20 @@
 %   A copy of the BSD 2-Clause License can be found in the LICENSE
 %   file in the top-level directory of this distribution.
 
-function [channelEstRG, noiseEst, rsrp, epre, timeAlignment] = srsChannelEstimator(receivedRG, pilots, betaDMRS, hop1, hop2, config)
+function [channelEstRG, noiseEst, rsrp, epre, timeAlignment, cfo] = ...
+    srsChannelEstimator(receivedRG, pilots, betaDMRS, hop1, hop2, config)
 
-    channelEstRG = zeros(size(receivedRG));
+    cfoCompensate = true;
+    if (isfield(config, 'CFOCompensate'))
+        cfoCompensate = config.CFOCompensate;
+    end
+
+    channelEstRG = complex(zeros(size(receivedRG)));
     noiseEst = 0;
     rsrp = 0;
     epre = 0;
     timeAlignment = 0;
+    cfo = [];
 
     nPilotSymbolsHop1 = sum(hop1.DMRSsymbols);
 
@@ -80,6 +88,7 @@ function [channelEstRG, noiseEst, rsrp, epre, timeAlignment] = srsChannelEstimat
 
     if ~isempty(hop2.DMRSsymbols)
         timeAlignment = timeAlignment / 2;
+        cfo = cfo / 2;
     end
 
 
@@ -101,7 +110,18 @@ function [channelEstRG, noiseEst, rsrp, epre, timeAlignment] = srsChannelEstimat
         % LSE-estimate the channel coefficients of the subcarriers carrying DM-RS.
         nDMRSsymbols_ = sum(hop_.DMRSsymbols);
         recXpilots_ = receivedPilots_ .* conj(pilots_);
-        estimatedChannelP_ = sum(recXpilots_, 2) / betaDMRS / nDMRSsymbols_;
+
+        [recXpilotsNOCFO_, PHcorrection_, cfoHop_] = compensateCFO(recXpilots_, ...
+            hop_.DMRSsymbols, config.Nfft, config.CyclicPrefixLengths, cfoCompensate);
+        if ~isempty(cfoHop_)
+            if ~isempty(cfo)
+                cfo = cfo + cfoHop_ * config.scs;
+            else
+                cfo = cfoHop_ * config.scs;
+            end
+        end
+
+        estimatedChannelP_ = sum(recXpilotsNOCFO_, 2) / betaDMRS / nDMRSsymbols_;
         % TODO: at this point, we should compute a metric for signal detection.
         % detectMetricNum = detectMetricNum + norm(recXpilots_, 'fro')^2;
 
@@ -150,11 +170,11 @@ function [channelEstRG, noiseEst, rsrp, epre, timeAlignment] = srsChannelEstimat
         rsrp = rsrp + betaDMRS^2 * norm(estimatedChannelP_)^2 * nDMRSsymbols_;
 
         % The other subcarriers are linearly interpolated.
-        channelEstRG = fillChEst(channelEstRG, estimatedChannelP_, hop_);
+        channelEstRG = fillChEst(channelEstRG, estimatedChannelP_, PHcorrection_, hop_);
     end
 end % of function srsChannelEstimator
 
-function channelOut = fillChEst(channelIn, estimated, hop)
+function channelOut = fillChEst(channelIn, estimated, PHcorrection, hop)
 %Linearly interpolates the missing subcarriers and organizes the estimates on
 %   a resource grid.
     NRE = 12;
@@ -177,6 +197,9 @@ function channelOut = fillChEst(channelIn, estimated, hop)
     occupiedSCs = (NRE * hop.PRBstart):(NRE * (hop.PRBstart + hop.nPRBs) - 1);
     occupiedSymbols = hop.startSymbol + (0:hop.nAllocatedSymbols-1);
     channelOut(1 + occupiedSCs, 1 + occupiedSymbols) = repmat(estimatedAll, 1, hop.nAllocatedSymbols);
+    if ~isempty(PHcorrection)
+        channelOut = channelOut * diag(exp(1j * PHcorrection(:) .* hop.CHsymbols(:)));
+    end
 end
 
 function [rcFilter, correction] = getRCfilter(stride, nRBs)
@@ -215,4 +238,31 @@ function virtualPilots = createVirtualPilots(inPilots, nVirtuals)
     b = my - a*mx;
 
     virtualPilots = virtualPilots .* exp(1j * (a * (-nVirtuals:-1)' + b));
+end
+
+% If cfoCompensate == false, only estimates the CFO.
+function [recXpilotsOut, PHcorrection, cfoOut] = compensateCFO(recXpilots, DMRSsymbols, ...
+    Nfft, CyclicPrefixLengths, cfoCompensate)
+
+    if sum(DMRSsymbols) < 2
+        recXpilotsOut = recXpilots;
+        PHcorrection = [];
+        cfoOut = [];
+        return
+    end
+
+    dmrsIx = find(DMRSsymbols);
+    nSyms = dmrsIx(2) - dmrsIx(1);
+    cfoOut = sum(recXpilots(:, 2) ./ recXpilots(:, 1));
+    nSamples = nSyms * Nfft + sum(CyclicPrefixLengths((dmrsIx(1) + 1):dmrsIx(2)));
+    cfoOut = angle(cfoOut) * Nfft / (2 * pi * nSamples);
+
+    if cfoCompensate
+        symbolStartTime = cumsum([CyclicPrefixLengths(1) CyclicPrefixLengths(2:14) + Nfft]);
+        PHcorrection = 2 * pi * symbolStartTime * cfoOut / Nfft;
+        recXpilotsOut = recXpilots * diag(exp(-1j * PHcorrection(dmrsIx)));
+    else
+        PHcorrection = [];
+        recXpilotsOut = recXpilots;
+    end
 end
