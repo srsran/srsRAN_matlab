@@ -164,12 +164,12 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
                 chEsts, eqType, noiseVar, txScaling);
 
             testCaseContext = {...
-                NumSymbols, ... % nof_re
-                NumLayers, ...  % nof_layers
-                NumRxPorts, ... % nof_rx_ports
-                noiseVar, ...   % noise_var
-                txScaling, ...  % scaling
-                eqType, ...     % equalizer_type
+                NumSymbols, ...       % nof_re
+                NumLayers, ...        % nof_layers
+                NumRxPorts, ...       % nof_rx_ports
+                noiseVar, ...         % noise_var
+                txScaling, ...        % scaling
+                ['"' eqType '"'], ... % equalizer_type
                 };
 
             % Write the equalized symbols to a binary file.
