@@ -70,7 +70,7 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
 
     properties (TestParameter)
         % Number of RE to equalize.
-        NumSymbols = {12, 123, 997}
+        NumSymbols = {12, 123, 1000}
 
         %Channel dimensions.
         %   The first entry is the number of receive antenna ports, the
@@ -148,13 +148,24 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
             NumRxPorts = channelSize(1);
             NumLayers = channelSize(2);
 
-            % Create random receive symbols.
-            rxSymbols = randn(NumSymbols, NumRxPorts) + ...
-                1i * randn(NumSymbols, NumRxPorts);
+            % Create random QPSK transmit symbols.
+            txSymbols = (randi([0, 1], NumSymbols, NumRxPorts) + ...
+                1i * randi([0, 1], NumSymbols, NumRxPorts));
+            txSymbols = (2 * txSymbols - (1 + 1j)) / sqrt(2);
 
-            % Create random estimated channel.
-            chEsts = randn(NumSymbols, NumRxPorts, NumLayers) + ...
-                1i * randn(NumSymbols, NumRxPorts, NumLayers);
+            % Create random estimated channel. The estimated channel
+            % magnitude is range (0.1, 1) and the phase (0, 2 * pi).
+            chEsts = (0.1 + 0.9 * rand(NumSymbols, NumRxPorts, NumLayers)) .* ...
+                exp(2i * pi * rand(NumSymbols, NumRxPorts, NumLayers));
+
+            % Create random receive symbols.
+            rxSymbols = zeros(NumSymbols, NumRxPorts);
+            for nt = 1:NumLayers
+                for nr = 1:NumRxPorts
+                    rxSymbols(:, nr) = rxSymbols(:, nr) + ...
+                        txSymbols(:, nt) .* chEsts(:, nr, nt);
+                end
+            end
             
             % Select a random noise variance between (0.5, 1.5).
             noiseVar = 0.5 + rand();
@@ -163,6 +174,13 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
             [eqSymbols, eqNoiseVars] = srsChannelEqualizer(rxSymbols, ...
                 chEsts, eqType, noiseVar, txScaling);
 
+            % Revert layer mapping.
+            eqSymbols = nrLayerDemap(eqSymbols);
+            eqSymbols = eqSymbols{1};
+            eqNoiseVars = nrLayerDemap(eqNoiseVars);
+            eqNoiseVars = eqNoiseVars{1};
+
+            % Create cell with test case context.
             testCaseContext = {...
                 NumSymbols, ...       % nof_re
                 NumLayers, ...        % nof_layers
@@ -182,7 +200,7 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
             obj.saveDataFile('_test_input_rx_symbols', testID, @writeComplexFloatFile, rxSymbols(:));
 
             % Write the channel estimates to a binary file.
-            obj.saveDataFile('_test_input_ch_estimates', testID, @writeComplexFloatFile, obj.channelTensor(:));
+            obj.saveDataFile('_test_input_ch_estimates', testID, @writeComplexFloatFile, chEsts(:));
 
             % Generate the test case entry.
             testCaseString = obj.testCaseToString(testID, ...
