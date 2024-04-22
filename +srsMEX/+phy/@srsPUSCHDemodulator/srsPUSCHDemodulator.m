@@ -54,8 +54,8 @@ classdef srsPUSCHDemodulator < matlab.System
         function schSoftBits = stepImpl(obj, rxSymbols, cest, noiseVar, pusch, puschIndices, puschDMRSIndices, rxPorts)
             arguments
                 obj               (1, 1)     srsMEX.phy.srsPUSCHDemodulator
-                rxSymbols         (:, 14, :) double
-                cest              (:, 14, :) double
+                rxSymbols         (:, 14, :) double {srsTest.helpers.mustBeResourceGrid}
+                cest              (:, 14, :) double {srsTest.helpers.mustBeResourceGrid}
                 noiseVar          (1, 1)     double {mustBePositive}
                 pusch             (1, 1)     nrPUSCHConfig
                 puschIndices      (:, 1)     double {mustBeInteger, mustBePositive}
@@ -67,8 +67,6 @@ classdef srsPUSCHDemodulator < matlab.System
             assert(all(gridSize == size(cest)), 'srsran_matlab:srsPUSCHDemodulator', ...
                 'Resource grid and channel estimates sizes do not match.');
             if (numel(gridSize) > 2)
-                assert(gridSize(3) <= 4, 'srsran_matlab:srsPUSCHDemodulator', ...
-                    'The maximum supported number of Rx ports is 4, given %d.', gridSize(3));
                 assert(numel(rxPorts) <= gridSize(3), 'srsran_matlab:srsPUSCHDemodulator', ...
                     'The number of PUSCH ports, %d, cannot be larger than the number of Rx antenna ports, %d.', ...
                     numel(rxPorts), gridSize(3));

@@ -540,8 +540,10 @@ classdef PUCCHBLER < matlab.System
                     flag = strcmp(obj.DelayProfile, 'AWGN');
                 case 'Modulation'
                     flag = ((obj.PUCCHFormat == 1) || (obj.PUCCHFormat == 2));
-                case {'SNRrange', 'TotalBlocksCtr'}
+                case 'SNRrange'
                     flag = isempty(obj.SNRrange);
+                case 'TotalBlocksCtr'
+                    flag = (isempty(obj.SNRrange) || (obj.PUCCHFormat == 1));
                 case 'MissedBlocksMATLABCtr'
                     flag = isempty(obj.SNRrange) || isFormat1 || ~obj.isDetectionTest || strcmp(obj.ImplementationType, 'srs');
                 case 'MissedBlocksSRSCtr'

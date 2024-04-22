@@ -182,12 +182,14 @@ classdef PUSCHBLER < matlab.System
         DelaySpread (1, 1) double {mustBeReal, mustBeNonnegative} = 30e-9
         %TDL delay profiles only: Maximum Doppler shift in hertz.
         MaximumDopplerShift (1, 1) double {mustBeReal, mustBeNonnegative} = 0
+        %Carrier frequency offset in hertz (requires PerfectChannelEstimator set to false).
+        CarrierFrequencyOffset (1, 1) double {mustBeReal} = 0
         %HARQ flag: true for enabling retransmission with RV sequence [0, 2, 3, 1], false for no retransmissions.
         EnableHARQ (1, 1) logical = false
         %PUSCH implementation type ('matlab', 'srs' (requires mex), 'both').
         ImplementationType (1, :) char {mustBeMember(ImplementationType, {'matlab', 'srs', 'both'})} = 'matlab'
         %Implementation of the SRS channel estimator ('MEX', 'noMEX').
-        %   Only applies if ImplementationType is set to 'srs' or 'both') and PerfectChannelEstimator
+        %   Only applies if ImplementationType is set to 'srs' or 'both' and PerfectChannelEstimator
         %   is set to false.
         SRSEstimatorType (1, :) char {mustBeMember(SRSEstimatorType, {'MEX', 'noMEX'})} = 'MEX'
     end % of properties (Nontunable)
@@ -274,6 +276,12 @@ classdef PUSCHBLER < matlab.System
         function checkHARQandDecType(obj)
             if (obj.EnableHARQ && strcmp(obj.ImplementationType, 'both'))
                 error('Cannot run both decoders when HARQ is enabled.');
+            end
+        end
+
+        function checkCFOandEstimator(obj)
+            if (obj.PerfectChannelEstimator && (obj.CarrierFrequencyOffset ~= 0))
+                error('Cannot set a non-null carrier frequency offset with perfect channel estimation.');
             end
         end
     end % of methods (Access = private)
@@ -540,6 +548,9 @@ classdef PUSCHBLER < matlab.System
 
             % Cross-check that we are not testing both decoders when HARQ is enabled.
             obj.checkHARQandDecType();
+
+            % Cross-check that we are not using perfect channel estimation with CFO.
+            obj.checkCFOandEstimator();
         end
 
         function stepImpl(obj, SNRIn, nFrames)
@@ -724,6 +735,16 @@ classdef PUSCHBLER < matlab.System
                     % spread.
                     txWaveform = [txWaveform; zeros(maxChDelay, size(txWaveform, 2))]; %#ok<AGROW>
                     [rxWaveform, pathGains, sampleTimes] = obj.Channel(txWaveform);
+
+                    % Add CFO to the received signal, if configured.
+                    if (obj.CarrierFrequencyOffset ~= 0)
+                        nSamples = size(rxWaveform, 1);
+                        if (~exist('cfoPhase', 'var') || (length(cfoPhase) ~= nSamples))
+                            timeIx = (0:nSamples-1).';
+                            cfoPhase = exp(2j * pi * timeIx * obj.CarrierFrequencyOffset / obj.Channel.SampleRate);
+                        end
+                        rxWaveform = rxWaveform .* cfoPhase;
+                    end
 
                     % Add AWGN to the received time domain waveform.
                     % Normalize noise power by the IFFT size used in OFDM modulation,
@@ -995,7 +1016,7 @@ classdef PUSCHBLER < matlab.System
                 ... Antennas and layers.
                 'NRxAnts', 'NTxAnts', 'NumLayers', ...
                 ... Channel model.
-                'DelayProfile', 'DelaySpread', 'MaximumDopplerShift', 'PerfectChannelEstimator', ...
+                'DelayProfile', 'DelaySpread', 'MaximumDopplerShift', 'CarrierFrequencyOffset', 'PerfectChannelEstimator', ...
                 ... HARQ.
                 'EnableHARQ', ...
                 ... Other simulation details.

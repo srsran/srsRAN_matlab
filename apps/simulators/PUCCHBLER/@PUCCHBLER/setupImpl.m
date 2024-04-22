@@ -108,20 +108,16 @@ function stats = updateStatsF1(stats, uci, uciRx, ~, NumACKBits, isDetectTest, s
         if ~isempty(uciRx{1})
             % NACK to ACK.
             stats.falseACK(snrIdx) = stats.falseACK(snrIdx) + sum(~uci & uciRx{1});
-            stats.nNACKs(snrIdx) = stats.nNACKs(snrIdx) + sum(~uci);
             % Missed ACK.
             stats.missedACK(snrIdx) = stats.missedACK(snrIdx) + sum(uci & ~uciRx{1});
-            stats.nACKs(snrIdx) = stats.nACKs(snrIdx) + sum(uci);
         else
             % Missed ACK. Here, uciRx is empty (MATLAB's PUCCH decoder failed
             % to detect) and all ACKs are lost.
             stats.missedACK(snrIdx) = stats.missedACK(snrIdx) + sum(uci);
-            stats.nACKs(snrIdx) = stats.nACKs(snrIdx) + sum(uci);
         end
     else % false alarm test
         % False ACK.
         stats.falseACK(snrIdx) = stats.falseACK(snrIdx) + sum(uciRx{1});
-        stats.nNACKs(snrIdx) = stats.nNACKs(snrIdx) + NumACKBits;
     end % if isDetectTest
 end
 
@@ -144,22 +140,18 @@ function stats = updateStatsSRSF1(stats, uci, msg, isDetectTest, snrIdx)
         if msg.isValid
             % NACK to ACK.
             stats.falseACKSRS(snrIdx) = stats.falseACKSRS(snrIdx) + sum(~uci & uciRxSRS);
-            stats.nNACKsSRS(snrIdx) = stats.nNACKsSRS(snrIdx) + sum(~uci);
             % Missed ACK.
             stats.missedACKSRS(snrIdx) = stats.missedACKSRS(snrIdx) + sum(uci & ~uciRxSRS);
-            stats.nACKsSRS(snrIdx) = stats.nACKsSRS(snrIdx) + sum(uci);
         else
             % Missed ACK. Here, SRS's PUCCH decoder failed
             % to detect and all ACKs are lost.
             stats.missedACKSRS(snrIdx) = stats.missedACKSRS(snrIdx) + sum(uci);
-            stats.nACKsSRS(snrIdx) = stats.nACKsSRS(snrIdx) + sum(uci);
         end
     else % false alarm test
         % False ACK.
         if msg.isValid
             stats.falseACKSRS(snrIdx) = stats.falseACKSRS(snrIdx) + sum(uciRxSRS);
         end
-        stats.nNACKsSRS(snrIdx) = stats.nNACKsSRS(snrIdx) + length(uciRxSRS);
     end
 end
 
