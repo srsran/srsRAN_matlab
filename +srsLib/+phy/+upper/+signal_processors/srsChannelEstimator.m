@@ -13,8 +13,9 @@
 %   HOP2       - Configuration of the second intraSlot frequency hop (see below)
 %   CONFIG     - General configuration (struct with fields DMRSREmask, pattern
 %                of REs carrying DM-RS inside a DM-RS dedicated PRB, DMRSSymbolMask,
-%                pattern of OFDM symbols carrying DM-RS across both hops, and scs,
-%                subcarrier spacing in hertz).
+%                pattern of OFDM symbols carrying DM-RS across both hops, scs,
+%                subcarrier spacing in hertz, and CyclicPrefixDurations, the duration of
+%                of the CPs in milliseconds).
 %
 %   Each hop is configured by a struct with fields
 %   DMRSsymbols       - OFDM symbols carrying DM-RS in the first hop (logical mask)
@@ -72,6 +73,13 @@ function [channelEstRG, noiseEst, rsrp, epre, timeAlignment, cfo] = ...
 
     smoothing = 'filter';
 
+    if (cfoCompensate)
+        CyclicPrefixDurations = config.CyclicPrefixDurations * scs / 1000;
+        % Compute the start time of all OFDM symbols from the start of the slot, expressed in
+        % units of OFDM symbol time.
+        symbolStartTime = cumsum([CyclicPrefixDurations(1) CyclicPrefixDurations(2:14) + 1]);
+    end
+
     processHop(hop1, pilots(:, 1:nPilotSymbolsHop1), smoothing);
 
     if ~isempty(hop2.DMRSsymbols)
@@ -88,9 +96,17 @@ function [channelEstRG, noiseEst, rsrp, epre, timeAlignment, cfo] = ...
 
     if ~isempty(hop2.DMRSsymbols)
         timeAlignment = timeAlignment / 2;
-        cfo = cfo / 2;
     end
 
+    if (cfoCompensate && ~isempty(cfo))
+        PHcorrection = 2 * pi * symbolStartTime * cfo;
+        % Apply the phase shifts caused by the CFO to the channel estimates, so they
+        % can be compensated by the channel equalizer.
+        channelEstRG = channelEstRG .* reshape(exp(1j * PHcorrection), 1, []);
+    end
+
+    % Convert CFO from normalized units to hertz.
+    cfo = cfo * scs;
 
     %     Nested functions
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -111,13 +127,13 @@ function [channelEstRG, noiseEst, rsrp, epre, timeAlignment, cfo] = ...
         nDMRSsymbols_ = sum(hop_.DMRSsymbols);
         recXpilots_ = receivedPilots_ .* conj(pilots_);
 
-        [recXpilotsNOCFO_, PHcorrection_, cfoHop_] = compensateCFO(recXpilots_, ...
-            hop_.DMRSsymbols, config.Nfft, config.CyclicPrefixLengths, cfoCompensate);
+        [recXpilotsNOCFO_, cfoHop_] = compensateCFO(recXpilots_, ...
+            hop_.DMRSsymbols, scs / 1000, config.CyclicPrefixDurations, cfoCompensate);
         if ~isempty(cfoHop_)
             if ~isempty(cfo)
-                cfo = cfo + cfoHop_ * config.scs;
+                cfo = (cfo + cfoHop_) / 2;
             else
-                cfo = cfoHop_ * config.scs;
+                cfo = cfoHop_;
             end
         end
 
@@ -170,11 +186,11 @@ function [channelEstRG, noiseEst, rsrp, epre, timeAlignment, cfo] = ...
         rsrp = rsrp + betaDMRS^2 * norm(estimatedChannelP_)^2 * nDMRSsymbols_;
 
         % The other subcarriers are linearly interpolated.
-        channelEstRG = fillChEst(channelEstRG, estimatedChannelP_, PHcorrection_, hop_);
+        channelEstRG = fillChEst(channelEstRG, estimatedChannelP_, hop_);
     end
 end % of function srsChannelEstimator
 
-function channelOut = fillChEst(channelIn, estimated, PHcorrection, hop)
+function channelOut = fillChEst(channelIn, estimated, hop)
 %Linearly interpolates the missing subcarriers and organizes the estimates on
 %   a resource grid.
     NRE = 12;
@@ -197,9 +213,6 @@ function channelOut = fillChEst(channelIn, estimated, PHcorrection, hop)
     occupiedSCs = (NRE * hop.PRBstart):(NRE * (hop.PRBstart + hop.nPRBs) - 1);
     occupiedSymbols = hop.startSymbol + (0:hop.nAllocatedSymbols-1);
     channelOut(1 + occupiedSCs, 1 + occupiedSymbols) = repmat(estimatedAll, 1, hop.nAllocatedSymbols);
-    if ~isempty(PHcorrection)
-        channelOut = channelOut * diag(exp(1j * PHcorrection(:) .* hop.CHsymbols(:)));
-    end
 end
 
 function [rcFilter, correction] = getRCfilter(stride, nRBs)
@@ -235,34 +248,34 @@ function virtualPilots = createVirtualPilots(inPilots, nVirtuals)
     y = unwrap(y);
     my = mean(y);
     a = (x * y - nPilots * mx * my) / (normx - nPilots * mx^2);
-    b = my - a*mx;
+    b = my - a * mx;
 
     virtualPilots = virtualPilots .* exp(1j * (a * (-nVirtuals:-1)' + b));
 end
 
 % If cfoCompensate == false, only estimates the CFO.
-function [recXpilotsOut, PHcorrection, cfoOut] = compensateCFO(recXpilots, DMRSsymbols, ...
-    Nfft, CyclicPrefixLengths, cfoCompensate)
+function [recXpilotsOut, cfoOut] = compensateCFO(recXpilots, DMRSsymbols, ...
+    SCS, CyclicPrefixDurations, cfoCompensate)
 
     if sum(DMRSsymbols) < 2
         recXpilotsOut = recXpilots;
-        PHcorrection = [];
         cfoOut = [];
         return
     end
 
+    CPDs = CyclicPrefixDurations * SCS;
+
     dmrsIx = find(DMRSsymbols);
     nSyms = dmrsIx(2) - dmrsIx(1);
-    cfoOut = sum(recXpilots(:, 2) ./ recXpilots(:, 1));
-    nSamples = nSyms * Nfft + sum(CyclicPrefixLengths((dmrsIx(1) + 1):dmrsIx(2)));
-    cfoOut = angle(cfoOut) * Nfft / (2 * pi * nSamples);
+    cfoOut = recXpilots(:, 1)' * recXpilots(:, 2);
+    nSamples = nSyms + sum(CPDs((dmrsIx(1) + 1):dmrsIx(2)));
+    cfoOut = angle(cfoOut) / (2 * pi * nSamples);
 
     if cfoCompensate
-        symbolStartTime = cumsum([CyclicPrefixLengths(1) CyclicPrefixLengths(2:14) + Nfft]);
-        PHcorrection = 2 * pi * symbolStartTime * cfoOut / Nfft;
-        recXpilotsOut = recXpilots * diag(exp(-1j * PHcorrection(dmrsIx)));
+        symbolStartTime = cumsum([CPDs(1) CPDs(2:14) + 1]);
+        PHcorrection = 2 * pi * symbolStartTime * cfoOut;
+        recXpilotsOut = recXpilots .* reshape(exp(-1j * PHcorrection(dmrsIx)), 1, []);
     else
-        PHcorrection = [];
         recXpilotsOut = recXpilots;
     end
 end

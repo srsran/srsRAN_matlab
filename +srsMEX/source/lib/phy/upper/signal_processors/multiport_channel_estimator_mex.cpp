@@ -156,11 +156,12 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
   }
 
   StructArray info_out =
-      factory.createStructArray({nof_rx_ports + 1, 1}, {"NoiseVar", "RSRP", "EPRE", "SINR", "TimeAlignment"});
+      factory.createStructArray({nof_rx_ports + 1, 1}, {"NoiseVar", "RSRP", "EPRE", "SINR", "TimeAlignment", "CFO"});
   float  total_noise_var      = 0;
   float  total_rsrp           = 0;
   float  total_epre           = 0;
   double total_time_alignment = 0;
+  double total_cfo            = 0;
   for (unsigned i_port = 0; i_port != nof_rx_ports; ++i_port) {
     info_out[i_port]["NoiseVar"] = factory.createScalar(static_cast<double>(ch_estimate.get_noise_variance(i_port)));
     total_noise_var += ch_estimate.get_noise_variance(i_port);
@@ -172,6 +173,13 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
     info_out[i_port]["TimeAlignment"] =
         factory.createScalar(static_cast<double>(ch_estimate.get_time_alignment(i_port).to_seconds()));
     total_time_alignment += ch_estimate.get_time_alignment(i_port).to_seconds();
+    if (ch_estimate.get_cfo_Hz(i_port).has_value()) {
+      info_out[i_port]["CFO"] = factory.createScalar(static_cast<double>(ch_estimate.get_cfo_Hz(i_port).value()));
+      total_cfo += static_cast<double>(ch_estimate.get_cfo_Hz(i_port).value());
+    } else {
+      info_out[i_port]["CFO"] = factory.createEmptyArray();
+      total_cfo               = std::numeric_limits<float>::quiet_NaN();
+    }
   }
 
   // In the last "info_out" we store the global metrics.
@@ -182,6 +190,11 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
   // A global SINR doesn't make much sense, we need to know how the ports are combined.
   info_out[nof_rx_ports]["SINR"]          = factory.createScalar(std::numeric_limits<double>::quiet_NaN());
   info_out[nof_rx_ports]["TimeAlignment"] = factory.createScalar(total_time_alignment / nof_rx_ports);
+  if (!std::isnan(total_cfo)) {
+    info_out[nof_rx_ports]["CFO"] = factory.createScalar(total_cfo / nof_rx_ports);
+  } else {
+    info_out[nof_rx_ports]["CFO"] = factory.createEmptyArray();
+  }
 
   outputs[0] = ch_est_out;
   outputs[1] = info_out;

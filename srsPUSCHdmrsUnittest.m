@@ -139,6 +139,7 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
             import srsLib.phy.helpers.srsConfigurePUSCH
             import srsLib.phy.upper.signal_processors.srsPUSCHdmrs
             import srsLib.phy.upper.signal_processors.srsChannelEstimator
+            import srsLib.ran.utils.scs2cps
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.symbolAllocationMask2string
             import srsTest.helpers.RBallocationMask2string
@@ -231,9 +232,8 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
                 pilots = reshape(DMRSsymbols, [], nOFDMSymbols);
                 cfg.DMRSSymbolMask = hop.DMRSsymbols;
                 cfg.DMRSREmask = hop.DMRSREmask;
-                cfg.nPilotsNoiseAvg = 2;
                 cfg.scs = SubcarrierSpacing * 1000;
-                cfg.useFilter = true;
+                cfg.CyclicPrefixDurations = scs2cps(SubcarrierSpacing);
                 [estChannel, estNoiseVar, estRSRP] = srsChannelEstimator(receivedRG, ...
                     pilots, amplitude, hop, hop2, cfg);
 

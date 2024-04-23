@@ -18,6 +18,7 @@
 %   srsChEstimatorUnittest Properties (TestParameter):
 %
 %   configuration     - Description of the allocated REs and DM-RS pattern.
+%   SubcarrierSpacing - Subcarrier spacing in kHz.
 %   FrequencyHopping  - Frequency hopping type.
 %   CarrierOffset     - Carrier frequency offset, as a fraction of the subcarrier spacing.
 %
@@ -165,6 +166,9 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                ), ...
             }
 
+        %Subcarrier spacing in kHz.
+        SubcarrierSpacing = {15, 30}
+
         %Frequency hopping type ('neither', 'intraSlot').
         %   Note: Interslot frequency hopping is currently not considered.
         FrequencyHopping = {'neither', 'intraSlot'}
@@ -205,7 +209,8 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             fprintf(fileID, '  float                                                   snr_est        = 0;\n');
             fprintf(fileID, '  float                                                   noise_var_est  = 0;\n');
             fprintf(fileID, '  float                                                   ta_us          = 0;\n');
-            fprintf(fileID, '  float                                                   cfo_Hz         = 0;\n');
+            fprintf(fileID, '  float                                                   cfo_true_Hz    = 0;\n');
+            fprintf(fileID, '  optional<float>                                         cfo_est_Hz     = 0;\n');
             fprintf(fileID, '  file_vector<resource_grid_reader_spy::expected_entry_t> grid;\n');
             fprintf(fileID, '  file_vector<cf_t>                                       pilots;\n');
             fprintf(fileID, '  file_vector<resource_grid_reader_spy::expected_entry_t> estimates;\n');
@@ -214,11 +219,13 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
     end % of methods (Access = protected)
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(obj, configuration, FrequencyHopping, CarrierOffset)
+        function testvectorGenerationCases(obj, configuration, SubcarrierSpacing, ...
+            FrequencyHopping, CarrierOffset)
         %testvectorGenerationCases - Generates a test vector according to the provided
-        %   CONFIGURATION, FREQUENCYHOPPING type and CARRIEROFFSET.
+        %   CONFIGURATION, SUBCARRIERSPACING, FREQUENCYHOPPING type and CARRIEROFFSET.
 
             import srsLib.phy.upper.signal_processors.srsChannelEstimator
+            import srsLib.ran.utils.scs2cps
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.writeComplexFloatFile
 
@@ -257,13 +264,14 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             channelRG = repmat(channelTF, 1, obj.nSymbolsSlot);
             % ... but for CFO.
             cfo = CarrierOffset; % Fraction of the SCS.
-            CPlengths = round(fftSize * 0.07) * ones(1, obj.nSymbolsSlot);
+            CPDurations = scs2cps(SubcarrierSpacing);
 
             if cfo ~= 0
-                cfoFreq = [CPlengths(1) CPlengths(2:end) + fftSize];
-                cfoFreq = cumsum(cfoFreq) * cfo / fftSize;
-                cfoFreq = exp(2j * pi * cfoFreq);
-                channelRG = channelRG * diag(cfoFreq) * exp(1j * pi * ((fftSize - 1) / fftSize) * cfo);
+                cfoVal = CPDurations * SubcarrierSpacing;
+                cfoVal(2:end) = cfoVal(2:end) + 1;
+                cfoVal = cumsum(cfoVal) * cfo;
+                cfoVal = exp(2j * pi * cfoVal);
+                channelRG = (channelRG .* cfoVal) * exp(1j * pi * ((fftSize - 1) / fftSize) * cfo);
             end
 
             % Compute received resource grid.
@@ -277,9 +285,8 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
 
             EstimatorConfig.DMRSSymbolMask = obj.DMRSsymbols;
             EstimatorConfig.DMRSREmask = obj.DMRSREmask;
-            EstimatorConfig.scs = 15000;
-            EstimatorConfig.Nfft = fftSize;
-            EstimatorConfig.CyclicPrefixLengths = CPlengths;
+            EstimatorConfig.scs = SubcarrierSpacing * 1000;
+            EstimatorConfig.CyclicPrefixDurations = CPDurations;
             [channelEst, noiseEst, rsrp, epre, timeAlignment, cfoEst] = srsChannelEstimator(receivedRG, ...
                 pilots, betaDMRS, hop1, hop2, EstimatorConfig);
 
@@ -315,9 +322,10 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
 
             startSymbol = configuration.symbolAllocation(1);
             nAllocatedSymbols = configuration.symbolAllocation(2);
+            scsString = sprintf('subcarrier_spacing::kHz%d', SubcarrierSpacing);
 
             configurationOut = {...
-                'subcarrier_spacing::kHz15', ... % scs
+                scsString, ...                   % scs
                 'cyclic_prefix::NORMAL', ...     % cp
                 startSymbol, ...                 % first_symbol
                 nAllocatedSymbols, ...           % nof_symbols
@@ -325,6 +333,10 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                 {0}, ...                         % rx_ports
                 betaDMRS, ...                    % betaDMRS
                 };
+
+            if isempty(cfoEst)
+                cfoEst = {};
+            end
 
             context = {...
                 configurationOut, ...
@@ -335,6 +347,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                 10 * log10(snrEst), ...
                 noiseEst, ...
                 timeAlignment * 1e6, ...
+                cfo * SubcarrierSpacing * 1000, ...
                 cfoEst, ...
                 };
 
@@ -348,11 +361,12 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
     end % of methods (Test, TestTags = {'testvector'})
 
     methods (Test, TestTags = {'testmex'})
-        function compareMex(obj, configuration, FrequencyHopping, CarrierOffset)
+        function compareMex(obj, configuration, SubcarrierSpacing, FrequencyHopping, CarrierOffset)
         %compareMex - Compare mex results with those from the reference estimator for
-        %   a given CONFIGURATION, FREQUENCYHOPPING type and CARRIEROFFSET.
+        %   a given CONFIGURATION, SUBCARRIERSPACING, FREQUENCYHOPPING type and CARRIEROFFSET.
 
             import srsLib.phy.upper.signal_processors.srsChannelEstimator
+            import srsLib.ran.utils.scs2cps
             import srsMEX.phy.srsMultiPortChannelEstimator
 
             obj.assumeFalse(((configuration.nPRBs == obj.NSizeBWP) || (configuration.symbolAllocation(2) == 1)) ...
@@ -387,13 +401,14 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             channelRG = repmat(channelTF, 1, obj.nSymbolsSlot);
             % ... but for CFO.
             cfo = CarrierOffset; % Fraction of the SCS.
-            CPlengths = round(fftSize * 0.07) * ones(1, obj.nSymbolsSlot);
+            CPDurations = scs2cps(SubcarrierSpacing);
 
             if cfo ~= 0
-                cfoFreq = [CPlengths(1) CPlengths(2:end) + fftSize];
-                cfoFreq = cumsum(cfoFreq) * cfo / fftSize;
-                cfoFreq = exp(2j * pi * cfoFreq);
-                channelRG = channelRG * diag(cfoFreq) * exp(1j * pi * ((fftSize - 1) / fftSize) * cfo);
+                cfoVal = CPDurations * SubcarrierSpacing;
+                cfoVal(2:end) = cfoVal(2:end) + 1;
+                cfoVal = cumsum(cfoVal) * cfo;
+                cfoVal = exp(2j * pi * cfoVal);
+                channelRG = (channelRG .* cfoVal) * exp(1j * pi * ((fftSize - 1) / fftSize) * cfo);
             end
 
             % Compute received resource grid.
@@ -408,8 +423,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             EstimatorConfig.DMRSSymbolMask = obj.DMRSsymbols;
             EstimatorConfig.DMRSREmask = obj.DMRSREmask;
             EstimatorConfig.scs = 15000;
-            EstimatorConfig.Nfft = fftSize;
-            EstimatorConfig.CyclicPrefixLengths = CPlengths;
+            EstimatorConfig.CyclicPrefixDurations = CPDurations;
             [channelEst, noiseEst, rsrp, epre, timeAlignment, cfoEst] = srsChannelEstimator(receivedRG, ...
                 pilots, betaDMRS, hop1, hop2, EstimatorConfig);
 
@@ -434,6 +448,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             obj.assertEqual(extra.EPRE, epre, 'Wrong EPRE estimate.', RelTol = tolerance);
             obj.assertEqual(extra.SINR, rsrp / betaDMRS^2 / noiseEst, 'Wrong SINR estimate.', RelTol = tolerance);
             obj.assertEqual(extra.TimeAlignment, timeAlignment, 'Wrong time alignment estimate.', RelTol = tolerance);
+            obj.assertEqual(extra.CFO, cfoEst, 'Wrong CFO.', RelTol = tolerance);
         end % of function testvectorGenerationCases(...)
     end % of methods (Test, TestTags = {'testmex'})
 
@@ -537,13 +552,15 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             epreEst = zeros(length(snrValues), nRuns);
             cfoEst = zeros(length(snrValues), nRuns);
 
+            CPDurations = waveformInfo.CyclicPrefixLengths(1:14);
+            CPDurations = CPDurations / sum(CPDurations) / scs;
+
             % Configure estimator.
             EstimatorConfig.DMRSSymbolMask = obj.DMRSsymbols;
             EstimatorConfig.DMRSREmask = obj.DMRSREmask;
             EstimatorConfig.nPilotsNoiseAvg = sum(obj.DMRSREmask);
             EstimatorConfig.scs = scs * 1000; % SCS in hertz
-            EstimatorConfig.Nfft = waveformInfo.Nfft;
-            EstimatorConfig.CyclicPrefixLengths = waveformInfo.CyclicPrefixLengths(1:14);
+            EstimatorConfig.CyclicPrefixDurations = CPDurations;
             % EstimatorConfig.CFOCompensate = false; % for legacy estimator without CFO compensation.
 
             for iRun = 1:nRuns
