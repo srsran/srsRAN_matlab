@@ -135,7 +135,8 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(obj, NumSymbols, channelSize, eqType, txScaling)
         %testvectorGenerationCases Generates a test vector for the given
-        %   channel size and equalizer type.
+        %   number of channel symbols, channel size, equalizer type and
+        %   data-to-reference amplitude scaling.
             import srsTest.helpers.writeComplexFloatFile
             import srsTest.helpers.writeFloatFile
             import srsLib.phy.upper.equalization.srsChannelEqualizer
@@ -150,22 +151,24 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
 
             % Create random QPSK transmit symbols.
             txSymbols = (randi([0, 1], NumSymbols, NumRxPorts) + ...
-                1i * randi([0, 1], NumSymbols, NumRxPorts));
+                1j * randi([0, 1], NumSymbols, NumRxPorts));
             txSymbols = (2 * txSymbols - (1 + 1j)) / sqrt(2);
 
             % Create random estimated channel. The estimated channel
-            % magnitude is range (0.1, 1) and the phase (0, 2 * pi).
+            % magnitude is in the range (0.1, 1) and the phase in 
+            % (0, 2 * pi). 
             chEsts = (0.1 + 0.9 * rand(NumSymbols, NumRxPorts, NumLayers)) .* ...
-                exp(2i * pi * rand(NumSymbols, NumRxPorts, NumLayers));
+                exp(2j * pi * rand(NumSymbols, NumRxPorts, NumLayers));
 
-            % Create random receive symbols.
-            rxSymbols = zeros(NumSymbols, NumRxPorts);
+            % Create random received symbols.
+            rxSymbols = complex(zeros(NumSymbols, NumRxPorts));
             for nt = 1:NumLayers
                 for nr = 1:NumRxPorts
                     rxSymbols(:, nr) = rxSymbols(:, nr) + ...
                         txSymbols(:, nt) .* chEsts(:, nr, nt);
                 end
             end
+
             
             % Select a random noise variance between (0.5, 1.5).
             noiseVar = 0.5 + rand();
@@ -281,7 +284,7 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
 
             noiseVar = 10^(- obj.snr/10);
             % Rx symbols: start with the noise.
-            rxSymbols = (randn(nSC, nSym, nRx) + 1i * randn(nSC, nSym, nRx)) ...
+            rxSymbols = (randn(nSC, nSym, nRx) + 1j * randn(nSC, nSym, nRx)) ...
                 * sqrt(noiseVar / 2);
             % Rx symbols: scale and add transmitted symbols.
             for iRx = 1:nRx
