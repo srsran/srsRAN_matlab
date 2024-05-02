@@ -74,9 +74,9 @@ function [channelEstRG, noiseEst, rsrp, epre, timeAlignment, cfo] = ...
     smoothing = 'filter';
 
     if (cfoCompensate)
-        CyclicPrefixDurations = config.CyclicPrefixDurations * scs / 1000;
         % Compute the start time of all OFDM symbols from the start of the slot, expressed in
         % units of OFDM symbol time.
+        CyclicPrefixDurations = config.CyclicPrefixDurations * scs / 1000;
         symbolStartTime = cumsum([CyclicPrefixDurations(1) CyclicPrefixDurations(2:14) + 1]);
     end
 
@@ -181,8 +181,14 @@ function [channelEstRG, noiseEst, rsrp, epre, timeAlignment, cfo] = ...
         end
         timeAlignment = timeAlignment + iMax_ / fftSize_ / scs;
 
-        noiseEst = noiseEst + norm(receivedPilots_ - betaDMRS * pilots_ ...
-            .* repmat(estimatedChannelP_, 1, nDMRSsymbols_), 'fro')^2;
+        if (cfoCompensate && ~isempty(cfoHop_))
+            PHcorrection = 2 * pi * symbolStartTime * cfoHop_;
+            noiseEst = noiseEst + norm(receivedPilots_ - betaDMRS * pilots_ ...
+                .* (estimatedChannelP_ * reshape(exp(1j * PHcorrection(hop_.DMRSsymbols)), 1, [])), 'fro')^2;
+        else
+            noiseEst = noiseEst + norm(receivedPilots_ - betaDMRS * pilots_ ...
+                .* repmat(estimatedChannelP_, 1, nDMRSsymbols_), 'fro')^2;
+        end
         rsrp = rsrp + betaDMRS^2 * norm(estimatedChannelP_)^2 * nDMRSsymbols_;
 
         % The other subcarriers are linearly interpolated.
