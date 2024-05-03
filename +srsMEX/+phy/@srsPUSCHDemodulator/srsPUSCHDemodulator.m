@@ -18,8 +18,8 @@
 %   RXSYMBOLS is a three-dimensional complex array with the received resource grid
 %   (dimensions are subcarriers, OFDM symbols and antenna ports).
 %
-%   CE is also a three-dimensional complex array with the estimated channel (dimensions
-%   are the same as before, currently only one transmission layer is supported). NOISEVAR
+%   CE is also a four-dimensional complex array with the estimated channel (the first
+%   three dimensions are the same as before, the fourth one is transmission layers). NOISEVAR
 %   is the estimated noise variance.
 %
 %   PUSCH is an nrPUSCHConfig object (the only relevant properties are PRBSet, RNTI,
@@ -53,25 +53,32 @@ classdef srsPUSCHDemodulator < matlab.System
     methods (Access = protected)
         function schSoftBits = stepImpl(obj, rxSymbols, cest, noiseVar, pusch, puschIndices, puschDMRSIndices, rxPorts)
             arguments
-                obj               (1, 1)     srsMEX.phy.srsPUSCHDemodulator
-                rxSymbols         (:, 14, :) double {srsTest.helpers.mustBeResourceGrid}
-                cest              (:, 14, :) double {srsTest.helpers.mustBeResourceGrid}
-                noiseVar          (1, 1)     double {mustBePositive}
-                pusch             (1, 1)     nrPUSCHConfig
-                puschIndices      (:, 1)     double {mustBeInteger, mustBePositive}
-                puschDMRSIndices  (:, 1)     double {mustBeInteger, mustBePositive}
-                rxPorts           (:, 1)     double {mustBeInteger, mustBeNonnegative}
+                obj               (1, 1)        srsMEX.phy.srsPUSCHDemodulator
+                rxSymbols         (:, 14, :)    double {srsTest.helpers.mustBeResourceGrid}
+                cest              (:, 14, :, :) double {srsTest.helpers.mustBeResourceGrid(cest, MultiLayer=1)}
+                noiseVar          (1, 1)        double {mustBePositive}
+                pusch             (1, 1)        nrPUSCHConfig
+                puschIndices      (:, 1)        double {mustBeInteger, mustBePositive}
+                puschDMRSIndices  (:, 1)        double {mustBeInteger, mustBePositive}
+                rxPorts           (:, 1)        double {mustBeInteger, mustBeNonnegative}
             end
 
             gridSize = size(rxSymbols);
-            assert(all(gridSize == size(cest)), 'srsran_matlab:srsPUSCHDemodulator', ...
+            ceSize = size(cest);
+            assert(all(gridSize(1:2) == ceSize(1:2)), 'srsran_matlab:srsPUSCHDemodulator', ...
                 'Resource grid and channel estimates sizes do not match.');
             if (numel(gridSize) > 2)
+                assert(numel(ceSize) > 2, 'srsran_matlab:srsPUSCHDemodulator', ...
+                    'Resource grid and channel estimates sizes do not match.');
+                assert(all(gridSize(3) == ceSize(3)), 'srsran_matlab:srsPUSCHDemodulator', ...
+                    'Resource grid and channel estimates sizes do not match.');
                 assert(numel(rxPorts) <= gridSize(3), 'srsran_matlab:srsPUSCHDemodulator', ...
                     'The number of PUSCH ports, %d, cannot be larger than the number of Rx antenna ports, %d.', ...
                     numel(rxPorts), gridSize(3));
             else
-                assert(numel(rxPorts) == 1, 'srsran_matlab:srsPUSCHDemodulator', ...
+                assert(numel(ceSize) == 2, 'srsran_matlab:srsPUSCHDemodulator', ...
+                    'Resource grid and channel estimates sizes do not match.');
+                assert(isscalar(rxPorts), 'srsran_matlab:srsPUSCHDemodulator', ...
                     'The number of PUSCH ports, %d, cannot be larger than the number of Rx antenna ports, 1.', ...
                     numel(rxPorts));
             end
