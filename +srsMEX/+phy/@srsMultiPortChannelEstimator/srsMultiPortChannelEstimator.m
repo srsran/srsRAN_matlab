@@ -1,4 +1,4 @@
-%srsMultiportChannelEstimator estimates a SIMO channel.
+%srsMultiPortChannelEstimator estimates a SIMO channel.
 %   User-friendly interface for estimating a single-input multiple-output (SIMO)
 %   channel via the MEX static method multiport_channel_estimator_mex, which
 %   calls srsRAN port_channel_estimator for each port and combines the outputs.
@@ -31,6 +31,12 @@
 %   'HoppingIndex'        - First OFDM symbol after intraslot frequency hopping (default
 %                           is [] for no frequency hopping).
 %   'BetaScaling'         - DM-RS to data amplitude gain (default is 1).
+%
+%   srsMultiPortChannelEstimator propertires (nontunable):
+%
+%   ImplementationType - Channel estimator implementation ('MEX', 'noMEX').
+%   Smoothing          - Frequency domain smoothing strategy ('filter', 'mean', 'none').
+%   CompensateCFO      - Boolean flat: compensate CFO if true.
 
 %   Copyright 2021-2024 Software Radio Systems Limited
 %
@@ -52,21 +58,34 @@ classdef srsMultiPortChannelEstimator < matlab.System
         stepMethod
     end
 
-    methods
-        function obj = srsMultiPortChannelEstimator(type)
-            arguments
-                type (1, :) char {mustBeMember(type, {'MEX', 'noMEX'})} = 'MEX'
-            end
+    properties (Nontunable)
+        %Channel estimator implementation ('MEX', 'noMEX').
+        ImplementationType (1, :) char     {mustBeMember(ImplementationType, {'MEX', 'noMEX'})} = 'MEX'
+        %Frequency domain smoothing strategy ('filter', 'mean', 'none').
+        Smoothing          (1, :) char     {mustBeMember(Smoothing, {'filter', 'mean', 'none'})} = 'filter'
+        %Boolean flat: compensate CFO if true.
+        CompensateCFO      (1, 1) logical      = true
+    end % properties (Nontunable)
 
-            if strcmp(type, 'MEX')
-                obj.stepMethod = @stepMEX;
-            else
-                obj.stepMethod = @stepPLAIN;
-            end
+    methods
+        function obj = srsMultiPortChannelEstimator(varargin)
+        %Constructor: sets nontunable properties.
+            setProperties(obj, nargin, varargin{:});
         end
     end % of public methods
 
     methods (Access = protected)
+        function setupImpl(obj)
+        %Sets the stepMethod according to the implementation type and, if this is 'MEX',
+        %   constructs the channel estimator object inside the MEX function.
+            if strcmp(obj.ImplementationType, 'MEX')
+                obj.stepMethod = @stepMEX;
+                obj.multiport_channel_estimator_mex('new', obj.Smoothing, obj.CompensateCFO);
+            else
+                obj.stepMethod = @stepPLAIN;
+            end
+        end % of function setupImpl(obj)
+
         function [channelEst, noiseEst, extra] ...
                 = stepImpl(obj, rxGrid, symbolAllocation, refInd, refSym, config)
             arguments
@@ -153,7 +172,7 @@ classdef srsMultiPortChannelEstimator < matlab.System
         end % of function stepMEX(obj, rxGrid, refInd, refSym, varargin)
 
         function [channelEst, noiseEst, extra] ...
-                = stepPLAIN(~, rxGrid, symbolAllocation, refInd, refSym, config)
+                = stepPLAIN(obj, rxGrid, symbolAllocation, refInd, refSym, config)
         % Implementation of the step method that uses SRS matlab implementation.
 
             import srsLib.phy.upper.signal_processors.srsChannelEstimator
@@ -202,7 +221,9 @@ classdef srsMultiPortChannelEstimator < matlab.System
                 'DMRSREmask', DMRSREmask, ...
                 'DMRSSymbolMask', DMRSsymbols, ...
                 'scs', config.SubcarrierSpacing * 1000, ...
-                'CyclicPrefixDurations', scs2cps(config.SubcarrierSpacing));
+                'CyclicPrefixDurations', scs2cps(config.SubcarrierSpacing), ...
+                'Smoothing', obj.Smoothing, ...
+                'CFOCompensate', obj.CompensateCFO);
 
             hopIndex = config.HoppingIndex;
             if ~isempty(hopIndex)

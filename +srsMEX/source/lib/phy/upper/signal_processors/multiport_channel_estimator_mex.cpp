@@ -30,6 +30,43 @@ using namespace matlab::data;
 using namespace srsran;
 using namespace srsran_matlab;
 
+void MexFunction::method_new(ArgumentList outputs, ArgumentList inputs)
+{
+  constexpr unsigned NOF_INPUTS = 3;
+  if (inputs.size() != NOF_INPUTS) {
+    mex_abort("Wrong number of inputs: expected {}, provided {}.", NOF_INPUTS, inputs.size());
+  }
+
+  if (inputs[1].getType() != ArrayType::CHAR) {
+    mex_abort("Input 'smoothing' must be a string.");
+  }
+  std::string                                  smoothing_string = static_cast<CharArray>(inputs[1]).toAscii();
+  port_channel_estimator_fd_smoothing_strategy smoothing        = port_channel_estimator_fd_smoothing_strategy::none;
+  if (smoothing_string == "filter") {
+    smoothing = port_channel_estimator_fd_smoothing_strategy::filter;
+  } else if (smoothing_string == "mean") {
+    smoothing = port_channel_estimator_fd_smoothing_strategy::mean;
+  } else if (smoothing_string != "none") {
+    mex_abort("Unknown smoothing strategy {}", smoothing_string);
+  }
+
+  if ((inputs[2].getType() != ArrayType::LOGICAL) && (inputs[2].getNumberOfElements() > 1)) {
+    mex_abort("Input 'compensateCFO' should be a scalar logical.");
+  }
+  bool compensate_cfo = static_cast<TypedArray<bool>>(inputs[2])[0];
+
+  if (!outputs.empty()) {
+    mex_abort("Wrong number of outputs: expected 0, provided {}.", outputs.size());
+  }
+
+  estimator = create_port_channel_estimator(smoothing, compensate_cfo);
+
+  // Ensure the estimator was created properly.
+  if (!estimator) {
+    mex_abort("Cannot create srsRAN port channel estimator.");
+  }
+}
+
 void MexFunction::check_step_outputs_inputs(ArgumentList outputs, ArgumentList inputs)
 {
   constexpr unsigned NOF_INPUTS = 5;
@@ -63,6 +100,11 @@ void MexFunction::check_step_outputs_inputs(ArgumentList outputs, ArgumentList i
 
 void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
 {
+  // Ensure the estimator is initialized.
+  if (!estimator) {
+    mex_abort("The srsRAN channel estimator was not initialized properly.");
+  }
+
   check_step_outputs_inputs(outputs, inputs);
 
   StructArray  in_cfg_array = inputs[4];

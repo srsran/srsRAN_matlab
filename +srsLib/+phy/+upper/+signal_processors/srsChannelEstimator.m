@@ -14,8 +14,9 @@
 %   CONFIG     - General configuration (struct with fields DMRSREmask, pattern
 %                of REs carrying DM-RS inside a DM-RS dedicated PRB, DMRSSymbolMask,
 %                pattern of OFDM symbols carrying DM-RS across both hops, scs,
-%                subcarrier spacing in hertz, and CyclicPrefixDurations, the duration of
-%                of the CPs in milliseconds).
+%                subcarrier spacing in hertz, CyclicPrefixDurations, the duration of
+%                of the CPs in milliseconds, Smoothing, the smoothing strategy, and
+%                CFOCompensate, a boolean flag to activate or not the CFO compensation).
 %
 %   Each hop is configured by a struct with fields
 %   DMRSsymbols       - OFDM symbols carrying DM-RS in the first hop (logical mask)
@@ -71,7 +72,11 @@ function [channelEstRG, noiseEst, rsrp, epre, timeAlignment, cfo] = ...
 
     scs = config.scs;
 
-    smoothing = 'filter';
+    if isfield(config, 'Smoothing')
+        smoothing = config.Smoothing;
+    else
+        smoothing = 'filter';
+    end
 
     if (cfoCompensate)
         % Compute the start time of all OFDM symbols from the start of the slot, expressed in
