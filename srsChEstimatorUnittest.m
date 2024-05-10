@@ -634,11 +634,15 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                         % Apply the true channel and ZF-equalize with the estimated channel (SC-wise).
                         rr = diag(channelTrue(whatSCS, whatSymbol) ./ channelEst(whatSCS, whatSymbol)) * fakeSymbols;
 
-                        % Split edge and middle points, to visualize the difference in
-                        % the estimation performance.
-                        rrEdge = rr([1:24, end-23:end], :);
-                        rrMiddle = rr(25:end-24, :);
-                        plot(real(rrEdge(:)), imag(rrEdge(:)), 'rx', real(rrMiddle(:)), imag(rrMiddle(:)), 'bx')
+                        if (size(rr, 1) >= 60)
+                            % Split edge and middle points, to visualize the difference in
+                            % the estimation performance.
+                            rrEdge = rr([1:24, end-23:end], :);
+                            rrMiddle = rr(25:end-24, :);
+                            plot(real(rrEdge(:)), imag(rrEdge(:)), 'rx', real(rrMiddle(:)), imag(rrMiddle(:)), 'bx')
+                        else
+                            plot(real(rr(:)), imag(rr(:)), 'bx')
+                        end
                         pause
                     end
 
