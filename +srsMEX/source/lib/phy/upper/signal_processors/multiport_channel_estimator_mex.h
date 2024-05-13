@@ -29,26 +29,37 @@
 #include <memory>
 
 /// Factory method for a single port channel estimator.
-inline std::unique_ptr<srsran::port_channel_estimator> create_port_channel_estimator();
+inline std::unique_ptr<srsran::port_channel_estimator>
+create_port_channel_estimator(srsran::port_channel_estimator_fd_smoothing_strategy smoothing, bool compensate_cfo);
 
 /// Implements a SIMO channel estimator leveraging srsRAN \c port_channel_estimator.
 class MexFunction : public srsran_mex_dispatcher
 {
 public:
-  /// Constructor: creates the \c port_channel_estimator object and the callback step method.
+  /// Constructor: creates the \c port_channel_estimator object and the callback methods.
   MexFunction()
   {
-    // Ensure the estimator was created successfully.
-    if (!estimator) {
-      mex_abort("Cannot create srsRAN port channel estimator.");
-    }
-
+    create_callback("new", [this](ArgumentList out, ArgumentList in) { return this->method_new(out, in); });
     create_callback("step", [this](ArgumentList out, ArgumentList in) { return this->method_step(out, in); });
   }
 
 private:
   /// Checks that outputs/inputs arguments match the requirements of method_step().
   void check_step_outputs_inputs(ArgumentList outputs, ArgumentList inputs);
+
+  /// \brief Creates a new multiport channel estimator MEX object.
+  ///
+  /// This method creates the srsRAN channel estimator object used by the multiport estimator. The channel estimator is
+  /// set to use a specific frequency-domain smoothing strategy and to compensate (or not) the CFO.
+  ///
+  /// The method accepts only three inputs.
+  ///   - The string <tt>"new"</tt>.
+  ///   - A string identifying the frequency-domain smoothing strategy method (one of <tt>"filter"</tt>, <tt>"mean"</tt>
+  ///     or <tt>"none"</tt>).
+  ///   - A boolean flag for CFO compensation, \c true to activate.
+  ///
+  /// The method has no output.
+  void method_new(ArgumentList outputs, ArgumentList inputs);
 
   /// \brief Estimates a SIMO channel.
   ///
@@ -88,10 +99,11 @@ private:
   void method_step(ArgumentList outputs, ArgumentList inputs);
 
   /// Pointer to the actual port channel estimator.
-  std::unique_ptr<srsran::port_channel_estimator> estimator = create_port_channel_estimator();
+  std::unique_ptr<srsran::port_channel_estimator> estimator = nullptr;
 };
 
-std::unique_ptr<srsran::port_channel_estimator> create_port_channel_estimator()
+std::unique_ptr<srsran::port_channel_estimator>
+create_port_channel_estimator(srsran::port_channel_estimator_fd_smoothing_strategy smoothing, bool compensate_cfo)
 {
   using namespace srsran;
   std::shared_ptr<dft_processor_factory>            dft_factory = create_dft_processor_factory_fftw_slow();
@@ -99,5 +111,5 @@ std::unique_ptr<srsran::port_channel_estimator> create_port_channel_estimator()
       create_time_alignment_estimator_dft_factory(dft_factory);
   std::shared_ptr<port_channel_estimator_factory> estimator_factory =
       create_port_channel_estimator_factory_sw(ta_est_factory);
-  return estimator_factory->create();
+  return estimator_factory->create(smoothing, compensate_cfo);
 }

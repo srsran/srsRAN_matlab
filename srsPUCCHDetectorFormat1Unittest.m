@@ -19,6 +19,7 @@
 %   srsPUCCHDetectorFormat1Unittest Properties (TestParameter):
 %
 %   numerology       - Numerology index (0, 1).
+%   NumRxPorts       - Number of Rx antenna ports (1, 2, 4).
 %   SymbolAllocation - PUCCH symbol allocation.
 %   FrequencyHopping - Frequency hopping type ('neither', 'intraSlot').
 %   ackSize          - Number of HARQ-ACK bits (0, 1, 2).
@@ -27,8 +28,8 @@
 %   srsPUCCHDetectorFormat1Unittest Methods (TestTags = {'testvector'}):
 %
 %   testvectorGenerationCases - Generates a test vector for the given numerology,
-%                               symbol allocation, frequency hopping, number of ACK
-%                               and SR bits.
+%                               number of Rx antenna ports, symbol allocation,
+%                               frequency hopping, number of ACK and SR bits.
 %
 %   srsPUCCHDetectorFormat1Unittest Methods (TestTags = {'testmex'}):
 %
@@ -76,6 +77,9 @@ classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
         %   Allows to compute the subcarrier spacing in kilohertz as 15 * 2^numerology.
         %   Note: Higher numerologies are currently not considered.
         numerology = {0, 1}
+
+        %Number of Rx antenna ports (1, 2, 4).
+        NumRxPorts = {1, 2, 4}
 
         %PUCCH symbol allocation.
         %   The symbol allocation is described by a two-element row array with,
@@ -125,10 +129,11 @@ classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
     end % of methods (Access = protected)
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(obj, numerology, SymbolAllocation, ...
+        function testvectorGenerationCases(obj, numerology, NumRxPorts, SymbolAllocation, ...
                 FrequencyHopping, ackSize, srSize)
         %testvectorGenerationCases generates a test vector for the given numerology,
-        %   symbol allocation, frequency hopping, number of ACK and SR bits.
+        %   number of Rx antenna ports, symbol allocation, frequency hopping, number of
+        %   ACK and SR bits.
 
             import srsTest.helpers.matlab2srsCyclicPrefix
             import srsTest.helpers.matlab2srsPUCCHGroupHopping
@@ -138,21 +143,32 @@ classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
             testID = obj.generateTestID('_test_received_symbols');
 
             [rxSymbols, ack, sr, channelCoefs, configuration] = ...
-                generateSimData(numerology, SymbolAllocation, FrequencyHopping, ...
+                generateSimData(numerology, NumRxPorts, SymbolAllocation, FrequencyHopping, ...
                 ackSize, srSize);
 
-            indices = configuration.Indices;
+            nREs = size(configuration.Indices, 1);
+            indices = nan(NumRxPorts * nREs, 3);
+            for iPort = 0:(NumRxPorts - 1)
+                ix = iPort * nREs + (1:nREs);
+                indices(ix, 1:2) = configuration.Indices(:, 1:2);
+                indices(ix, 3) = iPort;
+            end
 
             obj.saveDataFile('_test_received_symbols', testID, ...
-                @writeResourceGridEntryFile, rxSymbols, indices);
+                @writeResourceGridEntryFile, rxSymbols(:), indices);
 
             obj.saveDataFile('_test_ch_estimates', testID, ...
-                @writeResourceGridEntryFile, channelCoefs, indices);
+                @writeResourceGridEntryFile, channelCoefs(:), indices);
 
             cyclicPrefixConfig = matlab2srsCyclicPrefix(configuration.CyclicPrefix);
             groupHoppingConfig = matlab2srsPUCCHGroupHopping(configuration.GroupHopping);
 
-            port = 0;
+            if NumRxPorts == 1
+                ports = {0};
+            else
+                ports = 0:(NumRxPorts - 1);
+            end
+
             betaPUCCH = 1;
             pucch = configuration.PUCCH;
 
@@ -164,17 +180,18 @@ classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
                 configuration.SecondHopConfig,       ... % second_hop_prb
                 pucch.SymbolAllocation(1),           ... % start_symbol_index
                 pucch.SymbolAllocation(2),           ... % nof_symbols
-                groupHoppingConfig,                  ... % PUCCH group hopping type
-                port,                                ... % antenna port
-                betaPUCCH,                           ... % amplitude scaling factor
+                groupHoppingConfig,                  ... % group_hopping
+                ports,                               ... % ports
+                betaPUCCH,                           ... % beta_pucch
                 pucch.OCCI,                          ... % time_domain_occ
                 pucch.InitialCyclicShift,            ... % initial_cyclic_shift
-                configuration.NCellID,               ... % pseudorandom initializer
-                ackSize,                             ... % number of ACK bits
+                configuration.NCellID,               ... % n_id
+                ackSize,                             ... % nof_harq_ack
                 };
 
             % Generate the test case entry.
-            testCaseString = obj.testCaseToString(testID, {pucchF1Config, configuration.NoiseVar, num2cell(sr), num2cell(ack)}, ...
+            testCaseString = obj.testCaseToString(testID, {pucchF1Config, ...
+                configuration.NoiseVar, num2cell(sr), num2cell(ack)}, ...
                 false, '_test_received_symbols', '_test_ch_estimates');
 
             % Add the test to the file header.
@@ -184,7 +201,7 @@ classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
     end % of methods (Test, TestTags = {'testvector'})
 
     methods (Test, TestTags = {'testmex'})
-        function mexTest(obj, numerology, SymbolAllocation, FrequencyHopping, ackSize, srSize)
+        function mexTest(obj, numerology, NumRxPorts, SymbolAllocation, FrequencyHopping, ackSize, srSize)
         %mexTest Tests the mex wrapper of the srsRAN PUCCH detector for Format 1.
         %   mexTest(testCase, numerology, SymbolAllocation, FrequencyHopping, ackSize, srSize)
         %   runs a short simulation with a PUCCH transmission specified by the given
@@ -193,7 +210,7 @@ classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
             import srsMEX.phy.srsPUCCHDetector
 
             [rxSymbols, ack, sr, channelCoefs, configuration] = ...
-                generateSimData(numerology, SymbolAllocation, FrequencyHopping, ...
+                generateSimData(numerology, NumRxPorts, SymbolAllocation, FrequencyHopping, ...
                 ackSize, srSize);
 
             % Create a PUCCH Format 1 detector.
@@ -202,17 +219,26 @@ classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
             carrier = configuration.Carrier;
 
             % Copy the received signal into a resource grid.
-            rxGrid = nrResourceGrid(carrier);
-            indices = sub2ind(size(rxGrid), configuration.Indices(:, 1) + 1, configuration.Indices(:, 2) + 1, ...
-                configuration.Indices(:, 3) + 1);
+            rxGrid = nrResourceGrid(carrier, NumRxPorts);
+
+            nREs = size(configuration.Indices, 1);
+            indices = nan(NumRxPorts * nREs, 1);
+            indices(1:nREs) = sub2ind(size(rxGrid), configuration.Indices(:, 1) + 1, ...
+                configuration.Indices(:, 2) + 1, ones(nREs, 1));
+            for iPort = 2:NumRxPorts
+                ix = (1:nREs) + (iPort - 1) * nREs;
+                indices(ix) = sub2ind(size(rxGrid), configuration.Indices(:, 1) + 1, ...
+                    configuration.Indices(:, 2) + 1, ones(nREs, 1) * iPort);
+            end
+
             rxGrid(indices) = rxSymbols;
 
             % Copy the estimated channel coefficients into a resource grid.
-            chGrid = nrResourceGrid(carrier);
+            chGrid = nrResourceGrid(carrier, NumRxPorts);
             chGrid(indices) = channelCoefs;
 
             % Run the detector.
-            uci = srspucch(carrier, configuration.PUCCH, ackSize, rxGrid, chGrid, configuration.NoiseVar);
+            uci = srspucch(carrier, configuration.PUCCH, ackSize, rxGrid, chGrid, configuration.NoiseVar * ones(NumRxPorts, 1));
 
             if (ackSize == 0)
                 if (srSize == 0)
@@ -239,7 +265,7 @@ end % of srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
 
 %Generates simulation data (modulated symbols, ACK and SR values, channel coefficients and configuration objects).
 function [rxSymbols, ack, sr, channelCoefs, configuration] = generateSimData(numerology, ...
-        SymbolAllocation, FrequencyHopping, ackSize, srSize)
+        nPorts, SymbolAllocation, FrequencyHopping, ackSize, srSize)
 
     import srsLib.phy.helpers.srsConfigureCarrier
     import srsLib.phy.helpers.srsConfigurePUCCH
@@ -308,21 +334,29 @@ function [rxSymbols, ack, sr, channelCoefs, configuration] = generateSimData(num
     [symbols, indices] = srsPUCCH1(carrier, pucch, ack, sr);
 
     if isempty(symbols)
-        symbols = complex(zeros(size(indices,1), 1));
+        symbols = complex(zeros(size(indices, 1), 1));
     end
 
-    channelCoefs = randn(length(symbols), 2) * [1; 1j] / sqrt(2);
-    % Ensure no channel is very small.
-    channelCoefsAbs = abs(channelCoefs);
-    mask = (channelCoefsAbs < 0.1);
-    channelCoefs(mask) = channelCoefs(mask) ./ channelCoefsAbs(mask) * 0.1;
+    nSymbols = length(symbols);
 
-    % AWGN.
-    snrdB = 20;
-    noiseVar = 10^(-snrdB/10);
-    noiseSymbols = randn(length(symbols), 2) * [1; 1j] * sqrt(noiseVar / 2);
+    rxSymbols = complex(nan(nSymbols, nPorts));
+    channelCoefs = complex(nan(nSymbols, nPorts));
 
-    rxSymbols = symbols .* channelCoefs + noiseSymbols;
+    for iPort = 1:nPorts
+        channelTmp = randn(length(symbols), 2) * [1; 1j] / sqrt(2);
+        % Ensure no channel is very small.
+        channelTmpAbs = abs(channelTmp);
+        mask = (channelTmpAbs < 0.1);
+        channelTmp(mask) = channelTmp(mask) ./ channelTmpAbs(mask) * 0.1;
+
+        % AWGN.
+        snrdB = 20;
+        noiseVar = 10^(-snrdB / 10);
+        noiseSymbols = randn(length(symbols), 2) * [1; 1j] * sqrt(noiseVar / 2);
+
+        channelCoefs(:, iPort) = channelTmp;
+        rxSymbols(:, iPort) = symbols .* channelTmp + noiseSymbols;
+    end
 
     configuration = struct();
     configuration.Indices = indices;

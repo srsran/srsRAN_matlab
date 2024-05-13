@@ -201,21 +201,23 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
   // Get the noise variance.
   float noise_var = static_cast<float>(static_cast<TypedArray<double>>(inputs[3])[0]);
 
-  // Number of channel resource elements per receive port.
-  unsigned nof_ch_re_port = in_ce_cft_array.getNumberOfElements() / ce_dims.nof_rx_ports;
+  // Number of channel resource elements per receive port and layer.
+  unsigned nof_ch_re_port = in_ce_cft_array.getNumberOfElements() / ce_dims.nof_rx_ports / ce_dims.nof_tx_layers;
 
   // Set estimated channel.
   span<const std::complex<double>> ce_port_view = to_span(in_ce_cft_array);
 
-  for (unsigned i_rx_port = 0; i_rx_port != ce_dims.nof_rx_ports; ++i_rx_port) {
-    // Copy channel estimates for a single receive port.
-    srsvec::copy(chan_estimates.get_path_ch_estimate(i_rx_port, 0), ce_port_view.first(nof_ch_re_port));
+  for (unsigned i_tx_layer = 0; i_tx_layer != ce_dims.nof_tx_layers; ++i_tx_layer) {
+    for (unsigned i_rx_port = 0; i_rx_port != ce_dims.nof_rx_ports; ++i_rx_port) {
+      // Copy channel estimates for a single receive port.
+      srsvec::copy(chan_estimates.get_path_ch_estimate(i_rx_port, i_tx_layer), ce_port_view.first(nof_ch_re_port));
 
-    // Advance buffer.
-    ce_port_view = ce_port_view.last(ce_port_view.size() - nof_ch_re_port);
+      // Advance buffer.
+      ce_port_view = ce_port_view.last(ce_port_view.size() - nof_ch_re_port);
 
-    // Set noise variance.
-    chan_estimates.set_noise_variance(noise_var, i_rx_port, 0);
+      // Set noise variance.
+      chan_estimates.set_noise_variance(noise_var, i_rx_port, i_tx_layer);
+    }
   }
 
   // Compute expected soft output bit number.

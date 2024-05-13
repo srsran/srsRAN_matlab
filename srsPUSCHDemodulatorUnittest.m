@@ -26,6 +26,10 @@
 %   testvectorGenerationCases - Generates a test vector according to the provided
 %                               parameters.
 %
+%   srsPUSCHDemodulatorUnittest Methods (TestTags = {'testmex'}):
+%
+%   mexTest  - Tests the MEX-based implementation of the PUSCH demodulator.
+%
 %   srsPUSCHDemodulatorUnittest Methods (Access = protected):
 %
 %   addTestIncludesToHeaderFile     - Adds include directives to the test header file.
@@ -70,8 +74,10 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
         %Modulation {pi/2-BPSK, QPSK, 16-QAM, 64-QAM, 256-QAM}.
         Modulation = {'pi/2-BPSK', 'QPSK', '16QAM', '64QAM', '256QAM'};
 
-        %Number of receive antenna ports for PUSCH.
-        NumRxPorts = {1, 2, 4}
+        %Channel dimensions.
+        %   The first entry is the number of receive antenna ports, the
+        %   second entry is the number of transmit layers.
+        ChannelSize = {[1, 1], [2, 1], [2, 2], [4, 1], [4, 2]}
     end
 
     properties (Hidden)
@@ -177,7 +183,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
     end % of methods (Access = private)
 
     methods (Access = private)
-        function setupsimulation(obj, DMRSConfigurationType, Modulation, nofRxPorts)
+        function setupsimulation(obj, DMRSConfigurationType, Modulation, nofRxPorts, NumLayers)
         % Sets secondary simulation variables.
             import srsLib.phy.helpers.srsConfigureCarrier
             import srsLib.phy.helpers.srsConfigurePUSCH
@@ -198,7 +204,6 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             NID = obj.carrier.NCellID;
 
             % Configure PUSCH.
-            NumLayers = 1;
             RNTI = randi([1, 65535]);
             obj.pusch = srsConfigurePUSCH(NumLayers, Modulation, PRBSet, SymbolAllocation, NID, RNTI);
             obj.pusch.DMRS.DMRSConfigurationType = DMRSConfigurationType;
@@ -210,7 +215,9 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
 
             % Generate PUSCH indices for a single Rx port in subscript
             % form.
-            puschPortIndices = nrPUSCHIndices(obj.carrier, obj.pusch, 'IndexStyle', 'subscript', 'IndexBase', '0based');
+            pusch2 = obj.pusch;
+            pusch2.NumLayers = 1;
+            puschPortIndices = nrPUSCHIndices(obj.carrier, pusch2, 'IndexStyle', 'subscript', 'IndexBase', '0based');
 
             % Number of RE per port.
             nofREPort = size(puschPortIndices, 1);
@@ -240,7 +247,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             txSymbols = nrPUSCH(obj.carrier, obj.pusch, cw);
 
             % Generate grid.
-            obj.txGrid = nrResourceGrid(obj.carrier);
+            obj.txGrid = nrResourceGrid(obj.carrier, NumLayers);
 
             % Put PUSCH symbols in grid.
             obj.txGrid(obj.puschTxIndices) = txSymbols;
@@ -254,6 +261,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             tdl.DelaySpread = 100e-9;
             tdl.MaximumDopplerShift = 300;
             tdl.SampleRate = ofdmInfo.SampleRate;
+            tdl.NumTransmitAntennas = NumLayers;
             tdl.NumReceiveAntennas = nofRxPorts;
 
             T = tdl.SampleRate * 1e-3;
@@ -271,9 +279,9 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
     end % of methods (Access = Private)
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(obj, DMRSConfigurationType, Modulation, NumRxPorts)
+        function testvectorGenerationCases(obj, DMRSConfigurationType, Modulation, ChannelSize)
         %testvectorGenerationCases Generates a test vector for the given
-        %   DMRSConfigurationType, Modulation, and NumRxPorts.
+        %   DMRSConfigurationType, Modulation, and ChannelSize.
 
             import srsLib.phy.upper.channel_modulation.srsDemodulator
             import srsLib.phy.upper.equalization.srsChannelEqualizer
@@ -289,9 +297,12 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             % Generate a unique test ID by looking at the number of files
             % generated so far.
             testID = obj.generateTestID;
-            
+
+            NumRxPorts = ChannelSize(1);
+            NumLayers = ChannelSize(2);
+
             % Configure the test.
-            setupsimulation(obj, DMRSConfigurationType, Modulation, NumRxPorts);
+            setupsimulation(obj, DMRSConfigurationType, Modulation, NumRxPorts, NumLayers);
 
             % Estimate average energy per resource element (EPRE).
             epredB = 10 * log10(mean(abs(obj.ce) .^ 2, 'all'));
@@ -302,29 +313,43 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             % Select noise variance from the EPRE and SNR.
             noiseVar = 10 ^ ((epredB - snrdB) / 10);
 
-            % Generate noise.
-            noise = (randn(size(obj.txGrid)) + 1j * randn(size(obj.txGrid))) * sqrt(noiseVar / 2);
-
             % Generate receive grid.
-            rxGrid = obj.txGrid .* obj.ce + noise;
+            rxGrid = nrResourceGrid(obj.carrier, NumRxPorts);
+            for Nr = 1:NumRxPorts
+                for Nt = 1:NumLayers
+                    rxGrid(:, :, Nr) = rxGrid(:, :, Nr) + obj.ce(:, :, Nr, Nt) .* obj.txGrid(:, :, Nt);
+                end
+            end
+
+            % Apply AWGN.
+            noise = (randn(size(rxGrid)) + 1j * randn(size(rxGrid))) * sqrt(noiseVar / 2);
+            rxGrid  = rxGrid + noise;
 
             % Extract PUSCH Rx symbols.
-            rxSymbols = complex(zeros(size(obj.puschTxIndices, 1), NumRxPorts));
-
+            rxPortIndices = obj.puschTxIndices(:, 1);
+            rxSymbols = complex(zeros(size(rxPortIndices, 1), NumRxPorts));
             for iPort = 1:NumRxPorts
                 iRxGrid = rxGrid(:, :, iPort);
-                rxSymbols(:, iPort) = iRxGrid(obj.puschTxIndices);
+                rxSymbols(:, iPort) = iRxGrid(rxPortIndices);
             end
-            
+
             % Extract CE for PUSCH.
-            cePusch = complex(zeros(size(obj.puschTxIndices, 1), NumRxPorts));    
-            for iPort = 1:NumRxPorts
-                iCePusch = obj.ce(:, :, iPort);
-                cePusch(:, iPort) = iCePusch(obj.puschTxIndices);
+            cePusch = complex(zeros(size(rxPortIndices, 1), NumRxPorts, NumLayers));
+            for Nr = 1:NumRxPorts
+                for Nt = 1:NumLayers
+                    iCePusch = obj.ce(:, :, Nr, Nt);
+                    cePusch(:, Nr, Nt) = iCePusch(rxPortIndices);
+                end
             end
 
             % Equalize.
             [eqSymbols, eqNoise] = srsChannelEqualizer(rxSymbols, cePusch, 'ZF', noiseVar, 1.0);
+
+            % Layer demapping.
+            eqSymbols = nrLayerDemap(eqSymbols);
+            eqSymbols = eqSymbols{1};
+            eqNoise = nrLayerDemap(eqNoise);
+            eqNoise = eqNoise{1};
 
             % Estimate SINR from the equalizer noise esimation.
             estimatedSinrdB = -10 * log10(mean(eqNoise));
@@ -376,7 +401,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
                 dmrsTypeString, ...                         % dmrs_config_type
                 obj.pusch.DMRS.NumCDMGroupsWithoutData, ... % nof_cdm_groups_without_data
                 obj.pusch.NID, ...                          % n_id
-                obj.pusch.NumAntennaPorts, ...              % nof_tx_layers
+                obj.pusch.NumLayers, ...                    % nof_tx_layers
                 portsString, ...                            % rx_ports
                 };
 
@@ -406,48 +431,58 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
     end % of methods (Test, TestTags = {'testvector'})
 
     methods (Test, TestTags = {'testmex'})
-        function mexTest(obj, DMRSConfigurationType, Modulation, NumRxPorts)
-        %mexTest  Tests the mex wrapper of the SRSGNB PUSCH demodulator.
+        function mexTest(obj, DMRSConfigurationType, Modulation, ChannelSize)
+        %mexTest  Tests the mex wrapper of the srsRAN PUSCH demodulator.
         %   mexTest(OBJ, DMRSCONFIGURATIONTYPE, MODULATION,
         %   NUMRXPORTS) runs a short simulation with a
         %   ULSCH transmission using DM-RS type DMRSCONFIGURATIONTYPE,
-        %   symbol modulation MODULATION and number of receive
-        %   antenna ports NUMRXPORTS. Channel estimation on the PUSCH
-        %   transmission is done in MATLAB and PUSCH equalization and
-        %   demodulation is then performed using the mex wrapper of the
-        %   srsRAN C++ component. The test is considered as passed if the 
+        %   symbol modulation MODULATION and the channel geometry CHANNELSIZE.
+        %   Channel estimation on the PUSCH transmission is done in MATLAB and PUSCH
+        %   equalization and demodulation is then performed using the mex wrapper of the
+        %   srsRAN C++ component. The test is considered as passed if the
         %   recovered soft bits are coinciding with those originally transmitted.
 
             import srsMEX.phy.srsPUSCHDemodulator
             import srsLib.phy.upper.channel_modulation.srsDemodulator
             import srsLib.phy.upper.equalization.srsChannelEqualizer
 
+            NumRxPorts = ChannelSize(1);
+            NumLayers = ChannelSize(2);
+
             % Configure the test.
-            setupsimulation(obj, DMRSConfigurationType, Modulation, NumRxPorts);
+            setupsimulation(obj, DMRSConfigurationType, Modulation, NumRxPorts, NumLayers);
+
+            % Generate receive grid.
+            rxGrid = nrResourceGrid(obj.carrier, NumRxPorts);
+            for Nr = 1:NumRxPorts
+                for Nt = 1:NumLayers
+                    rxGrid(:, :, Nr) = rxGrid(:, :, Nr) + obj.ce(:, :, Nr, Nt) .* obj.txGrid(:, :, Nt);
+                end
+            end
 
             % Select noise variance between 0.0001 and 0.01.
             noiseVar = rand() * 0.0099 + 0.0001;
 
-            % Generate noise.
-            noise = (randn(size(obj.txGrid)) + 1i * randn(size(obj.txGrid))) * sqrt(noiseVar / 2);
-
-            % Generate receive grid.
-            rxGrid = obj.txGrid .* obj.ce + noise;
+            % Apply AWGN.
+            noise = (randn(size(rxGrid)) + 1j * randn(size(rxGrid))) * sqrt(noiseVar / 2);
+            rxGrid = rxGrid + noise;
 
             % Extract PUSCH symbols.
-            rxSymbols = complex(zeros(size(obj.puschTxIndices, 1), NumRxPorts));
+            rxPortIndices = obj.puschTxIndices(:, 1);
+            rxSymbols = complex(zeros(size(rxPortIndices, 1), NumRxPorts));
 
             for iPort = 1:NumRxPorts
                 iRxGrid = rxGrid(:, :, iPort);
-                rxSymbols(:, iPort) = iRxGrid(obj.puschTxIndices);
+                rxSymbols(:, iPort) = iRxGrid(rxPortIndices);
             end
-            
-            % Extract CE for PUSCH.
-            cePusch = complex(zeros(size(obj.puschTxIndices, 1), NumRxPorts)); 
 
-            for iPort = 1:NumRxPorts
-                iCePusch = obj.ce(:, :, iPort);
-                cePusch(:, iPort) = iCePusch(obj.puschTxIndices);
+            % Extract CE for PUSCH.
+            cePusch = complex(zeros(size(rxPortIndices, 1), NumRxPorts, NumLayers));
+            for Nr = 1:NumRxPorts
+                for Nt = 1:NumLayers
+                    iCePusch = obj.ce(:, :, Nr, Nt);
+                    cePusch(:, Nr, Nt) = iCePusch(rxPortIndices);
+                end
             end
 
             % Equalize.
@@ -467,11 +502,16 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
                 dmrsIx, obj.rxPorts);
 
             % Verify the correct demodulation (expected, since the SNR is very high).
-            % i) Soft demapping.
+            % i) Layer demapping.
+            eqSymbols = nrLayerDemap(eqSymbols);
+            eqSymbols = eqSymbols{1};
+            eqNoise = nrLayerDemap(eqNoise);
+            eqNoise = eqNoise{1};
+            % ii) Soft demapping.
             softBits = srsDemodulator(eqSymbols, obj.pusch.Modulation, eqNoise);
-            % ii) Reverse Scrambling. Attention: placeholderBitIndices are 0based.
+            % iii) Reverse Scrambling. Attention: placeholderBitIndices are 0based.
             schSoftBitsMatlab = nrPUSCHDescramble(softBits, obj.pusch.NID, obj.pusch.RNTI);
-            % iii) Compare srsRAN and MATLAB results.
+            % iv) Compare srsRAN and MATLAB results.
             obj.assertEqual(schSoftBits, int8(schSoftBitsMatlab), 'Demodulation errors.', AbsTol = int8(1));
         end % of function mextest
     end % of methods (Test, TestTags = {'testmex'})

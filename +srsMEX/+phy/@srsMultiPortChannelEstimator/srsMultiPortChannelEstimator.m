@@ -1,4 +1,4 @@
-%srsMultiportChannelEstimator estimates a SIMO channel.
+%srsMultiPortChannelEstimator estimates a SIMO channel.
 %   User-friendly interface for estimating a single-input multiple-output (SIMO)
 %   channel via the MEX static method multiport_channel_estimator_mex, which
 %   calls srsRAN port_channel_estimator for each port and combines the outputs.
@@ -31,6 +31,12 @@
 %   'HoppingIndex'        - First OFDM symbol after intraslot frequency hopping (default
 %                           is [] for no frequency hopping).
 %   'BetaScaling'         - DM-RS to data amplitude gain (default is 1).
+%
+%   srsMultiPortChannelEstimator propertires (nontunable):
+%
+%   ImplementationType - Channel estimator implementation ('MEX', 'noMEX').
+%   Smoothing          - Frequency domain smoothing strategy ('filter', 'mean', 'none').
+%   CompensateCFO      - Boolean flat: compensate CFO if true.
 
 %   Copyright 2021-2024 Software Radio Systems Limited
 %
@@ -52,21 +58,34 @@ classdef srsMultiPortChannelEstimator < matlab.System
         stepMethod
     end
 
-    methods
-        function obj = srsMultiPortChannelEstimator(type)
-            arguments
-                type (1, :) char {mustBeMember(type, {'MEX', 'noMEX'})} = 'MEX'
-            end
+    properties (Nontunable)
+        %Channel estimator implementation ('MEX', 'noMEX').
+        ImplementationType (1, :) char     {mustBeMember(ImplementationType, {'MEX', 'noMEX'})} = 'MEX'
+        %Frequency domain smoothing strategy ('filter', 'mean', 'none').
+        Smoothing          (1, :) char     {mustBeMember(Smoothing, {'filter', 'mean', 'none'})} = 'filter'
+        %Boolean flat: compensate CFO if true.
+        CompensateCFO      (1, 1) logical      = true
+    end % properties (Nontunable)
 
-            if strcmp(type, 'MEX')
-                obj.stepMethod = @stepMEX;
-            else
-                obj.stepMethod = @stepPLAIN;
-            end
+    methods
+        function obj = srsMultiPortChannelEstimator(varargin)
+        %Constructor: sets nontunable properties.
+            setProperties(obj, nargin, varargin{:});
         end
     end % of public methods
 
     methods (Access = protected)
+        function setupImpl(obj)
+        %Sets the stepMethod according to the implementation type and, if this is 'MEX',
+        %   constructs the channel estimator object inside the MEX function.
+            if strcmp(obj.ImplementationType, 'MEX')
+                obj.stepMethod = @stepMEX;
+                obj.multiport_channel_estimator_mex('new', obj.Smoothing, obj.CompensateCFO);
+            else
+                obj.stepMethod = @stepPLAIN;
+            end
+        end % of function setupImpl(obj)
+
         function [channelEst, noiseEst, extra] ...
                 = stepImpl(obj, rxGrid, symbolAllocation, refInd, refSym, config)
             arguments
@@ -136,7 +155,7 @@ classdef srsMultiPortChannelEstimator < matlab.System
 
             % Format outputs.
             channelEst = double(channelEstS);
-            if (length(config.PortIndices) == 1)
+            if (isscalar(config.PortIndices))
                 % If there was a single port, use its info.
                 infoOut = info(1);
             else
@@ -148,14 +167,16 @@ classdef srsMultiPortChannelEstimator < matlab.System
             extra.EPRE = infoOut.EPRE;
             extra.SINR = infoOut.SINR;
             extra.TimeAlignment = infoOut.TimeAlignment;
+            extra.CFO = infoOut.CFO;
 
         end % of function stepMEX(obj, rxGrid, refInd, refSym, varargin)
 
         function [channelEst, noiseEst, extra] ...
-                = stepPLAIN(~, rxGrid, symbolAllocation, refInd, refSym, config)
+                = stepPLAIN(obj, rxGrid, symbolAllocation, refInd, refSym, config)
         % Implementation of the step method that uses SRS matlab implementation.
 
             import srsLib.phy.upper.signal_processors.srsChannelEstimator
+            import srsLib.ran.utils.scs2cps
 
             % Build hop configuration structures.
             gridsize = size(rxGrid);
@@ -199,7 +220,10 @@ classdef srsMultiPortChannelEstimator < matlab.System
             configNew = struct(...
                 'DMRSREmask', DMRSREmask, ...
                 'DMRSSymbolMask', DMRSsymbols, ...
-                'scs', config.SubcarrierSpacing * 1000);
+                'scs', config.SubcarrierSpacing * 1000, ...
+                'CyclicPrefixDurations', scs2cps(config.SubcarrierSpacing), ...
+                'Smoothing', obj.Smoothing, ...
+                'CFOCompensate', obj.CompensateCFO);
 
             hopIndex = config.HoppingIndex;
             if ~isempty(hopIndex)
@@ -224,9 +248,9 @@ classdef srsMultiPortChannelEstimator < matlab.System
 
             channelEst = nan(gridsize);
             if nPorts == 1
-                extra = struct('RSRP', 0, 'EPRE', 0, 'SINR', 0, 'TimeAlignment', 0);
+                extra = struct('RSRP', 0, 'EPRE', 0, 'SINR', 0, 'TimeAlignment', 0, 'CFO', []);
             else
-                extra(nPorts + 1) = struct('RSRP', 0, 'EPRE', 0, 'SINR', 0, 'TimeAlignment', 0);
+                extra(nPorts + 1) = struct('RSRP', 0, 'EPRE', 0, 'SINR', 0, 'TimeAlignment', 0, 'CFO', []);
             end
 
             % Set up tracking of average metrics across ports.
@@ -234,20 +258,23 @@ classdef srsMultiPortChannelEstimator < matlab.System
             rsrp = 0;
             epre = 0;
             ta = 0;
+            cfo = [];
 
             for iPort = 1:nPorts
-                [channelEst(:, :, iPort), noiseEstTmp, rsrpTmp, epreTmp, taTmp] = ...
+                [channelEst(:, :, iPort), noiseEstTmp, rsrpTmp, epreTmp, taTmp, cfoTmp] = ...
                     srsChannelEstimator(rxGrid(:, :, iPort), pilots, config.BetaScaling, hop1, hop2, configNew);
 
                 noiseEst = noiseEst + noiseEstTmp / nPorts;
                 rsrp = rsrp + rsrpTmp / nPorts;
                 epre = epre + epreTmp / nPorts;
                 ta = ta + taTmp / nPorts;
+                cfo = cfo + cfoTmp;
 
                 extra(iPort).RSRP = rsrpTmp;
                 extra(iPort).EPRE = epreTmp;
                 extra(iPort).SINR = rsrpTmp / config.BetaScaling^2 / noiseEstTmp;
                 extra(iPort).TimeAlignment = taTmp;
+                extra(iPort).CFO = cfoTmp;
             end
 
             % If multiple ports, also report the average metrics.
@@ -256,6 +283,7 @@ classdef srsMultiPortChannelEstimator < matlab.System
                 extra(end).EPRE = epre;
                 extra(end).SINR = nan; % Global SINR is meaningless here.
                 extra(end).TimeAlignment = ta;
+                extra(end).CFO = cfo;
             end
         end % of function stepPLAIN(obj, rxGrid, refInd, refSym, varargin)
 

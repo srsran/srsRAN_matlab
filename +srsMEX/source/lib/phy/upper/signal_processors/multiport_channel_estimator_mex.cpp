@@ -30,6 +30,43 @@ using namespace matlab::data;
 using namespace srsran;
 using namespace srsran_matlab;
 
+void MexFunction::method_new(ArgumentList outputs, ArgumentList inputs)
+{
+  constexpr unsigned NOF_INPUTS = 3;
+  if (inputs.size() != NOF_INPUTS) {
+    mex_abort("Wrong number of inputs: expected {}, provided {}.", NOF_INPUTS, inputs.size());
+  }
+
+  if (inputs[1].getType() != ArrayType::CHAR) {
+    mex_abort("Input 'smoothing' must be a string.");
+  }
+  std::string                                  smoothing_string = static_cast<CharArray>(inputs[1]).toAscii();
+  port_channel_estimator_fd_smoothing_strategy smoothing        = port_channel_estimator_fd_smoothing_strategy::none;
+  if (smoothing_string == "filter") {
+    smoothing = port_channel_estimator_fd_smoothing_strategy::filter;
+  } else if (smoothing_string == "mean") {
+    smoothing = port_channel_estimator_fd_smoothing_strategy::mean;
+  } else if (smoothing_string != "none") {
+    mex_abort("Unknown smoothing strategy {}", smoothing_string);
+  }
+
+  if ((inputs[2].getType() != ArrayType::LOGICAL) && (inputs[2].getNumberOfElements() > 1)) {
+    mex_abort("Input 'compensateCFO' should be a scalar logical.");
+  }
+  bool compensate_cfo = static_cast<TypedArray<bool>>(inputs[2])[0];
+
+  if (!outputs.empty()) {
+    mex_abort("Wrong number of outputs: expected 0, provided {}.", outputs.size());
+  }
+
+  estimator = create_port_channel_estimator(smoothing, compensate_cfo);
+
+  // Ensure the estimator was created properly.
+  if (!estimator) {
+    mex_abort("Cannot create srsRAN port channel estimator.");
+  }
+}
+
 void MexFunction::check_step_outputs_inputs(ArgumentList outputs, ArgumentList inputs)
 {
   constexpr unsigned NOF_INPUTS = 5;
@@ -63,6 +100,11 @@ void MexFunction::check_step_outputs_inputs(ArgumentList outputs, ArgumentList i
 
 void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
 {
+  // Ensure the estimator is initialized.
+  if (!estimator) {
+    mex_abort("The srsRAN channel estimator was not initialized properly.");
+  }
+
   check_step_outputs_inputs(outputs, inputs);
 
   StructArray  in_cfg_array = inputs[4];
@@ -156,11 +198,12 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
   }
 
   StructArray info_out =
-      factory.createStructArray({nof_rx_ports + 1, 1}, {"NoiseVar", "RSRP", "EPRE", "SINR", "TimeAlignment"});
+      factory.createStructArray({nof_rx_ports + 1, 1}, {"NoiseVar", "RSRP", "EPRE", "SINR", "TimeAlignment", "CFO"});
   float  total_noise_var      = 0;
   float  total_rsrp           = 0;
   float  total_epre           = 0;
   double total_time_alignment = 0;
+  double total_cfo            = 0;
   for (unsigned i_port = 0; i_port != nof_rx_ports; ++i_port) {
     info_out[i_port]["NoiseVar"] = factory.createScalar(static_cast<double>(ch_estimate.get_noise_variance(i_port)));
     total_noise_var += ch_estimate.get_noise_variance(i_port);
@@ -172,6 +215,13 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
     info_out[i_port]["TimeAlignment"] =
         factory.createScalar(static_cast<double>(ch_estimate.get_time_alignment(i_port).to_seconds()));
     total_time_alignment += ch_estimate.get_time_alignment(i_port).to_seconds();
+    if (ch_estimate.get_cfo_Hz(i_port).has_value()) {
+      info_out[i_port]["CFO"] = factory.createScalar(static_cast<double>(ch_estimate.get_cfo_Hz(i_port).value()));
+      total_cfo += static_cast<double>(ch_estimate.get_cfo_Hz(i_port).value());
+    } else {
+      info_out[i_port]["CFO"] = factory.createEmptyArray();
+      total_cfo               = std::numeric_limits<float>::quiet_NaN();
+    }
   }
 
   // In the last "info_out" we store the global metrics.
@@ -182,6 +232,11 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
   // A global SINR doesn't make much sense, we need to know how the ports are combined.
   info_out[nof_rx_ports]["SINR"]          = factory.createScalar(std::numeric_limits<double>::quiet_NaN());
   info_out[nof_rx_ports]["TimeAlignment"] = factory.createScalar(total_time_alignment / nof_rx_ports);
+  if (!std::isnan(total_cfo)) {
+    info_out[nof_rx_ports]["CFO"] = factory.createScalar(total_cfo / nof_rx_ports);
+  } else {
+    info_out[nof_rx_ports]["CFO"] = factory.createEmptyArray();
+  }
 
   outputs[0] = ch_est_out;
   outputs[1] = info_out;

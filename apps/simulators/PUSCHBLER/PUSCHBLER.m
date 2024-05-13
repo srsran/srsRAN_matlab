@@ -621,7 +621,8 @@ classdef PUSCHBLER < matlab.System
 
             if useSRSDecoder
                 srsDemodulatePUSCH = srsMEX.phy.srsPUSCHDemodulator;
-                srsChannelEstimate = srsMEX.phy.srsMultiPortChannelEstimator(obj.SRSEstimatorType);
+                srsChannelEstimate = srsMEX.phy.srsMultiPortChannelEstimator(ImplementationType = obj.SRSEstimatorType, ...
+                    Smoothing = 'filter', CompensateCFO = true);
             end
 
             % %%% Simulation loop.
