@@ -34,6 +34,11 @@
 %   file in the top-level directory of this distribution.
 
 classdef CheckSimulators < matlab.unittest.TestCase
+    properties (TestParameter)
+        %Channel estimator implementation type for mex PUSCH tests.
+        EstimatorImplPUSCH = {"MEX", "noMEX"}
+    end % of properties (TestParameter)
+
     methods (Test, TestTags = {'matlab code'})
         function testPUSCHBLERmatlab(obj)
             import matlab.unittest.fixtures.CurrentFolderFixture
@@ -122,7 +127,7 @@ classdef CheckSimulators < matlab.unittest.TestCase
     end % of methods (Test, TestTags = {'matlab code'})
 
     methods (Test, TestTags = {'mex code'})
-        function testPUSCHBLERmex(obj)
+        function testPUSCHBLERmex(obj, EstimatorImplPUSCH)
             import matlab.unittest.fixtures.CurrentFolderFixture
             import matlab.unittest.constraints.IsFile
 
@@ -141,9 +146,14 @@ classdef CheckSimulators < matlab.unittest.TestCase
                 'Could not find PUSCH decoder mex executable.');
             obj.assertThat('../../../+srsMEX/+phy/@srsPUSCHDemodulator/pusch_demodulator_mex.mexa64', IsFile, ...
                 'Could not find PUSCH demodulator mex executable.');
+            obj.assertThat('../../../+srsMEX/+phy/@srsMultiPortChannelEstimator/multiport_channel_estimator_mex.mexa64', IsFile, ...
+                'Could not find channel estimator mex executable.');
 
+            pp.QuickSimulation = false;
             pp.ImplementationType = 'srs';
-            snrs = -5.6:0.2:-4.8;
+            pp.PerfectChannelEstimator = false;
+            pp.SRSEstimatorType = EstimatorImplPUSCH;
+            snrs = -5.0:0.2:-4.2;
             try
                 pp(snrs, 100)
             catch ME
@@ -154,8 +164,8 @@ classdef CheckSimulators < matlab.unittest.TestCase
             obj.assertEqual(pp.SNRrange, snrs, 'Wrong SNR range.');
             obj.assertEqual(pp.TBS, 1800, 'Wrong transport block size.');
             obj.assertEqual(pp.MaxThroughput, 1.8, 'Wrong maximum throughput.');
-            obj.assertEqual(pp.ThroughputSRS, [0; 0; 0.0178; 0.2746; 0.9089], "Wrong througuput curve.", RelTol=0.02);
-            obj.assertEqual(pp.BlockErrorRateSRS, [1; 1; 0.9901; 0.8403; 0.4950], "Wrong BLER curve.", RelTol=0.02);
+            obj.assertGreaterThanOrEqual(pp.ThroughputSRS, [0; 0; 0.0576; 0.3240; 1.0493], "Wrong througuput curve.");
+            obj.assertLessThanOrEqual(pp.BlockErrorRateSRS, [1; 1; 0.9709; 0.8200; 0.4274], "Wrong BLER curve.");
         end % of function testPUSCHBLERmex(obj)
     end % of methods (Test, TestTags = {'mex code'})
 end % of classdef CheckSimulators < matlab.unittest.TestCase
