@@ -323,7 +323,7 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
             refPointStr = ['pdsch_processor::pdu_t::', pdsch.DMRS.DMRSReferencePoint];
             numCDMGroupsWithoutData = pdsch.DMRS.NumCDMGroupsWithoutData;
             baseGraphString = ['ldpc_base_graph_type::BG', num2str(dlschInfo.BGN)];
-            TBSLBRMBytes = encDL.LimitedBufferSize / 8;
+            CBLBRMStr = ['units::bytes(' num2str(encDL.LimitedBufferSize / 8) ')'];
       
             % Generate Resource Block allocation string, referenced to the
             % starting PRB of the BWP.
@@ -357,7 +357,7 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
                 pdsch.SymbolAllocation(1), ... % start_symbol_index
                 pdsch.SymbolAllocation(2), ... % nof_symbols
                 baseGraphString, ...           % ldpc_base_graph
-                TBSLBRMBytes, ...              % tbs_lbrm_bytes
+                CBLBRMStr, ...                 % cb_lbrm
                 rvdREPatternList, ...          % reserved
                 betaDMRSdB, ...                % ratio_pdsch_dmrs_to_sss_dB
                 betaDatadB, ...                % ratio_pdsch_data_to_sss_dB
