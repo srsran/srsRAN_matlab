@@ -323,8 +323,11 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
             refPointStr = ['pdsch_processor::pdu_t::', pdsch.DMRS.DMRSReferencePoint];
             numCDMGroupsWithoutData = pdsch.DMRS.NumCDMGroupsWithoutData;
             baseGraphString = ['ldpc_base_graph_type::BG', num2str(dlschInfo.BGN)];
-            CBLBRMStr = ['units::bytes(' num2str(encDL.LimitedBufferSize / 8) ')'];
       
+            % Transport block size limited buffer rate match.
+            TBSLBRM = nrTBS('256QAM', 4, 273, 156, 948 / 1024) / 8;
+            TBSLBRMStr = ['units::bytes(' num2str(TBSLBRM) ')'];
+
             % Generate Resource Block allocation string, referenced to the
             % starting PRB of the BWP.
             RBAllocationString = rbAllocationIndexes2String(pdsch.PRBSet);
@@ -357,7 +360,7 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
                 pdsch.SymbolAllocation(1), ... % start_symbol_index
                 pdsch.SymbolAllocation(2), ... % nof_symbols
                 baseGraphString, ...           % ldpc_base_graph
-                CBLBRMStr, ...                 % cb_lbrm
+                TBSLBRMStr, ...                % tbs_lbrm
                 rvdREPatternList, ...          % reserved
                 betaDMRSdB, ...                % ratio_pdsch_dmrs_to_sss_dB
                 betaDatadB, ...                % ratio_pdsch_data_to_sss_dB
