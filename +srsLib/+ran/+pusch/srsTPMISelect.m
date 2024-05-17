@@ -41,7 +41,7 @@ info = struct("TPMI", num2cell(nan(MaxNumLayers, 1)), "SINR", nan);
 
 % Iterate the possible number of layers.
 for NumLayers = 1:MaxNumLayers
-    % Get the codebook size from the number of transmission ports and 
+    % Get the codebook size from the number of transmission ports and
     % layers.
     CodebookSize = getCodebookSize(NumTxPorts, NumLayers);
 
@@ -95,23 +95,23 @@ function meanSINR = calculateSINR(H, W, NoiseVar)
 
     % Number of layers.
     NLayers = size(W, 2);
-    
+
     % Number of transmit ports.
     NTxPorts = size(H, 2);
     assert(NLayers <= NTxPorts);
     assert(NTxPorts == size(W, 1));
-    
+
     % Number of receive ports.
     NRxPorts = size(H, 1);
     assert(NLayers <= NRxPorts);
-    
+
     % Calculate SINR denominator.
     HW = H * W;
-    den = NoiseVar * inv(HW' * HW + (NoiseVar * eye(NLayers)));
-    
+    den = NoiseVar * inv(HW' * HW + (NoiseVar * eye(NLayers))); %#ok<MINV>
+
     % Calculate the SINR for each layer.
     SINR = real((1 ./ diag(den)) - 1);
-    
+
     % Calculate the mean SINR for all layers.
     meanSINR = 10 * log10(mean(SINR));
 
