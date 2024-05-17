@@ -43,7 +43,7 @@
 %   srsRAN-matlab is free software: you can redistribute it and/or
 %   modify it under the terms of the BSD 2-Clause License.
 %
-%   srsRAN-matlab is distributed in the hope that it will be useful, 
+%   srsRAN-matlab is distributed in the hope that it will be useful,
 %   but WITHOUT ANY WARRANTY; without even the implied warranty of
 %   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 %   BSD 2-Clause License for more details.
@@ -69,10 +69,10 @@ classdef srsSRSEstimatorUnittest < srsTest.srsBlockUnittest
 
         %Numerology, it determines the subcarrier spacing.
         Numerology = {0 1}
-        
+
         %Number of SRS symbols.
         NumSRSSymbols = {1 2 4}
-        
+
         %Number of SRS transmit ports.
         NumSRSPorts = {2 4}
 
@@ -108,25 +108,25 @@ classdef srsSRSEstimatorUnittest < srsTest.srsBlockUnittest
 
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, Numerology, NumSRSPorts, NumSRSSymbols, NumRxPorts, KTC)
-        %testvectorGenerationCases Generates a test vector for the given 
-        %configuration 
+        %testvectorGenerationCases Generates a test vector for the given
+        %configuration
         %   NCellID, NSlot and PRB occupation are randomly generated.
 
             import srsTest.helpers.cellarray2str
             import srsTest.helpers.writeResourceGridEntryFile
             import srsLib.phy.helpers.srsConfigureCarrier
             import srsLib.phy.helpers.srsSRSValidateConfig
-            
+
             % Current fixed parameter values.
             NSizeGrid = 270;
             NStartGrid = 0;
-            
+
             switch(Numerology)
                 case 0
-                    NSlot = randi([0, 9]);                    
+                    NSlot = randi([0, 9]);
                 case 1
                     NSlot = randi([0, 19]);
-                case 2 
+                case 2
                     NSlot = randi([0, 39]);
                 case 3
                     NSlot = randi([0, 79]);
@@ -134,7 +134,7 @@ classdef srsSRSEstimatorUnittest < srsTest.srsBlockUnittest
                     NSlot = randi([0, 159]);
                 otherwise
                     return;
-            end                  
+            end
 
             SubcarrierSpacing = 15 * (2 .^ Numerology);
 
@@ -142,7 +142,7 @@ classdef srsSRSEstimatorUnittest < srsTest.srsBlockUnittest
             NCellID = randi([0, 1007]);
             NFrame = randi([0, 1023]);
             CyclicPrefix = 'normal';
-            
+
             % Configure the carrier according to the test parameters.
             carrier = srsConfigureCarrier(NCellID, SubcarrierSpacing,...
                 NSizeGrid, NStartGrid, NSlot, NFrame, CyclicPrefix);
@@ -152,7 +152,7 @@ classdef srsSRSEstimatorUnittest < srsTest.srsBlockUnittest
             NSRSID = randi([0, 1023]);
 
             srs = struct();
-            while ~srsSRSValidateConfig(carrier, srs) 
+            while ~srsSRSValidateConfig(carrier, srs)
                 % Generate random SRS parameters that could be invalid.
                 FrequencyStart = randi([0, 10]);
                 CSRS = randi([0, 63]);
@@ -161,7 +161,7 @@ classdef srsSRSEstimatorUnittest < srsTest.srsBlockUnittest
                 BHop = randi([BSRS, 3]);
                 CyclicShift = randi([0, 11]);
                 NRRC = randi([0, 67]);
-                
+
                 % Create the SRS configuration according to the test parameters.
                 srs = nrSRSConfig('NumSRSPorts', NumSRSPorts,...
                     'SymbolStart', SymbolStart,...
@@ -179,7 +179,7 @@ classdef srsSRSEstimatorUnittest < srsTest.srsBlockUnittest
 
             % Generate a unique test ID.
             TestID = testCase.generateTestID;
-            
+
             %Generate uplink SRS resource element indices.
             symbolIndices = nrSRSIndices(carrier, srs, 'IndexStyle', 'subscript', 'IndexBase', '0based');
 
@@ -248,12 +248,12 @@ classdef srsSRSEstimatorUnittest < srsTest.srsBlockUnittest
             % Generate a 'slot_point' configuration string.
             slotPointConfig = cellarray2str({Numerology, NFrame,...
                 floor(NSlot / carrier.SlotsPerSubframe),...
-                rem(NSlot, carrier.SlotsPerSubframe)}, true);             
+                rem(NSlot, carrier.SlotsPerSubframe)}, true);
 
             hoppingConfigStr = 'srs_resource_configuration::group_or_sequence_hopping_enum::neither';
 
             periodicityConfig = 'nullopt';
-            if srs.ResourceType == 'periodic'
+            if strcmp(srs.ResourceType, 'periodic')
                 periodicityConfig = '{}';
             end
 
