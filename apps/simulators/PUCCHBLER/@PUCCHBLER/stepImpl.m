@@ -221,7 +221,7 @@ function stepImpl(obj, SNRIn, nFrames)
             % Decode PUCCH symbols. uciRx are hard bits for PUCCH F1 and soft bits for PUCCH F2.
             uciRx = nrPUCCHDecode(carrier, pucch, ouci, pucchEq, noiseEst);
 
-            stats = obj.updateStats(stats, uci, uciRx, ouci, obj.NumACKBits, isDetectTest, snrIdx);
+            stats = obj.updateStats(stats, uci, uciRx, ouci, isDetectTest, snrIdx);
         end % if useMATLABpucch
 
         if useSRSpucch
