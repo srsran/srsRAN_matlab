@@ -20,7 +20,6 @@
 #include "pusch_decoder_mex.h"
 #include "srsran_matlab/support/matlab_to_srs.h"
 #include "srsran_matlab/support/to_span.h"
-#include "srsran/adt/optional.h"
 #include "srsran/phy/upper/channel_coding/ldpc/ldpc.h"
 #include "srsran/phy/upper/channel_processors/pusch/pusch_decoder_buffer.h"
 #include "srsran/phy/upper/channel_processors/pusch/pusch_decoder_notifier.h"
@@ -32,6 +31,7 @@
 #include "fmt/format.h"
 
 #include <memory>
+#include <optional>
 
 using matlab::mex::ArgumentList;
 using namespace matlab::data;
@@ -52,7 +52,7 @@ public:
 private:
   void on_sch_data(const pusch_decoder_result& result_) override { result = result_; }
 
-  srsran::optional<pusch_decoder_result> result;
+  std::optional<pusch_decoder_result> result;
 };
 
 } // namespace

@@ -214,6 +214,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             fprintf(fileID, '#include "srsran/phy/upper/signal_processors/port_channel_estimator.h"\n');
             fprintf(fileID, '#include "srsran/phy/upper/signal_processors/port_channel_estimator_parameters.h"\n');
             fprintf(fileID, '#include "srsran/support/file_vector.h"\n');
+            fprintf(fileID, '#include <optional>\n');
 
         end
 
@@ -233,7 +234,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             fprintf(fileID, '  float                                                   noise_var_est  = 0;\n');
             fprintf(fileID, '  float                                                   ta_us          = 0;\n');
             fprintf(fileID, '  float                                                   cfo_true_Hz    = 0;\n');
-            fprintf(fileID, '  optional<float>                                         cfo_est_Hz     = 0;\n');
+            fprintf(fileID, '  std::optional<float>                                    cfo_est_Hz     = 0;\n');
             fprintf(fileID, '  file_vector<resource_grid_reader_spy::expected_entry_t> grid;\n');
             fprintf(fileID, '  file_vector<cf_t>                                       pilots;\n');
             fprintf(fileID, '  file_vector<resource_grid_reader_spy::expected_entry_t> estimates;\n');
