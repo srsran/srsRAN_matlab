@@ -45,6 +45,15 @@ classdef CheckSimulators < matlab.unittest.TestCase
         PUCCHTestType = {"Detection", "False Alarm"}
     end % of properties (TestParameter)
 
+    methods (TestMethodSetup)
+        function resetrandomgenerator(obj)
+            % Reset random genenator after storing current state.
+            orig = rng('default');
+            % Random generator will be restored after the method.
+            obj.addTeardown(@rng, orig);
+        end % of function resetrandomgenerator(obj)
+    end % of methods (TestMethodSetup)
+
     methods (Test, TestTags = {'matlab code'})
         function testPUSCHBLERmatlab(obj)
             import matlab.unittest.fixtures.CurrentFolderFixture
@@ -244,8 +253,8 @@ classdef CheckSimulators < matlab.unittest.TestCase
             obj.assertEqual(pp.SNRrange, snrs, 'Wrong SNR range.');
             obj.assertEqual(pp.TBS, 1800, 'Wrong transport block size.');
             obj.assertEqual(pp.MaxThroughput, 1.8, 'Wrong maximum throughput.');
-            obj.assertGreaterThanOrEqual(pp.ThroughputSRS, [0; 0; 0.0576; 0.3240; 1.0493], "Wrong througuput curve.");
-            obj.assertLessThanOrEqual(pp.BlockErrorRateSRS, [1; 1; 0.9709; 0.8200; 0.4274], "Wrong BLER curve.");
+            obj.assertEqual(pp.ThroughputSRS, [0; 0; 0.0558; 0.3276; 1.0512], "Wrong througuput curve.", RelTol=0.02);
+            obj.assertEqual(pp.BlockErrorRateSRS, [1; 1; 0.9690; 0.8190; 0.4200], "Wrong BLER curve.", RelTol=0.02);
         end % of function testPUSCHBLERmex(obj)
 
         function testPUCCHBLERF1mex(obj, PUCCHTestType)
@@ -286,10 +295,10 @@ classdef CheckSimulators < matlab.unittest.TestCase
             obj.assertEqual(pp.SNRrange, snrs, 'Wrong SNR range.');
             if (PUCCHTestType == "Detection")
                 obj.assertLessThan(pp.NACK2ACKDetectionRateSRS, 0.04, "Wrong NACK-to-ACK detection curve.");
-                obj.assertEqual(pp.ACKDetectionRateSRS, [0.0039; 0.0068; 0.0135; 0.0222; 0.0338; 0.0609; 0.1238; 0.2582; 0.4942; 0.7689], ...
+                obj.assertEqual(pp.ACKDetectionRateSRS, [0.0077; 0.0097; 0.0184; 0.0280; 0.0435; 0.0754; 0.1441; 0.2814; 0.5261; 0.7950], ...
                     "Wrong ACK detection rate curve.", RelTol=0.02);
             else
-                obj.assertEqual(pp.FalseACKDetectionRateSRS, 0.0065 * ones(10, 1), "Wrong false ACK detection rate curve.", RelTol=0.02);
+                obj.assertEqual(pp.FalseACKDetectionRateSRS, 0.0075 * ones(10, 1), "Wrong false ACK detection rate curve.", RelTol=0.02);
             end
         end % of function testPUCCHBLERF1mex(obj, PUCCHTestType)
 
@@ -327,7 +336,7 @@ classdef CheckSimulators < matlab.unittest.TestCase
 
             obj.assertEqual(pp.SNRrange, snrs, 'Wrong SNR range.');
             if (PUCCHTestType == "Detection")
-                obj.assertEqual(pp.BlockErrorRateSRS, [.9434; 0.9524; 0.9009; 0.8130; 0.6452; 0.4292; 0.2427; 0.0530; 0.0040], ...
+                obj.assertEqual(pp.BlockErrorRateSRS, [0.9434; 0.9434; 0.9009; 0.7937; 0.6452; 0.4274; 0.2387; 0.0560; 0.0040], ...
                     "Wrong BLER curve.", RelTol=0.02);
             else
                 obj.assertEqual(pp.FalseDetectionRateSRS, 0.006 * ones(9, 1), "Wrong false alarm curve.", RelTol=0.02);
