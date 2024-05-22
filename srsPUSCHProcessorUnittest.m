@@ -342,7 +342,7 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             % Generate Resource Block allocation string.
             RBAllocationString = rbAllocationIndexes2String(pusch.PRBSet);
 
-            % Prepare codeblock limited buffer rate matcher.
+            % Prepare codeblock for the limited buffer rate matcher.
             TBSLBRM = nrTBS('256QAM', 4, 273, 156, 948 / 1024) / 8;
             TBSLBRMStr = ['units::bytes(' num2str(TBSLBRM) ')'];
 

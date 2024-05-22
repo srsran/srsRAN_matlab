@@ -324,7 +324,7 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
             numCDMGroupsWithoutData = pdsch.DMRS.NumCDMGroupsWithoutData;
             baseGraphString = ['ldpc_base_graph_type::BG', num2str(dlschInfo.BGN)];
       
-            % Transport block size limited buffer rate match.
+            % Transport block size for limited buffer rate match.
             TBSLBRM = nrTBS('256QAM', 4, 273, 156, 948 / 1024) / 8;
             TBSLBRMStr = ['units::bytes(' num2str(TBSLBRM) ')'];
 
