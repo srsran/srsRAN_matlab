@@ -119,7 +119,7 @@ void read_channel_estimate(channel_estimate& ch_est, const TypedArray<cf_t>& in_
   unsigned remaining_res = port_res * ch_dims.nof_rx_ports;
 
   for (unsigned i_port = 0; i_port != ch_dims.nof_rx_ports; ++i_port) {
-    span<cf_t>       path    = ch_est.get_path_ch_estimate(i_port);
+    span<cbf16_t>    path    = ch_est.get_path_ch_estimate(i_port, 0);
     span<const cf_t> in_path = in_view.first(port_res);
     remaining_res -= port_res;
     in_view = in_view.last(remaining_res);

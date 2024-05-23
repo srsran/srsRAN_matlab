@@ -193,8 +193,10 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
   for (unsigned i_port = 0; i_port != nof_rx_ports; ++i_port) {
     estimator->compute(ch_estimate, grid->get_reader(), i_port, pilots, cfg);
 
-    span<const cf_t> ch_estimate_view = ch_estimate.get_path_ch_estimate(i_port);
-    ch_est_out_iter                   = std::copy_n(ch_estimate_view.begin(), ch_estimate_view.size(), ch_est_out_iter);
+    span<const cbf16_t> ch_estimate_view = ch_estimate.get_path_ch_estimate(i_port);
+    std::transform(
+        ch_estimate_view.begin(), ch_estimate_view.end(), ch_est_out_iter, [](cbf16_t value) { return to_cf(value); });
+    ch_est_out_iter += ch_estimate_view.size();
   }
 
   StructArray info_out =
