@@ -77,13 +77,13 @@ function N = getCodebookSize(NumPorts, NumLayers)
     elseif (NumPorts == 4) && (NumLayers == 1)
         N = 28;
     elseif (NumPorts == 2) && (NumLayers == 2)
-        N = 2;
+        N = 3;
     elseif (NumPorts == 4) && (NumLayers == 2)
         N = 22;
     elseif (NumPorts == 4) && (NumLayers == 3)
         N = 7;
     elseif (NumPorts == 4) && (NumLayers == 4)
-        N = 4;
+        N = 5;
     else
         error('Invalid number of ports (i.e., %d) and layers (i.e., %d)', NumPorts, NumLayers);
     end
