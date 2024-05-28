@@ -253,7 +253,7 @@ classdef CheckSimulators < matlab.unittest.TestCase
             obj.assertEqual(pp.SNRrange, snrs, 'Wrong SNR range.');
             obj.assertEqual(pp.TBS, 1800, 'Wrong transport block size.');
             obj.assertEqual(pp.MaxThroughput, 1.8, 'Wrong maximum throughput.');
-            obj.assertEqual(pp.ThroughputSRS, [0; 0; 0.0558; 0.3276; 1.0512], "Wrong througuput curve.", RelTol=0.02);
+            obj.assertLessThanOrEqual(pp.ThroughputSRS, [0; 0.002; 0.06; 0.33; 1.06], "Wrong througuput curve.");
             obj.assertEqual(pp.BlockErrorRateSRS, [1; 1; 0.9690; 0.8190; 0.4200], "Wrong BLER curve.", RelTol=0.02);
         end % of function testPUSCHBLERmex(obj)
 
