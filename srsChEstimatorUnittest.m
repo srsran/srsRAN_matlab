@@ -747,7 +747,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                 hop2.CHsymbols(hop2.startSymbol + (1:hop2.nAllocatedSymbols)) = true;
             else
                 PRBstart = randi([0, obj.NSizeBWP - nPRBs]) + obj.NStartBWP;
-                obj.secondHop = 'nullopt';
+                obj.secondHop = 'std::nullopt';
 
                 hop1.DMRSsymbols = obj.DMRSsymbols;
                 hop1.DMRSREmask = obj.DMRSREmask;

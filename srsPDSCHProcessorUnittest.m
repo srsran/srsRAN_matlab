@@ -342,7 +342,7 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
 
             % Prepare PDSCH configuration.
             pduDescription = {...
-                'nullopt', ...                 % context
+                'std::nullopt', ...            % context
                 slotConfig, ...                % slot
                 pdsch.RNTI, ...                % rnti
                 pdsch.NSizeBWP, ...            % bwp_size_rb
