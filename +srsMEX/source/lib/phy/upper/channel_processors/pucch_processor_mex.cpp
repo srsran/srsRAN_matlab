@@ -65,7 +65,7 @@ static pucch_processor::format1_configuration populate_f1_configuration(const St
   // Create a PUCCH F1 configuration object.
   pucch_processor::format1_configuration cfg = {};
 
-  cfg.context = srsran::nullopt;
+  cfg.context = std::nullopt;
 
   // Set the slot point.
   unsigned scs_kHz    = static_cast<unsigned>(in_cfg["SubcarrierSpacing"][0]);
@@ -89,7 +89,7 @@ static pucch_processor::format1_configuration populate_f1_configuration(const St
 
   // Set the frequency allocation.
   cfg.starting_prb   = static_cast<unsigned>(in_cfg["StartPRB"][0]);
-  cfg.second_hop_prb = srsran::nullopt;
+  cfg.second_hop_prb = std::nullopt;
   if (!in_cfg["SecondHopStartPRB"].isEmpty()) {
     cfg.second_hop_prb = static_cast<unsigned>(in_cfg["SecondHopStartPRB"][0]);
   }
@@ -118,7 +118,7 @@ static pucch_processor::format2_configuration populate_f2_configuration(const St
   // Create a PUCCH F2 configuration object.
   pucch_processor::format2_configuration cfg = {};
 
-  cfg.context = srsran::nullopt;
+  cfg.context = std::nullopt;
 
   // Set the slot point.
   unsigned scs_kHz    = static_cast<unsigned>(in_cfg["SubcarrierSpacing"][0]);
@@ -143,7 +143,7 @@ static pucch_processor::format2_configuration populate_f2_configuration(const St
   // Set the frequency allocation.
   cfg.starting_prb   = static_cast<unsigned>(in_cfg["StartPRB"][0]);
   cfg.nof_prb        = static_cast<unsigned>(in_cfg["NumPRBs"][0]);
-  cfg.second_hop_prb = srsran::nullopt;
+  cfg.second_hop_prb = std::nullopt;
   if (!in_cfg["SecondHopStartPRB"].isEmpty()) {
     cfg.second_hop_prb = static_cast<unsigned>(in_cfg["SecondHopStartPRB"][0]);
   }
