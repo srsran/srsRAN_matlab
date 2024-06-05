@@ -75,7 +75,7 @@ classdef srsPUCCHProcessorFormat0Unittest < srsTest.srsBlockUnittest
             struct('numSymbols', 2, 'freqHopping', false), ...
             struct('numSymbols', 2, 'freqHopping', true), ...
             }
-        
+
         %Valid combinations of payload.
         payload = { ...
             struct('nofHarqAck', 0, 'sr', true), ...
@@ -95,6 +95,7 @@ classdef srsPUCCHProcessorFormat0Unittest < srsTest.srsBlockUnittest
             fprintf(fileID, '#include "../../support/resource_grid_test_doubles.h"\n');
             fprintf(fileID, '#include "srsran/phy/upper/channel_processors/pucch_processor.h"\n');
             fprintf(fileID, '#include "srsran/support/file_vector.h"\n');
+            fprintf(fileID, '#include <optional>\n');
         end
 
         function addTestDefinitionToHeaderFile(~, fileID)
@@ -102,7 +103,7 @@ classdef srsPUCCHProcessorFormat0Unittest < srsTest.srsBlockUnittest
             fprintf(fileID, 'struct pucch_entry {\n');
             fprintf(fileID, '  pucch_processor::format0_configuration config;\n');
             fprintf(fileID, '  std::vector<uint8_t>                   ack_bits;\n');
-            fprintf(fileID, '  optional<uint8_t>                      sr;\n');
+            fprintf(fileID, '  std::optional<uint8_t>                 sr;\n');
             fprintf(fileID, '};\n');
             fprintf(fileID, 'struct test_case_t {\n');
             fprintf(fileID, '  pucch_entry                                             entry;\n');
@@ -233,7 +234,7 @@ classdef srsPUCCHProcessorFormat0Unittest < srsTest.srsBlockUnittest
 
             % Demodulate baseband signal.
             gridWithCfo = nrOFDMDemodulate(carrier, basebandWithCfo);
-            
+
             % Iterate each receive port.
             for iRxPort = 1:NumRxPorts
                 % Create some noise samples.
@@ -288,7 +289,7 @@ classdef srsPUCCHProcessorFormat0Unittest < srsTest.srsBlockUnittest
 
             % Generate PUCCH common configuration.
             pucchConfig = {...
-                'nullopt', ...                  % context
+                'std::nullopt', ...             % context
                 slotPointConfig, ...            % slot
                 cyclicPrefixString, ...         % cp
                 NSizeBWP, ...                   % bwp_size_rb
