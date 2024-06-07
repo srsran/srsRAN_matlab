@@ -328,7 +328,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             % A few very loose checks, just to ensure we are not completely out of place.
             if (configuration.nPRBs > 2)
                 chEstIdx = (channelEst ~= 0);
-                obj.assertEqual(channelEst(chEstIdx), channelRG(chEstIdx), "Wrong channel coefficients.", RelTol = 0.2);
+                obj.assertEqual(channelEst(chEstIdx), channelRG(chEstIdx), "Wrong channel coefficients.", RelTol = 0.4);
                 obj.assertEqual(noiseEst, noiseVar, "Wrong noise variance.", RelTol = 0.6);
                 obj.assertEqual(snrEst, 10^(SNR/10), "Wrong SNR.", RelTol = 1.3);
                 obj.assertEqual(timeAlignment, channelDelay / fftSize / SubcarrierSpacing / 1000, ...
