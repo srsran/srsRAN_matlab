@@ -101,7 +101,7 @@ function setupImpl(obj)
 end % function setupImpl(obj)
 
 % %% Local Functions
-function stats = updateStatsF1(stats, uci, uciRx, ~, NumACKBits, isDetectTest, snrIdx)
+function stats = updateStatsF1(stats, uci, uciRx, ~, isDetectTest, snrIdx)
     if isDetectTest
         % If MATLAB's PUCCH decoder was able to detect a PUCCH and
         % uciRx contains the resulting bits.
@@ -121,7 +121,7 @@ function stats = updateStatsF1(stats, uci, uciRx, ~, NumACKBits, isDetectTest, s
     end % if isDetectTest
 end
 
-function stats = updateStatsF2(stats, uci, uciRx, ouci, ~, isDetectTest, snrIdx)
+function stats = updateStatsF2(stats, uci, uciRx, ouci, isDetectTest, snrIdx)
     if isDetectTest
         % Decode UCI.
         decucibits = nrUCIDecode(uciRx{1}, ouci);

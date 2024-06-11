@@ -342,6 +342,10 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             % Generate Resource Block allocation string.
             RBAllocationString = rbAllocationIndexes2String(pusch.PRBSet);
 
+            % Prepare codeblock for the limited buffer rate matcher.
+            TBSLBRM = nrTBS('256QAM', 4, 273, 156, 948 / 1024) / 8;
+            TBSLBRMStr = ['units::bytes(' num2str(TBSLBRM) ')'];
+
             dmrsTypeString = sprintf('dmrs_type::TYPE%d', pusch.DMRS.DMRSConfigurationType);
             baseGraphString = ['ldpc_base_graph_type::BG', num2str(ulschInfo.BGN)];
             codewordDescription = {...
@@ -365,7 +369,7 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             mcsDescr = mcsDescription2Cell(pusch.Modulation, targetCodeRate);
 
             pduDescription = {...
-                'nullopt', ...                                % context
+                'std::nullopt', ...                           % context
                 slotConfig, ...                               % slot
                 pusch.RNTI, ...                               % rnti
                 pusch.NSizeBWP, ...                           % bwp_size_rb
@@ -385,7 +389,7 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
                 RBAllocationString, ...                       % freq_alloc
                 pusch.SymbolAllocation(1), ...                % start_symbol_index
                 pusch.SymbolAllocation(2), ...                % nof_symbols
-                'ldpc::MAX_CODEBLOCK_SIZE / 8', ...           % tbs_lbrm_bytes
+                TBSLBRMStr, ...                               % tbs_lbrm
                 DCPosition, ...                               % dc_position
                 };
 

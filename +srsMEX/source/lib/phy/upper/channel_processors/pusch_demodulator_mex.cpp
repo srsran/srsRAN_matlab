@@ -22,11 +22,11 @@
 #include "srsran_matlab/support/matlab_to_srs.h"
 #include "srsran_matlab/support/resource_grid.h"
 #include "srsran_matlab/support/to_span.h"
-#include "srsran/adt/optional.h"
 #include "srsran/phy/support/resource_grid_writer.h"
 #include "srsran/phy/upper/channel_processors/pusch/pusch_codeword_buffer.h"
 #include "srsran/phy/upper/channel_processors/pusch/pusch_demodulator_notifier.h"
 #include "srsran/ran/sch/modulation_scheme.h"
+#include <optional>
 
 using matlab::mex::ArgumentList;
 using namespace matlab::data;
@@ -99,7 +99,7 @@ private:
   void on_provisional_stats(const demodulation_stats& stats_) override { stats = stats_; }
   void on_end_stats(const demodulation_stats& stats_) override { stats = stats_; }
 
-  srsran::optional<demodulation_stats> stats;
+  std::optional<demodulation_stats> stats;
 };
 
 } // namespace

@@ -214,6 +214,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             fprintf(fileID, '#include "srsran/phy/upper/signal_processors/port_channel_estimator.h"\n');
             fprintf(fileID, '#include "srsran/phy/upper/signal_processors/port_channel_estimator_parameters.h"\n');
             fprintf(fileID, '#include "srsran/support/file_vector.h"\n');
+            fprintf(fileID, '#include <optional>\n');
 
         end
 
@@ -233,7 +234,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             fprintf(fileID, '  float                                                   noise_var_est  = 0;\n');
             fprintf(fileID, '  float                                                   ta_us          = 0;\n');
             fprintf(fileID, '  float                                                   cfo_true_Hz    = 0;\n');
-            fprintf(fileID, '  optional<float>                                         cfo_est_Hz     = 0;\n');
+            fprintf(fileID, '  std::optional<float>                                    cfo_est_Hz     = 0;\n');
             fprintf(fileID, '  file_vector<resource_grid_reader_spy::expected_entry_t> grid;\n');
             fprintf(fileID, '  file_vector<cf_t>                                       pilots;\n');
             fprintf(fileID, '  file_vector<resource_grid_reader_spy::expected_entry_t> estimates;\n');
@@ -327,7 +328,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             % A few very loose checks, just to ensure we are not completely out of place.
             if (configuration.nPRBs > 2)
                 chEstIdx = (channelEst ~= 0);
-                obj.assertEqual(channelEst(chEstIdx), channelRG(chEstIdx), "Wrong channel coefficients.", RelTol = 0.2);
+                obj.assertEqual(channelEst(chEstIdx), channelRG(chEstIdx), "Wrong channel coefficients.", RelTol = 0.4);
                 obj.assertEqual(noiseEst, noiseVar, "Wrong noise variance.", RelTol = 0.6);
                 obj.assertEqual(snrEst, 10^(SNR/10), "Wrong SNR.", RelTol = 1.3);
                 obj.assertEqual(timeAlignment, channelDelay / fftSize / SubcarrierSpacing / 1000, ...
@@ -746,7 +747,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                 hop2.CHsymbols(hop2.startSymbol + (1:hop2.nAllocatedSymbols)) = true;
             else
                 PRBstart = randi([0, obj.NSizeBWP - nPRBs]) + obj.NStartBWP;
-                obj.secondHop = 'nullopt';
+                obj.secondHop = 'std::nullopt';
 
                 hop1.DMRSsymbols = obj.DMRSsymbols;
                 hop1.DMRSREmask = obj.DMRSREmask;

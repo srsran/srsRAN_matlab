@@ -24,7 +24,7 @@ function [outoutString] = cell2str(inputCell)
 
     if isstring(inputCell) || iscellstr(inputCell)
         outoutString = mat;
-    elseif length(mat) == 1
+    elseif isscalar(mat)
         outoutString = num2str(mat);
     else
         outoutString = ['{', array2str(mat), '}'];

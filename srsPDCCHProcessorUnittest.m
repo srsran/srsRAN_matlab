@@ -255,11 +255,11 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
             };
 
         configCell = {
-            'nullopt', ...     % context
-            slotConfig , ...   % slot
-            cpConfig,...       % cp
-            coresetConfig, ... % coreset
-            dciConfig, ...     % dci
+            'std::nullopt', ... % context
+            slotConfig , ...    % slot
+            cpConfig,...        % cp
+            coresetConfig, ...  % coreset
+            dciConfig, ...      % dci
             };
 
         % Generate the test case entry.

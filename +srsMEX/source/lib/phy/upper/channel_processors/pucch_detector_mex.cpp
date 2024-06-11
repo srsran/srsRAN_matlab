@@ -150,7 +150,7 @@ static pucch_detector::format1_configuration populate_f1_configuration(const Str
 
   // Set the frequency allocation.
   cfg.starting_prb   = static_cast<unsigned>(in_cfg["StartPRB"][0]);
-  cfg.second_hop_prb = srsran::nullopt;
+  cfg.second_hop_prb = std::nullopt;
   if (!in_cfg["SecondHopStartPRB"].isEmpty()) {
     cfg.second_hop_prb = static_cast<unsigned>(in_cfg["SecondHopStartPRB"][0]);
   }

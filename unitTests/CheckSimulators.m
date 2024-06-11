@@ -6,12 +6,16 @@
 %
 %   CheckSimulators Methods (Test, TestTags = {'matlab code'}):
 %
-%   testPUSCHBLERmatlab  - Verifies the PUSCHBLER simulator class using MATLAB objects only.
-%   testPRACHPERFmatlab  - Verifies the PRACHPERF simulator class using MATLAB objects only.
+%   testPUSCHBLERmatlab   - Verifies the PUSCHBLER simulator class using MATLAB objects only.
+%   testPRACHPERFmatlab   - Verifies the PRACHPERF simulator class using MATLAB objects only.
+%   testPUCCHBLERF1matlab - Verifies the PUCCHBLER F1 simulator class using MATLAB objects only.
+%   testPUCCHBLERF2matlab - Verifies the PUCCHBLER F2 simulator class using MATLAB objects only.
 %
 %   CheckSimulators Methods (Test, TestTags = {'mex code'}):
 %
-%   testPUSCHBLERmex  - Verifies the PUSCHBLER simulator class also using MEX implementations.
+%   testPUSCHBLERmex   - Verifies the PUSCHBLER simulator class also using MEX implementations.
+%   testPUCCHBLERF1mex - Verifies the PUCCHBLER F1 simulator class also using MEX implementations.
+%   testPUCCHBLERF2mex - Verifies the PUCCHBLER F2 simulator class also using MEX implementations.
 %
 %   Example
 %      runtests('CheckSimulators')
@@ -34,6 +38,22 @@
 %   file in the top-level directory of this distribution.
 
 classdef CheckSimulators < matlab.unittest.TestCase
+    properties (TestParameter)
+        %Channel estimator implementation type for mex PUSCH tests.
+        EstimatorImplPUSCH = {"MEX", "noMEX"}
+        %Test type for PUCCH tests.
+        PUCCHTestType = {"Detection", "False Alarm"}
+    end % of properties (TestParameter)
+
+    methods (TestMethodSetup)
+        function resetrandomgenerator(obj)
+            % Reset random genenator after storing current state.
+            orig = rng('default');
+            % Random generator will be restored after the method.
+            obj.addTeardown(@rng, orig);
+        end % of function resetrandomgenerator(obj)
+    end % of methods (TestMethodSetup)
+
     methods (Test, TestTags = {'matlab code'})
         function testPUSCHBLERmatlab(obj)
             import matlab.unittest.fixtures.CurrentFolderFixture
@@ -119,10 +139,84 @@ classdef CheckSimulators < matlab.unittest.TestCase
             obj.assertEqual(pp.Detected, 2, 'Wrong number of detected preambles.', AbsTol=2);
             obj.assertEqual(pp.ProbabilityFalseAlarm, 0.02, 'Wrong probability of detection.', AbsTol=0.02);
         end % of function testPRACHPERFmatlab(obj)
+
+        function testPUCCHBLERF1matlab(obj, PUCCHTestType)
+            import matlab.unittest.fixtures.CurrentFolderFixture
+
+            obj.applyFixture(CurrentFolderFixture('../apps/simulators/PUCCHBLER'));
+
+            try
+                pp = PUCCHBLER;
+            catch ME
+                obj.assertFail(['Could not create a PUCCHBLER object because of exception: ', ...
+                ME.message]);
+            end
+
+            obj.assertClass(pp, 'PUCCHBLER', 'The created object is not a PUCCHBLER object.');
+
+            pp.PUCCHFormat = 1;
+            pp.PRBSet = 0;
+            pp.SymbolAllocation = [0 14];
+            pp.NumACKBits = 2;
+            pp.NRxAnts = 2;
+            pp.TestType = PUCCHTestType;
+
+            snrs = -32:2:-14;
+            try
+                pp(snrs, 100)
+            catch ME
+                obj.assertFail(['PUCCHBLER could not run because of exception: ', ...
+                    ME.message]);
+            end
+
+            obj.assertEqual(pp.SNRrange, snrs, 'Wrong SNR range.');
+            if (PUCCHTestType == "Detection")
+                obj.assertLessThan(pp.NACK2ACKDetectionRateMATLAB, 0.01, "Wrong NACK-to-ACK detection curve.");
+                obj.assertEqual(pp.ACKDetectionRateMATLAB, [0.0106; 0.0164; 0.0213; 0.0397; 0.0658; 0.1112; 0.2012; 0.3820; 0.6383; 0.8617], ...
+                    "Wrong ACK detection rate curve.", RelTol=0.02);
+            else
+                obj.assertEqual(pp.FalseACKDetectionRateMATLAB, 0.007 * ones(10, 1), "Wrong false ACK detection rate curve.", RelTol=0.02);
+            end
+        end % of function testPUCCHBLERF1matlab(obj, PUCCHTestType)
+
+        function testPUCCHBLERF2matlab(obj, PUCCHTestType)
+            import matlab.unittest.fixtures.CurrentFolderFixture
+
+            obj.applyFixture(CurrentFolderFixture('../apps/simulators/PUCCHBLER'));
+
+            try
+                pp = PUCCHBLER;
+            catch ME
+                obj.assertFail(['Could not create a PUCCHBLER object because of exception: ', ...
+                ME.message]);
+            end
+
+            obj.assertClass(pp, 'PUCCHBLER', 'The created object is not a PUCCHBLER object.');
+            obj.assertEqual(pp.PUCCHFormat, 2, ['The PUCCH Format is set to ' num2str(pp.PUCCHFormat) ' instead of 2.']);
+
+            pp.NRxAnts = 2;
+            pp.TestType = PUCCHTestType;
+
+            snrs = -20:2:-4;
+            try
+                pp(snrs, 100)
+            catch ME
+                obj.assertFail(['PUCCHBLER could not run because of exception: ', ...
+                    ME.message]);
+            end
+
+            obj.assertEqual(pp.SNRrange, snrs, 'Wrong SNR range.');
+            if (PUCCHTestType == "Detection")
+                obj.assertEqual(pp.BlockErrorRateMATLAB, [1; 0.9709; 0.9346; 0.8696; 0.7576; 0.5682; 0.2053; 0.0280; 0.0010], ...
+                    "Wrong BLER curve.", RelTol=0.02);
+            else
+                obj.assertEqual(pp.FalseDetectionRateMATLAB, 0.005 * ones(9, 1), "Wrong false alarm curve.", RelTol=0.02);
+            end
+        end % of function testPUCCHBLERF2matlab(obj, PUCCHTestType)
     end % of methods (Test, TestTags = {'matlab code'})
 
     methods (Test, TestTags = {'mex code'})
-        function testPUSCHBLERmex(obj)
+        function testPUSCHBLERmex(obj, EstimatorImplPUSCH)
             import matlab.unittest.fixtures.CurrentFolderFixture
             import matlab.unittest.constraints.IsFile
 
@@ -141,9 +235,14 @@ classdef CheckSimulators < matlab.unittest.TestCase
                 'Could not find PUSCH decoder mex executable.');
             obj.assertThat('../../../+srsMEX/+phy/@srsPUSCHDemodulator/pusch_demodulator_mex.mexa64', IsFile, ...
                 'Could not find PUSCH demodulator mex executable.');
+            obj.assertThat('../../../+srsMEX/+phy/@srsMultiPortChannelEstimator/multiport_channel_estimator_mex.mexa64', IsFile, ...
+                'Could not find channel estimator mex executable.');
 
+            pp.QuickSimulation = false;
             pp.ImplementationType = 'srs';
-            snrs = -5.6:0.2:-4.8;
+            pp.PerfectChannelEstimator = false;
+            pp.SRSEstimatorType = EstimatorImplPUSCH;
+            snrs = -5.0:0.2:-4.2;
             try
                 pp(snrs, 100)
             catch ME
@@ -154,8 +253,94 @@ classdef CheckSimulators < matlab.unittest.TestCase
             obj.assertEqual(pp.SNRrange, snrs, 'Wrong SNR range.');
             obj.assertEqual(pp.TBS, 1800, 'Wrong transport block size.');
             obj.assertEqual(pp.MaxThroughput, 1.8, 'Wrong maximum throughput.');
-            obj.assertEqual(pp.ThroughputSRS, [0; 0; 0.0178; 0.2746; 0.9089], "Wrong througuput curve.", RelTol=0.02);
-            obj.assertEqual(pp.BlockErrorRateSRS, [1; 1; 0.9901; 0.8403; 0.4950], "Wrong BLER curve.", RelTol=0.02);
+            obj.assertLessThanOrEqual(pp.ThroughputSRS, [0; 0.002; 0.06; 0.33; 1.06], "Wrong througuput curve.");
+            obj.assertEqual(pp.BlockErrorRateSRS, [1; 1; 0.9690; 0.8190; 0.4200], "Wrong BLER curve.", RelTol=0.02);
         end % of function testPUSCHBLERmex(obj)
+
+        function testPUCCHBLERF1mex(obj, PUCCHTestType)
+            import matlab.unittest.fixtures.CurrentFolderFixture
+            import matlab.unittest.constraints.IsFile
+
+            obj.applyFixture(CurrentFolderFixture('../apps/simulators/PUCCHBLER'));
+
+            try
+                pp = PUCCHBLER;
+            catch ME
+                obj.assertFail(['Could not create a PUCCHBLER object because of exception: ', ...
+                ME.message]);
+            end
+
+            obj.assertClass(pp, 'PUCCHBLER', 'The created object is not a PUCCHBLER object.');
+
+            obj.assertThat('../../../+srsMEX/+phy/@srsPUCCHProcessor/pucch_processor_mex.mexa64', IsFile, ...
+                'Could not find PUCCH processor mex executable.');
+
+            pp.PUCCHFormat = 1;
+            pp.PRBSet = 0;
+            pp.SymbolAllocation = [0 14];
+            pp.NumACKBits = 2;
+            pp.NRxAnts = 2;
+            pp.TestType = PUCCHTestType;
+            pp.ImplementationType = 'srs';
+            pp.PerfectChannelEstimator = false;
+
+            snrs = -32:2:-14;
+            try
+                pp(snrs, 100)
+            catch ME
+                obj.assertFail(['PUCCHBLER could not run because of exception: ', ...
+                    ME.message]);
+            end
+
+            obj.assertEqual(pp.SNRrange, snrs, 'Wrong SNR range.');
+            if (PUCCHTestType == "Detection")
+                obj.assertLessThan(pp.NACK2ACKDetectionRateSRS, 0.04, "Wrong NACK-to-ACK detection curve.");
+                obj.assertEqual(pp.ACKDetectionRateSRS, [0.0077; 0.0097; 0.0184; 0.0280; 0.0435; 0.0754; 0.1441; 0.2814; 0.5261; 0.7950], ...
+                    "Wrong ACK detection rate curve.", RelTol=0.02);
+            else
+                obj.assertEqual(pp.FalseACKDetectionRateSRS, 0.0075 * ones(10, 1), "Wrong false ACK detection rate curve.", RelTol=0.02);
+            end
+        end % of function testPUCCHBLERF1mex(obj, PUCCHTestType)
+
+        function testPUCCHBLERF2mex(obj, PUCCHTestType)
+            import matlab.unittest.fixtures.CurrentFolderFixture
+            import matlab.unittest.constraints.IsFile
+
+            obj.applyFixture(CurrentFolderFixture('../apps/simulators/PUCCHBLER'));
+
+            try
+                pp = PUCCHBLER;
+            catch ME
+                obj.assertFail(['Could not create a PUCCHBLER object because of exception: ', ...
+                ME.message]);
+            end
+
+            obj.assertClass(pp, 'PUCCHBLER', 'The created object is not a PUCCHBLER object.');
+            obj.assertEqual(pp.PUCCHFormat, 2, ['The PUCCH Format is set to ' num2str(pp.PUCCHFormat) ' instead of 2.']);
+
+            obj.assertThat('../../../+srsMEX/+phy/@srsPUCCHProcessor/pucch_processor_mex.mexa64', IsFile, ...
+                'Could not find PUCCH processor mex executable.');
+
+            pp.TestType = PUCCHTestType;
+            pp.NRxAnts = 2;
+            pp.ImplementationType = 'srs';
+            pp.PerfectChannelEstimator = false;
+
+            snrs = -20:2:-4;
+            try
+                pp(snrs, 100)
+            catch ME
+                obj.assertFail(['PUCCHBLER could not run because of exception: ', ...
+                    ME.message]);
+            end
+
+            obj.assertEqual(pp.SNRrange, snrs, 'Wrong SNR range.');
+            if (PUCCHTestType == "Detection")
+                obj.assertEqual(pp.BlockErrorRateSRS, [0.9434; 0.9434; 0.9009; 0.7937; 0.6452; 0.4274; 0.2387; 0.0560; 0.0040], ...
+                    "Wrong BLER curve.", RelTol=0.02);
+            else
+                obj.assertEqual(pp.FalseDetectionRateSRS, 0.006 * ones(9, 1), "Wrong false alarm curve.", RelTol=0.02);
+            end
+        end % of function testPUCCHBLERF2mex(obj, PUCCHTestType)
     end % of methods (Test, TestTags = {'mex code'})
 end % of classdef CheckSimulators < matlab.unittest.TestCase

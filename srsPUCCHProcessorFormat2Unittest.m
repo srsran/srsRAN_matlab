@@ -359,7 +359,7 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
 
             % Generate PUCCH Format 2 configuration.
             pucchF2Config = {...
-                'nullopt', ...           % context
+                'std::nullopt', ...      % context
                 slotConfig, ...          % slot
                 cyclicPrefixStr, ...     % cp
                 portsString, ...         % rx_ports

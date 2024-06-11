@@ -178,7 +178,7 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
 
             % Generate PUCCH common configuration.
             pucchConfig1 = {...
-                'nullopt', ...                  % context
+                'std::nullopt', ...             % context
                 slotPointConfig, ...            % slot
                 NSizeBWP, ...                   % bwp_size_rb
                 NStartBWP, ...                  % bwp_start_rb
@@ -195,7 +195,7 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
                 };
 
             pucchConfig2 = {...
-                'nullopt', ...                  % context
+                'std::nullopt', ...             % context
                 slotPointConfig, ...            % slot
                 NSizeBWP, ...                   % bwp_size_rb
                 NStartBWP, ...                  % bwp_start_rb
