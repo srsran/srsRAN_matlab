@@ -83,6 +83,10 @@
 %   SRSEstimatorType             - Implementation of the SRS channel estimator ('MEX', 'noMEX')
 %   QuickSimulation              - Quick-simulation flag: set to true to stop
 %                                  each point after 100 failed transport blocks (tunable).
+%   ApplyOFHCompression          - Emulate the effect of O-FH compression on the received grid: set to true 
+%                                  to enable (tunable).
+%   CompIQwidth                  - Bit-width of the compressed IQ samples (1...16). Used only if 
+%                                  'ApplyOFHCOmpression' is set to true.
 %
 %   When the simulation is over, the object allows access to the following
 %   results properties.
@@ -192,6 +196,11 @@ classdef PUSCHBLER < matlab.System
         %   Only applies if ImplementationType is set to 'srs' or 'both' and PerfectChannelEstimator
         %   is set to false.
         SRSEstimatorType (1, :) char {mustBeMember(SRSEstimatorType, {'MEX', 'noMEX'})} = 'MEX'
+        %Flag for emulating O-FH compression.
+        ApplyOFHCompression (1, 1) logical = false
+        %Bit-width of the compressed IQ samples.
+        %   Only applies if ApplyOFHCompression is set to true.
+        CompIQwidth (1, 1) double {mustBeInteger, mustBeInRange(CompIQwidth, 1, 16)} = 9
     end % of properties (Nontunable)
 
     properties % Tunable
@@ -616,6 +625,13 @@ classdef PUSCHBLER < matlab.System
 
             quickSim = obj.QuickSimulation;
 
+            compGrid = obj.ApplyOFHCompression;
+            compWidth = obj.CompIQwidth;
+            optCompStr = '';
+            if compGrid
+                optCompStr = sprintf(', with O-FH compression enabled (%d-bit BFP)', compWidth);
+            end
+
             % DM-RS over data amplitude gain.
             betaDMRS = sqrt(2);
 
@@ -644,9 +660,9 @@ classdef PUSCHBLER < matlab.System
 
                 % Prepare simulation for new SNR point.
                 SNRdB = SNRIn(snrIdx);
-                fprintf('\nSimulating transmission scheme 1 (%dx%d) and SCS=%dkHz with %s channel at %gdB SNR for %d 10ms frame(s)\n', ...
+                fprintf('\nSimulating transmission scheme 1 (%dx%d) and SCS=%dkHz with %s channel at %gdB SNR for %d 10ms frame(s)%s\n', ...
                     nTxAnts, nRxAnts, carrier.SubcarrierSpacing, ...
-                    delayProfile, SNRdB, nFrames);
+                    delayProfile, SNRdB, nFrames, optCompStr);
 
                 % Specify the fixed order in which we cycle through the HARQ process IDs.
                 harqSequence = 0:puschextra.NHARQProcesses-1;
@@ -773,6 +789,14 @@ classdef PUSCHBLER < matlab.System
                     [K, L, R] = size(rxGrid);
                     if (L < carrier.SymbolsPerSlot)
                         rxGrid = cat(2, rxGrid, zeros(K, carrier.SymbolsPerSlot - L, R));
+                    end
+
+                    % Optionally, compress and decompress the received resource grid 
+                    % to emulate the effect that thecompression used in the O-FH has 
+                    % on the PUSCH decoding performance.
+                    if compGrid
+                       [compRXGrid, compParam] = srsLib.ofh.compression.srsCompressor(rxGrid, 'BFP', compWidth);
+                       rxGrid = srsLib.ofh.compression.srsDecompressor(compRXGrid, compParam, 'BFP', compWidth);
                     end
 
                     dmrsLayerIndices = nrPUSCHDMRSIndices(carrier, puschNonCodebook);
@@ -991,6 +1015,8 @@ classdef PUSCHBLER < matlab.System
                     flag = isempty(obj.ThroughputSRSCtr) || strcmp(obj.ImplementationType, 'matlab');
                 case 'SRSEstimatorType'
                     flag = strcmp(obj.ImplementationType, 'matlab') || obj.PerfectChannelEstimator;
+                case 'CompIQwidth'
+                    flag = obj.ApplyOFHCompression;
                 otherwise
                     flag = false;
             end
@@ -1020,6 +1046,8 @@ classdef PUSCHBLER < matlab.System
                 'DelayProfile', 'DelaySpread', 'MaximumDopplerShift', 'CarrierFrequencyOffset', 'PerfectChannelEstimator', ...
                 ... HARQ.
                 'EnableHARQ', ...
+                ... Compression.
+                'ApplyOFHCompression', 'CompIQwidth', ...
                 ... Other simulation details.
                 'ImplementationType', 'SRSEstimatorType', ...
                 'QuickSimulation', 'DisplaySimulationInformation', 'DisplayDiagnostics'};
