@@ -20,7 +20,9 @@
 %   numerology       - Subcarrier numerology (0, 1).
 %   allocation       - Structure containing the number of symbols and if it
 %                      uses intra-slot frequency hopping.
-%   payload          - Structure
+%   payload          - Structure containing the number of ACK bits and a logical
+%                      flag indicating whether the PUCCH carries SR information
+%                      or not.
 %
 %   srsPUCCHProcessorFormat0Unittest Methods (TestTags = {'testvector'}):
 %
@@ -115,8 +117,8 @@ classdef srsPUCCHProcessorFormat0Unittest < srsTest.srsBlockUnittest
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, numerology, allocation, payload, NumRxPorts)
         %testvectorGenerationCases Generates a test vector for the given
-        %   numerology, allocation, payload and number of receive ports, 
-        %   while using a random NCellID, random NSlot and random symbol and 
+        %   numerology, allocation, payload and number of receive ports,
+        %   while using a random NCellID, random NSlot, random symbol and
         %   PRB length.
 
             import srsTest.helpers.writeResourceGridEntryFile
@@ -125,131 +127,7 @@ classdef srsPUCCHProcessorFormat0Unittest < srsTest.srsBlockUnittest
             % generated so far.
             testID = testCase.generateTestID;
 
-            % Use a unique NCellIDLoc, NSlotLoc for each test.
-            NCellIDLoc = randi([0, 1007]);
-
-            % Use a random slot number from the allowed range.
-            NSlotLoc = randi([0, 10 * pow2(numerology) - 1]);
-
-            % Fixed parameter values.
-            NStartBWP = 1;
-            NSizeBWP = 51;
-            NSizeGrid = NStartBWP + NSizeBWP;
-            NStartGrid = 0;
-            CyclicPrefix = 'normal';
-            GroupHopping = 'neither';
-            FrequencyHopping = 'disabled';
-            FrequencyHopping2 = 'neither';
-            PRBSet = randi([0, NSizeBWP - 1]);
-            SecondHopStartPRB = PRBSet;
-            SymbolAllocation = [randi([0, 14 - allocation.numSymbols]), ...
-                allocation.numSymbols];
-            InitialCyclicShift = randi([0, 11]);
-
-            % Random frame number.
-            NFrame = randi([0, 1023]);
-
-            % Randomly select SecondHopStartPRB if intra-slot frequency
-            % hopping is enabled.
-            if allocation.freqHopping
-                SecondHopStartPRB = randi([0, NSizeBWP - 1]);
-                % Set respective MATLAB parameter.
-                FrequencyHopping   = 'enabled';
-                FrequencyHopping2   = 'intraSlot';
-            end
-
-            % Configure the carrier according to the test parameters.
-            SubcarrierSpacing = 15 * (2 .^ numerology);
-            carrier = nrCarrierConfig(...
-                'NCellID', NCellIDLoc, ...
-                'SubcarrierSpacing', SubcarrierSpacing, ...
-                'CyclicPrefix', CyclicPrefix, ...
-                'NSizeGrid', NSizeGrid, ...
-                'NStartGrid', NStartGrid, ...
-                'NSlot', NSlotLoc, ...
-                'NFrame', NFrame);
-
-            % Configure the PUCCH according to the test parameters.
-            pucch = nrPUCCH0Config( ...
-                'NSizeBWP', NSizeBWP, ...
-                'NStartBWP', NStartBWP, ...
-                'SymbolAllocation', SymbolAllocation, ...
-                'PRBSet', PRBSet, ...
-                'FrequencyHopping', FrequencyHopping2, ...
-                'SecondHopStartPRB', SecondHopStartPRB, ...
-                'GroupHopping', GroupHopping, ...
-                'HoppingID', NCellIDLoc, ...
-                'InitialCyclicShift', InitialCyclicShift);
-
-            % Generate HARQ ACK payload.
-            ack = randi([0, 1], payload.nofHarqAck, 1);
-
-            % Generate SR payload.
-            sr = [];
-            if payload.sr
-                if payload.nofHarqAck > 0
-                    sr = randi([0, 1]);
-                else
-                    sr = 1;
-                end
-            end
-
-             % Get the PUCCH control data indices.
-            pucchDataIndices = nrPUCCHIndices(carrier, pucch);
-
-            % Generate data symbols.
-            pucchData = nrPUCCH0(ack, sr, pucch.SymbolAllocation, ...
-                carrier.CyclicPrefix, carrier.NSlot, carrier.NCellID, ...
-                pucch.GroupHopping, pucch.InitialCyclicShift, ...
-                FrequencyHopping, "OutputDataType", "single");
-
-            % Create resource grid.
-            txGrid = nrResourceGrid(carrier, "OutputDataType", "single");
-            gridDims = size(txGrid);
-
-            % Write PUCCH data in the resource grid.
-            txGrid(pucchDataIndices) = pucchData;
-
-            % Init received signals.
-            rxGrid = nrResourceGrid(carrier, NumRxPorts, "OutputDataType", "single");
-            rxSymbols = zeros(length(pucchDataIndices), NumRxPorts);
-
-            % Generate random channel coefficients with unitary power and 
-            % uniform random phase.
-            H = exp(2i * pi * rand(NumRxPorts, 1));
-
-            % Noise variance.
-            snrdB = 30;
-            noiseStdDev = 10 ^ (-snrdB / 20);
-
-            % Carrier Frequency offset.
-            cfoHz = 400;
-
-            % Modulate baseband signal.
-            [baseband, OfdmInfo] = nrOFDMModulate(txGrid, carrier.SubcarrierSpacing, carrier.NSlot);
-
-            % Apply carrier frequency offset in time domain.
-            timeSeconds = (0:(length(baseband) - 1)) / OfdmInfo.SampleRate;
-            basebandWithCfo = baseband .* exp(2i * pi * timeSeconds.' * cfoHz);
-
-            % Demodulate baseband signal.
-            gridWithCfo = nrOFDMDemodulate(carrier, basebandWithCfo);
-
-            % Iterate each receive port.
-            for iRxPort = 1:NumRxPorts
-                % Create some noise samples.
-                normNoise = (randn(gridDims) + 1i * randn(gridDims)) / sqrt(2);
-
-                % Generate channel estimates as a phase rotation in the
-                % frequency domain.
-                estimates = H(iRxPort) * exp(1i * linspace(0, 2 * pi, gridDims(1))') * ones(1, gridDims(2));
-
-                % Create noisy modulated symbols.
-                rxGrid(:, :, iRxPort) = estimates .* gridWithCfo + (noiseStdDev * normNoise);
-
-                % Extract PUCCH symbols from the received grid.
-                rxSymbols(:, iRxPort) = rxGrid(pucchDataIndices);
-            end
+            [rxGrid, pucchDataIndices, payloadData, pucch, carrier] = generateSimData(numerology, allocation, payload, NumRxPorts);
 
             % Extract the elements of interest from the grid.
             nofRePort = length(pucchDataIndices);
@@ -285,15 +163,15 @@ classdef srsPUCCHProcessorFormat0Unittest < srsTest.srsBlockUnittest
             % Reception port list.
             portsString = ['{' num2str(0:(NumRxPorts - 1), "%d,") '}'];
 
-            cyclicPrefixString = ['cyclic_prefix::' upper(CyclicPrefix)];
+            cyclicPrefixString = ['cyclic_prefix::' upper(carrier.CyclicPrefix)];
 
             % Generate PUCCH common configuration.
             pucchConfig = {...
                 'std::nullopt', ...             % context
                 slotPointConfig, ...            % slot
                 cyclicPrefixString, ...         % cp
-                NSizeBWP, ...                   % bwp_size_rb
-                NStartBWP, ...                  % bwp_start_rb
+                pucch.NSizeBWP, ...             % bwp_size_rb
+                pucch.NStartBWP, ...            % bwp_start_rb
                 pucch.PRBSet, ...               % starting_prb
                 secondHopConfig, ...            % second_hop_prb
                 pucch.SymbolAllocation(1), ...  % start_symbol_index
@@ -301,15 +179,15 @@ classdef srsPUCCHProcessorFormat0Unittest < srsTest.srsBlockUnittest
                 pucch.InitialCyclicShift, ...   % initial_cyclic_shift
                 pucch.HoppingID, ...            % n_id
                 payload.nofHarqAck, ...         % nof_harq_ack
-                payload.sr, ...         % sr_opportunity
+                payload.sr, ...                 % sr_opportunity
                 portsString, ...                % ports
                 };
 
             % Generate test case cell.
             testCaseCell = {...
-                pucchConfig, ...    % config
-                num2cell(ack), ...  % ack_bits
-                num2cell(sr), ...   % sr
+                pucchConfig, ...                % config
+                num2cell(payloadData.ACK), ...  % ack_bits
+                num2cell(payloadData.SR), ...   % sr
                 };
 
             % Generate the test case entry.
@@ -321,3 +199,136 @@ classdef srsPUCCHProcessorFormat0Unittest < srsTest.srsBlockUnittest
         end % of function testvectorGenerationCases
     end % of methods (Test, TestTags = {'testvector'})
 end % of classdef srsPUCCHProcessorFormat0Unittest
+
+% For the given simulation set-up, generates the received resource grid. It also
+% returns the indices of the REs carrying PUCCH data, the value of payload bits,
+% the PUCCH Format0 configuration and the carrier configuration.
+function [rxGrid, pucchDataIndices, payloadData, pucch, carrier] = generateSimData(numerology, allocation, payload, NumRxPorts)
+    % Use a unique NCellIDLoc, NSlotLoc for each test.
+    NCellIDLoc = randi([0, 1007]);
+
+    % Use a random slot number from the allowed range.
+    NSlotLoc = randi([0, 10 * pow2(numerology) - 1]);
+
+    % Fixed parameter values.
+    NStartBWP = 1;
+    NSizeBWP = 51;
+    NSizeGrid = NStartBWP + NSizeBWP;
+    NStartGrid = 0;
+    CyclicPrefix = 'normal';
+    GroupHopping = 'neither';
+    FrequencyHopping = 'disabled';
+    FrequencyHopping2 = 'neither';
+    PRBSet = randi([0, NSizeBWP - 1]);
+    SecondHopStartPRB = PRBSet;
+    SymbolAllocation = [randi([0, 14 - allocation.numSymbols]), ...
+        allocation.numSymbols];
+    InitialCyclicShift = randi([0, 11]);
+
+    % Random frame number.
+    NFrame = randi([0, 1023]);
+
+    % Randomly select SecondHopStartPRB if intra-slot frequency
+    % hopping is enabled.
+    if allocation.freqHopping
+        SecondHopStartPRB = randi([0, NSizeBWP - 1]);
+        % Set respective MATLAB parameter.
+        FrequencyHopping   = 'enabled';
+        FrequencyHopping2   = 'intraSlot';
+    end
+
+    % Configure the carrier according to the test parameters.
+    SubcarrierSpacing = 15 * (2 .^ numerology);
+    carrier = nrCarrierConfig(...
+        'NCellID', NCellIDLoc, ...
+        'SubcarrierSpacing', SubcarrierSpacing, ...
+        'CyclicPrefix', CyclicPrefix, ...
+        'NSizeGrid', NSizeGrid, ...
+        'NStartGrid', NStartGrid, ...
+        'NSlot', NSlotLoc, ...
+        'NFrame', NFrame);
+
+    % Configure the PUCCH according to the test parameters.
+    pucch = nrPUCCH0Config( ...
+        'NSizeBWP', NSizeBWP, ...
+        'NStartBWP', NStartBWP, ...
+        'SymbolAllocation', SymbolAllocation, ...
+        'PRBSet', PRBSet, ...
+        'FrequencyHopping', FrequencyHopping2, ...
+        'SecondHopStartPRB', SecondHopStartPRB, ...
+        'GroupHopping', GroupHopping, ...
+        'HoppingID', NCellIDLoc, ...
+        'InitialCyclicShift', InitialCyclicShift);
+
+    % Generate HARQ ACK payload.
+    ack = randi([0, 1], payload.nofHarqAck, 1);
+
+    % Generate SR payload.
+    sr = [];
+    if payload.sr
+        if payload.nofHarqAck > 0
+            sr = randi([0, 1]);
+        else
+            sr = 1;
+        end
+    end
+
+     % Get the PUCCH control data indices.
+    pucchDataIndices = nrPUCCHIndices(carrier, pucch);
+
+    % Generate data symbols.
+    pucchData = nrPUCCH0(ack, sr, pucch.SymbolAllocation, ...
+        carrier.CyclicPrefix, carrier.NSlot, carrier.NCellID, ...
+        pucch.GroupHopping, pucch.InitialCyclicShift, ...
+        FrequencyHopping, "OutputDataType", "single");
+
+    % Create resource grid.
+    txGrid = nrResourceGrid(carrier, "OutputDataType", "single");
+    gridDims = size(txGrid);
+
+    % Write PUCCH data in the resource grid.
+    txGrid(pucchDataIndices) = pucchData;
+
+    % Init received signals.
+    rxGrid = nrResourceGrid(carrier, NumRxPorts, "OutputDataType", "single");
+    rxSymbols = zeros(length(pucchDataIndices), NumRxPorts);
+
+    % Generate random channel coefficients with unitary power and
+    % uniform random phase.
+    H = exp(2i * pi * rand(NumRxPorts, 1));
+
+    % Noise variance.
+    snrdB = 30;
+    noiseStdDev = 10 ^ (-snrdB / 20);
+
+    % Carrier Frequency offset.
+    cfoHz = 400;
+
+    % Modulate baseband signal.
+    [baseband, OfdmInfo] = nrOFDMModulate(txGrid, carrier.SubcarrierSpacing, carrier.NSlot);
+
+    % Apply carrier frequency offset in time domain.
+    timeSeconds = (0:(length(baseband) - 1)) / OfdmInfo.SampleRate;
+    basebandWithCfo = baseband .* exp(2i * pi * timeSeconds.' * cfoHz);
+
+    % Demodulate baseband signal.
+    gridWithCfo = nrOFDMDemodulate(carrier, basebandWithCfo);
+
+    % Iterate each receive port.
+    for iRxPort = 1:NumRxPorts
+        % Create some noise samples.
+        normNoise = (randn(gridDims) + 1i * randn(gridDims)) / sqrt(2);
+
+        % Generate channel estimates as a phase rotation in the
+        % frequency domain.
+        estimates = H(iRxPort) * exp(1i * linspace(0, 2 * pi, gridDims(1))') * ones(1, gridDims(2));
+
+        % Create noisy modulated symbols.
+        rxGrid(:, :, iRxPort) = estimates .* gridWithCfo + (noiseStdDev * normNoise);
+
+        % Extract PUCCH symbols from the received grid.
+        rxSymbols(:, iRxPort) = rxGrid(pucchDataIndices);
+    end
+
+    payloadData = struct('ACK', ack, 'SR', sr);
+end
