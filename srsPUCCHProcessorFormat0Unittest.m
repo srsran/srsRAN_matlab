@@ -29,6 +29,10 @@
 %   testvectorGenerationCases - Generates a test vector according to the provided
 %                               parameters.
 %
+%   srsPUCCHProcessorFormat0Unittest Methods (TestTags = {'testmex'}):
+%
+%   mexTest  - Tests the mex wrapper of the srsRAN PUCCH processor for Format 0.
+%
 %   srsPUCCHProcessorFormat0Unittest Methods (Access = protected):
 %
 %   addTestIncludesToHeaderFile     - Adds include directives to the test header file.
@@ -198,6 +202,48 @@ classdef srsPUCCHProcessorFormat0Unittest < srsTest.srsBlockUnittest
             testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);
         end % of function testvectorGenerationCases
     end % of methods (Test, TestTags = {'testvector'})
+
+    methods (Test, TestTags = {'testmex'})
+        function mexTest(testCase, numerology, allocation, payload, NumRxPorts)
+        %mexTest Tests the mex wrapper of the srsRAN PUCCH processor for Format 0.
+        %   mexTest(testCase, numerology, allocation, payload, NumRxPorts) runs a
+        %   short simulation with a PUCCH transmission specified by the given
+        %   numerology, allocation, payload and number of receive ports,
+        %   while using a random NCellID, random NSlot and random symbol and
+        %   PRB length.
+
+            import srsMEX.phy.srsPUCCHProcessor
+
+            [rxGrid, pucchDataIndices, payloadData, pucch, carrier] = ...
+                generateSimData(numerology, allocation, payload, NumRxPorts);
+
+            srspucch = srsPUCCHProcessor;
+
+            uci = srspucch(carrier, pucch, rxGrid, NumHARQAck = payload.nofHarqAck, NumSR = payload.sr);
+
+            % The processor output should be valid.
+            assertTrue(testCase, uci.isValid, 'The PUCCH Format 0 detection should be valid.');
+
+            % Check the ACK content.
+            assertLength(testCase, uci.HARQAckPayload, payload.nofHarqAck, 'Wrong number of ACK bits.');
+            if (payload.nofHarqAck > 0)
+                assertEqual(testCase, uci.HARQAckPayload, int8(payloadData.ACK), 'Wrong ACK bits.');
+            end
+
+            % Check the SR content.
+            if payload.sr
+                assertLength(testCase, uci.SRPayload, 1, 'PUCCH Format 0 with more than one SR bit.');
+                assertEqual(testCase, uci.SRPayload, int8(payloadData.SR), 'Wrong SR bit.');
+            else
+                assertEmpty(testCase, uci.SRPayload, 'Found SR bit with unconfigured SR occasion.');
+            end
+
+            % CSI Part 1 and Part 2 should be empty.
+            assertEmpty(testCase, uci.CSI1Payload, 'The PUCCH has a nonempty CSI Part 1 field.');
+            assertEmpty(testCase, uci.CSI2Payload, 'The PUCCH has a nonempty CSI Part 2 field.');
+        end % of function mexTest(testCase, numerology, allocation, payload, NumRxPorts)
+
+    end % of methods (Test, TestTags = {'testmex'})
 end % of classdef srsPUCCHProcessorFormat0Unittest
 
 % For the given simulation set-up, generates the received resource grid. It also

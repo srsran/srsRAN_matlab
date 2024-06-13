@@ -1,7 +1,7 @@
 %srsPUCCHProcessor retrieves UCI messages from a PUCCH transmission.
 %   User-friendly interface for processing a PUCCH transmission via the MEX static
 %   method pucch_processor_mex, which calls srsRAN pucch_processor. The PUCCH format
-%   can be either Format 1 or Format 2.
+%   can be Format 0, Format 1 or Format 2.
 %
 %   PROCESSOR = srsPUCCHProcessor creates the PUCCH processor object PROCESSOR.
 %
@@ -13,11 +13,11 @@
 %
 %   UCI = step(OBJ, RXGRID, PUCCH, CARRIER, NAME, VALUE, NAME, VALUE, ...) recovers
 %   the UCI messages from the PUCCH transmission in the resource grid
-%   RXGRID. Input PUCCH is either an nrPUCCH1Config or an nrPUCCH2Config object containing
-%   the configuration of the PUCCH transmission. Input CARRIER is an nrCarrierConfig object describing
-%   the carrier configuration (the only used fields are SubcarrierSpacing, NSlot, and
-%   CyclicPrefix). The Name-Value pairs are used to specify the length of the UCI
-%   messages (default is 0 for all of them):
+%   RXGRID. Input PUCCH can be an nrPUCCH0Config, an nrPUCCH1Config or an nrPUCCH2Config
+%   object containing the configuration of the PUCCH transmission. Input CARRIER
+%   is an nrCarrierConfig object describing the carrier configuration (the only
+%   used fields are SubcarrierSpacing, NSlot, and CyclicPrefix). The Name-Value
+%   pairs are used to specify the length of the UCI messages (default is 0 for all of them):
 %
 %   'NumHARQAck'   - Number of HARQ ACK bits (0...1706).
 %   'NumSR'        - Number of SR bits (0...4).
@@ -32,7 +32,7 @@
 %   'CSI1Payload'     - Column array of CSI Part 1 bits (possibly empty).
 %   'CSI2Payload'     - Column array of CSI Part 2 bits (possibly empty).
 %
-%   See also nrPUCCHDecode, nrUCIDecode, nrPUCCH1Config, nrPUCCH2Config, nrCarrierConfig.
+%   See also nrPUCCHDecode, nrUCIDecode, nrPUCCH0Config, nrPUCCH1Config, nrPUCCH2Config, nrCarrierConfig.
 
 %   Copyright 2021-2024 Software Radio Systems Limited
 %
@@ -55,12 +55,13 @@ classdef srsPUCCHProcessor < matlab.System
             arguments
                 obj                   (1, 1) srsMEX.phy.srsPUCCHProcessor
                 carrierConfig         (1, 1) nrCarrierConfig
-                pucchConfig           (1, 1)        {mustBeA(pucchConfig, ["nrPUCCH1Config", "nrPUCCH2Config"])}
+                pucchConfig           (1, 1)        {mustBeA(pucchConfig, ["nrPUCCH0Config", ...
+                                                     "nrPUCCH1Config", "nrPUCCH2Config"])}
                 rxGrid            (:, 14, :) double {srsTest.helpers.mustBeResourceGrid}
-                uciSizes.NumHARQAck   (1, 1) double {mustBeNonnegative} = 0
-                uciSizes.NumSR        (1, 1) double {mustBeNonnegative} = 0
-                uciSizes.NumCSIPart1  (1, 1) double {mustBeNonnegative} = 0
-                uciSizes.NumCSIPart2  (1, 1) double {mustBeNonnegative} = 0
+                uciSizes.NumHARQAck   (1, 1) double {mustBeInteger, mustBeNonnegative} = 0
+                uciSizes.NumSR        (1, 1) double {mustBeInteger, mustBeNonnegative} = 0
+                uciSizes.NumCSIPart1  (1, 1) double {mustBeInteger, mustBeNonnegative} = 0
+                uciSizes.NumCSIPart2  (1, 1) double {mustBeInteger, mustBeNonnegative} = 0
             end
 
             gridDims = size(rxGrid);
@@ -88,7 +89,34 @@ classdef srsPUCCHProcessor < matlab.System
 
             nid = carrierConfig.NCellID;
 
-            if isa(pucchConfig, 'nrPUCCH1Config')
+            if isa(pucchConfig, 'nrPUCCH0Config')
+                if ~isempty(pucchConfig.HoppingID)
+                    nid = pucchConfig.HoppingID;
+                end
+                mexConfig = struct( ...
+                    'Format', 0, ...
+                    'SubcarrierSpacing', carrierConfig.SubcarrierSpacing, ...
+                    'NSlot', mod(carrierConfig.NSlot, carrierConfig.SlotsPerFrame), ...
+                    'CP', carrierConfig.CyclicPrefix, ...
+                    'NRxPorts', numRxPorts, ...
+                    'NSizeBWP', nSizeBWP, ...
+                    'NStartBWP', nStartBWP, ...
+                    'StartPRB', pucchConfig.PRBSet(1), ...
+                    'SecondHopStartPRB', secondHop, ...
+                    'StartSymbolIndex', pucchConfig.SymbolAllocation(1), ...
+                    'NumOFDMSymbols', pucchConfig.SymbolAllocation(2), ...
+                    'NID', nid, ...
+                    'NumHARQAck', uciSizes.NumHARQAck, ...
+                    'NumSR', uciSizes.NumSR, ...
+                    'InitialCyclicShift', pucchConfig.InitialCyclicShift, ...
+                    'OCCI', [], ...         only PUCCH F1
+                    'NumPRBs', [], ...      only PUCCH F2
+                    'RNTI', [], ...         only PUCCH F2
+                    'NID0', [], ...         only PUCCH F2
+                    'NumCSIPart1', [], ...  only PUCCH F2
+                    'NumCSIPart2', [] ...   only PUCCH F2
+                );
+            elseif isa(pucchConfig, 'nrPUCCH1Config')
                 if ~isempty(pucchConfig.HoppingID)
                     nid = pucchConfig.HoppingID;
                 end
@@ -111,7 +139,7 @@ classdef srsPUCCHProcessor < matlab.System
                     'NumPRBs', [], ...      only PUCCH F2
                     'RNTI', [], ...         only PUCCH F2
                     'NID0', [], ...         only PUCCH F2
-                    'NumSR', [], ...        only PUCCH F2
+                    'NumSR', [], ...        only PUCCH F0 and F2
                     'NumCSIPart1', [], ...  only PUCCH F2
                     'NumCSIPart2', [] ...   only PUCCH F2
                     );
@@ -140,7 +168,7 @@ classdef srsPUCCHProcessor < matlab.System
                     'NumSR', uciSizes.NumSR, ...
                     'NumCSIPart1', uciSizes.NumCSIPart1, ...
                     'NumCSIPart2', uciSizes.NumCSIPart2, ...
-                    'InitialCyclicShift', [], ...  only PUCCH F1
+                    'InitialCyclicShift', [], ...  only PUCCH F0 and F1
                     'OCCI', [] ...                 only PUCCH F1
                     );
             end
