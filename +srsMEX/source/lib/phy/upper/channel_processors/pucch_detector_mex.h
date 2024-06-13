@@ -25,6 +25,7 @@
 #include "srsran_matlab/srsran_mex_dispatcher.h"
 #include "srsran/phy/upper/channel_processors/channel_processor_factories.h"
 #include "srsran/phy/upper/channel_processors/pucch_detector.h"
+#include "srsran/phy/upper/equalization/channel_equalizer_algorithm_type.h"
 #include "srsran/phy/upper/equalization/equalization_factories.h"
 #include "srsran/phy/upper/sequence_generators/sequence_generator_factories.h"
 
@@ -113,8 +114,9 @@ std::unique_ptr<srsran::pucch_detector> create_pucch_detector()
   std::shared_ptr<low_papr_sequence_collection_factory> lpapr_collection_factory =
       create_low_papr_sequence_collection_sw_factory(lpapr_generator_factory);
 
-  std::shared_ptr<channel_equalizer_factory> equalizer_factory = create_channel_equalizer_factory_zf();
-  std::shared_ptr<pucch_detector_factory>    detector_factory =
+  std::shared_ptr<channel_equalizer_factory> equalizer_factory =
+      create_channel_equalizer_generic_factory(channel_equalizer_algorithm_type::zf);
+  std::shared_ptr<pucch_detector_factory> detector_factory =
       create_pucch_detector_factory_sw(lpapr_collection_factory, prg_factory, equalizer_factory);
 
   return detector_factory->create();
