@@ -27,6 +27,7 @@
 #include "srsran/phy/support/support_factories.h"
 #include "srsran/phy/upper/channel_processors/pusch/factories.h"
 #include "srsran/phy/upper/channel_processors/pusch/pusch_demodulator.h"
+#include "srsran/phy/upper/equalization/channel_equalizer_algorithm_type.h"
 #include "srsran/phy/upper/equalization/equalization_factories.h"
 #include "srsran/ran/frame_types.h"
 
@@ -92,7 +93,8 @@ std::unique_ptr<srsran::pusch_demodulator> create_pusch_demodulator()
 {
   using namespace srsran;
 
-  std::shared_ptr<channel_equalizer_factory> equalizer_factory = create_channel_equalizer_factory_zf();
+  std::shared_ptr<channel_equalizer_factory> equalizer_factory =
+      create_channel_equalizer_generic_factory(channel_equalizer_algorithm_type::zf);
 
   std::shared_ptr<channel_modulation_factory> demod_factory = create_channel_modulation_sw_factory();
 
