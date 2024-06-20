@@ -41,7 +41,11 @@ function stepImpl(obj, SNRIn, nFrames)
     implementationType = obj.ImplementationType;
     nTxAnts = obj.NTxAnts;
     nRxAnts = obj.NRxAnts;
-    ouci = obj.NumACKBits + obj.NumSRBits + obj.NumCSI1Bits + obj.NumCSI2Bits;
+    if (obj.PUCCHFormat == 0)
+        ouci = [obj.NumACKBits obj.NumSRBits];
+    else
+        ouci = obj.NumACKBits + obj.NumSRBits + obj.NumCSI1Bits + obj.NumCSI2Bits;
+    end
     nFFT = obj.Nfft;
     symbolsPerSlot = obj.Carrier.SymbolsPerSlot;
     slotsPerFrame = obj.Carrier.SlotsPerFrame;
@@ -59,7 +63,17 @@ function stepImpl(obj, SNRIn, nFrames)
     quickSim = obj.QuickSimulation;
 
     totalBlocks = zeros(length(SNRIn), 1);
-    if (obj.PUCCHFormat == 1)
+    if (obj.PUCCHFormat == 0)
+        stats = struct(...
+            'errorACK', zeros(numel(SNRIn), 1), ...     % number of MATLAB erroneous ACKs
+            'falseACK', zeros(numel(SNRIn), 1), ...     % number of MATLAB false ACKs
+            'errorSR', zeros(numel(SNRIn), 1), ...      % number of MATLAB erroneous SR bits
+            'errorACKSRS', zeros(numel(SNRIn), 1), ...  % number of SRS erroneous ACKs
+            'falseACKSRS', zeros(numel(SNRIn), 1), ...  % number of SRS false ACKs
+            'errorSRSRS', zeros(numel(SNRIn), 1), ...   % number of SRS erroneous SR bits
+            'nACKs', zeros(numel(SNRIn), 1) ...         % number of ACK occasions
+            );
+    elseif  (obj.PUCCHFormat == 1)
         stats = struct(...
             'missedACK', zeros(numel(SNRIn), 1), ...    % number of MATLAB missed ACKs
             'falseACK', zeros(numel(SNRIn), 1), ...     % number of MATLAB false ACKs
@@ -71,7 +85,7 @@ function stepImpl(obj, SNRIn, nFrames)
     else
         stats = struct(...
             'blerUCI', zeros(numel(SNRIn), 1), ...
-            'blerUCIsrs', zeros(numel(SNRIn), 1) ...
+            'blerUCISRS', zeros(numel(SNRIn), 1) ...
             );
     end
 
@@ -113,9 +127,19 @@ function stepImpl(obj, SNRIn, nFrames)
             dmrsSymbols = nrPUCCHDMRS(carrier, pucch);
 
             % Create random UCI bits.
-            uci = randi([0 1], ouci, 1);
+            if isscalar(ouci)
+                uci = randi([0 1], ouci, 1);
+            else
+                uci = cell(2, 1);
+                uci{1} = randi([0 1], ouci(1), 1);
+                uci{2} = randi([0 1], ouci(2), 1);
+            end
 
-            if (obj.PUCCHFormat == 1)
+            if (obj.PUCCHFormat == 0)
+                % For Format0, no encoding.
+                codedUCI = uci;
+                stats.nACKs(snrIdx) = stats.nACKs(snrIdx) + ouci(1);
+            elseif (obj.PUCCHFormat == 1)
                 % For Format1, no encoding.
                 codedUCI = uci;
                 if isDetectTest
@@ -163,9 +187,9 @@ function stepImpl(obj, SNRIn, nFrames)
             % normalize the noise power by the number of receive antennas,
             % because the default behavior of the channel model is to apply
             % this normalization to the received waveform.
-            SNR = 10^(SNRdB/20);
-            N0 = 1/(sqrt(2.0*nRxAnts*nFFT)*SNR);
-            noise = N0*complex(randn(size(rxWaveform)), randn(size(rxWaveform)));
+            SNR = 10^(SNRdB / 20);
+            N0 = 1 / (sqrt(2.0 * nRxAnts * nFFT) * SNR);
+            noise = N0 * complex(randn(size(rxWaveform)), randn(size(rxWaveform)));
 
             if isDetectTest
                 rxWaveform = rxWaveform + noise;
@@ -173,7 +197,7 @@ function stepImpl(obj, SNRIn, nFrames)
                 rxWaveform = noise;
             end
 
-            if (perfectChannelEstimator)
+            if ((obj.PUCCHFormat ~= 0) && perfectChannelEstimator)
                 % Perfect synchronization. Use information provided by the
                 % channel to find the strongest multipath component.
                 pathFilters = getPathFilters(obj.Channel);
@@ -191,37 +215,47 @@ function stepImpl(obj, SNRIn, nFrames)
             end
 
             if useMATLABpucch
-                % Perform channel estimation.
-                if perfectChannelEstimator == 1
-                    % For perfect channel estimation, use the value of the path
-                    % gains provided by the channel.
-                    estChannelGrid = nrPerfectChannelEstimate(carrier, pathGains, pathFilters, offset, sampleTimes);
+                if (obj.PUCCHFormat == 0)
+                    % Get PUCCH REs from received grid and estimated channel grid.
+                    pucchRx = nrExtractResources(pucchIndices, rxGrid);
 
-                    % Get the perfect noise estimate (from the noise realization).
-                    noiseGrid = nrOFDMDemodulate(carrier, noise(1+offset:end,:));
-                    noiseEst = var(noiseGrid(:));
+                    % Decode PUCCH symbols. uciRx are hard bits for PUCCH F1 and soft bits for PUCCH F2.
+                    uciRx = nrPUCCHDecode(carrier, pucch, ouci, pucchRx);
 
-                    % Apply MIMO deprecoding to estChannelGrid to give an
-                    % estimate per transmission layer.
-                    K = size(estChannelGrid, 1);
-                    estChannelGrid = reshape(estChannelGrid, K*symbolsPerSlot*nRxAnts, nTxAnts);
-                    estChannelGrid = estChannelGrid*F.';
-                    estChannelGrid = reshape(estChannelGrid, K, symbolsPerSlot, nRxAnts, []);
+                    stats = obj.updateStats(stats, uci, uciRx, ouci, isDetectTest, snrIdx);
                 else
-                    % For practical channel estimation, use PUCCH DM-RS.
-                    [estChannelGrid, noiseEst] = nrChannelEstimate(carrier, rxGrid, dmrsIndices, dmrsSymbols);
-                end
+                    % Perform channel estimation.
+                    if perfectChannelEstimator
+                        % For perfect channel estimation, use the value of the path
+                        % gains provided by the channel.
+                        estChannelGrid = nrPerfectChannelEstimate(carrier, pathGains, pathFilters, offset, sampleTimes);
 
-                % Get PUCCH REs from received grid and estimated channel grid.
-                [pucchRx, pucchHest] = nrExtractResources(pucchIndices, rxGrid, estChannelGrid);
+                        % Get the perfect noise estimate (from the noise realization).
+                        noiseGrid = nrOFDMDemodulate(carrier, noise(1+offset:end,:));
+                        noiseEst = var(noiseGrid(:));
 
-                % Perform equalization.
-                pucchEq = nrEqualizeMMSE(pucchRx, pucchHest, noiseEst);
+                        % Apply MIMO deprecoding to estChannelGrid to give an
+                        % estimate per transmission layer.
+                        K = size(estChannelGrid, 1);
+                        estChannelGrid = reshape(estChannelGrid, K*symbolsPerSlot*nRxAnts, nTxAnts);
+                        estChannelGrid = estChannelGrid*F.';
+                        estChannelGrid = reshape(estChannelGrid, K, symbolsPerSlot, nRxAnts, []);
+                    else
+                        % For practical channel estimation, use PUCCH DM-RS.
+                        [estChannelGrid, noiseEst] = nrChannelEstimate(carrier, rxGrid, dmrsIndices, dmrsSymbols);
+                    end
 
-                % Decode PUCCH symbols. uciRx are hard bits for PUCCH F1 and soft bits for PUCCH F2.
-                uciRx = nrPUCCHDecode(carrier, pucch, ouci, pucchEq, noiseEst);
+                    % Get PUCCH REs from received grid and estimated channel grid.
+                    [pucchRx, pucchHest] = nrExtractResources(pucchIndices, rxGrid, estChannelGrid);
 
-                stats = obj.updateStats(stats, uci, uciRx, ouci, isDetectTest, snrIdx);
+                    % Perform equalization.
+                    pucchEq = nrEqualizeMMSE(pucchRx, pucchHest, noiseEst);
+
+                    % Decode PUCCH symbols. uciRx are hard bits for PUCCH F1 and soft bits for PUCCH F2.
+                    uciRx = nrPUCCHDecode(carrier, pucch, ouci, pucchEq, noiseEst);
+
+                    stats = obj.updateStats(stats, uci, uciRx, ouci, isDetectTest, snrIdx);
+                end % if (obj.PUCCHFormat == 0)
             end % if useMATLABpucch
 
             if useSRSpucch
@@ -236,12 +270,18 @@ function stepImpl(obj, SNRIn, nFrames)
 
             totalBlocks(snrIdx) = totalBlocks(snrIdx) + 1;
 
-            if (obj.PUCCHFormat == 1)
+            if (obj.PUCCHFormat == 0)
+                isSimOverMATLAB = (stats.falseACK(snrIdx) >= 100) && (~isDetectTest || (isDetectTest && (stats.errorACK(snrIdx) >= 100)));
+                isSimOverMATLAB = isSimOverMATLAB || (isDetectTest && (obj.NumSRBits > 0) && (stats.errorSR(snrIdx) >= 100));
+                isSimOverSRS = (stats.falseACKSRS(snrIdx) >= 100) && (~isDetectTest || (isDetectTest && (stats.errorACKSRS(snrIdx) >= 100)));
+                isSimOverSRS = isSimOverSRS || (isDetectTest && (obj.NumSRBits > 0) && (stats.errorSRSRS(snrIdx) >= 100));
+                isSimOver = isSimOverMATLAB && isSimOverSRS;
+            elseif (obj.PUCCHFormat == 1)
                 isSimOverMATLAB = (stats.falseACK(snrIdx) >= 100) && (~isDetectTest || (isDetectTest && (stats.missedACK(snrIdx) >= 100)));
                 isSimOverSRS = (stats.falseACKSRS(snrIdx) >= 100) && (~isDetectTest || (isDetectTest && (stats.missedACKSRS(snrIdx) >= 100)));
                 isSimOver = isSimOverMATLAB && isSimOverSRS;
             else
-                isSimOver = (~useMATLABpucch || (stats.blerUCI(snrIdx) >= 100)) && (~useSRSpucch || (stats.blerUCIsrs(snrIdx) >= 100));
+                isSimOver = (~useMATLABpucch || (stats.blerUCI(snrIdx) >= 100)) && (~useSRSpucch || (stats.blerUCISRS(snrIdx) >= 100));
             end
 
             % To speed the simulation up, we stop after 100 missed transport blocks.
@@ -267,7 +307,19 @@ function stepImpl(obj, SNRIn, nFrames)
     obj.SNRrange(repeatedIdx) = [];
     [obj.SNRrange, sortedIdx] = sort([obj.SNRrange SNRIn]);
 
-    if (obj.PUCCHFormat == 1)
+    if (obj.PUCCHFormat == 0)
+        obj.TotalBlocksCtr = joinArrays(obj.TotalBlocksCtr, totalBlocks, repeatedIdx, sortedIdx);
+        if isDetectTest
+            obj.TransmittedACKsCtr = joinArrays(obj.TransmittedACKsCtr, stats.nACKs, repeatedIdx, sortedIdx);
+            obj.MissedACKsMATLABCtr = joinArrays(obj.MissedACKsMATLABCtr, stats.errorACK, repeatedIdx, sortedIdx);
+            obj.MissedACKsSRSCtr = joinArrays(obj.MissedACKsSRSCtr, stats.errorACKSRS, repeatedIdx, sortedIdx);
+            obj.MissedSRsMATLABCtr = joinArrays(obj.MissedSRsMATLABCtr, stats.errorSR, repeatedIdx, sortedIdx);
+            obj.MissedSRsSRSCtr = joinArrays(obj.MissedSRsSRSCtr, stats.errorSRSRS, repeatedIdx, sortedIdx);
+        else
+            obj.FalseACKsMATLABCtr = joinArrays(obj.FalseACKsMATLABCtr, stats.falseACK, repeatedIdx, sortedIdx);
+            obj.FalseACKsSRSCtr = joinArrays(obj.FalseACKsSRSCtr, stats.falseACKSRS, repeatedIdx, sortedIdx);
+        end
+    elseif (obj.PUCCHFormat == 1)
         obj.TransmittedNACKsCtr = joinArrays(obj.TransmittedNACKsCtr, stats.nNACKs, repeatedIdx, sortedIdx);
         obj.FalseACKsMATLABCtr = joinArrays(obj.FalseACKsMATLABCtr, stats.falseACK, repeatedIdx, sortedIdx);
         obj.FalseACKsSRSCtr = joinArrays(obj.FalseACKsSRSCtr, stats.falseACKSRS, repeatedIdx, sortedIdx);
@@ -281,10 +333,10 @@ function stepImpl(obj, SNRIn, nFrames)
         obj.TotalBlocksCtr = joinArrays(obj.TotalBlocksCtr, totalBlocks, repeatedIdx, sortedIdx);
         if isDetectTest
             obj.MissedBlocksMATLABCtr = joinArrays(obj.MissedBlocksMATLABCtr, stats.blerUCI, repeatedIdx, sortedIdx);
-            obj.MissedBlocksSRSCtr = joinArrays(obj.MissedBlocksSRSCtr, stats.blerUCIsrs, repeatedIdx, sortedIdx);
+            obj.MissedBlocksSRSCtr = joinArrays(obj.MissedBlocksSRSCtr, stats.blerUCISRS, repeatedIdx, sortedIdx);
         else
             obj.FalseBlocksMATLABCtr = joinArrays(obj.FalseBlocksMATLABCtr, stats.blerUCI, repeatedIdx, sortedIdx);
-            obj.FalseBlocksSRSCtr = joinArrays(obj.FalseBlocksSRSCtr, stats.blerUCIsrs, repeatedIdx, sortedIdx);
+            obj.FalseBlocksSRSCtr = joinArrays(obj.FalseBlocksSRSCtr, stats.blerUCISRS, repeatedIdx, sortedIdx);
         end
     end
 
