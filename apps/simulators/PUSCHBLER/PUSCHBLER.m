@@ -1016,7 +1016,7 @@ classdef PUSCHBLER < matlab.System
                 case 'SRSEstimatorType'
                     flag = strcmp(obj.ImplementationType, 'matlab') || obj.PerfectChannelEstimator;
                 case 'CompIQwidth'
-                    flag = obj.ApplyOFHCompression;
+                    flag = ~obj.ApplyOFHCompression;
                 otherwise
                     flag = false;
             end
