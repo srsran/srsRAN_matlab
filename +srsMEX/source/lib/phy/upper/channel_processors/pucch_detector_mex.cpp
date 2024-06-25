@@ -25,6 +25,7 @@
 #include "srsran_matlab/support/resource_grid.h"
 #include "srsran_matlab/support/to_span.h"
 #include "srsran/phy/constants.h"
+#include "srsran/srsvec/conversion.h"
 #include <memory>
 
 using namespace matlab::data;
@@ -124,7 +125,7 @@ void read_channel_estimate(channel_estimate& ch_est, const TypedArray<cf_t>& in_
     remaining_res -= port_res;
     in_view = in_view.last(remaining_res);
 
-    srsvec::copy(path, in_path);
+    srsvec::convert(path, in_path);
   }
 }
 
