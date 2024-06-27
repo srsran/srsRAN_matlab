@@ -286,6 +286,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             import srsLib.phy.upper.channel_modulation.srsDemodulator
             import srsLib.phy.upper.equalization.srsChannelEqualizer
             import srsLib.phy.helpers.srsModulationFromMatlab
+            import srsTest.helpers.approxbf16
             import srsTest.helpers.cellarray2str
             import srsTest.helpers.symbolAllocationMask2string
             import srsTest.helpers.writeResourceGridEntryFile
@@ -343,7 +344,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             end
 
             % Equalize.
-            [eqSymbols, eqNoise] = srsChannelEqualizer(rxSymbols, cePusch, 'ZF', noiseVar, 1.0);
+            [eqSymbols, eqNoise] = srsChannelEqualizer(approxbf16(rxSymbols), approxbf16(cePusch), 'ZF', noiseVar, 1.0);
 
             % Layer demapping.
             eqSymbols = nrLayerDemap(eqSymbols);
@@ -445,6 +446,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             import srsMEX.phy.srsPUSCHDemodulator
             import srsLib.phy.upper.channel_modulation.srsDemodulator
             import srsLib.phy.upper.equalization.srsChannelEqualizer
+            import srsTest.helpers.approxbf16
 
             NumRxPorts = ChannelSize(1);
             NumLayers = ChannelSize(2);
@@ -486,7 +488,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             end
 
             % Equalize.
-            [eqSymbols, eqNoise] = srsChannelEqualizer(rxSymbols, cePusch, 'ZF', noiseVar, 1.0);
+            [eqSymbols, eqNoise] = srsChannelEqualizer(approxbf16(rxSymbols), approxbf16(cePusch), 'ZF', noiseVar, 1.0);
 
             % Initialize the SRS PUSCH demodulator mex.
             PUSCHDemodulator = srsPUSCHDemodulator;

@@ -111,10 +111,10 @@ classdef srsOFDMDemodulatorUnittest < srsTest.srsBlockUnittest
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.writeComplexFloatFile
 
-            % generate a unique test ID
+            % Generate a unique test ID.
             testID = testCase.generateTestID;
 
-            % use a unique port index and scale for each test
+            % Use a unique port index and scale for each test.
             portIdx = randi([0, 15]);
             scale = 2 * rand - 1;
             NSlotLoc = randi([0 pow2(numerology)-1]);
@@ -123,42 +123,42 @@ classdef srsOFDMDemodulatorUnittest < srsTest.srsBlockUnittest
             % any multiple of the sampling rate. Granularity 100 kHz.
             CarrierFrequency = round(rand() * 3e4) * 1e5;
 
-            % current fixed parameter values
+            % Current fixed parameter values.
             NStartGrid = 0;
             NFrame = 0;
 
-            % calculate the number of RBs to be used
+            % Calculate the number of RBs to be used.
             NSizeGrid = floor(192 * (DFTsize / 4096));
 
-            % skip those invalid configuration cases
+            % Skip those invalid configuration cases.
             isCPTypeOK = ((numerology == 2) || strcmp(CyclicPrefix, 'normal'));
             isNSizeGridOK = NSizeGrid > 0;
 
             if isCPTypeOK && isNSizeGridOK
-                % configure the carrier according to the test parameters
+                % Configure the carrier according to the test parameters.
                 SubcarrierSpacing = 15 * (2 .^ numerology);
                 carrier = srsConfigureCarrier(SubcarrierSpacing, NStartGrid, NSizeGrid, ...
                     NSlotLoc, NFrame, CyclicPrefix);
 
-                % generate the DFT input data and related indices
+                % Generate the DFT input data and related indices.
                 [inputData, inputIndices] = srsRandomGridEntry(carrier, portIdx);
 
-                % call the OFDM modulator MATLAB functions
+                % Call the OFDM modulator MATLAB functions.
                 timeDomainData = nrOFDMModulate(carrier, reshape(inputData, [NSizeGrid * 12, carrier.SymbolsPerSlot]), ...
                     'Windowing', 0, 'CarrierFrequency', CarrierFrequency);
 
-                % write the time-domain data into a binary file
+                % Write the time-domain data into a binary file.
                 testCase.saveDataFile('_test_input', testID, ...
                     @writeComplexFloatFile, timeDomainData);
 
-                % call the OFDM demodulator MATLAB functions
+                % Call the OFDM demodulator MATLAB functions.
                 demodulatedData = nrOFDMDemodulate(carrier, timeDomainData, ...
                     'CyclicPrefixFraction', 0, 'CarrierFrequency', CarrierFrequency);
 
-                % apply the requested scale
+                % Apply the requested scale.
                 demodulatedData = demodulatedData * scale;
 
-                % reshape the demodulated data and write it with its associated indices into a binary file
+                % Reshape the demodulated data and write it with its associated indices into a binary file.
                 demodulatedGrid = reshape(demodulatedData, [], 1);
                 testCase.saveDataFile('_test_output', testID, ...
                     @writeResourceGridEntryFile, demodulatedGrid, inputIndices);
@@ -185,11 +185,11 @@ classdef srsOFDMDemodulatorUnittest < srsTest.srsBlockUnittest
                     NSlotLoc, ...   % slot_idx
                     };
 
-                % generate the test case entry
+                % Generate the test case entry.
                 testCaseString = testCase.testCaseToString(testID, ...
                     ofdmDemodulatorConfigCell, true, '_test_input', '_test_output');
 
-                % add the test to the file header
+                % Add the test to the file header.
                 testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);
             end
         end % of function testvectorGenerationCases
