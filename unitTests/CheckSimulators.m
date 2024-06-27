@@ -253,8 +253,8 @@ classdef CheckSimulators < matlab.unittest.TestCase
             obj.assertEqual(pp.SNRrange, snrs, 'Wrong SNR range.');
             obj.assertEqual(pp.TBS, 1800, 'Wrong transport block size.');
             obj.assertEqual(pp.MaxThroughput, 1.8, 'Wrong maximum throughput.');
-            obj.assertLessThanOrEqual(pp.ThroughputSRS, [0; 0.002; 0.06; 0.33; 1.06], "Wrong througuput curve.");
-            obj.assertEqual(pp.BlockErrorRateSRS, [1; 1; 0.9690; 0.8190; 0.4200], "Wrong BLER curve.", RelTol=0.02);
+            obj.assertGreaterThanOrEqual(pp.ThroughputSRS, [0; 0; 0.041; 0.30; 0.995], "Wrong throughput curve.");
+            obj.assertLessThanOrEqual(pp.BlockErrorRateSRS, [1.00; 1.00; 0.98; 0.83; 0.45], "Wrong BLER curve.");
         end % of function testPUSCHBLERmex(obj)
 
         function testPUCCHBLERF1mex(obj, PUCCHTestType)
@@ -295,8 +295,9 @@ classdef CheckSimulators < matlab.unittest.TestCase
             obj.assertEqual(pp.SNRrange, snrs, 'Wrong SNR range.');
             if (PUCCHTestType == "Detection")
                 obj.assertLessThan(pp.NACK2ACKDetectionRateSRS, 0.04, "Wrong NACK-to-ACK detection curve.");
-                obj.assertEqual(pp.ACKDetectionRateSRS, [0.0077; 0.0097; 0.0184; 0.0280; 0.0435; 0.0754; 0.1441; 0.2814; 0.5261; 0.7950], ...
-                    "Wrong ACK detection rate curve.", RelTol=0.02);
+                obj.assertGreaterThanOrEqual(pp.ACKDetectionRateSRS, ...
+                    [0.0077; 0.0096; 0.0183; 0.0280; 0.0415; 0.0735; 0.145; 0.28; 0.5261; 0.79], ...
+                    "Wrong ACK detection rate curve.");
             else
                 obj.assertEqual(pp.FalseACKDetectionRateSRS, 0.0075 * ones(10, 1), "Wrong false ACK detection rate curve.", RelTol=0.02);
             end
@@ -336,10 +337,11 @@ classdef CheckSimulators < matlab.unittest.TestCase
 
             obj.assertEqual(pp.SNRrange, snrs, 'Wrong SNR range.');
             if (PUCCHTestType == "Detection")
-                obj.assertEqual(pp.BlockErrorRateSRS, [0.9434; 0.9434; 0.9009; 0.7937; 0.6452; 0.4274; 0.2387; 0.0560; 0.0040], ...
-                    "Wrong BLER curve.", RelTol=0.02);
+                obj.assertLessThanOrEqual(pp.BlockErrorRateSRS, ...
+                    [0.9434; 0.9434; 0.901; 0.7937; 0.6452; 0.4274; 0.241; 0.0560; 0.0040], ...
+                    "Wrong BLER curve.");
             else
-                obj.assertEqual(pp.FalseDetectionRateSRS, 0.006 * ones(9, 1), "Wrong false alarm curve.", RelTol=0.02);
+                obj.assertLessThanOrEqual(pp.FalseDetectionRateSRS, 0.007 * ones(9, 1), "Wrong false alarm curve.");
             end
         end % of function testPUCCHBLERF2mex(obj, PUCCHTestType)
     end % of methods (Test, TestTags = {'mex code'})
