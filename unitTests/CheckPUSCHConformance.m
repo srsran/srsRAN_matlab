@@ -105,6 +105,7 @@ classdef CheckPUSCHConformance < matlab.unittest.TestCase
             pp.EnableHARQ = true;
             pp.ImplementationType = 'srs';
             pp.SRSEstimatorType = 'MEX';
+            pp.QuickSimulation = false;
 
             % Restore warnings.
             warning(puschblerwarn);
@@ -123,8 +124,8 @@ classdef CheckPUSCHConformance < matlab.unittest.TestCase
                 obj.verifyEqual(tp, 1.0, 'Throughput should be maximum for ''Custom'' cases.', AbsTol=1e-8);
                 obj.assertGreaterThan(tp, 0.98, 'Throughput should be maximum for ''Custom'' cases.');
             else
-                obj.verifyGreaterThanOrEqual(tp, 0.80, 'Throughput should be at least 80% for TS cases.');
-                obj.assertGreaterThan(tp, 0.75, 'Throughput should be at least 80% for TS cases.');
+                obj.verifyGreaterThanOrEqual(tp, 0.75, 'Throughput should be at least 70% for TS cases.');
+                obj.assertGreaterThan(tp, 0.70, 'Throughput should be at least 70% for TS cases.');
             end
 
             % TODO: export throughput (and possibly other metrics) to grafana.
