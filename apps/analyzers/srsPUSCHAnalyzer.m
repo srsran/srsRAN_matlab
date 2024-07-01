@@ -44,7 +44,7 @@ function srsPUSCHAnalyzer(carrier, pusch, extra, rgFilename, rgOffset, rgSize)
         pusch      (1, 1) nrPUSCHConfig
         extra      (1, 1) struct
         rgFilename (1, :) char {mustBeFile}
-        rgOffset   (1, 1) double {mustBeInteger, mustBePositive}
+        rgOffset   (1, 1) double {mustBeInteger, mustBeNonnegative}
         rgSize     (1, 1) double {mustBeInteger, mustBePositive}
     end
 
