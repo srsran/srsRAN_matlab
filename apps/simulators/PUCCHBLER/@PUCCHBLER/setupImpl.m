@@ -31,7 +31,6 @@ function setupImpl(obj)
         obj.PUCCH.GroupHopping = "neither";
         obj.PUCCH.HoppingID = 0;
         obj.PUCCH.InitialCyclicShift = 0;
-        obj.PUCCH.Interlacing = 0;
     elseif (obj.PUCCHFormat == 1)
         obj.PUCCH = nrPUCCH1Config;
         obj.PUCCH.GroupHopping = "neither";
