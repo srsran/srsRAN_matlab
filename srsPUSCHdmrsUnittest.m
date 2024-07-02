@@ -140,6 +140,7 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
             import srsLib.phy.upper.signal_processors.srsPUSCHdmrs
             import srsLib.phy.upper.signal_processors.srsChannelEstimator
             import srsLib.ran.utils.scs2cps
+            import srsTest.helpers.approxbf16
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.symbolAllocationMask2string
             import srsTest.helpers.RBallocationMask2string
@@ -234,6 +235,7 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
                 cfg.DMRSREmask = hop.DMRSREmask;
                 cfg.scs = SubcarrierSpacing * 1000;
                 cfg.CyclicPrefixDurations = scs2cps(SubcarrierSpacing);
+                receivedRG = approxbf16(receivedRG);
                 [estChannel, estNoiseVar, estRSRP] = srsChannelEstimator(receivedRG, ...
                     pilots, amplitude, hop, hop2, cfg);
 
@@ -242,7 +244,7 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
                     @writeResourceGridEntryFile, receivedRG(symbolIndicesLinear), symbolIndices);
                 [subcarriers, syms, vals] = find(estChannel);
                 testCase.saveDataFile('_ch_estimates', testID, ...
-                    @writeResourceGridEntryFile, vals, [subcarriers, syms, zeros(length(subcarriers), 1)] - 1);
+                    @writeResourceGridEntryFile, approxbf16(vals), [subcarriers, syms, zeros(length(subcarriers), 1)] - 1);
             end
 
             % Generate a 'slot_point' configuration string.

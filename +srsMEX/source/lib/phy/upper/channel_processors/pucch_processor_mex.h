@@ -65,18 +65,18 @@ public:
   }
 
 private:
-  /// \brief Processes a PUCCH Format 1 or Format 2 transmission.
+  /// \brief Processes a PUCCH Format 0, Format 1 or Format 2 transmission.
   ///
-  /// This method reads a PUCCH Format 1 or Format 2 from a resource grid and returns the UCI message (specifically,
-  /// HARQ ACK bits, SR bits, CSI Part 1 and Part 2 bits). Intermediate steps consist in channel estimation and
-  /// equalization, detection or demodulation and decoding.
+  /// This method reads a PUCCH Format 0, Format 1 or Format 2 from a resource grid and returns the UCI message
+  /// (specifically, HARQ ACK bits, SR bits, CSI Part 1 and Part 2 bits, when applicable). Intermediate steps consist in
+  /// channel estimation and equalization, detection or demodulation and decoding.
   ///
   /// The method takes three inputs.
   ///   - The string <tt>"step"</tt>.
   ///   - A resource grid, that is a two- or three-dimensional array of complex floats with the received samples
   ///     (subcarriers, OFDM symbols, antenna ports).
   ///   - A structure that provides the PUCCH configurations. The fields are
-  ///      - \c Format, the PUCCH format, either 1 or 2;
+  ///      - \c Format, the PUCCH format, specifically 0, 1 or 2;
   ///      - \c SubcarrierSpacing, the subcarrier spacing;
   ///      - \c NSlot, slot counter (unsigned);
   ///      - \c CP, cyclic prefix (either 'normal' or 'extended');
@@ -96,10 +96,10 @@ private:
   ///      - \c RNTI, radio network temporary identifier \f$\{0, \dots, 65535\}\f$ (Format 2 only);
   ///      - \c NID, PUCCH scrambling identity \f$\{0, \dots, 1023\}\f$;
   ///      - \c NID0, DM-RS scrambling identity \f$\{0, \dots, 65535\}\f$ (Format 2 only);
-  ///      - \c InitialCyclicShift, initial cyclic shift \f$\{0, \dots, 11\}\f$ (Format 1 only);
+  ///      - \c InitialCyclicShift, initial cyclic shift \f$\{0, \dots, 11\}\f$ (Formats 0 and 1 only);
   ///      - \c OCCI, Orthogonal cover code index \f$\{0, \dots, 6\}\f$ (Format 1 only);
   ///      - \c NumHARQAck, number of HARQ ACK bits \f$\{0, \dots, 1706\}\f$;
-  ///      - \c NumSR, number of SR bits \f$\{0, \dots, 4\}\f$ (Format 2 only);
+  ///      - \c NumSR, number of SR bits \f$\{0, \dots, 4\}\f$ (Formats 0 and 2 only);
   ///      - \c NumCSIPart1, number of CSI Part 1 bits \f$\{0, \dots, 1706\}\f$ (Format 2 only);
   ///      - \c NumCSIPart2, number of CSI Part 2 bits \f$\{0, \dots, 1706\}\f$ (Format 2 only).
   ///

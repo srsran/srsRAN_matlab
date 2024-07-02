@@ -137,6 +137,7 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
         %testvectorGenerationCases Generates a test vector for the given
         %   number of channel symbols, channel size, equalizer type and
         %   data-to-reference amplitude scaling.
+            import srsTest.helpers.approxbf16
             import srsTest.helpers.writeComplexFloatFile
             import srsTest.helpers.writeFloatFile
             import srsLib.phy.upper.equalization.srsChannelEqualizer
@@ -144,7 +145,7 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
             % Generate a unique test ID by looking at the number of files
             % generated so far.
             testID = obj.generateTestID;
-            
+
             % Extract number of receive ports and transmit layers.
             NumRxPorts = channelSize(1);
             NumLayers = channelSize(2);
@@ -155,8 +156,8 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
             txSymbols = (2 * txSymbols - (1 + 1j)) / sqrt(2);
 
             % Create random estimated channel. The estimated channel
-            % magnitude is in the range (0.1, 1) and the phase in 
-            % (0, 2 * pi). 
+            % magnitude is in the range (0.1, 1) and the phase in
+            % (0, 2 * pi).
             chEsts = (0.1 + 0.9 * rand(NumSymbols, NumRxPorts, NumLayers)) .* ...
                 exp(2j * pi * rand(NumSymbols, NumRxPorts, NumLayers));
 
@@ -169,13 +170,13 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
                 end
             end
 
-            
+
             % Select a random noise variance between (0.5, 1.5).
             noiseVar = 0.5 + rand();
 
             % Generate and process the symbols.
-            [eqSymbols, eqNoiseVars] = srsChannelEqualizer(rxSymbols, ...
-                chEsts, eqType, noiseVar, txScaling);
+            [eqSymbols, eqNoiseVars] = srsChannelEqualizer(approxbf16(rxSymbols), ...
+                approxbf16(chEsts), eqType, noiseVar, txScaling);
 
             % Revert layer mapping.
             eqSymbols = nrLayerDemap(eqSymbols);
@@ -194,7 +195,7 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
                 };
 
             % Write the equalized symbols to a binary file.
-            obj.saveDataFile('_test_output_eq_symbols', testID, @writeComplexFloatFile, eqSymbols(:));
+            obj.saveDataFile('_test_output_eq_symbols', testID, @writeComplexFloatFile, approxbf16(eqSymbols(:)));
 
             % Write the post-equalization noise variances to a binary file.
             obj.saveDataFile('_test_output_eq_noise_vars', testID, @writeFloatFile, eqNoiseVars(:));
@@ -218,7 +219,7 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
 
     methods
         function [mseEmp, mseNom, snrEmp, snrNom] = MSEsimulation(obj, channelSize, eqType)
-            %MSEsimulation Computes the expected (nominal) and empirical 
+            %MSEsimulation Computes the expected (nominal) and empirical
             %   SNR and MSE achieved by the channel equalizer for the given
             %   channel size, i.e., number of receive ports and transmit
             %   layers, and equalizer type. The results are computed for
@@ -276,7 +277,7 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
 
         function [eqSymbols, txSymbols, rxSymbols, eqNoiseVars] = runCase(obj, eqType, txScaling)
             import srsLib.phy.upper.equalization.srsChannelEqualizer
-            
+
             [nSC, nSym, nRx, nTx] = size(obj.channelTensor);
 
             % Tx symbols: unitary power.
@@ -293,7 +294,7 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
                         + txScaling * obj.channelTensor(:, :, iRx, iTx)  .* txSymbols(:, :, iTx);
                 end
             end
-            
+
             % Equalize the Rx symbols and compute the equivalent noise
             % variances.
             eqSymbols = nan(nSC, nSym, nTx);
@@ -308,7 +309,7 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
                 [eqSymbols(:, iSymbol, :), eqNoiseVars(:, iSymbol, :)] = ...
                     srsChannelEqualizer(rxRE, chRE, eqType, noiseVar, txScaling);
             end
-            
+
         end % of function runCase()
 
         function [mseN, snrN] = computeREnominals(obj, eqType)

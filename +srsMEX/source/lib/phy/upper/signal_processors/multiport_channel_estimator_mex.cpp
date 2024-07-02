@@ -25,6 +25,7 @@
 #include "srsran_matlab/support/resource_grid.h"
 #include "srsran_matlab/support/to_span.h"
 #include "srsran/phy/support/resource_grid_writer.h"
+#include "srsran/srsvec/conversion.h"
 
 using namespace matlab::data;
 using namespace srsran;
@@ -189,12 +190,15 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
 
   TypedArray<cf_t> ch_est_out = factory.createArray<cf_t>(
       {static_cast<size_t>(ch_est_dims.nof_prb * NRE), ch_est_dims.nof_symbols, nof_rx_ports});
-  TypedArray<cf_t>::iterator ch_est_out_iter = ch_est_out.begin();
+  span<cf_t> ch_est_out_view = to_span(ch_est_out);
   for (unsigned i_port = 0; i_port != nof_rx_ports; ++i_port) {
     estimator->compute(ch_estimate, grid->get_reader(), i_port, pilots, cfg);
 
-    span<const cf_t> ch_estimate_view = ch_estimate.get_path_ch_estimate(i_port);
-    ch_est_out_iter                   = std::copy_n(ch_estimate_view.begin(), ch_estimate_view.size(), ch_est_out_iter);
+    span<const cbf16_t> ch_estimate_view = ch_estimate.get_path_ch_estimate(i_port, 0);
+
+    srsvec::convert(ch_est_out_view.first(ch_estimate_view.size()), ch_estimate_view);
+
+    ch_est_out_view = ch_est_out_view.last(ch_est_out_view.size() - ch_estimate_view.size());
   }
 
   StructArray info_out =

@@ -250,6 +250,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
 
             import srsLib.phy.upper.signal_processors.srsChannelEstimator
             import srsLib.ran.utils.scs2cps
+            import srsTest.helpers.approxbf16
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.writeComplexFloatFile
 
@@ -313,7 +314,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             EstimatorConfig.CyclicPrefixDurations = CPDurations;
             EstimatorConfig.Smoothing = configuration.smoothing;
             EstimatorConfig.CFOCompensate = configuration.cfocompensate;
-            [channelEst, noiseEst, rsrp, epre, timeAlignment, cfoEst] = srsChannelEstimator(receivedRG, ...
+            [channelEst, noiseEst, rsrp, epre, timeAlignment, cfoEst] = srsChannelEstimator(approxbf16(receivedRG), ...
                 pilots, betaDMRS, hop1, hop2, EstimatorConfig);
 
             % TODO: The ratio of the two quantities below should give a metric that allows us
@@ -410,6 +411,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             import srsLib.phy.upper.signal_processors.srsChannelEstimator
             import srsLib.ran.utils.scs2cps
             import srsMEX.phy.srsMultiPortChannelEstimator
+            import srsTest.helpers.approxbf16
 
             obj.assumeFalse(((configuration.nPRBs == obj.NSizeBWP) || (configuration.symbolAllocation(2) == 1)) ...
                 && strcmp(FrequencyHopping, 'intraSlot'), ...
@@ -468,7 +470,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             EstimatorConfig.CyclicPrefixDurations = CPDurations;
             EstimatorConfig.Smoothing = configuration.smoothing;
             EstimatorConfig.CFOCompensate = configuration.cfocompensate;
-            [channelEst, noiseEst, rsrp, epre, timeAlignment, cfoEst] = srsChannelEstimator(receivedRG, ...
+            [channelEst, noiseEst, rsrp, epre, timeAlignment, cfoEst] = srsChannelEstimator(approxbf16(receivedRG), ...
                 pilots, betaDMRS, hop1, hop2, EstimatorConfig);
 
             % Cast input for the mex estimator.
@@ -484,16 +486,16 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                 = mexEstimator(receivedRG, configuration.symbolAllocation, pilotIndices, ...
                 pilots(:), HoppingIndex = hop2.startSymbol, BetaScaling = betaDMRS); %#ok<FNDSB>
 
-            tolerance = 0.05;
+            toleranceTA = 1000 / (4096 * SubcarrierSpacing);
             chEstIdx = (channelEst ~= 0);
-            obj.assertEqual(channelEstMEX(chEstIdx), channelEst(chEstIdx), 'Wrong channel estimates.', RelTol = tolerance);
-            obj.assertEqual(noiseEstMEX, noiseEst, 'Wrong noise variance estimate.', RelTol = tolerance);
-            obj.assertEqual(extra.RSRP, rsrp, 'Wrong RSRP estimate.', RelTol = tolerance);
-            obj.assertEqual(extra.EPRE, epre, 'Wrong EPRE estimate.', RelTol = tolerance);
-            obj.assertEqual(extra.SINR, rsrp / betaDMRS^2 / noiseEst, 'Wrong SINR estimate.', RelTol = tolerance);
-            obj.assertEqual(extra.TimeAlignment, timeAlignment, 'Wrong time alignment estimate.', RelTol = tolerance);
-            obj.assertEqual(extra.CFO, cfoEst, 'Wrong CFO.', RelTol = tolerance);
-        end % of function testvectorGenerationCases(...)
+            obj.assertEqual(channelEstMEX(chEstIdx), channelEst(chEstIdx), 'Wrong channel estimates.', AbsTol = 0.008);
+            obj.assertEqual(noiseEstMEX, noiseEst, 'Wrong noise variance estimate.', AbsTol = 5e-4);
+            obj.assertEqual(extra.RSRP, rsrp, 'Wrong RSRP estimate.', AbsTol = 5e-4);
+            obj.assertEqual(extra.EPRE, epre, 'Wrong EPRE estimate.', AbsTol = 5e-4);
+            obj.assertEqual(extra.SINR, rsrp / betaDMRS^2 / noiseEst, 'Wrong SINR estimate.', RelTol = 0.004);
+            obj.assertEqual(extra.TimeAlignment, timeAlignment, 'Wrong time alignment estimate.', RelTol = toleranceTA);
+            obj.assertEqual(extra.CFO, cfoEst, 'Wrong CFO.', RelTol = 0.04);
+        end % of function compareMex(...)
     end % of methods (Test, TestTags = {'testmex'})
 
     methods % public
@@ -695,7 +697,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
 
             crlb = repmat(10.^(-snrValues(:)/10), 1, 2) / betaDMRS^2 / sum(hop1.DMRSsymbols);
             crlb = (crlb' .* computeCRLB(hop1.maskPRBs, hop1.DMRSREmask))';
-        end % of function testvectorGenerationCases(...)
+        end % of function characterize(...)
     end % of methods % public
 
     methods (Access = private)

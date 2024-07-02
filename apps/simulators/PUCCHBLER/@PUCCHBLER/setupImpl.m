@@ -26,7 +26,13 @@ function setupImpl(obj)
     obj.Carrier.NStartGrid = 0;
 
     % Set PUCCH properties.
-    if (obj.PUCCHFormat == 1)
+    if (obj.PUCCHFormat == 0)
+        obj.PUCCH = nrPUCCH0Config;
+        obj.PUCCH.GroupHopping = "neither";
+        obj.PUCCH.HoppingID = 0;
+        obj.PUCCH.InitialCyclicShift = 0;
+        obj.PUCCH.Interlacing = 0;
+    elseif (obj.PUCCHFormat == 1)
         obj.PUCCH = nrPUCCH1Config;
         obj.PUCCH.GroupHopping = "neither";
         obj.PUCCH.HoppingID = 0;
@@ -86,7 +92,12 @@ function setupImpl(obj)
     obj.Channel = channel;
 
     % Set helper function handles.
-    if (obj.PUCCHFormat == 1)
+    if (obj.PUCCHFormat == 0)
+        obj.updateStats = @updateStatsF0;
+        obj.updateStatsSRS = @updateStatsSRSF0;
+        obj.printMessages = @printMessagesF0;
+        obj.printMessagesSRS = @printMessagesSRSF0;
+    elseif (obj.PUCCHFormat == 1)
         obj.updateStats = @updateStatsF1;
         obj.updateStatsSRS = @updateStatsSRSF1;
         obj.printMessages = @printMessagesF1;
@@ -101,6 +112,28 @@ function setupImpl(obj)
 end % function setupImpl(obj)
 
 % %% Local Functions
+function stats = updateStatsF0(stats, uci, uciRx, ouci, isDetectTest, snrIdx)
+    if isDetectTest
+        % If MATLAB's PUCCH decoder was able to detect a PUCCH and
+        % uciRx contains the resulting bits.
+        if ~isempty(uciRx{1})
+            % Erroneous ACK.
+            stats.errorACK(snrIdx) = stats.errorACK(snrIdx) + sum(uci{1} ~= uciRx{1});
+        else
+            stats.errorACK(snrIdx) = stats.errorACK(snrIdx) + ouci(1);
+        end
+        if ~isempty(uciRx{2})
+            % Erroneous SR.
+            stats.errorSR(snrIdx) = stats.errorSR(snrIdx) + (uci{2} ~= uciRx{2});
+        else
+            stats.errorSR(snrIdx) = stats.errorSR(snrIdx) + ouci(2);
+        end
+    else % false alarm test
+        % False ACK.
+        stats.falseACK(snrIdx) = stats.falseACK(snrIdx) + numel(uciRx{1});
+    end % if isDetectTest
+end
+
 function stats = updateStatsF1(stats, uci, uciRx, ~, isDetectTest, snrIdx)
     if isDetectTest
         % If MATLAB's PUCCH decoder was able to detect a PUCCH and
@@ -133,6 +166,28 @@ function stats = updateStatsF2(stats, uci, uciRx, ouci, isDetectTest, snrIdx)
     end % if isDetectTest
 end
 
+function stats = updateStatsSRSF0(stats, uci, msg, isDetectTest, snrIdx)
+    ackRxSRS = msg.HARQAckPayload;
+    srRxSRS = msg.SRPayload;
+    if isDetectTest
+        % If SRS's PUCCH decoder was able to detect a PUCCH.
+        if msg.isValid
+            % ACK errors.
+            stats.errorACKSRS(snrIdx) = stats.errorACKSRS(snrIdx) + sum(uci{1} ~= ackRxSRS);
+            stats.errorSRSRS(snrIdx) = stats.errorSRSRS(snrIdx) + sum(uci{2} ~= srRxSRS);
+        else
+            % No ACK or SR bit has been recovered.
+            stats.errorACKSRS(snrIdx) = stats.errorACKSRS(snrIdx) + numel(uci{1});
+            stats.errorSRSRS(snrIdx) = stats.errorSRSRS(snrIdx) + numel(uci{2});
+        end
+    else % false alarm test
+        % False ACK.
+        if msg.isValid
+            stats.falseACKSRS(snrIdx) = stats.falseACKSRS(snrIdx) + numel(uciRxSRS);
+        end
+    end
+end
+
 function stats = updateStatsSRSF1(stats, uci, msg, isDetectTest, snrIdx)
     uciRxSRS = msg.HARQAckPayload;
     if isDetectTest
@@ -158,9 +213,21 @@ end
 function stats = updateStatsSRSF2(stats, uci, msg, isDetectTest, snrIdx)
     if isDetectTest
         decucibitssrs = [msg.HARQAckPayload; msg.SRPayload; msg.CSI1Payload; msg.CSI2Payload];
-        stats.blerUCIsrs(snrIdx) = stats.blerUCIsrs(snrIdx) + (~(isequal(decucibitssrs, uci)));
+        stats.blerUCISRS(snrIdx) = stats.blerUCISRS(snrIdx) + (~(isequal(decucibitssrs, uci)));
     else % false alarm test
-        stats.blerUCIsrs(snrIdx) = stats.blerUCIsrs(snrIdx) + msg.isValid;
+        stats.blerUCISRS(snrIdx) = stats.blerUCISRS(snrIdx) + msg.isValid;
+    end
+end
+
+function printMessagesF0(stats, usedFrames, nSRs, SNRIn, isDetectTest, snrIdx)
+    if isDetectTest
+        fprintf(['PUCCH Format 0 - ACK error rate for %d frame(s) at ', ...
+            'SNR %.1f dB: %g\n'], usedFrames, SNRIn(snrIdx), stats.errorACK(snrIdx)/stats.nACKs(snrIdx));
+        fprintf(['PUCCH Format 0 - SR error rate for %d frame(s) at ', ...
+            'SNR %.1f dB: %g\n'], usedFrames, SNRIn(snrIdx), stats.errorSR(snrIdx)/nSRs(snrIdx));
+    else
+        fprintf(['PUCCH Format 0 - false ACK detection rate for %d frame(s) at ', ...
+            'SNR %.1f dB: %g\n'], usedFrames, SNRIn(snrIdx), stats.falseACK(snrIdx)/stats.nACKs(snrIdx));
     end
 end
 
@@ -187,6 +254,18 @@ function printMessagesF2(stats, usedFrames, totalBlocks, SNRIn, isDetectTest, sn
         ' frame(s) at SNR ' num2str(SNRIn(snrIdx)) ' dB: ' num2str(stats.blerUCI(snrIdx)/totalBlocks(snrIdx)) '\n'])
 end
 
+function printMessagesSRSF0(stats, usedFrames, nSRs, SNRIn, isDetectTest, snrIdx)
+    if isDetectTest
+        fprintf(['SRS - PUCCH Format 0 - ACK error rate for %d frame(s) at ', ...
+            'SNR %.1f dB: %g\n'], usedFrames, SNRIn(snrIdx), stats.errorACKSRS(snrIdx)/stats.nACKs(snrIdx));
+        fprintf(['SRS - PUCCH Format 0 - SR error rate for %d frame(s) at ', ...
+            'SNR %.1f dB: %g\n'], usedFrames, SNRIn(snrIdx), stats.errorSRSRS(snrIdx)/nSRs(snrIdx));
+    else
+        fprintf(['SRS - PUCCH Format 0 - false ACK detection rate for %d frame(s) at ', ...
+            'SNR %.1f dB: %g\n'], usedFrames, SNRIn(snrIdx), stats.falseACKSRS(snrIdx)/stats.nACKs(snrIdx));
+    end
+end
+
 function printMessagesSRSF1(stats, usedFrames, ~, SNRIn, isDetectTest, snrIdx)
     if isDetectTest
         fprintf(['SRS - PUCCH Format 1 - NACK to ACK rate for %d frame(s) at ', ...
@@ -208,6 +287,6 @@ function printMessagesSRSF2(stats, usedFrames, totalBlocks, SNRIn, isDetectTest,
 
     fprintf('SRS - ');
     fprintf([message ' for ' num2str(usedFrames) ...
-        ' frame(s) at SNR ' num2str(SNRIn(snrIdx)) ' dB: ' num2str(stats.blerUCIsrs(snrIdx)/totalBlocks(snrIdx)) '\n'])
+        ' frame(s) at SNR ' num2str(SNRIn(snrIdx)) ' dB: ' num2str(stats.blerUCISRS(snrIdx)/totalBlocks(snrIdx)) '\n'])
 end
 
