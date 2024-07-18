@@ -56,11 +56,14 @@ classdef srsTransformPrecoderUnittest < srsTest.srsBlockUnittest
 
         %Type of the tested block.
         srsBlockType = 'phy/generic_functions/transform_precoding'
+
+        %Number of OFDM symbols to apply transform precoding.
+        NumOFDMSymbols = 8
     end
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'ulsch_demultiplex' tests will be erased).
-        outputPath = {['testTransformDeprecoder', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
+        outputPath = {['testTransformPrecoder', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
     end
 
     properties (TestParameter)
@@ -71,9 +74,6 @@ classdef srsTransformPrecoderUnittest < srsTest.srsBlockUnittest
              54,  60,  64,  72,  75,  80,  81,  90,  96, 100, 108, 120, ...
             125, 128, 135, 144, 150, 160, 162, 180, 192, 200, 216, 225, ...
             240, 243, 250, 256, 270};
-
-        %Number of OFDM symbols to apply transform precoding.
-        NumOFDMSymbols = {1, 2, 4, 8, 12}
     end
 
     methods (Access = protected)
@@ -88,17 +88,15 @@ classdef srsTransformPrecoderUnittest < srsTest.srsBlockUnittest
 
             fprintf(fileID, 'struct test_case_t {\n');
             fprintf(fileID, '  unsigned          M_rb;\n');
-            fprintf(fileID, '  file_vector<cf_t> x;\n');
-            fprintf(fileID, '  file_vector<cf_t> y;\n');
+            fprintf(fileID, '  file_vector<cf_t> deprecode_input;\n');
+            fprintf(fileID, '  file_vector<cf_t> deprecode_output;\n');
             fprintf(fileID, '};\n');
         end
     end % of methods (Access = protected)
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(testCase, ...
-                NumPRB, NumOFDMSymbols)
-        %testvectorGenerationCases Generates a test vectors given the
-        %   combinations of MRB and  nofOFDMSymbols. 
+        function testvectorGenerationCases(testCase, NumPRB)
+        %testvectorGenerationCases Generates a test vectors given the MRB. 
 
             import srsTest.helpers.writeComplexFloatFile
             import srsTest.helpers.approxbf16
@@ -108,29 +106,27 @@ classdef srsTransformPrecoderUnittest < srsTest.srsBlockUnittest
             testID = testCase.generateTestID;
 
             % Calculate total number of subcarriers.
-            NumSC = NumPRB * 12 * NumOFDMSymbols;
+            NumSC = NumPRB * 12 * testCase.NumOFDMSymbols;
 
             % Generate random QPSK subcarriers.
-            x = (randi([0 1], NumSC, 2) * 2 - 1) * [1; 1i];
-
-            % Approximate subcarriers to brain float.
-            x = approxbf16(x);
+            x = (randi([0 1], NumSC, 2) * 2 - 1) * [1; 1i] / sqrt(2);
 
             % Apply transform precoding.
-            y = nrTransformPrecode(x, NumPRB);
+            precoded = nrTransformPrecode(x, NumPRB);
+            precoded = approxbf16(precoded);
 
-            % Approximate transform precoded to brain float.
-            y = approxbf16(y);
+            deprecoded = nrTransformDeprecode(precoded, NumPRB);
+            deprecoded = approxbf16(deprecoded);
 
             % Save data before transform precoding.
-            testCase.saveDataFile('_test_input_x', testID, @writeComplexFloatFile, x);
+            testCase.saveDataFile('_test_input', testID, @writeComplexFloatFile, precoded);
 
             % Save data after transform precoding.
-            testCase.saveDataFile('_test_output_y', testID, @writeComplexFloatFile, y);
+            testCase.saveDataFile('_test_output', testID, @writeComplexFloatFile, deprecoded);
 
 
             testCaseString = testCase.testCaseToString(testID, ...
-                {NumPRB}, false, '_test_input_x', '_test_output_y');
+                {NumPRB}, true, '_test_input', '_test_output');
 
             % Add the test to the file header.
             testCase.addTestToHeaderFile(testCase.headerFileID, ...
