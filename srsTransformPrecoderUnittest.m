@@ -113,10 +113,9 @@ classdef srsTransformPrecoderUnittest < srsTest.srsBlockUnittest
 
             % Apply transform precoding.
             precoded = nrTransformPrecode(x, NumPRB);
-            precoded = approxbf16(precoded);
 
+            % Deprecode.
             deprecoded = nrTransformDeprecode(precoded, NumPRB);
-            deprecoded = approxbf16(deprecoded);
 
             % Save data before transform precoding.
             testCase.saveDataFile('_test_input', testID, @writeComplexFloatFile, precoded);
@@ -126,7 +125,7 @@ classdef srsTransformPrecoderUnittest < srsTest.srsBlockUnittest
 
 
             testCaseString = testCase.testCaseToString(testID, ...
-                {NumPRB}, true, '_test_input', '_test_output');
+                {NumPRB}, false, '_test_input', '_test_output');
 
             % Add the test to the file header.
             testCase.addTestToHeaderFile(testCase.headerFileID, ...
