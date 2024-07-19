@@ -108,7 +108,7 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
   // Fill buffer with time frequency-domain data.
   for (unsigned i_rx_port = 0; i_rx_port != nof_rx_ports; ++i_rx_port) {
     for (unsigned i_symbol = 0; i_symbol != nof_symbols; ++i_symbol) {
-      span<cf_t> symbol_view = buffer->get_symbol(i_rx_port, 0, 0, i_symbol);
+      span<cbf16_t> symbol_view = buffer->get_symbol(i_rx_port, 0, 0, i_symbol);
       for (unsigned i_sample = 0; i_sample != nof_re; ++i_sample) {
         symbol_view[i_sample] = static_cast<cf_t>(in_cft_array[i_sample][i_symbol][i_rx_port]);
       }
