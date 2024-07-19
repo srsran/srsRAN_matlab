@@ -93,6 +93,11 @@ std::unique_ptr<srsran::pusch_demodulator> create_pusch_demodulator()
 {
   using namespace srsran;
 
+  std::shared_ptr<dft_processor_factory> dft_proc_factory = create_dft_processor_factory_fftw_slow();
+
+  std::shared_ptr<transform_precoder_factory> transform_precod_factory =
+      create_dft_transform_precoder_factory(dft_proc_factory, MAX_RB);
+
   std::shared_ptr<channel_equalizer_factory> equalizer_factory =
       create_channel_equalizer_generic_factory(channel_equalizer_algorithm_type::zf);
 
@@ -100,8 +105,8 @@ std::unique_ptr<srsran::pusch_demodulator> create_pusch_demodulator()
 
   std::shared_ptr<pseudo_random_generator_factory> prg_factory = create_pseudo_random_generator_sw_factory();
 
-  std::shared_ptr<pusch_demodulator_factory> pusch_demod_factory =
-      create_pusch_demodulator_factory_sw(equalizer_factory, demod_factory, prg_factory);
+  std::shared_ptr<pusch_demodulator_factory> pusch_demod_factory = create_pusch_demodulator_factory_sw(
+      equalizer_factory, transform_precod_factory, demod_factory, prg_factory, MAX_RB);
 
   return pusch_demod_factory->create();
 }
