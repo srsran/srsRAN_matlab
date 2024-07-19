@@ -32,7 +32,7 @@
 %   addTestDefinitionToHeaderFile   - Adds details (e.g., type/variable declarations)
 %                                     to the test header file.
 %
-%   See also matlab.unittest, nrULSCHDemultiplex, nrULSCHInfo.
+%   See also matlab.unittest, nrTransformPrecode, nrTransformDeprecode.
 
 %   Copyright 2021-2024 Software Radio Systems Limited
 %
@@ -62,7 +62,7 @@ classdef srsTransformPrecoderUnittest < srsTest.srsBlockUnittest
     end
 
     properties (ClassSetupParameter)
-        %Path to results folder (old 'ulsch_demultiplex' tests will be erased).
+        %Path to results folder (old 'transform_precoder' tests will be erased).
         outputPath = {['testTransformPrecoder', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
     end
 
@@ -99,7 +99,7 @@ classdef srsTransformPrecoderUnittest < srsTest.srsBlockUnittest
         %testvectorGenerationCases Generates a test vectors given the MRB. 
 
             import srsTest.helpers.writeComplexFloatFile
-            import srsTest.helpers.approxbf16
+            import srsTest.helpers.randmod;
 
             % Generate a unique test ID by looking at the number of files
             % generated so far.
@@ -109,7 +109,7 @@ classdef srsTransformPrecoderUnittest < srsTest.srsBlockUnittest
             NumSC = NumPRB * 12 * testCase.NumOFDMSymbols;
 
             % Generate random QPSK subcarriers.
-            x = (randi([0 1], NumSC, 2) * 2 - 1) * [1; 1i] / sqrt(2);
+            x = randmod('QPSK', [NumSC, 1]);
 
             % Apply transform precoding.
             precoded = nrTransformPrecode(x, NumPRB);
