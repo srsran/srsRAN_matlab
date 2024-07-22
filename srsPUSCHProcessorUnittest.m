@@ -60,6 +60,17 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
 
         %Type of the tested block.
         srsBlockType = 'phy/upper/channel_processors/pusch'
+
+        %List of possible BWP sizes.
+        BWPSizes = [25, 50, 75, 100, 150, 200, 250, 270]
+
+        %Valid number of RB that accept transform precoding.
+        ValidNumPRB = [...
+               1,   2,   3,   4,   5,   6,   8,   9,  10,  12,  15,  16,...
+              18,  20,  24,  25,  27,  30,  32,  36,  40,  45,  48,  50,...
+              54,  60,  64,  72,  75,  80,  81,  90,  96, 100, 108, 120,...
+             125, 128, 135, 144, 150, 160, 162, 180, 192, 200, 216, 225,...
+             240, 243, 250, 256, 270]
     end
 
     properties (ClassSetupParameter)
@@ -150,12 +161,12 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             MinNumPrb = 1 + (nofHarqAck + nofCsiPart1 + nofCsiPart2);
             
             % Maximum number of PRB of a 5G NR resource grid.
-            MaxGridBW = 274;
+            MaxGridBW = max(testCase.BWPSizes);
 
             % Randomly select BWP start and size values that satisfy the
             % size constraints. 
-            BWPStart = randi([0, MaxGridBW - MinNumPrb]);
-            BWPSize = randi([MinNumPrb, MaxGridBW - BWPStart]);
+            BWPSize = testCase.BWPSizes(randi([1, numel(testCase.BWPSizes)]));
+            BWPStart = randi([0, MaxGridBW - BWPSize]);
 
             NSizeGrid = BWPStart + BWPSize;
             NStartGrid = 0;
@@ -165,10 +176,12 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
           
             % Fix a maximum number of PRB allocated to PUSCH to limit the
             % size of the test vectors.
-            MaxNumPrb = min(25, BWPSize - PrbStart);
+            MaxNumPrb = BWPSize - PrbStart;
 
-            % Number of PRB allocated to PUSCH.
-            NumPrb = randi([MinNumPrb, MaxNumPrb]);
+            % Select a valid number of PRB allocated to PUSCH.
+            NumPrb = testCase.ValidNumPRB;
+            NumPrb = NumPrb(and((NumPrb >= MinNumPrb), (NumPrb <= MaxNumPrb)));
+            NumPrb = NumPrb(randi([1, numel(NumPrb)]));
             
             % Random modulation.
             ModulationOpts = {'QPSK', '16QAM', '64QAM', '256QAM'};
@@ -188,6 +201,7 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             NIDNSCID = randi([0, 65535]);
             NSCID = randi([0, 1]);
             DCPosition = randi(12 * [PrbStart, PrbStart + NumPrb]) + BWPStart;
+            TransformPrecoding = randi([0, 1]);
 
             % Fix parameters.
             rv = 0;
@@ -203,6 +217,7 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             pusch.DMRS.DMRSAdditionalPosition = DMRSAdditionalPosition;
             pusch.DMRS.NIDNSCID = NIDNSCID;
             pusch.DMRS.NSCID = NSCID;
+            pusch.TransformPrecoding = TransformPrecoding;
 
             % Generate PUSCH resource grid indices.
             [puschResourceIndices, puschInfo] = nrPUSCHIndices(carrier, pusch);
@@ -389,6 +404,7 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
                 RBAllocationString, ...                       % freq_alloc
                 pusch.SymbolAllocation(1), ...                % start_symbol_index
                 pusch.SymbolAllocation(2), ...                % nof_symbols
+                logical(pusch.TransformPrecoding), ...        % enable_transform_precoding
                 TBSLBRMStr, ...                               % tbs_lbrm
                 DCPosition, ...                               % dc_position
                 };
