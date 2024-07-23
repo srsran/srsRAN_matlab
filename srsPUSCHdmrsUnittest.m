@@ -60,6 +60,14 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
 
         %Type of the tested block.
         srsBlockType = 'phy/upper/signal_processors'
+
+        %Valid number of RB that accept transform precoding.
+        ValidNumPRB = [...
+               1,   2,   3,   4,   5,   6,   8,   9,  10,  12,  15,  16,...
+              18,  20,  24,  25,  27,  30,  32,  36,  40,  45,  48,  50,...
+              54,  60,  64,  72,  75,  80,  81,  90,  96, 100, 108, 120,...
+             125, 128, 135, 144, 150, 160, 162, 180, 192, 200, 216, 225,...
+             240, 243, 250, 256, 270]
     end
 
     properties (Hidden)
@@ -155,6 +163,9 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
             % Generate a unique test ID.
             testID = testCase.generateTestID;
 
+            % Limit the resource grid size.
+            NSizeGrid = 275;
+
             % Use a unique NCellID, NSlot, scrambling ID and PRB allocation for each test.
             NCellID = testCase.randomizeTestvector(testID + 1) - 1;
             if numerology == 0
@@ -163,11 +174,13 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
                 NSlot = randi([0, 19]);
             end
             NSCID = randi([0, 1]);
-            PRBstart = randi([0, 136]);
-            PRBend = randi([136, 271]);
+
+            % Select a random PRB allocation.
+            NumPRB = testCase.ValidNumPRB(randi([1, numel(testCase.ValidNumPRB)]));
+            PRBstart = randi([0, NSizeGrid - NumPRB]);
+            PRBend = PRBstart + NumPRB - 1;
 
             % Current fixed parameter values (e.g., number of CDM groups without data).
-            NSizeGrid = 272;
             NStartGrid = 0;
             NFrame = 0;
             CyclicPrefix = 'normal';
@@ -183,6 +196,13 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
             amplitude = sqrt(2);
             PUSCHports = 0:(NumLayers-1);
 
+            % Select randomly transform precoding if only one layer and 
+            % configuration type 1.
+            TransformPrecoding = 0;
+            if (NumLayers == 1) && (DMRSConfigurationType == 1)
+                TransformPrecoding = randi([0, 1]);
+            end
+
             % Configure the carrier according to the test parameters.
             SubcarrierSpacing = 15 * (2 .^ numerology);
             carrier = srsConfigureCarrier(NCellID, SubcarrierSpacing, ...
@@ -195,7 +215,8 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
 
             % Configure the PUSCH according to the test parameters.
             pusch = srsConfigurePUSCH(DMRS, NStartBWP, NSizeBWP, NID, RNTI, ...
-                Modulation, NumLayers, MappingType, SymbolAllocation, PRBSet);
+                Modulation, NumLayers, MappingType, SymbolAllocation, PRBSet, ...
+                TransformPrecoding);
 
             % Call the PUSCH DM-RS symbol processor MATLAB functions.
             [DMRSsymbols, symbolIndices] = srsPUSCHdmrs(carrier, pusch);
@@ -267,18 +288,19 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
 
             % Prepare DMRS configuration cell
             dmrsConfigCell = { ...
-                slotPointConfig, ...           % slot
-                DmrsTypeStr, ...               % type
-                NIDNSCID, ...                  % Scrambling_id
-                NSCID, ...                     % n_scid
-                amplitude, ...                 % scaling
-                cyclicPrefixStr, ...           % c_prefix
-                symbolAllocationMask, ...      % symbol_mask
-                rbAllocationMask, ...          % rb_mask
-                pusch.SymbolAllocation(1), ... % first_symbol
-                pusch.SymbolAllocation(2), ... % nof_symbols
-                NumLayers, ...                 % nof_tx_layers
-                {PUSCHports}, ...              % rx_ports
+                slotPointConfig, ...             % slot
+                DmrsTypeStr, ...                 % type
+                NIDNSCID, ...                    % Scrambling_id
+                NSCID, ...                       % n_scid
+                amplitude, ...                   % scaling
+                cyclicPrefixStr, ...             % c_prefix
+                symbolAllocationMask, ...        % symbol_mask
+                rbAllocationMask, ...            % rb_mask
+                pusch.SymbolAllocation(1), ...   % first_symbol
+                pusch.SymbolAllocation(2), ...   % nof_symbols
+                NumLayers, ...                   % nof_tx_layers
+                logical(TransformPrecoding), ... % enable_transform_precoding
+                {PUSCHports}, ...                % rx_ports
                 };
 
             testCell = {['test_label::' testLabel], dmrsConfigCell, estNoiseVar, estRSRP};
