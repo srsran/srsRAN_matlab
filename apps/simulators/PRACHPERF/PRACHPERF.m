@@ -112,8 +112,8 @@ classdef PRACHPERF < matlab.System
         PreambleIndex  (1, 1) double {mustBeInteger, mustBeNonnegative} = 32
         %Cyclic shift width.
         %   Parameter NCS as defined in TS38.211 Tables 6.3.3.1-5, 6.3.3.1-6, 6.3.3.1-7.
-        %   Default is 13.
-        NCS (1, 1) double {mustBeInteger, mustBeNonnegative} = 13
+        %   Default is 0.
+        NCS (1, 1) double {mustBeInteger, mustBeNonnegative} = 0
         %PUSCH subcarrier spacing in kHz (15, 30, 60, 120).
         %   Default is 15 kHz.
         PUSCHSubcarrierSpacing (1, 1) double {mustBeMember(PUSCHSubcarrierSpacing, [15 30 60 120])} = 15
@@ -133,7 +133,7 @@ classdef PRACHPERF < matlab.System
         %   Possible values are ('Detection', 'False Alarm'). Default is 'Detection'.
         TestType (1, :) char {mustBeMember(TestType, {'Detection', 'False Alarm'})} = 'Detection'
         %CFO flag: if true, the detector will assume perfect frequency synchronization.
-        IgnoreCFO (1, 1) logical = false
+        IgnoreCFO (1, 1) logical = true
         %Custom detection threshold.
         %   If NaN, the detector uses the default threshold value.
         DetectionThreshold (1, 1) double = NaN

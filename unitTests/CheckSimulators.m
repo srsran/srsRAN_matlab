@@ -121,7 +121,7 @@ classdef CheckSimulators < matlab.unittest.TestCase
             obj.assertEqual(pp.DetectedPerfect, 100, 'Wrong number of perfectly detected preambles.');
             obj.assertEqual(pp.ProbabilityDetection, 1, 'Wrong probability of detection.');
             obj.assertEqual(pp.ProbabilityDetectionPerfect, 1, 'Wrong probability of perfect detection.');
-            obj.assertEqual(pp.OffsetError, [0.2127 0.2461], 'Wrong offset error.', RelTol=0.02);
+            obj.assertEqual(pp.OffsetError, [0.1781 0.2265], 'Wrong offset error.', RelTol=0.02);
 
             % Run false alarm test.
             pp.release;
