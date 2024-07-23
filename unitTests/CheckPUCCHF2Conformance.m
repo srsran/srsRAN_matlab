@@ -80,8 +80,10 @@ classdef CheckPUCCHF2Conformance < matlab.unittest.TestCase
             end
 
             detectionRate = 1 - pp.BlockErrorRateSRS;
-            obj.verifyGreaterThanOrEqual(detectionRate, 0.99, 'The PUCCH F2 ACK detection rate should be higher than 99%.');
-            obj.assertGreaterThanOrEqual(detectionRate, 0.95, 'The PUCCH F2 ACK detection rate should be higher than 99%.');
+            obj.verifyGreaterThanOrEqual(detectionRate, 0.99, ...
+                'WARNING: The PUCCH F2 ACK detection rate should be higher than 99%.');
+            obj.assertGreaterThanOrEqual(detectionRate, 0.95, ...
+                'ERROR: The PUCCH F2 ACK detection rate is below the hard acceptance threshold of 95%.');
 
             % TODO: export Detection Rate (and possibly other metrics) to grafana.
 
@@ -109,8 +111,10 @@ classdef CheckPUCCHF2Conformance < matlab.unittest.TestCase
                 obj.assertFail(['PUCCHBLER simulation failed with error: ', ME.message]);
             end
 
-            obj.verifyLessThanOrEqual(pp.FalseDetectionRateSRS, 0.01, 'The PUCCH F2 ACK detection rate should be higher than 99%.');
-            obj.assertLessThanOrEqual(pp.FalseDetectionRateSRS, 0.05, 'The PUCCH F2 ACK detection rate should be higher than 99%.');
+            obj.verifyLessThanOrEqual(pp.FalseDetectionRateSRS, 0.01, ...
+                'WARNING: The PUCCH F2 ACK detection rate should be lower than 1%.');
+            obj.assertLessThanOrEqual(pp.FalseDetectionRateSRS, 0.05, ...
+                'ERROR: The PUCCH F2 ACK detection rate is above the hard acceptance threshold of 5%.');
 
             % TODO: export False Detection Rate (and possibly other metrics) to grafana.
         end % of function checkPUCCHF2shortDetect(obj, TestConfig)
@@ -137,8 +141,10 @@ classdef CheckPUCCHF2Conformance < matlab.unittest.TestCase
                 obj.assertFail(['PUCCHBLER simulation failed with error: ', ME.message]);
             end
 
-            obj.verifyLessThanOrEqual(pp.BlockErrorRateSRS, 0.01, 'The PUCCH F2 UCI BLER should not be higher than 1%.');
-            obj.assertLessThanOrEqual(pp.BlockErrorRateSRS, 0.05, 'The PUCCH F2 UCI BLER should not be higher than 1%.');
+            obj.verifyLessThanOrEqual(pp.BlockErrorRateSRS, 0.01, ...
+                'WARNING: The PUCCH F2 UCI BLER should not be higher than 1%.');
+            obj.assertLessThanOrEqual(pp.BlockErrorRateSRS, 0.05, ...
+                'ERROR: The PUCCH F2 UCI BLER is above the hard acceptance threshold of 5%.');
 
             % TODO: export Detection Rate (and possibly other metrics) to grafana.
 

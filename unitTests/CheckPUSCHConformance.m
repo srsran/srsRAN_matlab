@@ -121,11 +121,11 @@ classdef CheckPUSCHConformance < matlab.unittest.TestCase
             tp = pp.ThroughputSRS / pp.MaxThroughput;
 
             if contains(TestConfig.Name, 'Custom')
-                obj.verifyEqual(tp, 1.0, 'Throughput should be maximum for ''Custom'' cases.', AbsTol=1e-8);
-                obj.assertGreaterThan(tp, 0.98, 'Throughput should be maximum for ''Custom'' cases.');
+                obj.verifyEqual(tp, 1.0, 'WARNING: Throughput should be maximum for ''Custom'' cases.', AbsTol=1e-8);
+                obj.assertGreaterThan(tp, 0.98, 'ERROR: Throughput for a ''Custom'' case is below the hard acceptance threshold of 98%.');
             else
-                obj.verifyGreaterThanOrEqual(tp, 0.75, 'Throughput should be at least 70% for TS cases.');
-                obj.assertGreaterThan(tp, 0.70, 'Throughput should be at least 70% for TS cases.');
+                obj.verifyGreaterThanOrEqual(tp, 0.75, 'WARNING: Throughput should be at least 70% for TS cases.');
+                obj.assertGreaterThan(tp, 0.70, 'ERROR: Throughput for a TS case is below the hard acceptance threshold of 70%.');
             end
 
             % TODO: export throughput (and possibly other metrics) to grafana.
