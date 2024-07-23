@@ -182,7 +182,7 @@ function stats = updateStatsSRSF0(stats, uci, msg, isDetectTest, snrIdx)
     else % false alarm test
         % False ACK.
         if msg.isValid
-            stats.falseACKSRS(snrIdx) = stats.falseACKSRS(snrIdx) + numel(uciRxSRS);
+            stats.falseACKSRS(snrIdx) = stats.falseACKSRS(snrIdx) + numel(uci{1});
         end
     end
 end
