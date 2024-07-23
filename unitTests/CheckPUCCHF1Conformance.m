@@ -145,6 +145,7 @@ classdef CheckPUCCHF1Conformance < matlab.unittest.TestCase
             pp.MaximumDopplerShift = 100;
             pp.ImplementationType = 'srs';
             pp.PerfectChannelEstimator = false;
+            pp.QuickSimulation = false;
             pp.DisplaySimulationInformation = true;
             % TODO: enable intra-slot frequency hopping when ready in srsRAN.
 
