@@ -53,7 +53,7 @@ classdef TrivialChannel < matlab.System
                 %Input signal
                 signalIn (:, 1) double
             end
-            signalOut = repmat(signalIn, 1, obj.NumReceiveAntennas);
+            signalOut = repmat(signalIn, 1, obj.NumReceiveAntennas) / sqrt(obj.NumReceiveAntennas);
         end
 
         function channelInfo = infoImpl(obj)
