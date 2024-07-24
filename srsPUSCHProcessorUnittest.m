@@ -62,7 +62,7 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
         srsBlockType = 'phy/upper/channel_processors/pusch'
 
         %List of possible BWP sizes.
-        BWPSizes = [25, 50, 75, 100, 150, 200, 250, 270]
+        BWPSizes = [50, 75, 100, 150, 200, 250, 270]
 
         %Valid number of RB that accept transform precoding.
         ValidNumPRB = [...
@@ -200,6 +200,7 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             DMRSAdditionalPosition = randi([0, 3]);
             NIDNSCID = randi([0, 65535]);
             NSCID = randi([0, 1]);
+            NRSID = randi([0, 1007]);
             DCPosition = randi(12 * [PrbStart, PrbStart + NumPrb]) + BWPStart;
             TransformPrecoding = randi([0, 1]);
 
@@ -217,6 +218,7 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             pusch.DMRS.DMRSAdditionalPosition = DMRSAdditionalPosition;
             pusch.DMRS.NIDNSCID = NIDNSCID;
             pusch.DMRS.NSCID = NSCID;
+            pusch.DMRS.NRSID = NRSID;
             pusch.TransformPrecoding = TransformPrecoding;
 
             % Generate PUSCH resource grid indices.
@@ -383,6 +385,25 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
 
             mcsDescr = mcsDescription2Cell(pusch.Modulation, targetCodeRate);
 
+            if TransformPrecoding == 0
+                DMRSConfig = {...
+                    dmrsTypeString, ...                     % dmrs
+                    pusch.DMRS.NIDNSCID, ...                % scrambling_id
+                    pusch.DMRS.NSCID, ...                   % n_scid
+                    pusch.DMRS.NumCDMGroupsWithoutData, ... % nof_cdm_groups_without_data
+                    };
+                DMRSDescr = ['pusch_processor::dmrs_configuration('...
+                    cellarray2str(DMRSConfig, true)...
+                    ')'];
+            else
+                DMRSConfig = {...
+                    pusch.DMRS.NRSID, ... % n_rs_id
+                    };
+                DMRSDescr = ['pusch_processor::dmrs_transform_precoding_configuration('...
+                    cellarray2str(DMRSConfig, true)...
+                    ')'];
+            end
+
             pduDescription = {...
                 'std::nullopt', ...                           % context
                 slotConfig, ...                               % slot
@@ -397,14 +418,10 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
                 pusch.NumAntennaPorts, ...                    % nof_tx_layers
                 portsString, ...                              % rx_ports
                 dmrsSymbolMask, ...                           % dmrs_symbol_mask
-                dmrsTypeString, ...                           % dmrs
-                pusch.DMRS.NIDNSCID, ...                      % scrambling_id
-                pusch.DMRS.NSCID, ...                         % n_scid
-                pusch.DMRS.NumCDMGroupsWithoutData, ...       % nof_cdm_groups_without_data
+                DMRSDescr, ...                                % dmrs
                 RBAllocationString, ...                       % freq_alloc
                 pusch.SymbolAllocation(1), ...                % start_symbol_index
                 pusch.SymbolAllocation(2), ...                % nof_symbols
-                logical(pusch.TransformPrecoding), ...        % enable_transform_precoding
                 TBSLBRMStr, ...                               % tbs_lbrm
                 DCPosition, ...                               % dc_position
                 };

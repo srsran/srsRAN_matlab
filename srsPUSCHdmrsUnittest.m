@@ -149,6 +149,7 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
             import srsLib.phy.upper.signal_processors.srsChannelEstimator
             import srsLib.ran.utils.scs2cps
             import srsTest.helpers.approxbf16
+            import srsTest.helpers.cellarray2str
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.symbolAllocationMask2string
             import srsTest.helpers.RBallocationMask2string
@@ -189,6 +190,7 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
             NSizeBWP = NSizeGrid;
             NIDNSCID = NCellID;
             NID = NCellID;
+            NRSID = NCellID;
             Modulation = '16QAM';
             MappingType = 'A';
             SymbolAllocation = [1 13];
@@ -211,7 +213,7 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
             % Configure the PUSCH DM-RS symbols according to the test parameters.
             DMRS = srsConfigurePUSCHdmrs(DMRSConfigurationType, ...
                 DMRSTypeAPosition, DMRSAdditionalPosition, DMRSLength, ...
-                NIDNSCID, NSCID);
+                NIDNSCID, NSCID, NRSID);
 
             % Configure the PUSCH according to the test parameters.
             pusch = srsConfigurePUSCH(DMRS, NStartBWP, NSizeBWP, NID, RNTI, ...
@@ -285,21 +287,36 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
             % generate a RB allocation mask string
             rbAllocationMask = RBallocationMask2string(PRBstart, PRBend);
 
+            if TransformPrecoding == 0
+                SequenceConfig = {...
+                    DmrsTypeStr, ...         % type
+                    NumLayers, ...           % nof_tx_layers
+                    pusch.DMRS.NIDNSCID, ... % scrambling_id
+                    pusch.DMRS.NSCID, ...    % n_scid
+                    }; 
+                SequenceDescr = ['dmrs_pusch_estimator::pseudo_random_sequence_configuration('...
+                    cellarray2str(SequenceConfig, true)...
+                    ')'];
+            else
+                SequenceConfig = {...
+                    pusch.DMRS.NRSID, ... % n_rs_id
+                    };
+                SequenceDescr = ['dmrs_pusch_estimator::low_papr_sequence_configuration('...
+                    cellarray2str(SequenceConfig, true)...
+                    ')'];
+            end
+
 
             % Prepare DMRS configuration cell
             dmrsConfigCell = { ...
                 slotPointConfig, ...             % slot
-                DmrsTypeStr, ...                 % type
-                NIDNSCID, ...                    % Scrambling_id
-                NSCID, ...                       % n_scid
+                SequenceDescr, ...               % sequence_config
                 amplitude, ...                   % scaling
                 cyclicPrefixStr, ...             % c_prefix
                 symbolAllocationMask, ...        % symbol_mask
                 rbAllocationMask, ...            % rb_mask
                 pusch.SymbolAllocation(1), ...   % first_symbol
                 pusch.SymbolAllocation(2), ...   % nof_symbols
-                NumLayers, ...                   % nof_tx_layers
-                logical(TransformPrecoding), ... % enable_transform_precoding
                 {PUSCHports}, ...                % rx_ports
                 };
 
