@@ -77,7 +77,7 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
         DuplexMode = {'FDD', 'TDD'}
 
         %Preamble formats.
-        PreambleFormat = {'0', '1', '2', '3', 'A1','B4'}
+        PreambleFormat = {'0', '1', '2', 'A1','B4'}
 
         %Zero-correlation zone boolean flag. Set to false for no cyclic shift
         %   and set to true for cyclic shift. The final value of the zero-configuration
@@ -158,7 +158,7 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
         % Sets secondary simulation variables.
 
             import srsLib.phy.helpers.srsConfigurePRACH
-        
+
             RestrictedSetLoc = obj.RestrictedSet;
             RBOffsetLoc = obj.RBOffset;
 
@@ -242,7 +242,7 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
         %   and PreambleIndex are generated randomly.
 
             import srsTest.helpers.writeComplexFloatFile
-            
+
             % Generate a unique test ID.
             TestID = obj.generateTestID;
 
@@ -345,10 +345,10 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
             %   MATLAB and PRACH detection is then performed using the mex
             %   wrapper of the SRSRAN C++ component. The test is considered
             %   as passed if the detected PRACH is equal to the transmitted one.
-    
+
             import srsMEX.phy.srsPRACHDetector
 
-            obj.assumeTrue(ismember(PreambleFormat, {'0', 'B4'}), ['Format ' PreambleFormat ' not yet supported.']);
+            obj.assumeTrue(ismember(PreambleFormat, {'0', '1', 'A1', 'B4'}), ['Format ' PreambleFormat ' not yet supported.']);
             obj.assumeFalse(strcmp(PreambleFormat, 'B4') && strcmp(DuplexMode, 'FDD'), ...
                 'For now, Format B4 is supported in TDD only (SCS 30 kHz).');
 
