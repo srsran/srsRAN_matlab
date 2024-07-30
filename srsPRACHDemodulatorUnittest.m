@@ -60,6 +60,10 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
 
         %Type of the tested block.
         srsBlockType = 'phy/lower/modulation'
+
+        %Preamble formats.
+        PreambleFormats = {'0', '1', '2', '3', 'A1', 'A1/B1', 'A2', ...
+            'A2/B2', 'A3', 'A3/B3', 'B1', 'B4', 'C0', 'C2'}
     end
 
     properties (ClassSetupParameter)
@@ -71,14 +75,10 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
         %Carrier duplexing mode, set to
         %   - FDD for paired spectrum with 15kHz subcarrier spacing, or
         %   - TDD for unpaired spectrum with 30kHz subcarrier spacing.
-        DuplexMode = {'FDD', 'TDD'}
+        DuplexMode = {'FDD', 'TDD', 'TDD-FR2'}
 
         %Carrier bandwidth in PRB.
         CarrierBandwidth = {79, 106}
-
-        %Preamble formats.
-        PreambleFormat = {'0', '1', '2', '3', 'A1', 'A1/B1', 'A2', ...
-            'A2/B2', 'A3', 'A3/B3', 'B1', 'B4', 'C0', 'C2'}
 
         %Restricted set type.
         %   Possible values are {'UnrestrictedSet', 'RestrictedSetTypeA', 'RestrictedSetTypeB'}.
@@ -124,7 +124,7 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
     end % of methods (Access = protected)
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(testCase, DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet, ZeroCorrelationZone, RBOffset)
+        function testvectorGenerationCases(testCase, DuplexMode, CarrierBandwidth, RestrictedSet, ZeroCorrelationZone, RBOffset)
         %testvectorGenerationCases Generates a test vector for the given
         %   DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet,
         %   ZeroCorrelationZone and RBOffset. The parameters SequenceIndex
@@ -137,10 +137,28 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
             % Generate a unique test ID
             TestID = testCase.generateTestID;
 
+            % Set parameters that depend on the duplex mode.
+            minPreambleIndex = 1;
+            switch DuplexMode
+                case 'FDD'
+                    subcarrierSpacing = 15;
+                case 'TDD'
+                    subcarrierSpacing = 30;
+                case 'TDD-FR2'
+                    subcarrierSpacing = 120;
+                    DuplexMode = 'TDD';
+                    minPreambleIndex = 5;
+                otherwise
+                    error('Invalid duplex mode %s', DuplexMode);
+            end
+
+            PreambleFormat = testCase.PreambleFormats{randi([minPreambleIndex, numel(testCase.PreambleFormats)])};
+
             % Generate carrier configuration
             carrier = nrCarrierConfig;
             carrier.CyclicPrefix = 'normal';
             carrier.NSizeGrid = CarrierBandwidth;
+            carrier.SubcarrierSpacing = subcarrierSpacing;
 
             % Generate PRACH configuration.
             sequenceIndex = randi([0, 1023], 1, 1);
@@ -155,16 +173,6 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
 
             % Select a symbolic number of frequency-domain occasions.
             NumFreqOccasions = 2;
-
-            % Set parameters that depend on the duplex mode.
-            switch DuplexMode
-                case 'FDD'
-                    carrier.SubcarrierSpacing = 15;
-                case 'TDD'
-                    carrier.SubcarrierSpacing = 30;
-                otherwise
-                    error('Invalid duplex mode %s', DuplexMode);
-            end
 
             % Get PRACH modulation information.
             PrachOfdmInfo = nrPRACHOFDMInfo(carrier, prach);

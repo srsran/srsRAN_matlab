@@ -65,7 +65,7 @@ classdef srsOFDMModulatorUnittest < srsTest.srsBlockUnittest
 
     properties (TestParameter)
         %Defines the subcarrier spacing (0, 1, 2, 3, 4).
-        numerology = {0, 1, 2}
+        numerology = {0, 1, 2, 3}
 
         %Size of the DFT (256, 512, 1024, 2048, 4096). Only standard values.
         DFTsize = {256, 512, 1024, 2048, 4096}
