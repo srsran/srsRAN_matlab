@@ -68,10 +68,13 @@ function stepImpl(obj, SNRIn, nFrames)
             'errorACK', zeros(numel(SNRIn), 1), ...     % number of MATLAB erroneous ACKs
             'falseACK', zeros(numel(SNRIn), 1), ...     % number of MATLAB false ACKs
             'errorSR', zeros(numel(SNRIn), 1), ...      % number of MATLAB erroneous SR bits
+            'falseSR', zeros(numel(SNRIn), 1), ...      % number of MATLAB false SR bits
             'errorACKSRS', zeros(numel(SNRIn), 1), ...  % number of SRS erroneous ACKs
             'falseACKSRS', zeros(numel(SNRIn), 1), ...  % number of SRS false ACKs
             'errorSRSRS', zeros(numel(SNRIn), 1), ...   % number of SRS erroneous SR bits
-            'nACKs', zeros(numel(SNRIn), 1) ...         % number of ACK occasions
+            'falseSRSRS', zeros(numel(SNRIn), 1), ...   % number of SRS false SR bits
+            'nACKs', zeros(numel(SNRIn), 1), ...        % number of ACK occasions
+            'nSRs', zeros(numel(SNRIn), 1) ...          % number of SR occasions
             );
     elseif  (obj.PUCCHFormat == 1)
         stats = struct(...
@@ -132,13 +135,21 @@ function stepImpl(obj, SNRIn, nFrames)
             else
                 uci = cell(2, 1);
                 uci{1} = randi([0 1], ouci(1), 1);
-                uci{2} = randi([0 1], ouci(2), 1);
+                if ouci(1) > 0
+                    uci{2} = randi([0 1], ouci(2), 1);
+                else
+                    % If there are no ACK bits, the PUCCH is transmitted only if
+                    % the SR bit is 1. Since the no transmission case is covered
+                    % by the 'False Alarm' test, here we set the bit to 1.
+                    uci{2} = 1;
+                end
             end
 
             if (obj.PUCCHFormat == 0)
                 % For Format0, no encoding.
                 codedUCI = uci;
                 stats.nACKs(snrIdx) = stats.nACKs(snrIdx) + ouci(1);
+                stats.nSRs(snrIdx) = stats.nSRs(snrIdx) + ouci(2);
             elseif (obj.PUCCHFormat == 1)
                 % For Format1, no encoding.
                 codedUCI = uci;
@@ -318,6 +329,8 @@ function stepImpl(obj, SNRIn, nFrames)
         else
             obj.FalseACKsMATLABCtr = joinArrays(obj.FalseACKsMATLABCtr, stats.falseACK, repeatedIdx, sortedIdx);
             obj.FalseACKsSRSCtr = joinArrays(obj.FalseACKsSRSCtr, stats.falseACKSRS, repeatedIdx, sortedIdx);
+            obj.FalseSRsMATLABCtr = joinArrays(obj.FalseSRsMATLABCtr, stats.falseACK, repeatedIdx, sortedIdx);
+            obj.FalseSRsSRSCtr = joinArrays(obj.FalseSRsSRSCtr, stats.falseACKSRS, repeatedIdx, sortedIdx);
         end
     elseif (obj.PUCCHFormat == 1)
         obj.TransmittedNACKsCtr = joinArrays(obj.TransmittedNACKsCtr, stats.nNACKs, repeatedIdx, sortedIdx);
