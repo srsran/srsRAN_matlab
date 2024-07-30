@@ -1,4 +1,4 @@
-%srsPUSCHProcessorUnittest Unit tests for PUSCH processor functions.
+ %srsPUSCHProcessorUnittest Unit tests for PUSCH processor functions.
 %   This class implements unit tests for the PUSCH symbol processor
 %   functions using the matlab.unittest framework. The simplest use
 %   consists in creating an object with 
@@ -158,30 +158,29 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
 
             % Minimum number of PRB. It increases when UCI needs to be
             % multiplexed on the PUSCH resources.
-            MinNumPrb = 1 + (nofHarqAck + nofCsiPart1 + nofCsiPart2);
+            minNumPrb = 1 + (nofHarqAck + nofCsiPart1 + nofCsiPart2);
             
             % Maximum number of PRB of a 5G NR resource grid.
-            MaxGridBW = max(testCase.BWPSizes);
+            maxGridBW = max(testCase.BWPSizes);
 
             % Randomly select BWP start and size values that satisfy the
             % size constraints. 
             BWPSize = testCase.BWPSizes(randi([1, numel(testCase.BWPSizes)]));
-            BWPStart = randi([0, MaxGridBW - BWPSize]);
+            BWPStart = randi([0, maxGridBW - BWPSize]);
 
             NSizeGrid = BWPStart + BWPSize;
             NStartGrid = 0;
           
             % PUSCH PRB start within the BWP.
-            PrbStart = randi([0, BWPSize - MinNumPrb]);
+            prbStart = randi([0, BWPSize - minNumPrb]);
           
             % Fix a maximum number of PRB allocated to PUSCH to limit the
             % size of the test vectors.
-            MaxNumPrb = BWPSize - PrbStart;
+            maxNumPrb = BWPSize - prbStart;
 
             % Select a valid number of PRB allocated to PUSCH.
-            NumPrb = testCase.ValidNumPRB;
-            NumPrb = NumPrb(and((NumPrb >= MinNumPrb), (NumPrb <= MaxNumPrb)));
-            NumPrb = NumPrb(randi([1, numel(NumPrb)]));
+            validNumPrb = testCase.ValidNumPRB((testCase.ValidNumPRB >= minNumPrb) & (testCase.ValidNumPRB <= maxNumPrb));
+            numPrb = validNumPrb(randi([1, numel(validNumPrb)]));
             
             % Random modulation.
             ModulationOpts = {'QPSK', '16QAM', '64QAM', '256QAM'};
@@ -201,7 +200,7 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             NIDNSCID = randi([0, 65535]);
             NSCID = randi([0, 1]);
             NRSID = randi([0, 1007]);
-            DCPosition = randi(12 * [PrbStart, PrbStart + NumPrb]) + BWPStart;
+            DCPosition = randi(12 * [prbStart, prbStart + numPrb]) + BWPStart;
             TransformPrecoding = randi([0, 1]);
 
             % Fix parameters.
@@ -214,7 +213,7 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             carrier.NSlot = NSlot;
             pusch.NStartBWP = BWPStart;
             pusch.NSizeBWP = BWPSize;
-            pusch.PRBSet = PrbStart + (0:NumPrb - 1);
+            pusch.PRBSet = prbStart + (0:numPrb - 1);
             pusch.DMRS.DMRSAdditionalPosition = DMRSAdditionalPosition;
             pusch.DMRS.NIDNSCID = NIDNSCID;
             pusch.DMRS.NSCID = NSCID;
@@ -243,15 +242,15 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             encUL = nrULSCH;
             encUL.TargetCodeRate = targetCodeRate;
             setTransportBlock(encUL, schData);
-            EncSchData = encUL(Modulation, pusch.NumLayers, ...
+            encSchData = encUL(Modulation, pusch.NumLayers, ...
                 ulschInfo.GULSCH, rv);
-            EncHarqAck = nrUCIEncode(harqAck, ulschInfo.GACK, Modulation);
-            EncCsiPart1 = nrUCIEncode(csiPart1, ulschInfo.GCSI1, Modulation);
-            EncCsiPart2 = nrUCIEncode(csiPart2, ulschInfo.GCSI2, Modulation);
+            encHarqAck = nrUCIEncode(harqAck, ulschInfo.GACK, Modulation);
+            encCsiPart1 = nrUCIEncode(csiPart1, ulschInfo.GCSI1, Modulation);
+            encCsiPart2 = nrUCIEncode(csiPart2, ulschInfo.GCSI2, Modulation);
 
             % Multiplex data and UCI.
             codeword = nrULSCHMultiplex(pusch, targetCodeRate, tbs, ...
-                EncSchData, EncHarqAck, EncCsiPart1, EncCsiPart2);
+                encSchData, encHarqAck, encCsiPart1, encCsiPart2);
 
             % Create resource grid.
             grid = nrResourceGrid(carrier);

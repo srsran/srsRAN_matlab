@@ -24,8 +24,6 @@ function [outoutString] = cell2str(inputCell)
 
     if isstring(inputCell) || iscellstr(inputCell)
         outoutString = mat;
-    elseif islogical(mat)
-        outoutString = char(string(mat));
     elseif isscalar(mat)
         if islogical(mat)
             outoutString = char(string(mat));
