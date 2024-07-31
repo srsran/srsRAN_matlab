@@ -18,11 +18,16 @@
 %   A copy of the BSD 2-Clause License can be found in the LICENSE
 %   file in the top-level directory of this distribution.
 
-function ConfigurationIndex = srsSelectPRACHConfigurationIndex(DuplexMode, PreambleFormat)
+function ConfigurationIndex = srsSelectPRACHConfigurationIndex(FrequencyRange, DuplexMode, PreambleFormat)
     % Select table from the corresponding duplex mode.
-    if strcmp(DuplexMode, 'FDD')
+    if strcmp(FrequencyRange, 'FR2')
+        assert(strcmp(DuplexMode, 'TDD'))
+        table = nrPRACHConfig.Tables.ConfigurationsFR2;
+    elseif strcmp(DuplexMode, 'FDD')
+        assert(strcmp(FrequencyRange, 'FR1'))
         table = nrPRACHConfig.Tables.ConfigurationsFR1PairedSUL;
     elseif strcmp(DuplexMode, 'TDD')
+        assert(strcmp(FrequencyRange, 'FR1'))
         table = nrPRACHConfig.Tables.ConfigurationsFR1Unpaired;
     else
         error('Unhandled duplex mode %s.', DuplexMode);

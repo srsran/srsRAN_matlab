@@ -61,9 +61,13 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
         %Type of the tested block.
         srsBlockType = 'phy/lower/modulation'
 
-        %Preamble formats.
-        PreambleFormats = {'0', '1', '2', '3', 'A1', 'A1/B1', 'A2', ...
+        %Preamble formats for FR1.
+        PreambleFormatsFR1 = {'0', '1', '2', '3', 'A1', 'A1/B1', 'A2', ...
             'A2/B2', 'A3', 'A3/B3', 'B1', 'B4', 'C0', 'C2'}
+
+        %Preamble formats for FR2.
+        PreambleFormatsFR2 = {'A1', 'A1/B1', 'A2', 'A2/B2', 'A3', ...
+            'A3/B3', 'B1', 'B4', 'C0', 'C2'}
     end
 
     properties (ClassSetupParameter)
@@ -75,10 +79,11 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
         %Carrier duplexing mode, set to
         %   - FDD for paired spectrum with 15kHz subcarrier spacing, or
         %   - TDD for unpaired spectrum with 30kHz subcarrier spacing.
+        %   - TDD-FR2 for unpaired spectrum in frequency range 2 with 120kHz subcarrier spacing.
         DuplexMode = {'FDD', 'TDD', 'TDD-FR2'}
 
         %Carrier bandwidth in PRB.
-        CarrierBandwidth = {79, 106}
+        CarrierBandwidth = {79, 106, 212, 275}
 
         %Restricted set type.
         %   Possible values are {'UnrestrictedSet', 'RestrictedSetTypeA', 'RestrictedSetTypeB'}.
@@ -90,7 +95,7 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
         %Frequency-domain sequence mapping.
         %   Starting resource block (RB) index of the initial uplink bandwidth
         %   part (BWP) relative to carrier resource grid.
-        RBOffset = {0, 2};
+        RBOffset = {0, 2, 4, 10};
     end
 
     methods (Access = protected)
@@ -126,9 +131,9 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, DuplexMode, CarrierBandwidth, RestrictedSet, ZeroCorrelationZone, RBOffset)
         %testvectorGenerationCases Generates a test vector for the given
-        %   DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet,
-        %   ZeroCorrelationZone and RBOffset. The parameters SequenceIndex
-        %   and PreambleIndex are generated randomly.
+        %   DuplexMode, CarrierBandwidth, RestrictedSet, 
+        %   ZeroCorrelationZone and RBOffset. The parameters SequenceIndex,
+        %   PreambleFormat and PreambleIndex are generated randomly.
 
             import srsTest.helpers.writeComplexFloatFile
             import srsLib.phy.helpers.srsConfigurePRACH
@@ -138,32 +143,37 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
             TestID = testCase.generateTestID;
 
             % Set parameters that depend on the duplex mode.
-            minPreambleIndex = 1;
             switch DuplexMode
                 case 'FDD'
-                    subcarrierSpacing = 15;
+                    FrequencyRange = 'FR1';
+                    SubcarrierSpacing = 15;
+                    preambleFormats = testCase.PreambleFormatsFR1;
                 case 'TDD'
-                    subcarrierSpacing = 30;
+                    FrequencyRange = 'FR1';
+                    SubcarrierSpacing = 30;
+                    preambleFormats = testCase.PreambleFormatsFR1;
                 case 'TDD-FR2'
-                    subcarrierSpacing = 120;
+                    FrequencyRange = 'FR2';
+                    SubcarrierSpacing = 120;
                     DuplexMode = 'TDD';
-                    minPreambleIndex = 5;
+                    preambleFormats = testCase.PreambleFormatsFR2;
                 otherwise
                     error('Invalid duplex mode %s', DuplexMode);
             end
 
-            PreambleFormat = testCase.PreambleFormats{randi([minPreambleIndex, numel(testCase.PreambleFormats)])};
+            PreambleFormat = preambleFormats{randi([1, numel(preambleFormats)])};
 
             % Generate carrier configuration
             carrier = nrCarrierConfig;
             carrier.CyclicPrefix = 'normal';
             carrier.NSizeGrid = CarrierBandwidth;
-            carrier.SubcarrierSpacing = subcarrierSpacing;
+            carrier.SubcarrierSpacing = SubcarrierSpacing;
 
             % Generate PRACH configuration.
             sequenceIndex = randi([0, 1023], 1, 1);
             prach = srsConfigurePRACH( ...
                 PreambleFormat, ...
+                FrequencyRange=frequencyRange, ...
                 DuplexMode=DuplexMode, ...
                 SequenceIndex=sequenceIndex, ...
                 RestrictedSet=RestrictedSet, ...
@@ -194,7 +204,10 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
                     prach.PreambleIndex = randi([0, 63]);
 
                     % Generate waveform for each occasion.
-                    [occasion, gridset, info] = srsPRACHgenerator(carrier, prach);
+                    [occasionTmp, gridset, info] = srsPRACHgenerator(carrier, prach);
+
+                    % Padd occasion with zeros to match the waveform size.
+                    occasion = [occasioccasionTmpon; zeros(numel(waveform) - numel(occasionTmp), 1)];
 
                     % Combine the waveform of each occasion.
                     waveform = occasion + waveform;
@@ -233,17 +246,19 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
                 @writeComplexFloatFile, PRACHSymbols);
 
             srsPRACHFormat = sprintf('to_prach_format_type("%s")', PreambleFormat);
-            Numerology = ['subcarrier_spacing::kHz' num2str(carrier.SubcarrierSpacing)];
+
+            % Slot configuration.
+            slotConfig = {log2(carrier.SubcarrierSpacing/15), info.NPRACHSlot};
 
             % srsran PRACH configuration
             srsPRACHConfig = {...
+                slotConfig, ...                       % slot
                 srsPRACHFormat, ...                   % format
                 max([1, prach.NumTimeOccasions]), ... % nof_td_occasions
                 max([1, NumFreqOccasions]), ...       % nof_fd_occasions
                 StartSymbolWithinSlot , ...           % start_symbol
                 prach.RBOffset, ...                   % rb_offset
                 carrier.NSizeGrid, ...                % nof_prb_ul_grid
-                Numerology, ...                       % pusch_scs
                 };
 
             % test context

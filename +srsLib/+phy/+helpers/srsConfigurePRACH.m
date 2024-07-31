@@ -49,7 +49,7 @@ function prach = setPreambleFormat(prach, preambleFormat)
 
     % Select configuration index according to the duplex mode and preamble
     % format.
-    prach.ConfigurationIndex = srsSelectPRACHConfigurationIndex(prach.DuplexMode, preambleFormat);
+    prach.ConfigurationIndex = srsSelectPRACHConfigurationIndex(prach.FrequencyRange, prach.DuplexMode, preambleFormat);
 
     % Force PRACH parameters that depend on the format.
     switch preambleFormat
@@ -69,9 +69,6 @@ function prach = setPreambleFormat(prach, preambleFormat)
             prach.RestrictedSet = 'UnrestrictedSet';
             if strcmp(prach.DuplexMode, 'TDD')
                 prach.ActivePRACHSlot = 1;
-                prach.SubcarrierSpacing = 30;
-            else
-                prach.SubcarrierSpacing = 15;
             end
             prach.LRA = 139;
     end
