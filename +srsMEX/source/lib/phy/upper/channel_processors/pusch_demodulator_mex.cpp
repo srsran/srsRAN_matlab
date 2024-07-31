@@ -173,6 +173,9 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
   // Number of transmit layers.
   demodulator_config.nof_tx_layers = in_dem_cfg["NumLayers"][0];
 
+  // Transform precoding.
+  demodulator_config.enable_transform_precoding = in_dem_cfg["TransformPrecoding"][0];
+
   // Build the Rx port list.
   const TypedArray<double> rx_ports_in = in_dem_cfg["RxPorts"];
   for (double rxp : rx_ports_in) {

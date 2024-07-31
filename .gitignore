@@ -1,0 +1,6 @@
+# runSRSRANUnittest results.
+/testvector_outputs
+# MATLAB automatic save files.
+*.asv
+# MEX libraries.
+*.mexa64

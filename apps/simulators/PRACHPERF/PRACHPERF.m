@@ -63,10 +63,12 @@
 %   TimeErrorTolerance      - Time error tolerance in microseconds.
 %   TestType                - Test type ('Detection', 'False Alarm').
 %   IgnoreCFO               - CFO flag: if true, the detector will assume perfect
-%                             frequency synchronization.
-%   DetectionThreshold      - Custom detection threshold (NaN for default or positive value).
+%                             frequency synchronization (only for ImplementationType 'matlab').
+%   DetectionThreshold      - Custom detection threshold (NaN for default or positive value,
+%                             only for ImplementationType 'matlab').
+%   ImplementationType      - PRACH detector implementation type('matlab', 'srs'). Default is 'matlab'.
 %   QuickSimulation         - Quick-simulation flag: set to true to stop each point
-%                             after 100 failed transport blocks (tunable).
+%                             after 100 failures (tunable).
 %
 %   When the simulation is over, the object allows access to the following
 %   results properties (depending on TestType).
@@ -112,8 +114,8 @@ classdef PRACHPERF < matlab.System
         PreambleIndex  (1, 1) double {mustBeInteger, mustBeNonnegative} = 32
         %Cyclic shift width.
         %   Parameter NCS as defined in TS38.211 Tables 6.3.3.1-5, 6.3.3.1-6, 6.3.3.1-7.
-        %   Default is 13.
-        NCS (1, 1) double {mustBeInteger, mustBeNonnegative} = 13
+        %   Default is 0.
+        NCS (1, 1) double {mustBeInteger, mustBeNonnegative} = 0
         %PUSCH subcarrier spacing in kHz (15, 30, 60, 120).
         %   Default is 15 kHz.
         PUSCHSubcarrierSpacing (1, 1) double {mustBeMember(PUSCHSubcarrierSpacing, [15 30 60 120])} = 15
@@ -133,11 +135,15 @@ classdef PRACHPERF < matlab.System
         %   Possible values are ('Detection', 'False Alarm'). Default is 'Detection'.
         TestType (1, :) char {mustBeMember(TestType, {'Detection', 'False Alarm'})} = 'Detection'
         %CFO flag: if true, the detector will assume perfect frequency synchronization.
-        IgnoreCFO (1, 1) logical = false
-        %Custom detection threshold.
+        %   Only applies when ImplementationType is 'matlab'. For ImplementationType 'srs'
+        %   this is assumed true.
+        IgnoreCFO (1, 1) logical = true
+        %Custom detection threshold (only for ImplementationType 'matlab').
         %   If NaN, the detector uses the default threshold value.
         DetectionThreshold (1, 1) double = NaN
-
+        %PRACH detector implementation type('matlab', 'srs'). Default is 'matlab'.
+        %   Both implementations refer to the same algorithm, but the 'srs' one runs the MEX version.
+        ImplementationType (1, :) char {mustBeMember(ImplementationType, {'matlab', 'srs'})} = 'matlab'
     end
 
     properties (Access = private, Hidden)
@@ -327,6 +333,10 @@ classdef PRACHPERF < matlab.System
             % Get the channel characteristic information.
             channelInfo = info(channel);
 
+            % Implementation flag.
+            useMEX = strcmp(obj.ImplementationType, 'srs');
+            prachDetectorMex = srsMEX.phy.srsPRACHDetector;
+
             for snrIdx = 1:numel(SNRdB)
 
                 % Display progress in the command window.
@@ -407,9 +417,18 @@ classdef PRACHPERF < matlab.System
                     prachDemodulated = srsLib.phy.lower.modulation.srsPRACHdemodulator(carrier, ...
                         prachRx, gridset.Info, rxwave, winfo);
 
-                    % PRACH detection for all cell preamble indices.
-                    [indicesMask, offsets] = srsLib.phy.upper.channel_processors.srsPRACHdetector(carrier, prachRx, ...
-                        prachDemodulated, ignoreCFO, detectionThreshold);
+                    if useMEX
+                        prachDemodulated = reshape(prachDemodulated, prach.LRA, [], obj.NumReceiveAntennas);
+                        prachResults = prachDetectorMex(prachRx, prachDemodulated);
+                        indicesMask = false(64, 1);
+                        indicesMask(prachResults.PreambleIndices + 1) = true;
+                        offsets = nan(64, 1);
+                        offsets(prachResults.PreambleIndices + 1) = prachResults.TimeAdvance * 1e6;
+                    else
+                        % PRACH detection for all cell preamble indices.
+                        [indicesMask, offsets] = srsLib.phy.upper.channel_processors.srsPRACHdetector(carrier, prachRx, ...
+                            prachDemodulated, ignoreCFO, detectionThreshold);
+                    end
 
                     % Test for preamble detection.
                     if any(indicesMask)
@@ -490,6 +509,8 @@ classdef PRACHPERF < matlab.System
                     flag = isempty(obj.Detected) || obj.isDetectionTest || ~obj.isLocked;
                 case 'OffsetError'
                     flag = isempty(obj.TimingAvg) || ~obj.isDetectionTest || ~obj.isLocked;
+                case {'DetectionThreshold', 'IgnoreCFO'}
+                    flag = ~strcmp(obj.ImplementationType, 'matlab');
                 otherwise
                     flag = false;
             end

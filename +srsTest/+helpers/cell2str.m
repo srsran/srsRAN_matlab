@@ -25,7 +25,11 @@ function [outoutString] = cell2str(inputCell)
     if isstring(inputCell) || iscellstr(inputCell)
         outoutString = mat;
     elseif isscalar(mat)
-        outoutString = num2str(mat);
+        if islogical(mat)
+            outoutString = char(string(mat));
+        else
+            outoutString = num2str(mat);
+        end
     else
         outoutString = ['{', array2str(mat), '}'];
     end

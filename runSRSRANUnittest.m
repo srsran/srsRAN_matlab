@@ -159,6 +159,8 @@ function unittestClass = name2Class(name)
             unittestClass = ?srsSSBProcessorUnittest;
         case 'tbs_calculator'
             unittestClass = ?srsTBSCalculatorUnittest;
+        case 'transform_precoder'
+            unittestClass = ?srsTransformPrecoderUnittest;
         case 'uci_decoder'
             unittestClass = ?srsUCIDecoderUnittest;
         case 'ulsch_demultiplex'

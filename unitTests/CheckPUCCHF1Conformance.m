@@ -72,13 +72,15 @@ classdef CheckPUCCHF1Conformance < matlab.unittest.TestCase
                 obj.assertFail(['PUCCHBLER simulation failed with error: ', ME.message]);
             end
 
-            obj.verifyGreaterThanOrEqual(pp.ACKDetectionRateSRS, 0.99, 'The PUCCH F1 ACK detection rate should not be lower than 99%.');
-            obj.assertGreaterThanOrEqual(pp.ACKDetectionRateSRS, 0.95, 'The PUCCH F1 ACK detection rate should not be lower than 99%.');
+            obj.verifyGreaterThanOrEqual(pp.ACKDetectionRateSRS, 0.99, ...
+                'WARNING: The PUCCH F1 ACK detection rate should not be lower than 99%.');
+            obj.assertGreaterThanOrEqual(pp.ACKDetectionRateSRS, 0.95, ...
+                'ERROR: The PUCCH F1 ACK detection rate is below the hard acceptance threshold of 99%.');
 
             obj.verifyLessThanOrEqual(pp.NACK2ACKDetectionRateSRS, 0.001, ...
-                'The PUCCH F1 NACK-to-ACK detection rate should not be larger than 0.1%.');
+                'WARNING: The PUCCH F1 NACK-to-ACK detection rate should not be larger than 0.1%.');
             obj.assertLessThanOrEqual(pp.NACK2ACKDetectionRateSRS, 0.005, ...
-                'The PUCCH F1 NACK-to-ACK detection rate should not be larger than 0.1%.');
+                'ERROR: The PUCCH F1 NACK-to-ACK detection rate is above the hard acceptance threshold of 0.5%.');
 
             % TODO: export Detection Rate (and possibly other metrics) to grafana.
         end % of function checkPUCCHF1detection(obj, TestConfig)
@@ -106,9 +108,9 @@ classdef CheckPUCCHF1Conformance < matlab.unittest.TestCase
             end
 
             obj.verifyLessThanOrEqual(pp.FalseACKDetectionRateSRS, 0.01, ...
-                'The PUCCH F1 false ACK detection rate should not be higher than 1%.');
+                'WARNING: The PUCCH F1 false ACK detection rate should not be higher than 1%.');
             obj.assertLessThanOrEqual(pp.FalseACKDetectionRateSRS, 0.05, ...
-                'The PUCCH F1 false ACK detection rate should not be higher than 1%.');
+                'ERROR: The PUCCH F1 false ACK detection rate is above the hard acceptance threshold of 5%.');
 
             % TODO: export Detection Rate (and possibly other metrics) to grafana.
         end % of function checkPUCCHF1falseack(obj, TestConfig)
@@ -143,6 +145,8 @@ classdef CheckPUCCHF1Conformance < matlab.unittest.TestCase
             pp.MaximumDopplerShift = 100;
             pp.ImplementationType = 'srs';
             pp.PerfectChannelEstimator = false;
+            pp.QuickSimulation = false;
+            pp.DisplaySimulationInformation = true;
             % TODO: enable intra-slot frequency hopping when ready in srsRAN.
 
         end % of function pp = preparePUCCH(obj, TestConfig)

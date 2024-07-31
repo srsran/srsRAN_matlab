@@ -795,8 +795,18 @@ classdef PUSCHBLER < matlab.System
                     % to emulate the effect that thecompression used in the O-FH has 
                     % on the PUSCH decoding performance.
                     if compGrid
-                       [compRXGrid, compParam] = srsLib.ofh.compression.srsCompressor(rxGrid, 'BFP', compWidth);
-                       rxGrid = srsLib.ofh.compression.srsDecompressor(compRXGrid, compParam, 'BFP', compWidth);
+                        % Adjust the dynamic range of the signal to the compressor. We set the
+                        % maximum amplitude with the best precision (i.e., exponent zero) to
+                        % 1.5 (recall that the maximum component amplitude for 256QAM is 1.1504).
+                        % All IQ values grater than 1.5 will have a non-zero exponent and,
+                        % in turn, less precision. We also round real and imaginary parts
+                        % of the grid entries to work around a bug in the MATLAB compression
+                        % algorithm.
+                        sf = 2^(compWidth - 1) / 1.5;
+                        rxGrid = round(rxGrid * sf);
+                        [compRXGrid, compParam] = srsLib.ofh.compression.srsCompressor(rxGrid, 'BFP', compWidth);
+                        rxGrid = srsLib.ofh.compression.srsDecompressor(compRXGrid, compParam, 'BFP', compWidth);
+                        rxGrid = rxGrid / sf;
                     end
 
                     dmrsLayerIndices = nrPUSCHDMRSIndices(carrier, puschNonCodebook);

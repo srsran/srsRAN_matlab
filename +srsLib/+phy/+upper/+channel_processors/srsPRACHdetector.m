@@ -1085,7 +1085,12 @@ function [winMargin, threshold] = getThreshold(prach, nAntennas, scs, ignoreCFO)
         [0.130, 12, 1], ... % Ant4_SCS15_FB4_NCS34_noCFO1
         [0.104, 12, 1], ... % Ant4_SCS15_FB4_NCS46_noCFO1
         [0.080, 12, 1], ... % Ant4_SCS15_FB4_NCS69_noCFO1
-        [0.229, 12, 1], ... % Ant1_SCS30_FB4_NCS0_noCFO1
+        ... This is the threshold value that best approaches the TS requirements
+        ... when running MATLAB simulations. However, lab experiments using wired
+        ... RF show a high false alarm probability due to leaking from adjacent
+        ... resource blocks carrying PUSCH or PUCCH, or from external interference.
+        ... [0.229, 12, 1], ... % Ant1_SCS30_FB4_NCS0_noCFO1
+        [0.458, 12, 1], ... % Ant1_SCS30_FB4_NCS0_noCFO1
         [1.000, 12, 0], ... % Ant1_SCS30_FB4_NCS2_noCFO1
         [1.000, 12, 0], ... % Ant1_SCS30_FB4_NCS4_noCFO1
         [1.000, 12, 1], ... % Ant1_SCS30_FB4_NCS6_noCFO1
@@ -1161,7 +1166,7 @@ function [winMargin, threshold] = getThreshold(prach, nAntennas, scs, ignoreCFO)
              'Using a non-calibrated configuration with a suboptimal detection threshold.');
          if ismember(prach.Format, {'0', '1', '2', '3'})
              winMargin = 5;
-             threshold = 0.1;
+             threshold = 2;
          else
              winMargin = 12;
              threshold = 0.3;

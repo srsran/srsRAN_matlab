@@ -31,7 +31,6 @@ function setupImpl(obj)
         obj.PUCCH.GroupHopping = "neither";
         obj.PUCCH.HoppingID = 0;
         obj.PUCCH.InitialCyclicShift = 0;
-        obj.PUCCH.Interlacing = 0;
     elseif (obj.PUCCHFormat == 1)
         obj.PUCCH = nrPUCCH1Config;
         obj.PUCCH.GroupHopping = "neither";
@@ -183,7 +182,7 @@ function stats = updateStatsSRSF0(stats, uci, msg, isDetectTest, snrIdx)
     else % false alarm test
         % False ACK.
         if msg.isValid
-            stats.falseACKSRS(snrIdx) = stats.falseACKSRS(snrIdx) + numel(uciRxSRS);
+            stats.falseACKSRS(snrIdx) = stats.falseACKSRS(snrIdx) + numel(uci{1});
         end
     end
 end

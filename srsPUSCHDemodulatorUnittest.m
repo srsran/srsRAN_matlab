@@ -60,6 +60,11 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
 
         %Type of the tested block.
         srsBlockType = 'phy/upper/channel_processors/pusch'
+
+        %Valid number of RB that accept transform precoding.
+        ValidNumPRB = [...
+              1,   2,   3,   4,   5,   6,   8,   9,  10,  12,  15,  16, ...
+             18,  20,  24,  25];
     end
 
     properties (ClassSetupParameter)
@@ -183,14 +188,17 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
     end % of methods (Access = private)
 
     methods (Access = private)
-        function setupsimulation(obj, DMRSConfigurationType, Modulation, nofRxPorts, NumLayers)
+        function setupsimulation(obj, DMRSConfigurationType, Modulation, nofRxPorts, NumLayers, TransformPrecoding)
         % Sets secondary simulation variables.
             import srsLib.phy.helpers.srsConfigureCarrier
             import srsLib.phy.helpers.srsConfigurePUSCH
 
+            % Select a random number of PRB.
+            NumPRB = obj.ValidNumPRB(randi([1, length(obj.ValidNumPRB)]));
+
             % Configure carrier.
             NCellID = randi([0, 1007]);
-            NSizeGrid = 25;
+            NSizeGrid = NumPRB;
             obj.carrier = srsConfigureCarrier(NCellID, NSizeGrid);
 
             % Set symbol allocation.
@@ -199,7 +207,6 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             SymbolAllocation = [startSymbol, nofSymbols];
 
             % Prepare PRB set.
-            NumPRB = randi([1, NSizeGrid]);
             PRBSet = 0:(NumPRB-1);
             NID = obj.carrier.NCellID;
 
@@ -209,6 +216,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             obj.pusch.DMRS.DMRSConfigurationType = DMRSConfigurationType;
             obj.pusch.DMRS.DMRSAdditionalPosition = randi([0, 3]);
             obj.pusch.DMRS.NumCDMGroupsWithoutData = randi([1, obj.pusch.DMRS.DMRSConfigurationType + 1]);
+            obj.pusch.TransformPrecoding = TransformPrecoding;
 
             % Generate PUSCH data grid indices.
             [obj.puschTxIndices, puschInfo] = nrPUSCHIndices(obj.carrier, obj.pusch);
@@ -302,8 +310,14 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             NumRxPorts = ChannelSize(1);
             NumLayers = ChannelSize(2);
 
+            % Select randomly the use of transform precoding.
+            TransformPrecoding = 0;
+            if NumLayers == 1
+                TransformPrecoding = randi([0,1]);
+            end
+
             % Configure the test.
-            setupsimulation(obj, DMRSConfigurationType, Modulation, NumRxPorts, NumLayers);
+            setupsimulation(obj, DMRSConfigurationType, Modulation, NumRxPorts, NumLayers, TransformPrecoding);
 
             % Estimate average energy per resource element (EPRE).
             epredB = 10 * log10(mean(abs(obj.ce) .^ 2, 'all'));
@@ -346,6 +360,11 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             % Equalize.
             [eqSymbols, eqNoise] = srsChannelEqualizer(approxbf16(rxSymbols), approxbf16(cePusch), 'ZF', noiseVar, 1.0);
 
+            % Revert transform precoding if it is present.
+            if obj.pusch.TransformPrecoding
+                eqSymbols = nrTransformDeprecode(eqSymbols, length(obj.pusch.PRBSet));
+            end
+
             % Layer demapping.
             eqSymbols = nrLayerDemap(eqSymbols);
             eqSymbols = eqSymbols{1};
@@ -386,6 +405,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             % Generate a PUSCH RB allocation mask string.
             rbAllocationMask = zeros(obj.carrier.NSizeGrid, 1);
             rbAllocationMask(obj.pusch.PRBSet + 1) = 1;
+            rbAllocationMask = {rbAllocationMask};
 
             dmrsTypeString = sprintf('dmrs_type::TYPE%d', obj.pusch.DMRS.DMRSConfigurationType);
 
@@ -403,6 +423,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
                 obj.pusch.DMRS.NumCDMGroupsWithoutData, ... % nof_cdm_groups_without_data
                 obj.pusch.NID, ...                          % n_id
                 obj.pusch.NumLayers, ...                    % nof_tx_layers
+                obj.pusch.TransformPrecoding == 1, ...      % enable_transform_precoding
                 portsString, ...                            % rx_ports
                 };
 
@@ -451,8 +472,14 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             NumRxPorts = ChannelSize(1);
             NumLayers = ChannelSize(2);
 
+            % Select randomly the use of transform precoding.
+            TransformPrecoding = 0;
+            if NumLayers == 1
+                TransformPrecoding = randi([0,1]);
+            end
+
             % Configure the test.
-            setupsimulation(obj, DMRSConfigurationType, Modulation, NumRxPorts, NumLayers);
+            setupsimulation(obj, DMRSConfigurationType, Modulation, NumRxPorts, NumLayers, TransformPrecoding);
 
             % Generate receive grid.
             rxGrid = nrResourceGrid(obj.carrier, NumRxPorts);
@@ -489,6 +516,11 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
 
             % Equalize.
             [eqSymbols, eqNoise] = srsChannelEqualizer(approxbf16(rxSymbols), approxbf16(cePusch), 'ZF', noiseVar, 1.0);
+
+            % Revert transform precoding if it is present.
+            if obj.pusch.TransformPrecoding
+                eqSymbols = nrTransformDeprecode(eqSymbols, length(obj.pusch.PRBSet));
+            end
 
             % Initialize the SRS PUSCH demodulator mex.
             PUSCHDemodulator = srsPUSCHDemodulator;

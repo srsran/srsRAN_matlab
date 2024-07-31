@@ -214,7 +214,7 @@ classdef srsPUCCHProcessorFormat0Unittest < srsTest.srsBlockUnittest
 
             import srsMEX.phy.srsPUCCHProcessor
 
-            [rxGrid, pucchDataIndices, payloadData, pucch, carrier] = ...
+            [rxGrid, ~, payloadData, pucch, carrier] = ...
                 generateSimData(numerology, allocation, payload, NumRxPorts);
 
             srspucch = srsPUCCHProcessor;

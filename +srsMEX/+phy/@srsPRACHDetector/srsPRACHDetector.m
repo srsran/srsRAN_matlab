@@ -32,7 +32,7 @@
 %      TimeResolution       - detector time resolution;
 %      MaxTimeAdvance       - detector maximum tolerated time advance;
 %      PreambleIndices      - array of indices of the detected PRACH preambles;
-%      TimeAdvance          - array of timing advance values between the observed arrival time
+%      TimeAdvance          - array of timing advance values in seconds between the observed arrival time
 %                             (for the corresponding preamble indices) and the reference uplink time;
 %      NormalizedMetric     - array of detection metrics, normalized with respect to the
 %                             detection threshold.
