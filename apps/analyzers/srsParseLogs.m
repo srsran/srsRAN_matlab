@@ -111,7 +111,7 @@ function [carrier, phych, extra] = srsParseLogs
 
     isPUSH = true;
     if strcmp(chType{1}, 'PUSCH')
-        phych = srsLib.phy.helpers.srsConfigurePUSCH();
+        phych = nrPUSCHConfig;
     elseif strcmp(chType{1}, 'PUCCH')
         isPUSH = false;
         % If a PUCCH entry, we need the PUCCH format.

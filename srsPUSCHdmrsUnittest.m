@@ -143,7 +143,6 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
 
             import srsTest.helpers.cellarray2str
             import srsLib.phy.helpers.srsConfigureCarrier
-            import srsLib.phy.helpers.srsConfigurePUSCH
             import srsLib.phy.upper.signal_processors.srsPUSCHdmrs
             import srsLib.phy.upper.signal_processors.srsChannelEstimator
             import srsLib.ran.utils.scs2cps
@@ -185,23 +184,23 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
             NFrame = 0;
             CyclicPrefix = 'normal';
             RNTI = 0;
-            NStartBWP = 0;
-            NSizeBWP = NSizeGrid;
+            nStartBWP = 0;
+            nSizeBWP = NSizeGrid;
             NIDNSCID = NCellID;
-            NID = NCellID;
+            nID = NCellID;
             NRSID = NCellID;
-            Modulation = '16QAM';
-            MappingType = 'A';
-            SymbolAllocation = [1 13];
+            modulation = '16QAM';
+            mappingType = 'A';
+            symbolAllocation = [1 13];
             PRBSet = PRBstart:PRBend;
             amplitude = sqrt(2);
             PUSCHports = 0:(NumLayers-1);
 
             % Select randomly transform precoding if only one layer and 
             % configuration type 1.
-            TransformPrecoding = 0;
+            transformPrecoding = 0;
             if (NumLayers == 1) && (DMRSConfigurationType == 1)
-                TransformPrecoding = randi([0, 1]);
+                transformPrecoding = randi([0, 1]);
             end
 
             % Configure the carrier according to the test parameters.
@@ -221,9 +220,19 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
                 );
 
             % Configure the PUSCH according to the test parameters.
-            pusch = srsConfigurePUSCH(DMRS, NStartBWP, NSizeBWP, NID, RNTI, ...
-                Modulation, NumLayers, MappingType, SymbolAllocation, PRBSet, ...
-                TransformPrecoding);
+            pusch = nrPUSCHConfig( ...
+                DMRS=DMRS, ...
+                NStartBWP=nStartBWP, ...
+                NSizeBWP=nSizeBWP, ...
+                NID=nID, ...
+                RNTI=RNTI, ...
+                Modulation=modulation, ...
+                NumLayers=NumLayers, ...
+                MappingType=mappingType, ...
+                SymbolAllocation=symbolAllocation, ...
+                PRBSet=PRBSet, ...
+                TransformPrecoding=transformPrecoding ...
+                );
 
             % Call the PUSCH DM-RS symbol processor MATLAB functions.
             [DMRSsymbols, symbolIndices] = srsPUSCHdmrs(carrier, pusch);
@@ -292,7 +301,7 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
             % generate a RB allocation mask string
             rbAllocationMask = RBallocationMask2string(PRBstart, PRBend);
 
-            if TransformPrecoding == 0
+            if transformPrecoding == 0
                 SequenceConfig = {...
                     DmrsTypeStr, ...         % type
                     NumLayers, ...           % nof_tx_layers
@@ -350,10 +359,10 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
                 hop_.nPRBs = length(PRBSet);
                 hop_.maskPRBs = false(NSizeGrid, 1);
                 hop_.maskPRBs(PRBSet + 1) = true;
-                hop_.startSymbol = SymbolAllocation(1);
-                hop_.nAllocatedSymbols = SymbolAllocation(2);
+                hop_.startSymbol = symbolAllocation(1);
+                hop_.nAllocatedSymbols = symbolAllocation(2);
                 hop_.CHsymbols = false(14, 1);
-                hop_.CHsymbols((1:SymbolAllocation(2)) + SymbolAllocation(1)) = true;
+                hop_.CHsymbols((1:symbolAllocation(2)) + symbolAllocation(1)) = true;
             end
         end % of function testvectorGenerationCases
     end % of methods (Test, TestTags = {'testvector'})

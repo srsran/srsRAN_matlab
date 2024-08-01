@@ -149,7 +149,6 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
         % Sets secondary simulation variables.
 
             import srsLib.phy.helpers.srsConfigureCarrier
-            import srsLib.phy.helpers.srsConfigurePUSCH
             import srsLib.phy.helpers.srsExpandMCS
             import srsLib.phy.helpers.srsGetModulation
 
@@ -178,15 +177,17 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
             % to the current modulation and scheme configuration.
             [R, Qm] = srsExpandMCS(mcs, obj.mcsTable);
             obj.TargetCodeRate = R/1024;
-            ModulationLoc = srsGetModulation(Qm);
-            obj.Modulation = ModulationLoc;
+            modulation = srsGetModulation(Qm);
+            obj.Modulation = modulation;
 
-            % Configure the PUSCH according to the test parameters.
-            NStartBWPLoc = obj.NStartBWP;
-            NSizeBWPLoc = obj.NSizeBWP;
-            NumLayersLoc = obj.NumLayers;
-            pusch = srsConfigurePUSCH(NStartBWPLoc, NSizeBWPLoc, ModulationLoc, ...
-                NumLayersLoc, SymbolAllocation, PRBSet);
+            pusch = nrPUSCHConfig( ...
+                NStartBWP=obj.NStartBWP, ...
+                NSizeBWP=obj.NSizeBWP, ...
+                Modulation=modulation, ...
+                NumLayers=obj.NumLayers, ...
+                SymbolAllocation=SymbolAllocation, ...
+                PRBSet=PRBSet ...
+                );
             obj.PUSCH = pusch;
 
             % Get the encoded TB length.
@@ -195,7 +196,7 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
             obj.encodedTBLength = PUSCHInfo.G;
 
             % Compute the transport block size.
-            obj.TransportBlockSize = nrTBS(ModulationLoc, obj.NumLayers, ...
+            obj.TransportBlockSize = nrTBS(modulation, obj.NumLayers, ...
                 numel(PRBSet), PUSCHInfo.NREPerPRB, obj.TargetCodeRate);
 
             % Get UL-SCH coding information.
