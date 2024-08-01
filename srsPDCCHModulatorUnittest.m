@@ -122,7 +122,6 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
             import srsTest.helpers.writeResourceGridEntryFile
             import srsLib.phy.upper.channel_processors.srsPDCCHmodulator
             import srsTest.helpers.writeUint8File
-            import srsLib.phy.helpers.srsConfigurePDCCH
             import srsLib.phy.helpers.srsConfigureCORESET
             import srsLib.phy.helpers.srsConfigureCarrier
             import srsTest.helpers.RBallocationMask2string
@@ -133,7 +132,7 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
             % Use a unique nCellID, nSlot and RNTI for each test.
             testCellID = testCase.randomizeTestvector(testID + 1) - 1;
             NSlot = testCase.randomizeSlot(testID + 1);
-            RNTI = randi([0, 65519]);
+            rnti = randi([0, 65519]);
             maxAllowedStartSymbol = 14 - Duration;
             startSymbolIndex = randi([1, maxAllowedStartSymbol]);
             if strcmp(CCEREGMapping, 'interleaved')
@@ -152,10 +151,10 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
             NFrame = 0;
             maxFrequencyResources = floor(NSizeGrid / 6);
             FrequencyResources = int2bit(2^maxFrequencyResources - 1, maxFrequencyResources).';
-            SearchSpaceType = 'ue';
-            NStartBWP = 0;
-            NSizeBWP = NSizeGrid;
-            AllocatedCandidate = 1;
+            searchSpaceType = 'ue';
+            nStartBWP = 0;
+            nSizeBWP = NSizeGrid;
+            allocatedCandidate = 1;
             DMRSScramblingID = testCellID;
 
             % Only encode the PDCCH when it fits.
@@ -170,15 +169,23 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
                     NSlot, NFrame, CyclicPrefix);
 
                 % Configure the CORESET according to the test parameters.
-                CORESET = srsConfigureCORESET(FrequencyResources, Duration, ...
+                coreset = srsConfigureCORESET(FrequencyResources, Duration, ...
                     CCEREGMapping, REGBundleSize, InterleaverSize);
 
                 % Configure the PDCCH according to the test parameters.
-                pdcch = srsConfigurePDCCH(CORESET, NStartBWP, NSizeBWP, RNTI, ...
-                    AggregationLevel, SearchSpaceType, AllocatedCandidate, DMRSScramblingID);
+                pdcch = nrPDCCHConfig( ...
+                    CORESET=coreset, ...
+                    NStartBWP=nStartBWP, ...
+                    NSizeBWP=nSizeBWP, ...
+                    RNTI=rnti, ...
+                    AggregationLevel=AggregationLevel, ...
+                    AllocatedCandidate=allocatedCandidate, ...
+                    DMRSScramblingID=DMRSScramblingID ...
+                    );
 
                 % Set startSymbol using random value generated above.
                 pdcch.SearchSpace.StartSymbolWithinSlot = startSymbolIndex;
+                pdcch.SearchSpace.SearchSpaceType = searchSpaceType;
 
                 % Generate random codeword, 54REs per CCE, 2 bits per QPSK symbol.
                 codeWord = randi([0 1], 54 * 2 * AggregationLevel, 1);
@@ -187,7 +194,7 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
                 testCase.saveDataFile('_test_input', testID, @writeUint8File, codeWord);
 
                 % Call the PDCCH modulator MATLAB functions.
-                [PDCCHsymbols, symbolIndices] = srsPDCCHmodulator(codeWord, carrier, pdcch, DMRSScramblingID, RNTI);
+                [PDCCHsymbols, symbolIndices] = srsPDCCHmodulator(codeWord, carrier, pdcch, DMRSScramblingID, rnti);
 
                 % Write each complex symbol into a binary file, and the associated indices to another.
                 testCase.saveDataFile('_test_output', testID, ...
@@ -201,7 +208,7 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
                     startSymbolIndex, ...    start_symbol_index
                     Duration, ...            duration
                     DMRSScramblingID, ...    n_id
-                    RNTI, ...                n_rnti
+                    rnti, ...                n_rnti
                     1.0, ...                 scaling
                     'default_precoding'...   precoding
                     };

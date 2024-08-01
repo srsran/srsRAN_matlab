@@ -126,7 +126,6 @@ classdef srsPDCCHdmrsUnittest < srsTest.srsBlockUnittest
             import srsTest.helpers.cellarray2str
             import srsLib.phy.helpers.srsConfigureCarrier
             import srsLib.phy.helpers.srsConfigureCORESET
-            import srsLib.phy.helpers.srsConfigurePDCCH
             import srsLib.phy.upper.signal_processors.srsPDCCHdmrs
             import srsLib.phy.helpers.srsGetUniqueSymbolsIndices
             import srsTest.helpers.writeResourceGridEntryFile
@@ -157,11 +156,11 @@ classdef srsPDCCHdmrsUnittest < srsTest.srsBlockUnittest
             FrequencyResources = int2bit(2^maxFrequencyResources - 1, maxFrequencyResources).';
             InterleaverSize = 2;
             REGBundleSize = 6;
-            SearchSpaceType = 'ue';
-            RNTILoc = 0;
-            NStartBWP = 0;
-            NSizeBWP = NSizeGrid;
-            AllocatedCandidate = 1;
+            searchSpaceType = 'ue';
+            rnti = 0;
+            nStartBWP = 0;
+            nSizeBWP = NSizeGrid;
+            allocatedCandidate = 1;
             referencePointKrb = 0;
             startSymbolIndex = 0;
             DMRSScramblingID = NCellIDLoc;
@@ -181,12 +180,20 @@ classdef srsPDCCHdmrsUnittest < srsTest.srsBlockUnittest
                     NStartGrid, NSlotLoc, NFrame, CyclicPrefix);
 
                 % configure the CORESET according to the test parameters
-                CORESET = srsConfigureCORESET(FrequencyResources, Duration, ...
+                coreset = srsConfigureCORESET(FrequencyResources, Duration, ...
                     CCEREGMapping, REGBundleSize, InterleaverSize);
 
                 % configure the PDCCH according to the test parameters
-                pdcch = srsConfigurePDCCH(CORESET, NStartBWP, NSizeBWP, RNTILoc, ...
-                    AggregationLevel, SearchSpaceType, AllocatedCandidate, DMRSScramblingID);
+                pdcch = nrPDCCHConfig( ...
+                    CORESET=coreset, ...
+                    NStartBWP=nStartBWP, ...
+                    NSizeBWP=nSizeBWP, ...
+                    RNTI=rnti, ...
+                    AggregationLevel=AggregationLevel, ...
+                    AllocatedCandidate=allocatedCandidate, ...
+                    DMRSScramblingID=DMRSScramblingID ...
+                    );
+                pdcch.SearchSpace.SearchSpaceType = searchSpaceType;
 
                 % call the PDCCH DMRS symbol processor MATLAB functions
                 [DMRSsymbols, symbolIndices] = srsPDCCHdmrs(carrier, pdcch);

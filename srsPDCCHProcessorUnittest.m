@@ -117,7 +117,6 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
         import srsLib.phy.upper.signal_processors.srsPDCCHdmrs
         import srsLib.ran.pdcch.srsPDCCHCandidatesUE
         import srsTest.helpers.writeUint8File
-        import srsLib.phy.helpers.srsConfigurePDCCH
         import srsLib.phy.helpers.srsConfigureCORESET
         import srsLib.phy.helpers.srsConfigureSearchSpace
         import srsLib.phy.helpers.srsConfigureCarrier
@@ -148,8 +147,8 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
         NFrame = randi([0, 1023]);
         FrequencyResources = ones(1, floor(NSizeGrid / 6));
         SearchSpaceType = 'ue';
-        NStartBWP = 0;
-        NSizeBWP = NSizeGrid;
+        nStartBWP = 0;
+        nSizeBWP = NSizeGrid;
         DMRSScramblingID = testCellID;
 
         % Configure the carrier according to the test parameters.
@@ -157,15 +156,15 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
             NSlot, NFrame, CyclicPrefix);
 
         % Configure the CORESET according to the test parameters.
-        CORESET = srsConfigureCORESET(FrequencyResources, Duration, ...
+        coreset = srsConfigureCORESET(FrequencyResources, Duration, ...
             CCEREGMapping, REGBundleSize, InterleaverSize, CORESETID);
 
         % Select number of candidates.
-        NumCandidates = floor(CORESET.NCCE ./ [1, 2, 4, 8, 16]);
+        NumCandidates = floor(coreset.NCCE ./ [1, 2, 4, 8, 16]);
         NumCandidates(NumCandidates > 8) = 8;
 
         % Configure Search Space.
-        SearchSpace = srsConfigureSearchSpace(SearchSpaceType, StartSymbolWithinSlot, CORESETID, NumCandidates);
+        searchSpace = srsConfigureSearchSpace(SearchSpaceType, StartSymbolWithinSlot, CORESETID, NumCandidates);
 
         % Skip if no candidates available.
         AggregationLevelIndex = floor(log2(AggregationLevel)) + 1;
@@ -174,12 +173,19 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
         end
 
         % Configure the PDCCH according to the test parameters.
-        pdcch = srsConfigurePDCCH(CORESET, SearchSpace, NStartBWP, NSizeBWP, RNTI, ...
-            AggregationLevel, SearchSpaceType, DMRSScramblingID);
+        pdcch = nrPDCCHConfig( ...
+            CORESET=coreset, ...
+            SearchSpace=searchSpace, ...
+            NStartBWP=nStartBWP, ...
+            NSizeBWP=nSizeBWP, ...
+            RNTI=RNTI, ...
+            AggregationLevel=AggregationLevel, ...
+            DMRSScramblingID=DMRSScramblingID ...
+            );
 
         % Calculate the available candidates CCE initial positions.
-        candidatesCCE = srsPDCCHCandidatesUE(CORESET.NCCE, NumCandidates(AggregationLevelIndex), AggregationLevel, CORESET.CORESETID, RNTI, carrier.NSlot);
-        
+        candidatesCCE = srsPDCCHCandidatesUE(coreset.NCCE, NumCandidates(AggregationLevelIndex), AggregationLevel, coreset.CORESETID, RNTI, carrier.NSlot);
+
         % Select random candidate and initial CCE.
         candidateIndex = randi([1, NumCandidates(AggregationLevelIndex)]);
         pdcch.AllocatedCandidate = candidateIndex;
@@ -221,7 +227,7 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
 
         % Generate slot configuration.
         slotConfig = {...
-            0, ...         % numerology 
+            0, ...         % numerology
             slotIndex, ... % slot
             };
 
@@ -230,8 +236,8 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
         CCEREGMappingStr = 'pdcch_processor::cce_to_reg_mapping_type::NON_INTERLEAVED';
 
         coresetConfig = {...
-            NSizeBWP, ...              % bwp_size_rb
-            NStartBWP, ...             % bwp_start_rb
+            nSizeBWP, ...              % bwp_size_rb
+            nStartBWP, ...             % bwp_start_rb
             StartSymbolWithinSlot, ... % start_symbol_index
             Duration, ...              % duration
             FrequencyResources, ...    % frequency_resources
