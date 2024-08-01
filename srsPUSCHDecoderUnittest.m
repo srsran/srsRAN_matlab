@@ -210,8 +210,6 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
         %   PRBAllocation and mcs. Other parameters (e.g., the HARQProcessID) are
         %   generated randomly.
 
-            import srsLib.phy.helpers.srsConfigureULSCHEncoder
-            import srsLib.phy.helpers.srsConfigureULSCHDecoder
             import srsLib.phy.helpers.srsModulationFromMatlab
             import srsTest.helpers.bitPack
             import srsTest.helpers.writeUint8File
@@ -226,12 +224,18 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
             TB = randi([0 1], obj.TransportBlockSize, 1);
 
             % Configure the PUSCH encoder and decoder.
-            MultipleHARQProcessesLoc = obj.MultipleHARQProcesses;
-            TargetCodeRateLoc = obj.TargetCodeRate;
-            TransportBlockLength = obj.TransportBlockSize;
-            ULSCHEncoder = srsConfigureULSCHEncoder(MultipleHARQProcessesLoc, TargetCodeRateLoc);
-            ULSCHDecoder = srsConfigureULSCHDecoder(MultipleHARQProcessesLoc, ...
-                TargetCodeRateLoc, TransportBlockLength);
+            multipleHARQProcesses = obj.MultipleHARQProcesses;
+            targetCodeRate = obj.TargetCodeRate;
+            transportBlockLength = obj.TransportBlockSize;
+            ULSCHEncoder = nrULSCH(...
+                MultipleHARQProcesses=multipleHARQProcesses, ...
+                TargetCodeRate=targetCodeRate ...
+                );
+            ULSCHDecoder = nrULSCHDecoder( ...
+                MultipleHARQProcesses=multipleHARQProcesses, ...
+                TargetCodeRate=targetCodeRate, ...
+                TransportBlockLength=transportBlockLength ...
+                );
 
             % Add the generated TB to the encoder.
             setTransportBlock(ULSCHEncoder, TB, obj.HARQProcessID);
@@ -300,7 +304,6 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
         %   decoded using the mex wrapper of the SRSRAN C++ component. The test is considered
         %   as passed if the transmitted and received transport blocks are equal.
 
-            import srsLib.phy.helpers.srsConfigureULSCHEncoder
             import srsMEX.phy.srsPUSCHDecoder
             import srsTest.helpers.bitPack
 
@@ -310,9 +313,12 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
             TB = randi([0 1], obj.TransportBlockSize, 1);
 
             % Configure the PUSCH encoder.
-            MultipleHARQProcessesLoc = obj.MultipleHARQProcesses;
+            multipleHARQProcesses = obj.MultipleHARQProcesses;
             TargetCodeRateLoc = obj.TargetCodeRate;
-            ULSCHEncoder = srsConfigureULSCHEncoder(MultipleHARQProcessesLoc, TargetCodeRateLoc);
+            ULSCHEncoder = nrULSCH( ...
+                MultipleHARQProcesses=multipleHARQProcesses, ...
+                TargetCodeRate=TargetCodeRateLoc ...
+                );
 
             % Configure the SRS PUSCH decoder mex.
             ULSCHDecoder = srsPUSCHDecoder('MaxCodeblockSize', obj.ulschInfo.N, ...

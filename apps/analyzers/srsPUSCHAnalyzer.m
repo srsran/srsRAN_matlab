@@ -49,16 +49,15 @@ function srsPUSCHAnalyzer(carrier, pusch, extra, rgFilename, rgOffset, rgSize)
     end
 
 %% Imprt dependencies.
-import srsLib.phy.helpers.srsConfigureULSCHDecoder
 import srsTest.helpers.readComplexFloatFile
 
 %% Prepare configuration.
 
 % Other parameters.
-MultipleHARQProcesses = false;
-TargetCodeRate = extra.TargetCodeRate;
-RV = extra.RV;
-TransportBlockLength = extra.TransportBlockLength;
+multipleHARQProcesses = false;
+targetCodeRate = extra.TargetCodeRate;
+rv = extra.RV;
+transportBlockLength = extra.TransportBlockLength;
 
 %% Load resource grid.
 nSubcarriers = carrier.NSizeGrid * 12;
@@ -97,10 +96,10 @@ end
 
 %% Decode.
 % Make sure the TBS is consistent.
-TransportBlockLength2 = nrTBS(pusch.Modulation, pusch.NumLayers, length(pusch.PRBSet), puschInfo.NREPerPRB, TargetCodeRate);
-if TransportBlockLength ~= TransportBlockLength2
+transportBlockLength2 = nrTBS(pusch.Modulation, pusch.NumLayers, length(pusch.PRBSet), puschInfo.NREPerPRB, targetCodeRate);
+if transportBlockLength ~= transportBlockLength2
     error('Incosistent configuration: the computed TBS is %d, the provided one is %d.', ...
-        TransportBlockLength2, TransportBlockLength);
+        transportBlockLength2, transportBlockLength);
 end
 
 % Demodulate codeword.
@@ -112,10 +111,14 @@ cwZerosInd = repelem(zerosInd, 6);
 rxcw(cwZerosInd) = 0;
 
 % Prepare UL-SCH decoder.
-ULSCHDecoder = srsConfigureULSCHDecoder(MultipleHARQProcesses, TargetCodeRate, TransportBlockLength);
+ULSCHDecoder = nrULSCHDecoder( ...
+    MultipleHARQProcesses=multipleHARQProcesses, ...
+    TargetCodeRate=targetCodeRate, ...
+    TransportBlockLength=transportBlockLength ...
+    );
 
 % Decode.
-[~, blkCRCErr] = ULSCHDecoder(rxcw, pusch.Modulation, pusch.NumLayers, RV);
+[~, blkCRCErr] = ULSCHDecoder(rxcw, pusch.Modulation, pusch.NumLayers, rv);
 
 crcStatus = 'OK';
 if (blkCRCErr == 1)
