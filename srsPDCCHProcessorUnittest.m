@@ -117,7 +117,6 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
         import srsLib.phy.upper.signal_processors.srsPDCCHdmrs
         import srsLib.ran.pdcch.srsPDCCHCandidatesUE
         import srsTest.helpers.writeUint8File
-        import srsLib.phy.helpers.srsConfigureSearchSpace
         import srsLib.phy.helpers.srsConfigureCarrier
         import srsTest.helpers.RBallocationMask2string
 
@@ -129,7 +128,7 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
         NSlot = randi([0, 9]);
         RNTI = randi([0, 65519]);
         maxAllowedStartSymbol = 14 - Duration;
-        StartSymbolWithinSlot = randi([1 maxAllowedStartSymbol]);
+        startSymbolWithinSlot = randi([1 maxAllowedStartSymbol]);
         if strcmp(CCEREGMapping, 'interleaved')
             interleaverSize = testCase.InterleaverSizes(randi([1, 3]));
             REGBundleSize = testCase.REGBundleSizes(Duration, randi([1, 2]));
@@ -137,7 +136,7 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
             interleaverSize = 2;
             REGBundleSize = 6;
         end
-        CORESETID = randi([1, 10]);
+        coresetID = randi([1, 10]);
 
         % Current fixed parameter values (e.g., maximum grid size with current interleaving
         % configuration, CORESET will use all available frequency resources).
@@ -145,7 +144,7 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
         NStartGrid = 0;
         NFrame = randi([0, 1023]);
         frequencyResources = ones(1, floor(NSizeGrid / 6));
-        SearchSpaceType = 'ue';
+        searchSpaceType = 'ue';
         nStartBWP = 0;
         nSizeBWP = NSizeGrid;
         DMRSScramblingID = testCellID;
@@ -161,19 +160,24 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
             CCEREGMapping=CCEREGMapping, ...
             REGBundleSize=REGBundleSize, ...
             InterleaverSize=interleaverSize, ...
-            CORESETID=CORESETID ...
+            CORESETID=coresetID ...
             );
 
         % Select number of candidates.
-        NumCandidates = floor(coreset.NCCE ./ [1, 2, 4, 8, 16]);
-        NumCandidates(NumCandidates > 8) = 8;
+        numCandidates = floor(coreset.NCCE ./ [1, 2, 4, 8, 16]);
+        numCandidates(numCandidates > 8) = 8;
 
         % Configure Search Space.
-        searchSpace = srsConfigureSearchSpace(SearchSpaceType, StartSymbolWithinSlot, CORESETID, NumCandidates);
+        searchSpace = nrSearchSpaceConfig( ...
+            SearchSpaceType=searchSpaceType, ...
+            StartSymbolWithinSlot=startSymbolWithinSlot, ...
+            CORESETID=coresetID, ...
+            NumCandidates=numCandidates ...
+            );
 
         % Skip if no candidates available.
         AggregationLevelIndex = floor(log2(AggregationLevel)) + 1;
-        if NumCandidates(AggregationLevelIndex) == 0
+        if numCandidates(AggregationLevelIndex) == 0
             return;
         end
 
@@ -189,10 +193,10 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
             );
 
         % Calculate the available candidates CCE initial positions.
-        candidatesCCE = srsPDCCHCandidatesUE(coreset.NCCE, NumCandidates(AggregationLevelIndex), AggregationLevel, coreset.CORESETID, RNTI, carrier.NSlot);
+        candidatesCCE = srsPDCCHCandidatesUE(coreset.NCCE, numCandidates(AggregationLevelIndex), AggregationLevel, coreset.CORESETID, RNTI, carrier.NSlot);
 
         % Select random candidate and initial CCE.
-        candidateIndex = randi([1, NumCandidates(AggregationLevelIndex)]);
+        candidateIndex = randi([1, numCandidates(AggregationLevelIndex)]);
         pdcch.AllocatedCandidate = candidateIndex;
         ncce = candidatesCCE(candidateIndex);
 
@@ -243,7 +247,7 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
         coresetConfig = {...
             nSizeBWP, ...              % bwp_size_rb
             nStartBWP, ...             % bwp_start_rb
-            StartSymbolWithinSlot, ... % start_symbol_index
+            startSymbolWithinSlot, ... % start_symbol_index
             Duration, ...              % duration
             frequencyResources, ...    % frequency_resources
             CCEREGMappingStr, ...      % cce_to_reg_mapping
