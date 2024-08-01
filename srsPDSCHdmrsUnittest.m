@@ -117,7 +117,6 @@ classdef srsPDSCHdmrsUnittest < srsTest.srsBlockUnittest
             import srsTest.helpers.cellarray2str
             import srsLib.phy.helpers.srsConfigureCarrier
             import srsLib.phy.helpers.srsConfigurePDSCHdmrs
-            import srsLib.phy.helpers.srsConfigurePDSCH
             import srsLib.phy.upper.signal_processors.srsPDSCHdmrs
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.symbolAllocationMask2string
@@ -145,15 +144,15 @@ classdef srsPDSCHdmrsUnittest < srsTest.srsBlockUnittest
             NFrame = 0;
             CyclicPrefix = 'normal';
             RNTI = 0;
-            NStartBWP = 0;
-            NSizeBWP = NSizeGrid;
+            nStartBWP = 0;
+            nSizeBWP = NSizeGrid;
             referencePointKrb = 0;
             NIDNSCID = NCellID;
-            NID = NCellID;
-            ReservedRE = [];
-            Modulation = '16QAM';
-            MappingType = 'A';
-            SymbolAllocation = [1 13];
+            nID = NCellID;
+            reservedRE = [];
+            modulation = '16QAM';
+            mappingType = 'A';
+            symbolAllocation = [1 13];
             PRBSet = PRBstart:PRBend;
             amplitude = 0.5;
 
@@ -172,9 +171,19 @@ classdef srsPDSCHdmrsUnittest < srsTest.srsBlockUnittest
                     NIDNSCID, NSCID);
 
                 % Configure the PDSCH according to the test parameters.
-                pdsch = srsConfigurePDSCH(DMRS, NStartBWP, NSizeBWP, NID, RNTI, ...
-                    ReservedRE, Modulation, NumLayers, MappingType, ...
-                    SymbolAllocation, PRBSet);
+                pdsch = nrPDSCHConfig( ...
+                    DMRS=DMRS, ...
+                    NStartBWP=nStartBWP, ...
+                    NSizeBWP=nSizeBWP, ...
+                    NID=nID, ...
+                    RNTI=RNTI, ...
+                    ReservedRE=reservedRE, ...
+                    Modulation=modulation, ...
+                    NumLayers=NumLayers, ...
+                    MappingType=mappingType, ...
+                    SymbolAllocation=symbolAllocation, ...
+                    PRBSet=PRBSet ...
+                    );
 
                 % Call the PDSCH DMRS symbol processor MATLAB functions.
                 [DMRSsymbols, symbolIndices] = srsPDSCHdmrs(carrier, pdsch);

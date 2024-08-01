@@ -106,16 +106,15 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
 
             import srsLib.phy.helpers.srsConfigureCarrier
             import srsLib.phy.helpers.srsConfigureDLSCHEncoder
-            import srsLib.phy.helpers.srsConfigurePDSCH
             import srsLib.phy.helpers.srsExpandMCS
             import srsLib.phy.helpers.srsGetModulation
             import srsTest.helpers.bitPack
             import srsTest.helpers.writeUint8File
 
-            % Generate a unique test ID
+            % Generate a unique test ID.
             testID = testCase.generateTestID;
 
-            % Set randomized values
+            % Set randomized values.
             if PRBAllocation == 0
                 PRBstart = 0;
                 PRBend = 24;
@@ -125,76 +124,83 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
             end
             HARQProcessID = randi([1, 8]);
 
-            % current fixed parameter values (e.g., single layer = single TB/codeword, no retransmissions)
+            % Current fixed parameter values (e.g., single layer = single TB/codeword, no retransmissions).
             NSizeGrid = 25;
             NStartGrid = 0;
-            NumLayersLoc = 1;
-            NStartBWP = 0;
-            NSizeBWP = NSizeGrid;
+            numLayers = 1;
+            nStartBWP = 0;
+            nSizeBWP = NSizeGrid;
             PRBSet = PRBstart:PRBend;
             mcsTable = 'qam256';
             MultipleHARQProcesses = true;
-            RV = 0;
+            rv = 0;
             cwIdx = 0;
 
-            % skip those invalid configuration cases
+            % Skip those invalid configuration cases.
             isMCSConfigOK = (~strcmp(mcsTable, 'qam256') || mcs < 28);
 
             if ~isMCSConfigOK
                 return;
             end
 
-            % configure the carrier according to the test parameters
+            % Configure the carrier according to the test parameters.
             carrier = srsConfigureCarrier(NSizeGrid, NStartGrid);
 
-            % get the target code rate (R) and modulation order (Qm) corresponding to the current modulation and scheme configuration
+            % Get the target code rate (R) and modulation order (Qm) corresponding to the current modulation and scheme configuration.
             [R, Qm] = srsExpandMCS(mcs, mcsTable);
             TargetCodeRate = R/1024;
-            [ModulationLoc, ModulationSRS] = srsGetModulation(Qm);
+            [modulation, modulationSRS] = srsGetModulation(Qm);
 
-            % configure the PDSCH according to the test parameters
-            pdsch = srsConfigurePDSCH(NStartBWP, NSizeBWP, ModulationLoc, NumLayersLoc, SymbolAllocation, PRBSet);
+            % Configure the PDSCH according to the test parameters.
+            pdsch = nrPDSCHConfig( ...
+                NStartBWP=nStartBWP, ...
+                NSizeBWP=nSizeBWP, ...
+                Modulation=modulation, ...
+                NumLayers=numLayers, ...
+                SymbolAllocation=SymbolAllocation, ...
+                PRBSet=PRBSet ...
+                );
 
-            % get the encoded TB length
+            % Get the encoded TB length.
             [PDSCHIndices, PDSCHInfo] = nrPDSCHIndices(carrier, pdsch);
             nofREs = length(PDSCHIndices);
             encodedTBLength = nofREs * Qm;
 
-            % generate the TB to be encoded
-            TBSize = nrTBS(ModulationLoc, NumLayersLoc, numel(PRBSet), PDSCHInfo.NREPerPRB, TargetCodeRate);
+            % Generate the TB to be encoded.
+            TBSize = nrTBS(modulation, numLayers, numel(PRBSet), PDSCHInfo.NREPerPRB, TargetCodeRate);
             TB = randi([0 1], TBSize, 1);
 
-            % write the packed format of the TB to a binary file
+            % Write the packed format of the TB to a binary file.
             TBPkd = bitPack(TB);
             testCase.saveDataFile('_test_input', testID, @writeUint8File, TBPkd);
 
-            % configure the PDSCH encoder
+            % Configure the PDSCH encoder.
             DLSCHEncoder = srsConfigureDLSCHEncoder(MultipleHARQProcesses, TargetCodeRate);
 
-            % add the generated TB to the encoder
+            % Add the generated TB to the encoder.
             setTransportBlock(DLSCHEncoder, TB, cwIdx, HARQProcessID);
 
-            % call the PDSCH encoding Matlab functions
-            cw = DLSCHEncoder(ModulationLoc, NumLayersLoc, encodedTBLength, RV, HARQProcessID);
+            % Call the PDSCH encoding Matlab functions.
+            cw = DLSCHEncoder(modulation, numLayers, encodedTBLength, rv, HARQProcessID);
 
-            % write the encoded TB to a binary file
+            % Write the encoded TB to a binary file.
             testCase.saveDataFile('_test_output', testID, @writeUint8File, cw);
 
-            % obtain the related LDPC encoding parameters
+            % Obtain the related LDPC encoding parameters.
             info = nrDLSCHInfo(TBSize, TargetCodeRate);
 
-            % generate the test case entry
+            % Generate the test case entry.
             Nref = DLSCHEncoder.LimitedBufferSize;
-            % 25344 is the maximum coded length of a code block and implies no limit on the buffer size
+            % 25344 is the maximum coded length of a code block and implies no limit on the buffer size.
             if Nref >= 25344
               Nref = 0;
             end
             testCaseString = testCase.testCaseToString(testID, ...
-                {['ldpc_base_graph_type::BG', num2str(info.BGN)], RV, ...
-                    ['modulation_scheme::', ModulationSRS], Nref, ...
-                    NumLayersLoc, nofREs}, true, '_test_input', '_test_output');
+                {['ldpc_base_graph_type::BG', num2str(info.BGN)], rv, ...
+                    ['modulation_scheme::', modulationSRS], Nref, ...
+                    numLayers, nofREs}, true, '_test_input', '_test_output');
 
-            % add the test to the file header
+            % Add the test to the file header.
             testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);
 
         end % of function testvectorGenerationCases
