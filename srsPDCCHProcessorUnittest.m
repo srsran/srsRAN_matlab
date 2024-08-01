@@ -117,7 +117,6 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
         import srsLib.phy.upper.signal_processors.srsPDCCHdmrs
         import srsLib.ran.pdcch.srsPDCCHCandidatesUE
         import srsTest.helpers.writeUint8File
-        import srsLib.phy.helpers.srsConfigureCORESET
         import srsLib.phy.helpers.srsConfigureSearchSpace
         import srsLib.phy.helpers.srsConfigureCarrier
         import srsTest.helpers.RBallocationMask2string
@@ -132,10 +131,10 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
         maxAllowedStartSymbol = 14 - Duration;
         StartSymbolWithinSlot = randi([1 maxAllowedStartSymbol]);
         if strcmp(CCEREGMapping, 'interleaved')
-            InterleaverSize = testCase.InterleaverSizes(randi([1, 3]));
+            interleaverSize = testCase.InterleaverSizes(randi([1, 3]));
             REGBundleSize = testCase.REGBundleSizes(Duration, randi([1, 2]));
         else
-            InterleaverSize = 2;
+            interleaverSize = 2;
             REGBundleSize = 6;
         end
         CORESETID = randi([1, 10]);
@@ -145,7 +144,7 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
         CyclicPrefix = 'normal';
         NStartGrid = 0;
         NFrame = randi([0, 1023]);
-        FrequencyResources = ones(1, floor(NSizeGrid / 6));
+        frequencyResources = ones(1, floor(NSizeGrid / 6));
         SearchSpaceType = 'ue';
         nStartBWP = 0;
         nSizeBWP = NSizeGrid;
@@ -156,8 +155,14 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
             NSlot, NFrame, CyclicPrefix);
 
         % Configure the CORESET according to the test parameters.
-        coreset = srsConfigureCORESET(FrequencyResources, Duration, ...
-            CCEREGMapping, REGBundleSize, InterleaverSize, CORESETID);
+        coreset = nrCORESETConfig( ...
+            FrequencyResources=frequencyResources, ...
+            Duration=Duration, ...
+            CCEREGMapping=CCEREGMapping, ...
+            REGBundleSize=REGBundleSize, ...
+            InterleaverSize=interleaverSize, ...
+            CORESETID=CORESETID ...
+            );
 
         % Select number of candidates.
         NumCandidates = floor(coreset.NCCE ./ [1, 2, 4, 8, 16]);
@@ -240,7 +245,7 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
             nStartBWP, ...             % bwp_start_rb
             StartSymbolWithinSlot, ... % start_symbol_index
             Duration, ...              % duration
-            FrequencyResources, ...    % frequency_resources
+            frequencyResources, ...    % frequency_resources
             CCEREGMappingStr, ...      % cce_to_reg_mapping
             0, ...                     % reg_bundle_size
             0, ...                     % interleaver_size

@@ -122,7 +122,6 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
             import srsTest.helpers.writeResourceGridEntryFile
             import srsLib.phy.upper.channel_processors.srsPDCCHmodulator
             import srsTest.helpers.writeUint8File
-            import srsLib.phy.helpers.srsConfigureCORESET
             import srsLib.phy.helpers.srsConfigureCarrier
             import srsTest.helpers.RBallocationMask2string
 
@@ -136,10 +135,10 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
             maxAllowedStartSymbol = 14 - Duration;
             startSymbolIndex = randi([1, maxAllowedStartSymbol]);
             if strcmp(CCEREGMapping, 'interleaved')
-                InterleaverSize = testCase.InterleaverSizes(randi([1, 3]));
+                interleaverSize = testCase.InterleaverSizes(randi([1, 3]));
                 REGBundleSize = testCase.REGBundleSizes(Duration, randi([1, 2]));
             else
-                InterleaverSize = 2;
+                interleaverSize = 2;
                 REGBundleSize = 6;
             end
 
@@ -150,7 +149,7 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
             NStartGrid = 0;
             NFrame = 0;
             maxFrequencyResources = floor(NSizeGrid / 6);
-            FrequencyResources = int2bit(2^maxFrequencyResources - 1, maxFrequencyResources).';
+            frequencyResources = int2bit(2^maxFrequencyResources - 1, maxFrequencyResources).';
             searchSpaceType = 'ue';
             nStartBWP = 0;
             nSizeBWP = NSizeGrid;
@@ -158,8 +157,8 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
             DMRSScramblingID = testCellID;
 
             % Only encode the PDCCH when it fits.
-            isAggregationOK = (sum(FrequencyResources) * Duration >= AggregationLevel);
-            isREGbundleSizeOK = (mod(sum(FrequencyResources) * Duration, InterleaverSize * REGBundleSize) == 0);
+            isAggregationOK = (sum(frequencyResources) * Duration >= AggregationLevel);
+            isREGbundleSizeOK = (mod(sum(frequencyResources) * Duration, interleaverSize * REGBundleSize) == 0);
             isCCEREGMappingOK = (strcmp(CCEREGMapping, 'noninterleaved') || ...
                 (strcmp(CCEREGMapping, 'interleaved') &&  isREGbundleSizeOK));
 
@@ -169,8 +168,13 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
                     NSlot, NFrame, CyclicPrefix);
 
                 % Configure the CORESET according to the test parameters.
-                coreset = srsConfigureCORESET(FrequencyResources, Duration, ...
-                    CCEREGMapping, REGBundleSize, InterleaverSize);
+                coreset = nrCORESETConfig( ...
+                    FrequencyResources=frequencyResources, ...
+                    Duration=Duration, ...
+                    CCEREGMapping=CCEREGMapping, ...
+                    REGBundleSize=REGBundleSize, ...
+                    InterleaverSize=interleaverSize ...
+                    );
 
                 % Configure the PDCCH according to the test parameters.
                 pdcch = nrPDCCHConfig( ...

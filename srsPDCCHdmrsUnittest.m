@@ -125,7 +125,6 @@ classdef srsPDCCHdmrsUnittest < srsTest.srsBlockUnittest
 
             import srsTest.helpers.cellarray2str
             import srsLib.phy.helpers.srsConfigureCarrier
-            import srsLib.phy.helpers.srsConfigureCORESET
             import srsLib.phy.upper.signal_processors.srsPDCCHdmrs
             import srsLib.phy.helpers.srsGetUniqueSymbolsIndices
             import srsTest.helpers.writeResourceGridEntryFile
@@ -153,8 +152,8 @@ classdef srsPDCCHdmrsUnittest < srsTest.srsBlockUnittest
             NFrame = 0;
             CyclicPrefix = 'normal';
             maxFrequencyResources = floor(NSizeGrid / 6);
-            FrequencyResources = int2bit(2^maxFrequencyResources - 1, maxFrequencyResources).';
-            InterleaverSize = 2;
+            frequencyResources = int2bit(2^maxFrequencyResources - 1, maxFrequencyResources).';
+            interleaverSize = 2;
             REGBundleSize = 6;
             searchSpaceType = 'ue';
             rnti = 0;
@@ -167,8 +166,8 @@ classdef srsPDCCHdmrsUnittest < srsTest.srsBlockUnittest
             DMRSamplitude = 1.0;
 
             % only encode the PDCCH when it fits
-            isAggregationOK = (sum(FrequencyResources) * Duration >= AggregationLevel);
-            isREGbundleSizeOK = (mod(sum(FrequencyResources) * Duration, InterleaverSize * REGBundleSize) == 0);
+            isAggregationOK = (sum(frequencyResources) * Duration >= AggregationLevel);
+            isREGbundleSizeOK = (mod(sum(frequencyResources) * Duration, interleaverSize * REGBundleSize) == 0);
             isCCEREGMappingOK = (strcmp(CCEREGMapping, 'noninterleaved') || ...
                 (strcmp(CCEREGMapping, 'interleaved') &&  isREGbundleSizeOK));
 
@@ -180,8 +179,13 @@ classdef srsPDCCHdmrsUnittest < srsTest.srsBlockUnittest
                     NStartGrid, NSlotLoc, NFrame, CyclicPrefix);
 
                 % configure the CORESET according to the test parameters
-                coreset = srsConfigureCORESET(FrequencyResources, Duration, ...
-                    CCEREGMapping, REGBundleSize, InterleaverSize);
+                coreset = nrCORESETConfig( ...
+                    FrequencyResources=frequencyResources, ...
+                    Duration=Duration, ...
+                    CCEREGMapping=CCEREGMapping, ...
+                    REGBundleSize=REGBundleSize, ...
+                    InterleaverSize=interleaverSize ...
+                    );
 
                 % configure the PDCCH according to the test parameters
                 pdcch = nrPDCCHConfig( ...
