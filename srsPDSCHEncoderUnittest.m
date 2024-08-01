@@ -105,7 +105,6 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
         %   generated randomly.
 
             import srsLib.phy.helpers.srsConfigureCarrier
-            import srsLib.phy.helpers.srsConfigureDLSCHEncoder
             import srsLib.phy.helpers.srsExpandMCS
             import srsLib.phy.helpers.srsGetModulation
             import srsTest.helpers.bitPack
@@ -132,7 +131,7 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
             nSizeBWP = NSizeGrid;
             PRBSet = PRBstart:PRBend;
             mcsTable = 'qam256';
-            MultipleHARQProcesses = true;
+            multipleHARQProcesses = true;
             rv = 0;
             cwIdx = 0;
 
@@ -148,7 +147,7 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
 
             % Get the target code rate (R) and modulation order (Qm) corresponding to the current modulation and scheme configuration.
             [R, Qm] = srsExpandMCS(mcs, mcsTable);
-            TargetCodeRate = R/1024;
+            targetCodeRate = R/1024;
             [modulation, modulationSRS] = srsGetModulation(Qm);
 
             % Configure the PDSCH according to the test parameters.
@@ -167,7 +166,7 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
             encodedTBLength = nofREs * Qm;
 
             % Generate the TB to be encoded.
-            TBSize = nrTBS(modulation, numLayers, numel(PRBSet), PDSCHInfo.NREPerPRB, TargetCodeRate);
+            TBSize = nrTBS(modulation, numLayers, numel(PRBSet), PDSCHInfo.NREPerPRB, targetCodeRate);
             TB = randi([0 1], TBSize, 1);
 
             % Write the packed format of the TB to a binary file.
@@ -175,7 +174,10 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
             testCase.saveDataFile('_test_input', testID, @writeUint8File, TBPkd);
 
             % Configure the PDSCH encoder.
-            DLSCHEncoder = srsConfigureDLSCHEncoder(MultipleHARQProcesses, TargetCodeRate);
+            DLSCHEncoder = nrDLSCH( ...
+                MultipleHARQProcesses=multipleHARQProcesses, ...
+                TargetCodeRate=targetCodeRate ...
+                );
 
             % Add the generated TB to the encoder.
             setTransportBlock(DLSCHEncoder, TB, cwIdx, HARQProcessID);
@@ -187,7 +189,7 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
             testCase.saveDataFile('_test_output', testID, @writeUint8File, cw);
 
             % Obtain the related LDPC encoding parameters.
-            info = nrDLSCHInfo(TBSize, TargetCodeRate);
+            info = nrDLSCHInfo(TBSize, targetCodeRate);
 
             % Generate the test case entry.
             Nref = DLSCHEncoder.LimitedBufferSize;
