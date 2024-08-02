@@ -117,7 +117,6 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
         %   combinations of Modulation, nofHarqAckBits,
         %   nofCsiPart1Bits and nofCsiPart2Bits. 
 
-            import srsLib.phy.helpers.srsConfigureCarrier
             import srsLib.phy.helpers.srsModulationFromMatlab
             import srsLib.phy.upper.signal_processors.srsPUSCHdmrs
             import srsLib.phy.upper.channel_processors.pusch.srsULSCHScramblingPlaceholders
@@ -130,11 +129,11 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
             testID = testCase.generateTestID;
 
             % Configure carrier.
-            carrier = srsConfigureCarrier;
+            carrier = nrCarrierConfig;
 
             % Prepare PRB set.
-            NumPRB = randi([1, carrier.NSizeGrid]);
-            PRBSet = 0:(NumPRB-1);
+            numPRB = randi([1, carrier.NSizeGrid]);
+            PRBSet = 0:(numPRB-1);
 
             % Select a target code rate between 0.5 and 0.9.
             targetCodeRate = round(0.4 * rand + 0.5, 1);

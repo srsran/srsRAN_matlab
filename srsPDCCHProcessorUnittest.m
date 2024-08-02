@@ -117,7 +117,6 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
         import srsLib.phy.upper.signal_processors.srsPDCCHdmrs
         import srsLib.ran.pdcch.srsPDCCHCandidatesUE
         import srsTest.helpers.writeUint8File
-        import srsLib.phy.helpers.srsConfigureCarrier
         import srsTest.helpers.RBallocationMask2string
 
         % Generate a unique test ID.
@@ -125,7 +124,7 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
 
         % Generate random parameters.
         testCellID = randi([0, 1007]);
-        NSlot = randi([0, 9]);
+        nSlot = randi([0, 9]);
         RNTI = randi([0, 65519]);
         maxAllowedStartSymbol = 14 - Duration;
         startSymbolWithinSlot = randi([1 maxAllowedStartSymbol]);
@@ -140,9 +139,9 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
 
         % Current fixed parameter values (e.g., maximum grid size with current interleaving
         % configuration, CORESET will use all available frequency resources).
-        CyclicPrefix = 'normal';
-        NStartGrid = 0;
-        NFrame = randi([0, 1023]);
+        cyclicPrefix = 'normal';
+        nStartGrid = 0;
+        nFrame = randi([0, 1023]);
         frequencyResources = ones(1, floor(NSizeGrid / 6));
         searchSpaceType = 'ue';
         nStartBWP = 0;
@@ -150,8 +149,13 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
         DMRSScramblingID = testCellID;
 
         % Configure the carrier according to the test parameters.
-        carrier = srsConfigureCarrier(NSizeGrid, NStartGrid, ...
-            NSlot, NFrame, CyclicPrefix);
+        carrier = nrCarrierConfig( ...
+            NSizeGrid=NSizeGrid, ...
+            NStartGrid=nStartGrid, ...
+            NSlot=nSlot, ...
+            NFrame=nFrame, ...
+            CyclicPrefix=cyclicPrefix ...
+            );
 
         % Configure the CORESET according to the test parameters.
         coreset = nrCORESETConfig( ...
@@ -232,7 +236,7 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
             @writeResourceGridEntryFile, [dataSymbols; dmrsSymbols], ...
             [dataIndices; dmrsIndices]);
 
-        slotIndex = NFrame * carrier.SlotsPerSubframe * 10 + NSlot;
+        slotIndex = nFrame * carrier.SlotsPerSubframe * 10 + nSlot;
 
         % Generate slot configuration.
         slotConfig = {...

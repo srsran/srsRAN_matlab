@@ -134,7 +134,6 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
         %   parameters such as physical cell identifier, BWP dimensions,
         %   slot number, RNTI, scrambling identifiers, frequency allocation
         %   and DM-RS additional positions are randomly selected.
-            import srsLib.phy.helpers.srsConfigureCarrier
             import srsTest.helpers.rbAllocationIndexes2String
             import srsTest.helpers.symbolAllocationMask2string
             import srsTest.helpers.bitPack
@@ -147,7 +146,7 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             testID = testCase.generateTestID;
 
             % Select a random cell ID.
-            NCellID = randi([0, 1007]);
+            nCellID = randi([0, 1007]);
 
             % Extract the number of CSI Part 1 and 2 message bits.
             nofCsiPart1 = nofCsiBits(1);
@@ -165,8 +164,8 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             BWPSize = testCase.BWPSizes(randi([1, numel(testCase.BWPSizes)]));
             BWPStart = randi([0, maxGridBW - BWPSize]);
 
-            NSizeGrid = BWPStart + BWPSize;
-            NStartGrid = 0;
+            nSizeGrid = BWPStart + BWPSize;
+            nStartGrid = 0;
 
             % PUSCH PRB start within the BWP.
             prbStart = randi([0, BWPSize - minNumPrb]);
@@ -187,10 +186,14 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             targetCodeRate = 0.6 * rand() + 0.1;
 
             % Generate carrier configuration.
-            carrier = srsConfigureCarrier(NCellID, NSizeGrid, NStartGrid);
+            carrier = nrCarrierConfig( ...
+                NCellID=nCellID, ...
+                NSizeGrid=nSizeGrid, ...
+                NStartGrid=nStartGrid ...
+                );
 
             % Random parameters.
-            NSlot = randi([0, carrier.SlotsPerFrame]);
+            nSlot = randi([0, carrier.SlotsPerFrame]);
             RNTI = randi([1, 65535]);
             nID = randi([0, 1023]);
             DMRSAdditionalPosition = randi([0, 3]);
@@ -198,7 +201,7 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             NSCID = randi([0, 1]);
             NRSID = randi([0, 1007]);
             DCPosition = randi(12 * [prbStart, prbStart + numPrb]) + BWPStart;
-            TransformPrecoding = randi([0, 1]);
+            transformPrecoding = randi([0, 1]);
 
             % Fix parameters.
             rv = 0;
@@ -212,7 +215,7 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
                 );
 
             % Set parameters.
-            carrier.NSlot = NSlot;
+            carrier.NSlot = nSlot;
             pusch.NStartBWP = BWPStart;
             pusch.NSizeBWP = BWPSize;
             pusch.PRBSet = prbStart + (0:numPrb - 1);
@@ -220,7 +223,7 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             pusch.DMRS.NIDNSCID = NIDNSCID;
             pusch.DMRS.NSCID = NSCID;
             pusch.DMRS.NRSID = NRSID;
-            pusch.TransformPrecoding = TransformPrecoding;
+            pusch.TransformPrecoding = transformPrecoding;
 
             % Generate PUSCH resource grid indices.
             [puschResourceIndices, puschInfo] = nrPUSCHIndices(carrier, pusch);
@@ -386,7 +389,7 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
 
             mcsDescr = mcsDescription2Cell(pusch.Modulation, targetCodeRate);
 
-            if TransformPrecoding == 0
+            if transformPrecoding == 0
                 DMRSConfig = {...
                     dmrsTypeString, ...                     % dmrs
                     pusch.DMRS.NIDNSCID, ...                % scrambling_id

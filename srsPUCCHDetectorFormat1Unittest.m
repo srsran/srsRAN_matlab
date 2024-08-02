@@ -267,33 +267,39 @@ end % of srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
 function [rxSymbols, ack, sr, channelCoefs, configuration] = generateSimData(numerology, ...
         nPorts, symbolAllocation, frequencyHopping, ackSize, srSize)
 
-    import srsLib.phy.helpers.srsConfigureCarrier
     import srsLib.phy.upper.channel_processors.srsPUCCH1
 
     % Generate random cell ID and slot number.
-    NCellID = randi([0, 1007]);
+    nCellID = randi([0, 1007]);
 
     if numerology == 0
-        NSlot = randi([0, 9]);
+        nSlot = randi([0, 9]);
     else
-        NSlot = randi([0, 19]);
+        nSlot = randi([0, 19]);
     end
 
     % Fix BWP size and start as well as the frame number, since they
     % are irrelevant for the test.
     NSizeBWP = 51;
     NStartBWP = 1;
-    NSizeGrid = NSizeBWP + NStartBWP;
-    NStartGrid = 0;
-    NFrame = 0;
+    nSizeGrid = NSizeBWP + NStartBWP;
+    nStartGrid = 0;
+    nFrame = 0;
 
     % Cyclic prefix can only be normal in the supported numerologies.
-    CyclicPrefix = 'normal';
+    cyclicPrefix = 'normal';
 
     % Configure the carrier according to the test parameters.
-    SubcarrierSpacing = 15 * (2 .^ numerology);
-    carrier = srsConfigureCarrier(NCellID, SubcarrierSpacing, NSizeGrid, ...
-        NStartGrid, NSlot, NFrame, CyclicPrefix);
+    subcarrierSpacing = 15 * (2 .^ numerology);
+    carrier = nrCarrierConfig( ...
+        NCellID=nCellID, ...
+        SubcarrierSpacing=subcarrierSpacing, ...
+        NSizeGrid=nSizeGrid, ...
+        NStartGrid=nStartGrid, ...
+        NSlot=nSlot, ...
+        NFrame=nFrame, ...
+        CyclicPrefix=cyclicPrefix ...
+        );
 
     % PRB assigned to PUCCH Format 1 within the BWP.
     PRBSet  = randi([0, NSizeBWP - 1]);
@@ -365,13 +371,13 @@ function [rxSymbols, ack, sr, channelCoefs, configuration] = generateSimData(num
 
     configuration = struct();
     configuration.Indices = indices;
-    configuration.CyclicPrefix = CyclicPrefix;
+    configuration.CyclicPrefix = cyclicPrefix;
     configuration.GroupHopping = groupHopping;
-    configuration.NSlot = NSlot;
+    configuration.NSlot = nSlot;
     configuration.PRBSet = PRBSet;
     configuration.SecondHopConfig = secondHopConfig;
     configuration.PUCCH = pucch;
     configuration.Carrier = carrier;
-    configuration.NCellID = NCellID;
+    configuration.NCellID = nCellID;
     configuration.NoiseVar = noiseVar;
 end

@@ -122,7 +122,6 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
             import srsTest.helpers.writeResourceGridEntryFile
             import srsLib.phy.upper.channel_processors.srsPDCCHmodulator
             import srsTest.helpers.writeUint8File
-            import srsLib.phy.helpers.srsConfigureCarrier
             import srsTest.helpers.RBallocationMask2string
 
             % Generate a unique test ID.
@@ -130,7 +129,7 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
 
             % Use a unique nCellID, nSlot and RNTI for each test.
             testCellID = testCase.randomizeTestvector(testID + 1) - 1;
-            NSlot = testCase.randomizeSlot(testID + 1);
+            nSlot = testCase.randomizeSlot(testID + 1);
             rnti = randi([0, 65519]);
             maxAllowedStartSymbol = 14 - Duration;
             startSymbolIndex = randi([1, maxAllowedStartSymbol]);
@@ -144,15 +143,15 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
 
             % Current fixed parameter values (e.g., maximum grid size with current interleaving
             % configuration, CORESET will use all available frequency resources).
-            CyclicPrefix = 'normal';
-            NSizeGrid = 52;
-            NStartGrid = 0;
-            NFrame = 0;
-            maxFrequencyResources = floor(NSizeGrid / 6);
+            cyclicPrefix = 'normal';
+            nSizeGrid = 52;
+            nStartGrid = 0;
+            nFrame = 0;
+            maxFrequencyResources = floor(nSizeGrid / 6);
             frequencyResources = int2bit(2^maxFrequencyResources - 1, maxFrequencyResources).';
             searchSpaceType = 'ue';
             nStartBWP = 0;
-            nSizeBWP = NSizeGrid;
+            nSizeBWP = nSizeGrid;
             allocatedCandidate = 1;
             DMRSScramblingID = testCellID;
 
@@ -164,8 +163,13 @@ classdef srsPDCCHModulatorUnittest < srsTest.srsBlockUnittest
 
             if (isAggregationOK && isCCEREGMappingOK)
                 % Configure the carrier according to the test parameters.
-                carrier = srsConfigureCarrier(NSizeGrid, NStartGrid, ...
-                    NSlot, NFrame, CyclicPrefix);
+                carrier = nrCarrierConfig( ...
+                    NSizeGrid=nSizeGrid, ...
+                    NStartGrid=nStartGrid, ...
+                    NSlot=nSlot, ...
+                    NFrame=nFrame, ...
+                    CyclicPrefix=cyclicPrefix ...
+                    );
 
                 % Configure the CORESET according to the test parameters.
                 coreset = nrCORESETConfig( ...

@@ -134,7 +134,7 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
             nSizeBWP = configuration.NSizeBWP;
             nStartBWP = configuration.NStartBWP;
 
-            CyclicPrefix = carrier.CyclicPrefix;
+            cyclicPrefix = carrier.CyclicPrefix;
 
             % Extract the elements of interest from the grid.
             nofRePort = length(pucchDataIndices) + length(pucchDmrsIndices);
@@ -166,7 +166,7 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
                 };
 
             % Generate a 'cyclic_prefix' configuration.
-            cyclicPrefixConfig = matlab2srsCyclicPrefix(CyclicPrefix);
+            cyclicPrefixConfig = matlab2srsCyclicPrefix(cyclicPrefix);
 
             secondHopConfig = {};
             if intraSlotFreqHopping
@@ -289,27 +289,26 @@ end % of classdef srsPUCCHProcessorFormat1Unittest
 
 %Generates simulation data (ACKS, Rx side resource grid, configurations).
 function [rxGrid, ack, ack2, configuration] = generateSimData(numerology, intraSlotFreqHopping, SymbolAllocation, ackSize)
-    import srsLib.phy.helpers.srsConfigureCarrier
 
-    % Use a unique NCellIDLoc, NSlotLoc for each test.
-    NCellIDLoc = randi([0, 1007]);
+    % Use a unique NCellID, NSlot for each test.
+    nCellID = randi([0, 1007]);
 
     % Use a random slot number from the allowed range.
-    NSlotLoc = randi([0, 10 * pow2(numerology) - 1]);
+    nSlot = randi([0, 10 * pow2(numerology) - 1]);
 
     % Fixed parameter values.
     nStartBWP = 1;
     nSizeBWP = 51;
-    NSizeGrid = nStartBWP + nSizeBWP;
-    NStartGrid = 0;
-    CyclicPrefix = 'normal';
+    nSizeGrid = nStartBWP + nSizeBWP;
+    nStartGrid = 0;
+    cyclicPrefix = 'normal';
     groupHopping = 'neither';
     frequencyHopping = 'neither';
     secondHopStartPRB = 0;
     numRxPorts = 4;
 
     % Random frame number.
-    NFrame = randi([0, 1023]);
+    nFrame = randi([0, 1023]);
 
     % Random initial cyclic shift for the first PUCCH.
     initialCyclicShift1 = randi([0, 11]);
@@ -351,10 +350,16 @@ function [rxGrid, ack, ack2, configuration] = generateSimData(numerology, intraS
     end
 
     % Configure the carrier according to the test parameters.
-    SubcarrierSpacing = 15 * (2 .^ numerology);
-    carrier = srsConfigureCarrier(NCellIDLoc, ...
-        SubcarrierSpacing, NSizeGrid, NStartGrid, ...
-        NSlotLoc, NFrame, CyclicPrefix);
+    subcarrierSpacing = 15 * (2 .^ numerology);
+    carrier = nrCarrierConfig( ...
+        NCellID=nCellID, ...
+        SubcarrierSpacing=subcarrierSpacing, ...
+        NSizeGrid=nSizeGrid, ...
+        NStartGrid=nStartGrid, ...
+        NSlot=nSlot, ...
+        NFrame=nFrame, ...
+        CyclicPrefix=cyclicPrefix ...
+        );
 
     % Configure the PUCCH according to the test parameters.
     pucch1 = nrPUCCH1Config( ...

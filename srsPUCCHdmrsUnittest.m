@@ -160,8 +160,6 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
         %testvectorGenerationCases Generates a test vector for the given numerology, format and frequency hopping,
         %  while using a random NCellID, random NSlot and random symbol and PRB length.
 
-            import srsLib.phy.helpers.srsConfigureCarrier
-            import srsLib.phy.helpers.srsConfigurePUCCH
             import srsLib.phy.upper.signal_processors.srsPUCCHdmrs
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.cellarray2str
@@ -171,31 +169,31 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
             % generated so far.
             testID = testCase.generateTestID;
 
-            % Use a unique NCellIDLoc, NSlotLoc for each test.
+            % Use a unique NCellID, NSlot for each test.
             randomizedCellID = testCase.randomizeTestvector(testID + 1);
-            NCellIDLoc = testCase.NCellID{randomizedCellID};
+            nCellID = testCase.NCellID{randomizedCellID};
 
             % Use a random slot number from the allowed range.
             if numerology == 0
-                NSlotLoc = randi([0, 9]);
+                nSlot = randi([0, 9]);
             else
-                NSlotLoc = randi([0, 19]);
+                nSlot = randi([0, 19]);
             end
             % Format name following srsran naming.
             formatString = [testCase.srsFormatName, num2str(format)];
 
             % Fixed parameter values.
-            NSizeGrid  = 52;
-            NStartGrid = 0;
-            NFrame     = 0;
-            CyclicPrefix = 'normal';
+            nSizeGrid  = 52;
+            nStartGrid = 0;
+            nFrame     = 0;
+            cyclicPrefix = 'normal';
             groupHopping = 'neither';
             frequencyHopping = 'neither';
             secondHopStartPRB = 0;
 
             % Fix nid and nid0 to physical CellID.
-            nid  = NCellIDLoc;
-            nid0 = NCellIDLoc;
+            nid  = nCellID;
+            nid0 = nCellID;
 
             % Currently fixed to 1 port of random number from [0, 7].
             ports = randi([0, 7]);
@@ -205,7 +203,7 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
             initialCyclicShift = randi([0, 11]);
 
             % Random start PRB index and length in number of PRBs.
-            PRBSet  = generateRandomPRBallocation(testCase, NSizeGrid, format);
+            PRBSet  = generateRandomPRBallocation(testCase, nSizeGrid, format);
             nofPRBs = size(PRBSet, 2);
 
             % Random start symbol and length in symbols.
@@ -249,15 +247,22 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
             % Randomly select secondHopStartPRB if intra-slot frequency
             % hopping is enabled.
             if intraSlotFreqHopping
-                secondHopStartPRB = generateRandomSecondHopPRB(NSizeGrid, PRBSet);
+                secondHopStartPRB = generateRandomSecondHopPRB(nSizeGrid, PRBSet);
                 % Set respective MATLAB parameter.
                 frequencyHopping   = 'intraSlot';
             end
 
             % Configure the carrier according to the test parameters.
-            SubcarrierSpacing = 15 * (2 .^ numerology);
-            carrier = srsConfigureCarrier(NCellIDLoc, SubcarrierSpacing, NSizeGrid, ...
-                NStartGrid, NSlotLoc, NFrame, CyclicPrefix);
+            subcarrierSpacing = 15 * (2 .^ numerology);
+            carrier = nrCarrierConfig( ...
+                NCellID=nCellID, ...
+                SubcarrierSpacing=subcarrierSpacing, ...
+                NSizeGrid=nSizeGrid, ...
+                NStartGrid=nStartGrid, ...
+                NSlot=nSlot, ...
+                NFrame=nFrame, ...
+                CyclicPrefix=cyclicPrefix ...
+                );
 
             % Configure the PUCCH according to the test parameters.
             pucch = createPUCCHConfig(format);
@@ -287,7 +292,7 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
                 @writeResourceGridEntryFile, DMRSsymbols, DMRSindices);
 
             % Generate a 'slot_point' configuration string.
-            slotPointConfig = cellarray2str({numerology, NSlotLoc}, true);
+            slotPointConfig = cellarray2str({numerology, nSlot}, true);
             % Group hopping string following srsran naming.
             GroupHoppingStr = ['pucch_group_hopping::', upper(groupHopping)];
             % Write as true/false.
@@ -295,7 +300,7 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
 
             % Generate the test case entry.
             testCaseString = testCase.testCaseToString(testID, ...
-                {formatString, slotPointConfig, ['cyclic_prefix::', upper(CyclicPrefix)], ...
+                {formatString, slotPointConfig, ['cyclic_prefix::', upper(cyclicPrefix)], ...
                 GroupHoppingStr, startSymbolIndex, symbolLength, PRBSet(1), ...
                 intraSlotFreqHoppingStr, secondHopStartPRB, nofPRBs, initialCyclicShift, ...
                  OCCI, 'false', nid, nid0, portsStr}, true, '_test_output');

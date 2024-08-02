@@ -115,7 +115,6 @@ classdef srsPDSCHdmrsUnittest < srsTest.srsBlockUnittest
         %   DMRSConfigurationType. NCellID, NSlot and PRB are randomly generated.
 
             import srsTest.helpers.cellarray2str
-            import srsLib.phy.helpers.srsConfigureCarrier
             import srsLib.phy.upper.signal_processors.srsPDSCHdmrs
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.symbolAllocationMask2string
@@ -126,11 +125,11 @@ classdef srsPDSCHdmrsUnittest < srsTest.srsBlockUnittest
 
             % Use a unique NCellID, NSlot, scrambling ID and PRB allocation
             % for each test.
-            NCellID = testCase.randomizeTestvector(testID + 1) - 1;
+            nCellID = testCase.randomizeTestvector(testID + 1) - 1;
             if numerology == 0
-                NSlot = randi([0, 9]);
+                nSlot = randi([0, 9]);
             else
-                NSlot = randi([0, 19]);
+                nSlot = randi([0, 19]);
             end
             NSCID = randi([0, 1]);
             PRBstart = randi([0, 136]);
@@ -138,16 +137,16 @@ classdef srsPDSCHdmrsUnittest < srsTest.srsBlockUnittest
 
             % Current fixed parameter values (e.g., number of CDM groups
             % without data).
-            NSizeGrid = 272;
-            NStartGrid = 0;
-            NFrame = 0;
-            CyclicPrefix = 'normal';
+            nSizeGrid = 272;
+            nStartGrid = 0;
+            nFrame = 0;
+            cyclicPrefix = 'normal';
             RNTI = 0;
             nStartBWP = 0;
-            nSizeBWP = NSizeGrid;
+            nSizeBWP = nSizeGrid;
             referencePointKrb = 0;
-            NIDNSCID = NCellID;
-            nID = NCellID;
+            NIDNSCID = nCellID;
+            nID = nCellID;
             reservedRE = [];
             modulation = '16QAM';
             mappingType = 'A';
@@ -159,9 +158,16 @@ classdef srsPDSCHdmrsUnittest < srsTest.srsBlockUnittest
             isDMRSLengthOK = (DMRSLength == 1 || DMRSAdditionalPosition < 2);
             if isDMRSLengthOK
                 % Configure the carrier according to the test parameters.
-                SubcarrierSpacing = 15 * (2 .^ numerology);
-                carrier = srsConfigureCarrier(NCellID, SubcarrierSpacing, ...
-                    NSizeGrid, NStartGrid, NSlot, NFrame, CyclicPrefix);
+                subcarrierSpacing = 15 * (2 .^ numerology);
+                carrier = nrCarrierConfig( ...
+                    NCellID=nCellID, ...
+                    SubcarrierSpacing=subcarrierSpacing, ...
+                    NSizeGrid=nSizeGrid, ...
+                    NStartGrid=nStartGrid, ...
+                    NSlot=nSlot, ...
+                    NFrame=nFrame, ...
+                    CyclicPrefix=cyclicPrefix ...
+                    );
 
                 % Configure the PDSCH DMRS symbols according to the test
                 % parameters.
@@ -198,9 +204,9 @@ classdef srsPDSCHdmrsUnittest < srsTest.srsBlockUnittest
                     @writeResourceGridEntryFile, amplitude * DMRSsymbols, symbolIndices);
 
                 % Generate a 'slot_point' configuration string.
-                slotPointConfig = cellarray2str({numerology, NFrame, ...
-                    floor(NSlot / carrier.SlotsPerSubframe), ...
-                    rem(NSlot, carrier.SlotsPerSubframe)}, true);
+                slotPointConfig = cellarray2str({numerology, nFrame, ...
+                    floor(nSlot / carrier.SlotsPerSubframe), ...
+                    rem(nSlot, carrier.SlotsPerSubframe)}, true);
 
                 % Generate a symbol allocation mask string.
                 symbolAllocationMask = symbolAllocationMask2string(symbolIndices);

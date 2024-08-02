@@ -104,7 +104,6 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
         %   PRBAllocation and mcs. Other parameters (e.g., the HARQProcessID) are
         %   generated randomly.
 
-            import srsLib.phy.helpers.srsConfigureCarrier
             import srsLib.phy.helpers.srsExpandMCS
             import srsLib.phy.helpers.srsGetModulation
             import srsTest.helpers.bitPack
@@ -124,11 +123,11 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
             HARQProcessID = randi([1, 8]);
 
             % Current fixed parameter values (e.g., single layer = single TB/codeword, no retransmissions).
-            NSizeGrid = 25;
-            NStartGrid = 0;
+            nSizeGrid = 25;
+            nStartGrid = 0;
             numLayers = 1;
             nStartBWP = 0;
-            nSizeBWP = NSizeGrid;
+            nSizeBWP = nSizeGrid;
             PRBSet = PRBstart:PRBend;
             mcsTable = 'qam256';
             multipleHARQProcesses = true;
@@ -143,7 +142,7 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
             end
 
             % Configure the carrier according to the test parameters.
-            carrier = srsConfigureCarrier(NSizeGrid, NStartGrid);
+            carrier = nrCarrierConfig(NSizeGrid=nSizeGrid, NStartGrid=nStartGrid);
 
             % Get the target code rate (R) and modulation order (Qm) corresponding to the current modulation and scheme configuration.
             [R, Qm] = srsExpandMCS(mcs, mcsTable);

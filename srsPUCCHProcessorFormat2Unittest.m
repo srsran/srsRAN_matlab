@@ -138,10 +138,8 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
                 nofHarqAck, nofSR, nofCSIPart1, nofCSIPart2, maxCodeRate)
         % Sets secondary simulation variables and MATLAB NR configuration objects.
 
-            import srsLib.phy.helpers.srsConfigureCarrier
-
             % Generate random cell ID.
-            NCellID = randi([0, 1007]);
+            nCellID = randi([0, 1007]);
 
             % Generate a random NID.
             NID = randi([0, 1023]);
@@ -153,7 +151,7 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
             RNTI = randi([1, 65535]);
 
             % Normal cyclic prefix.
-            CyclicPrefix = 'normal';
+            cyclicPrefix = 'normal';
 
             % No frequency hopping.
             frequencyHopping = 'neither';
@@ -194,7 +192,7 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
             MaxGridSize = 275;
 
             % Resource grid starts at CRB0.
-            NStartGrid = 0;
+            nStartGrid = 0;
 
             % BWP start relative to CRB0.
             nStartBWP = randi([0, MaxGridSize - PRBNum]);
@@ -207,7 +205,7 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
             PRBStart = randi([0, nSizeBWP - PRBNum]);
 
             % Fit resource grid size to the BWP.
-            NSizeGrid = nStartBWP + nSizeBWP;
+            nSizeGrid = nStartBWP + nSizeBWP;
 
             % PRB set assigned to PUCCH Format 2 within the BWP.
             % Each element within the PRB set indicates the location of a
@@ -215,8 +213,12 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
             PRBSet = PRBStart : (PRBStart + PRBNum - 1);
 
             % Configure the carrier according to the test parameters.
-            testCase.Carrier = srsConfigureCarrier(NCellID, NSizeGrid, ...
-                NStartGrid, CyclicPrefix);
+            testCase.Carrier = nrCarrierConfig( ...
+                NCellID=nCellID, ...
+                NSizeGrid=nSizeGrid, ...
+                NStartGrid=nStartGrid, ...
+                CyclicPrefix=cyclicPrefix ...
+                );
 
             % Configure the PUCCH Format 2
             testCase.PUCCH = nrPUCCH2Config( ...

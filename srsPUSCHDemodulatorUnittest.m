@@ -190,15 +190,14 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
     methods (Access = private)
         function setupsimulation(obj, DMRSConfigurationType, Modulation, nofRxPorts, NumLayers, TransformPrecoding)
         % Sets secondary simulation variables.
-            import srsLib.phy.helpers.srsConfigureCarrier
 
             % Select a random number of PRB.
-            NumPRB = obj.ValidNumPRB(randi([1, length(obj.ValidNumPRB)]));
+            numPRB = obj.ValidNumPRB(randi([1, length(obj.ValidNumPRB)]));
 
             % Configure carrier.
-            NCellID = randi([0, 1007]);
-            NSizeGrid = NumPRB;
-            obj.carrier = srsConfigureCarrier(NCellID, NSizeGrid);
+            nCellID = randi([0, 1007]);
+            nSizeGrid = numPRB;
+            obj.carrier = nrCarrierConfig(NCellID=nCellID, NSizeGrid=nSizeGrid);
 
             % Set symbol allocation.
             startSymbol = randi([0 2]);
@@ -206,7 +205,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             symbolAllocation = [startSymbol, nofSymbols];
 
             % Prepare PRB set.
-            PRBSet = 0:(NumPRB-1);
+            PRBSet = 0:(numPRB-1);
             nID = obj.carrier.NCellID;
 
             % Configure PUSCH.

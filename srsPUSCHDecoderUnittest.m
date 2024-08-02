@@ -148,7 +148,6 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
         function setupsimulation(obj, SymbolAllocation, PRBAllocation, mcs)
         % Sets secondary simulation variables.
 
-            import srsLib.phy.helpers.srsConfigureCarrier
             import srsLib.phy.helpers.srsExpandMCS
             import srsLib.phy.helpers.srsGetModulation
 
@@ -168,9 +167,9 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
             obj.HARQProcessID = randi([1, obj.NHARQProcesses]);
 
             % Configure the carrier according to the test parameters.
-            NSizeGridLoc = obj.NSizeGrid;
-            NStartGridLoc = obj.NStartGrid;
-            carrier = srsConfigureCarrier(NSizeGridLoc, NStartGridLoc);
+            nSizeGrid = obj.NSizeGrid;
+            nStartGrid = obj.NStartGrid;
+            carrier = nrCarrierConfig(NSizeGrid=nSizeGrid, NStartGrid=nStartGrid);
             obj.Carrier = carrier;
 
             % Get the target code rate (R) and modulation order (Qm) corresponding

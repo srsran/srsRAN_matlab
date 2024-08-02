@@ -113,14 +113,13 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.writeInt8File
             import srsTest.helpers.writeComplexFloatFile
-            import srsLib.phy.helpers.srsConfigureCarrier
             import srsLib.phy.upper.channel_processors.srsPUCCH2
 
             % Generate a unique test ID.
             testID = testCase.generateTestID;
 
             % Generate random cell ID.
-            NCellID = randi([0, 1007]);
+            nCellID = randi([0, 1007]);
 
             % Generate a random NID.
             NID = randi([0, 1023]);
@@ -132,7 +131,7 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
             MaxGridSize = 275;
 
             % Resource grid starts at CRB0.
-            NStartGrid = 0;
+            nStartGrid = 0;
 
             % BWP start relative to CRB0.
             nStartBWP = randi([0, MaxGridSize - PRBNum - 1]);
@@ -145,7 +144,7 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
             PRBStart = randi([0, nSizeBWP - PRBNum]);
 
             % Fit resource grid size to the BWP.
-            NSizeGrid = nStartBWP + nSizeBWP;
+            nSizeGrid = nStartBWP + nSizeBWP;
 
             % PRB set assigned to PUCCH Format 2 within the BWP.
             % Each element within the PRB set indicates the location of a
@@ -153,14 +152,18 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
             PRBSet = PRBStart : PRBStart + PRBNum - 1;
 
             % Normal cyclic prefix.
-            CyclicPrefix = 'normal';
+            cyclicPrefix = 'normal';
 
             % Configure the carrier according to the test parameters.
-            carrier = srsConfigureCarrier(NCellID, NSizeGrid, ...
-                NStartGrid, CyclicPrefix);
+            carrier = nrCarrierConfig( ...
+                NCellID=nCellID, ...
+                NSizeGrid=nSizeGrid, ...
+                NStartGrid=nStartGrid, ...
+                CyclicPrefix=cyclicPrefix ...
+                );
 
             % Resource grid dimensions.
-            nofGridSubcs = NSizeGrid * 12;
+            nofGridSubcs = nSizeGrid * 12;
             nofGridSymbols = carrier.SymbolsPerSlot;
 
             % No frequency hopping.
@@ -265,7 +268,7 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
                 };
 
             testCaseContext = { ...
-                NSizeGrid, ...      % grid_nof_prb
+                nSizeGrid, ...      % grid_nof_prb
                 nofGridSymbols, ... % grid_nof_symbols
                 noiseVar, ...       % noise_var
                 pucchF2Config, ...  % config

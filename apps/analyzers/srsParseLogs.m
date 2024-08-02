@@ -90,7 +90,7 @@ function [carrier, phych, extra] = srsParseLogs
     allLines = splitlines(logs);
     nLines = length(allLines);
 
-    carrier = srsLib.phy.helpers.srsConfigureCarrier();
+    carrier = nrCarrierConfig;
 
     % The subcarrier spacing must be provided manually.
     scs = input('Subcarrier spacing in kHz: ');

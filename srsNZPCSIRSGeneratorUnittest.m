@@ -120,14 +120,13 @@ classdef srsNZPCSIRSGeneratorUnittest < srsTest.srsBlockUnittest
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.matlab2srsCyclicPrefix
 
-            import srsLib.phy.helpers.srsConfigureCarrier
             import srsLib.phy.upper.signal_processors.srsCSIRSnzp
             import srsLib.phy.helpers.srsCSIRSGetNofFreqRefs
             import srsLib.phy.helpers.srsCSIRSValidateConfig
 
             % Current fixed parameter values.
-            NSizeGrid = 272;
-            NStartGrid = 0;
+            nSizeGrid = 272;
+            nStartGrid = 0;
 
             % The l_1 symbol location reference is not used in any of the
             % currently supported mapping options.
@@ -142,26 +141,26 @@ classdef srsNZPCSIRSGeneratorUnittest < srsTest.srsBlockUnittest
 
             % Use a random NCellID, NFrame, NSlot, scrambling ID, PRB allocation and amplitude
             % for each test.
-            NCellID = randi([0, 1007]);
-            NFrame = randi([0, 1023]);
+            nCellID = randi([0, 1007]);
+            nFrame = randi([0, 1023]);
 
             switch(Numerology)
                 case 0
-                    NSlot = randi([0, 9]);
+                    nSlot = randi([0, 9]);
                 case 1
-                    NSlot = randi([0, 19]);
+                    nSlot = randi([0, 19]);
                 case 2
-                    NSlot = randi([0, 39]);
+                    nSlot = randi([0, 39]);
                 case 3
-                    NSlot = randi([0, 79]);
+                    nSlot = randi([0, 79]);
                 case 4
-                    NSlot = randi([0, 159]);
+                    nSlot = randi([0, 159]);
                 otherwise
                     return;
             end
 
-            numRB = randi([4, floor(NSizeGrid)]);
-            RBOffset = randi([0, NSizeGrid - numRB]);
+            numRB = randi([4, floor(nSizeGrid)]);
+            RBOffset = randi([0, nSizeGrid - numRB]);
             nID = randi([0, 1023]);
             amplitude = 0.1 * randi([1, 100]);
 
@@ -176,14 +175,21 @@ classdef srsNZPCSIRSGeneratorUnittest < srsTest.srsBlockUnittest
             subcarrierLocations = {subcarrierLocations};
             symbolLocations = {l_0};
 
-            SubcarrierSpacing = 15 * (2 .^ Numerology);
+            subcarrierSpacing = 15 * (2 .^ Numerology);
 
-            % Configure the carrier according to the test parameters.
-            Carrier = srsConfigureCarrier(NCellID, SubcarrierSpacing, ...
-                NSizeGrid, NStartGrid, NSlot, NFrame, CyclicPrefix);
-
-            if (isempty(Carrier))
-                return;
+            try
+                % Configure the carrier according to the test parameters.
+                carrier = nrCarrierConfig( ...
+                    NCellID=nCellID, ...
+                    SubcarrierSpacing=subcarrierSpacing, ...
+                    NSizeGrid=nSizeGrid, ...
+                    NStartGrid=nStartGrid, ...
+                    NSlot=nSlot, ...
+                    NFrame=nFrame, ...
+                    CyclicPrefix=CyclicPrefix ...
+                    );
+            catch
+                testCase.assumeFail('The current configuration results in an invalid carrier.');
             end
 
             try
@@ -200,25 +206,25 @@ classdef srsNZPCSIRSGeneratorUnittest < srsTest.srsBlockUnittest
                     CSIRSPeriod=CSIRSPeriod ...
                 );
             catch
-                obj.AssumeFail('The current configuration results in an invalid CSIRS.');
+                testCase.assumeFail('The current configuration results in an invalid CSIRS.');
             end
 
             % Invalid test case configurations are skipped.
-            if (~srsCSIRSValidateConfig(Carrier, CSIRS))
+            if (~srsCSIRSValidateConfig(carrier, CSIRS))
                 return;
             end
 
             % Call the CSI-RS processor MATLAB functions.
-            [CSIRSsymbols, symbolIndices] = srsCSIRSnzp(Carrier, CSIRS, amplitude);
+            [CSIRSsymbols, symbolIndices] = srsCSIRSnzp(carrier, CSIRS, amplitude);
 
             % Write the generated NZP-CSI-RS sequence into a binary file.
             testCase.saveDataFile('_test_output', TestID, ...
                 @writeResourceGridEntryFile, approxbf16(CSIRSsymbols), symbolIndices);
 
             % Generate a 'slot_point' configuration string.
-            slotPointConfig = cellarray2str({Numerology, NFrame, ...
-                floor(NSlot / Carrier.SlotsPerSubframe), ...
-                rem(NSlot, Carrier.SlotsPerSubframe)}, true);
+            slotPointConfig = cellarray2str({Numerology, nFrame, ...
+                floor(nSlot / carrier.SlotsPerSubframe), ...
+                rem(nSlot, carrier.SlotsPerSubframe)}, true);
 
             % Generate the CP string for the test header file.
             CyclicPrefixStr = matlab2srsCyclicPrefix(CyclicPrefix);

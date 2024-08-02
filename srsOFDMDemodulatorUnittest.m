@@ -106,7 +106,6 @@ classdef srsOFDMDemodulatorUnittest < srsTest.srsBlockUnittest
         %   DFTsize and CyclicPrefix. NSlot, port index, scale and center carrier 
         %   frequency are randomly generated.
 
-            import srsLib.phy.helpers.srsConfigureCarrier
             import srsLib.phy.helpers.srsRandomGridEntry
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.writeComplexFloatFile
@@ -117,34 +116,40 @@ classdef srsOFDMDemodulatorUnittest < srsTest.srsBlockUnittest
             % Use a unique port index and scale for each test.
             portIdx = randi([0, 15]);
             scale = 2 * rand - 1;
-            NSlotLoc = randi([0 pow2(numerology)-1]);
+            nSlot = randi([0 pow2(numerology)-1]);
 
             % Select a random carrier frequency from 0 to 3 GHz to avoid
             % any multiple of the sampling rate. Granularity 100 kHz.
             CarrierFrequency = round(rand() * 3e4) * 1e5;
 
             % Current fixed parameter values.
-            NStartGrid = 0;
-            NFrame = 0;
+            nStartGrid = 0;
+            nFrame = 0;
 
             % Calculate the number of RBs to be used.
-            NSizeGrid = floor(192 * (DFTsize / 4096));
+            nSizeGrid = floor(192 * (DFTsize / 4096));
 
             % Skip those invalid configuration cases.
             isCPTypeOK = ((numerology == 2) || strcmp(CyclicPrefix, 'normal'));
-            isNSizeGridOK = NSizeGrid > 0;
+            isNSizeGridOK = nSizeGrid > 0;
 
             if isCPTypeOK && isNSizeGridOK
                 % Configure the carrier according to the test parameters.
-                SubcarrierSpacing = 15 * (2 .^ numerology);
-                carrier = srsConfigureCarrier(SubcarrierSpacing, NStartGrid, NSizeGrid, ...
-                    NSlotLoc, NFrame, CyclicPrefix);
+                subcarrierSpacing = 15 * (2 .^ numerology);
+                carrier = nrCarrierConfig( ...
+                    SubcarrierSpacing=subcarrierSpacing, ...
+                    NStartGrid=nStartGrid, ...
+                    NSizeGrid=nSizeGrid, ...
+                    NSlot=nSlot, ...
+                    NFrame=nFrame, ...
+                    CyclicPrefix=CyclicPrefix ...
+                    );
 
                 % Generate the DFT input data and related indices.
                 [inputData, inputIndices] = srsRandomGridEntry(carrier, portIdx);
 
                 % Call the OFDM modulator MATLAB functions.
-                timeDomainData = nrOFDMModulate(carrier, reshape(inputData, [NSizeGrid * 12, carrier.SymbolsPerSlot]), ...
+                timeDomainData = nrOFDMModulate(carrier, reshape(inputData, [nSizeGrid * 12, carrier.SymbolsPerSlot]), ...
                     'Windowing', 0, 'CarrierFrequency', CarrierFrequency);
 
                 % Write the time-domain data into a binary file.
@@ -171,7 +176,7 @@ classdef srsOFDMDemodulatorUnittest < srsTest.srsBlockUnittest
 
                 configCell = {
                     numerology, ...       % numerology
-                    NSizeGrid, ...        % bw_rb
+                    nSizeGrid, ...        % bw_rb
                     DFTsize, ...          % dft_size
                     cpString, ...         % cp
                     DftWindowOffset, ...  % nof_samples_window_offset
@@ -182,7 +187,7 @@ classdef srsOFDMDemodulatorUnittest < srsTest.srsBlockUnittest
                 ofdmDemodulatorConfigCell = {
                     configCell, ... % config
                     portIdx, ...    % port_idx
-                    NSlotLoc, ...   % slot_idx
+                    nSlot, ...   % slot_idx
                     };
 
                 % Generate the test case entry.

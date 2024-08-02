@@ -116,7 +116,6 @@ classdef srsULSCHInfoUnittest < srsTest.srsBlockUnittest
         %   combinations of NumLayers, DMRSConfigurationType, targetCodeRate,
         %   nofHarqAckBits, nofCsiPart1Bits, nofCsiPart2Bits and UlSchDataEnabled.
 
-            import srsLib.phy.helpers.srsConfigureCarrier
             import srsLib.phy.upper.signal_processors.srsPUSCHdmrs
             import srsTest.helpers.cellarray2str
             import srsTest.helpers.symbolAllocationMask2string
@@ -131,7 +130,7 @@ classdef srsULSCHInfoUnittest < srsTest.srsBlockUnittest
             modulation = modulationOpts{randi([1, 4])};
 
             % Configure carrier.
-            carrier = srsConfigureCarrier;
+            carrier = nrCarrierConfig;
 
             % Prepare PRB set.
             PRBSet = 0:(NumPRB-1);

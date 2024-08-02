@@ -114,71 +114,77 @@ classdef srsSRSEstimatorUnittest < srsTest.srsBlockUnittest
 
             import srsTest.helpers.cellarray2str
             import srsTest.helpers.writeResourceGridEntryFile
-            import srsLib.phy.helpers.srsConfigureCarrier
             import srsLib.phy.helpers.srsSRSValidateConfig
 
             % Current fixed parameter values.
-            NSizeGrid = 270;
-            NStartGrid = 0;
+            nSizeGrid = 270;
+            nStartGrid = 0;
 
             switch(Numerology)
                 case 0
-                    NSlot = randi([0, 9]);
+                    nSlot = randi([0, 9]);
                 case 1
-                    NSlot = randi([0, 19]);
+                    nSlot = randi([0, 19]);
                 case 2
-                    NSlot = randi([0, 39]);
+                    nSlot = randi([0, 39]);
                 case 3
-                    NSlot = randi([0, 79]);
+                    nSlot = randi([0, 79]);
                 case 4
-                    NSlot = randi([0, 159]);
+                    nSlot = randi([0, 159]);
                 otherwise
                     return;
             end
 
-            SubcarrierSpacing = 15 * (2 .^ Numerology);
+            subcarrierSpacing = 15 * (2 .^ Numerology);
 
             % Use a random NCellID, NFrame.
-            NCellID = randi([0, 1007]);
-            NFrame = randi([0, 1023]);
-            CyclicPrefix = 'normal';
+            nCellID = randi([0, 1007]);
+            nFrame = randi([0, 1023]);
+            cyclicPrefix = 'normal';
 
             % Configure the carrier according to the test parameters.
-            carrier = srsConfigureCarrier(NCellID, SubcarrierSpacing,...
-                NSizeGrid, NStartGrid, NSlot, NFrame, CyclicPrefix);
+            carrier = nrCarrierConfig( ...
+                NCellID=nCellID, ...
+                SubcarrierSpacing=subcarrierSpacing,...
+                NSizeGrid=nSizeGrid, ...
+                NStartGrid=nStartGrid, ...
+                NSlot=nSlot, ...
+                NFrame=nFrame, ...
+                CyclicPrefix=cyclicPrefix ...
+                );
 
             % Generate random SRS parameters.
-            SymbolStart = randi([0, 14 - NumSRSSymbols]);
+            symbolStart = randi([0, 14 - NumSRSSymbols]);
             NSRSID = randi([0, 1023]);
 
             srs = struct();
             while ~srsSRSValidateConfig(carrier, srs)
                 % Generate random SRS parameters that could be invalid.
-                FrequencyStart = randi([0, 10]);
+                frequencyStart = randi([0, 10]);
                 CSRS = randi([0, 63]);
                 BSRS = randi([0, 3]);
                 KBarTC = randi([0, KTC - 1]);
                 BHop = randi([BSRS, 3]);
-                CyclicShift = randi([0, 11]);
+                cyclicShift = randi([0, 11]);
                 NRRC = randi([0, 67]);
 
                 % Create the SRS configuration according to the test parameters.
                 srs = nrSRSConfig('NumSRSPorts', NumSRSPorts,...
-                    'SymbolStart', SymbolStart,...
+                    'SymbolStart', symbolStart,...
                     'NumSRSSymbols', NumSRSSymbols,...
-                    'FrequencyStart', FrequencyStart,...
+                    'FrequencyStart', frequencyStart,...
                     'CSRS', CSRS,...
                     'BSRS', BSRS,...
                     'BHop', BHop,...
                     'KTC', KTC,...
                     'KBarTC', KBarTC,...
                     'NSRSID', NSRSID,...
-                    'CyclicShift', CyclicShift,...
+                    'CyclicShift', cyclicShift,...
                     'NRRC', NRRC);
             end
 
             % Generate a unique test ID.
-            TestID = testCase.generateTestID;
+            testID = testCase.generateTestID;
 
             %Generate uplink SRS resource element indices.
             symbolIndices = nrSRSIndices(carrier, srs, 'IndexStyle', 'subscript', 'IndexBase', '0based');
@@ -190,9 +196,9 @@ classdef srsSRSEstimatorUnittest < srsTest.srsBlockUnittest
             txGrid = nrResourceGrid(carrier, NumSRSPorts);
 
             % Create transmit grid RE indices.
-            NumSubcarriers = size(txGrid, 1);
-            NumOfdmSymbols = size(txGrid, 2);
-            txSymbolIndices = sub2ind([NumSubcarriers, NumOfdmSymbols, NumSRSPorts],...
+            numSubcarriers = size(txGrid, 1);
+            numOfdmSymbols = size(txGrid, 2);
+            txSymbolIndices = sub2ind([numSubcarriers, numOfdmSymbols, NumSRSPorts],...
                 symbolIndices(:, 1) + 1, symbolIndices(:, 2) + 1, symbolIndices(:, 3) + 1);
 
             % Write RE in the resource grid.
@@ -211,44 +217,44 @@ classdef srsSRSEstimatorUnittest < srsTest.srsBlockUnittest
             end
 
             % Maximum time aligment that we expect in seconds.
-            MaxTimeAligment = 16 / (2048 * 1000 * carrier.SubcarrierSpacing);
+            maxTimeAligment = 16 / (2048 * 1000 * carrier.SubcarrierSpacing);
 
             % Select random time aligment.
-            TimeAligment = (2 * rand() - 1) * MaxTimeAligment;
+            timeAligment = (2 * rand() - 1) * maxTimeAligment;
 
             % Create time aligment frequency shift.
-            FreqResponse = exp(-2i * pi * (0:NumSubcarriers - 1).' * TimeAligment * 1000 * carrier.SubcarrierSpacing);
+            freqResponse = exp(-2i * pi * (0:numSubcarriers - 1).' * timeAligment * 1000 * carrier.SubcarrierSpacing);
 
             % Apply frequency response in all the received grid.
-            rxGrid = rxGrid .* repmat(FreqResponse, 1, NumOfdmSymbols, NumRxPorts);
+            rxGrid = rxGrid .* repmat(freqResponse, 1, numOfdmSymbols, NumRxPorts);
 
             % Prepare receive symbols indices. Combine all transmit ports.
             symbolIndices(:, 3) = 0;
             symbolIndices = unique(symbolIndices, 'rows');
-            NumRxRe = size(symbolIndices, 1);
-            rxSymbolSubscripts = zeros(NumRxRe, 3);
+            numRxRe = size(symbolIndices, 1);
+            rxSymbolSubscripts = zeros(numRxRe, 3);
             for Nr = 0:NumRxPorts-1
                 % Combine all indices to same receive port.
                 symbolIndices(:, 3) = Nr;
                 % Write coordinates with the receive port.
-                rxSymbolSubscripts(NumRxRe * Nr + (1:NumRxRe), :) = symbolIndices;
+                rxSymbolSubscripts(numRxRe * Nr + (1:numRxRe), :) = symbolIndices;
             end
 
             % Convert subscripts to indices.
-            rxSymbolIndices = sub2ind([NumSubcarriers, NumOfdmSymbols, NumRxPorts],...
+            rxSymbolIndices = sub2ind([numSubcarriers, numOfdmSymbols, NumRxPorts],...
                 rxSymbolSubscripts(:, 1) + 1, rxSymbolSubscripts(:, 2) + 1, rxSymbolSubscripts(:, 3) + 1);
 
             % Extract RE used for SRS from the resoyrce grid.
             rxSymbols = rxGrid(rxSymbolIndices);
 
             % Write the generated SRS sequence into a binary file.
-            testCase.saveDataFile('_test_input', TestID,...
+            testCase.saveDataFile('_test_input', testID,...
                 @writeResourceGridEntryFile, rxSymbols, rxSymbolSubscripts);
 
             % Generate a 'slot_point' configuration string.
-            slotPointConfig = cellarray2str({Numerology, NFrame,...
-                floor(NSlot / carrier.SlotsPerSubframe),...
-                rem(NSlot, carrier.SlotsPerSubframe)}, true);
+            slotPointConfig = cellarray2str({Numerology, nFrame,...
+                floor(nSlot / carrier.SlotsPerSubframe),...
+                rem(nSlot, carrier.SlotsPerSubframe)}, true);
 
             hoppingConfigStr = 'srs_resource_configuration::group_or_sequence_hopping_enum::neither';
 
@@ -257,9 +263,9 @@ classdef srsSRSEstimatorUnittest < srsTest.srsBlockUnittest
                 periodicityConfig = '{}';
             end
 
-            NumSRSPortsStr = sprintf('srs_resource_configuration::one_two_four_enum(%d)', NumSRSPorts);
-            NumSRSSymbolsStr = sprintf('srs_resource_configuration::one_two_four_enum(%d)', NumSRSSymbols);
-            CombSizeStr = sprintf('srs_resource_configuration::comb_size_enum(%d)', KTC);
+            numSRSPortsStr = sprintf('srs_resource_configuration::one_two_four_enum(%d)', NumSRSPorts);
+            numSRSSymbolsStr = sprintf('srs_resource_configuration::one_two_four_enum(%d)', NumSRSSymbols);
+            combSizeStr = sprintf('srs_resource_configuration::comb_size_enum(%d)', KTC);
 
             portsConfig = num2cell(0:NumRxPorts-1);
 
@@ -269,20 +275,20 @@ classdef srsSRSEstimatorUnittest < srsTest.srsBlockUnittest
                 NumSRSPorts,... % nof_tx_ports
                 };
 
-            tAlignStr = sprintf('{%.9f}', TimeAligment);
+            tAlignStr = sprintf('{%.9f}', timeAligment);
 
             srsResourceCell = {...
-                NumSRSPortsStr,...    % nof_antenna_ports
-                NumSRSSymbolsStr,...  % nof_symbols
-                SymbolStart,...       % start_symbol
+                numSRSPortsStr,...    % nof_antenna_ports
+                numSRSSymbolsStr,...  % nof_symbols
+                symbolStart,...       % start_symbol
                 CSRS,...              % configuration_index
                 NSRSID,...            % sequence_id
                 BSRS,...              % bandwidth_index
-                CombSizeStr,...       % comb_size
+                combSizeStr,...       % comb_size
                 KBarTC,...            % comb_offset
-                CyclicShift,...       % cyclic_shift
+                cyclicShift,...       % cyclic_shift
                 NRRC,...              % freq_position
-                FrequencyStart,...    % freq_shift
+                frequencyStart,...    % freq_shift
                 BHop,...              % freq_hopping
                 hoppingConfigStr,...  % hopping
                 periodicityConfig,... % periodicity
@@ -306,7 +312,7 @@ classdef srsSRSEstimatorUnittest < srsTest.srsBlockUnittest
                 };
 
             % Generate the test case entry.
-            testCaseString = testCase.testCaseToString(TestID,...
+            testCaseString = testCase.testCaseToString(testID,...
                 testContext, true, '_test_input');
 
             % Add the test to the file header.

@@ -75,16 +75,16 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
         outputPath = {['testPDSCHProcessor', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
     end
 
-    properties (TestParameter)     
+    properties (TestParameter)
         %BWP configuration.
         %   The bandwidth part is described by a two-element array with the starting
         %   PRB and the total number of PRBs (1...275).
         %   Example: [0, 25].
         BWPConfig = {[1, 25], [2, 52], [0, 106]}
-                
+
         %Modulation {QPSK, 16-QAM, 64-QAM, 256-QAM}.
         Modulation = {'QPSK', '16QAM', '64QAM', '256QAM'}
-        
+
         %PDSCH DM-RS subcarrier reference point.
         %    It can be either CRB 0 or PRB 0 within the BWP.
         DMRSReferencePoint = {'CRB0', 'PRB0'};
@@ -128,13 +128,12 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
         function testvectorGenerationCases(testCase, BWPConfig, Modulation, ...
                 DMRSReferencePoint)
         %testvectorGenerationCases Generates a test vector for the given
-        %   BWP, modulation scheme, and DM-RS reference point settings. 
+        %   BWP, modulation scheme, and DM-RS reference point settings.
         %   Other parameters, such as subcarrier spacing, PDSCH frequency
         %   allocation, slot number, RNTI, scrambling identifiers, target
         %   code rate and DM-RS additional positions are randomly
         %   generated.
 
-            import srsLib.phy.helpers.srsConfigureCarrier
             import srsLib.phy.helpers.srsCSIRSValidateConfig
             import srsLib.phy.helpers.srsCSIRS2ReservedCell
             import srsLib.phy.helpers.srsModulationFromMatlab
@@ -148,21 +147,25 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
             testID = testCase.generateTestID;
 
             % Random parameters.
-            NCellID = randi([0, 1007]);
-            NumLayers = randi([1, testCase.MaxNumLayers]);
-            
+            nCellID = randi([0, 1007]);
+            numLayers = randi([1, testCase.MaxNumLayers]);
+
             % BWP allocation, referenced to CRB0.
-            NStartBWP = BWPConfig(1);
-            NSizeBWP = BWPConfig(2);
+            nStartBWP = BWPConfig(1);
+            nSizeBWP = BWPConfig(2);
 
             % Grid starts at CRB0.
-            NStartGrid = 0;
+            nStartGrid = 0;
 
             % Grid size must be large enough to hold the BWP.
-            NSizeGrid = NStartBWP + NSizeBWP;
-            
+            nSizeGrid = nStartBWP + nSizeBWP;
+
             % Generate carrier configuration.
-            carrier = srsConfigureCarrier(NCellID, NSizeGrid, NStartGrid);
+            carrier = nrCarrierConfig( ...
+                NCellID=nCellID, ...
+                NSizeGrid=nSizeGrid, ...
+                NStartGrid=nStartGrid ...
+                );
 
             % Redundancy Version 0.
             rv = 0;
@@ -178,38 +181,38 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
             NID = randi([0, 1023]);
             NIDNSCID = randi([0, 65535]);
             NSCID = randi([0, 1]);
-            
+
             % 15 or 30 kHz subcarrier spacing.
             carrier.SubcarrierSpacing = 15 * randi([1, 2]);
             NSlot = randi([0, carrier.SlotsPerFrame]);
 
             % PDSCH frequency allocation within the BWP, referenced to PRB 0 of the BWP.
-            PdschStartRB = randi([0, NSizeBWP - MinNumPrb]);
-            PdschNumRB = randi([MinNumPrb, NSizeBWP - PdschStartRB]);
+            PdschStartRB = randi([0, nSizeBWP - MinNumPrb]);
+            PdschNumRB = randi([MinNumPrb, nSizeBWP - PdschStartRB]);
 
             % Additional DM-RS positions.
             DMRSAdditionalPosition = randi([0, 3]);
-            
+
             % Set carrier paramters.
-            carrier.NStartGrid = NStartGrid;
-            carrier.NSizeGrid = NSizeGrid;
-            carrier.NCellID = NCellID;
+            carrier.NStartGrid = nStartGrid;
+            carrier.NSizeGrid = nSizeGrid;
+            carrier.NCellID = nCellID;
             carrier.NSlot = NSlot;
-            
+
             % Create and set PDSCH config.
             pdsch = nrPDSCHConfig;
             pdsch.RNTI = RNTI;
             pdsch.NID = NID;
             pdsch.Modulation = Modulation;
             pdsch.SymbolAllocation = testCase.SymbolAllocation;
-            pdsch.NStartBWP = NStartBWP;
-            pdsch.NSizeBWP = NSizeBWP;
+            pdsch.NStartBWP = nStartBWP;
+            pdsch.NSizeBWP = nSizeBWP;
             pdsch.PRBSet = PdschStartRB + (0:PdschNumRB - 1);
             pdsch.DMRS.DMRSAdditionalPosition = DMRSAdditionalPosition;
             pdsch.DMRS.NIDNSCID = NIDNSCID;
             pdsch.DMRS.NSCID = NSCID;
             pdsch.DMRS.DMRSReferencePoint = DMRSReferencePoint;
-            pdsch.NumLayers = NumLayers;
+            pdsch.NumLayers = numLayers;
 
             % Create a ZP-CSI-RS resource, occupying the first symbol.
             csirs1 = nrCSIRSConfig;
@@ -219,10 +222,10 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
             csirs1.Density = 'three';
             csirs1.SymbolLocations = {3};
             csirs1.SubcarrierLocations = {0};
-            csirs1.NumRB = NSizeBWP;
-            csirs1.RBOffset = NStartBWP;
+            csirs1.NumRB = nSizeBWP;
+            csirs1.RBOffset = nStartBWP;
             csirs1.NID = NID;
-        
+
             % Create a second ZP-CSI-RS resource with differnt RE
             % allocations.
             csirs2 = nrCSIRSConfig;
@@ -232,8 +235,8 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
             csirs2.Density = 'dot5odd';
             csirs2.SymbolLocations = {4};
             csirs2.SubcarrierLocations = {randi([0, 11])};
-            csirs2.NumRB = NSizeBWP;
-            csirs2.RBOffset = NStartBWP;
+            csirs2.NumRB = nSizeBWP;
+            csirs2.RBOffset = nStartBWP;
             csirs2.NID = NID;
 
             % Create a third ZP-CSI-RS resource spanning two antenna
@@ -245,10 +248,10 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
             csirs3.Density = 'dot5even';
             csirs3.SymbolLocations = {12};
             csirs3.SubcarrierLocations = {randi([0, 10])};
-            csirs3.NumRB = NSizeBWP;
-            csirs3.RBOffset = NStartBWP;
+            csirs3.NumRB = nSizeBWP;
+            csirs3.RBOffset = nStartBWP;
             csirs3.NID = NID;
-          
+
             % Validate the CSI-RS resources.
             if ((~srsCSIRSValidateConfig(carrier, csirs1)) || ...
                     (~srsCSIRSValidateConfig(carrier, csirs2)) || ...
@@ -258,17 +261,17 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
 
             % Generate RE patterns from the CSI-RS resources.
             rvdREPatternList = srsCSIRS2ReservedCell(carrier, {csirs1, csirs2, csirs3});
-            
+
             % Add the CSI-RS indices to the PDSCH reserved RE list.
             CSIRSIndices = [nrCSIRSIndices(carrier, csirs1, 'IndexStyle','subscript', 'IndexBase', '0based'); ...
                nrCSIRSIndices(carrier, csirs2, 'IndexStyle','subscript', 'IndexBase', '0based'); ...
                nrCSIRSIndices(carrier, csirs3, 'IndexStyle','subscript', 'IndexBase', '0based')];
 
             % Flatten the index format.
-            CSIRSIndices = CSIRSIndices(:, 1) + 12 * NSizeBWP * CSIRSIndices(:, 2);
+            CSIRSIndices = CSIRSIndices(:, 1) + 12 * nSizeBWP * CSIRSIndices(:, 2);
 
             % Change the RE reference point from CRB0 to the BWP Start.
-            pdsch.ReservedRE = CSIRSIndices - 12 * NStartBWP;
+            pdsch.ReservedRE = CSIRSIndices - 12 * nStartBWP;
 
             % Generate PDSCH resource grid indices.
             [pdschDataIndices, pdschInfo] = nrPDSCHIndices(carrier, pdsch, 'IndexStyle','subscript', 'IndexBase','0based');
@@ -278,7 +281,7 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
 
             % Select a valid TBS.
             tbs = nrTBS(pdsch.Modulation, pdsch.NumLayers, length(pdsch.PRBSet), pdschInfo.NREPerPRB, targetCodeRate);
-           
+
             % Get DL-SCH information.
             dlschInfo = nrDLSCHInfo(tbs, targetCodeRate);
 
@@ -311,7 +314,7 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
 
             % Write PDSCH Data complex symbols and indices into a binary file as resource grid entries.
             testCase.saveDataFile(pdschGridFileName, testID, @writeResourceGridEntryFile, allSymbols, allIndices);
-                
+
             % Generate DM-RS symbol mask.
             dmrsSymbolMask = symbolAllocationMask2string(...
                 nrPDSCHDMRSIndices(carrier, pdsch, 'IndexStyle', ...
@@ -323,7 +326,7 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
             refPointStr = ['pdsch_processor::pdu_t::', pdsch.DMRS.DMRSReferencePoint];
             numCDMGroupsWithoutData = pdsch.DMRS.NumCDMGroupsWithoutData;
             baseGraphString = ['ldpc_base_graph_type::BG', num2str(dlschInfo.BGN)];
-      
+
             % Transport block size for limited buffer rate match.
             TBSLBRM = nrTBS('256QAM', 4, 273, 156, 948 / 1024) / 8;
             TBSLBRMStr = ['units::bytes(' num2str(TBSLBRM) ')'];
@@ -338,7 +341,7 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
             % Convert modulation type to string.
             modString1 = srsModulationFromMatlab(pdsch.Modulation, 'full');
 
-            precodingString = ['precoding_configuration::make_wideband(make_identity(' num2str(NumLayers) '))'];
+            precodingString = ['precoding_configuration::make_wideband(make_identity(' num2str(numLayers) '))'];
 
             % Prepare PDSCH configuration.
             pduDescription = {...
@@ -376,7 +379,7 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
             % Generate PDSCH transmission entry.
             testCaseString = testCase.testCaseToString(testID, contextDescription, true, ...
                 transportBlockFileName, pdschGridFileName);
-        
+
             % Add the test to the file header.
             testCase.addTestToHeaderFile(testCase.headerFileID, ...
                 testCaseString);

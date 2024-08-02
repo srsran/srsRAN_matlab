@@ -124,7 +124,6 @@ classdef srsPDCCHdmrsUnittest < srsTest.srsBlockUnittest
         %   CCEREGMapping and AggregationLevel, while using a random NCellID and a random NSlot.
 
             import srsTest.helpers.cellarray2str
-            import srsLib.phy.helpers.srsConfigureCarrier
             import srsLib.phy.upper.signal_processors.srsPDCCHdmrs
             import srsLib.phy.helpers.srsGetUniqueSymbolsIndices
             import srsTest.helpers.writeResourceGridEntryFile
@@ -136,33 +135,33 @@ classdef srsPDCCHdmrsUnittest < srsTest.srsBlockUnittest
 
             % use a unique NCellID, NSlot and rnti for each test
             randomizedCellID = testCase.randomizeTestvector(testID + 1);
-            NCellIDLoc = testCase.NCellID{randomizedCellID};
+            nCellID = testCase.NCellID{randomizedCellID};
 
             if numerology == 0
                 randomizedSlot = testCase.randomizeSlotNum0(testID + 1);
             else
                 randomizedSlot = testCase.randomizeSlotNum1(testID + 1);
             end
-            NSlotLoc = testCase.NSlot{randomizedSlot};
+            nSlot = testCase.NSlot{randomizedSlot};
 
             % current fixed parameter values (e.g., maximum grid size with current interleaving
             % configuration, CORESET will use all available frequency resources)
-            NSizeGrid = 216;
-            NStartGrid = 0;
-            NFrame = 0;
-            CyclicPrefix = 'normal';
-            maxFrequencyResources = floor(NSizeGrid / 6);
+            nSizeGrid = 216;
+            nStartGrid = 0;
+            nFrame = 0;
+            cyclicPrefix = 'normal';
+            maxFrequencyResources = floor(nSizeGrid / 6);
             frequencyResources = int2bit(2^maxFrequencyResources - 1, maxFrequencyResources).';
             interleaverSize = 2;
             REGBundleSize = 6;
             searchSpaceType = 'ue';
             rnti = 0;
             nStartBWP = 0;
-            nSizeBWP = NSizeGrid;
+            nSizeBWP = nSizeGrid;
             allocatedCandidate = 1;
             referencePointKrb = 0;
             startSymbolIndex = 0;
-            DMRSScramblingID = NCellIDLoc;
+            DMRSScramblingID = nCellID;
             DMRSamplitude = 1.0;
 
             % only encode the PDCCH when it fits
@@ -174,9 +173,16 @@ classdef srsPDCCHdmrsUnittest < srsTest.srsBlockUnittest
             if (isAggregationOK && isCCEREGMappingOK)
 
                 % configure the carrier according to the test parameters
-                SubcarrierSpacing = 15 * (2 .^ numerology);
-                carrier = srsConfigureCarrier(NCellIDLoc, SubcarrierSpacing, NSizeGrid, ...
-                    NStartGrid, NSlotLoc, NFrame, CyclicPrefix);
+                subcarrierSpacing = 15 * (2 .^ numerology);
+                carrier = nrCarrierConfig( ...
+                    NCellID=nCellID, ...
+                    SubcarrierSpacing=subcarrierSpacing, ...
+                    NSizeGrid=nSizeGrid, ...
+                    NStartGrid=nStartGrid, ...
+                    NSlot=nSlot, ...
+                    NFrame=nFrame, ...
+                    CyclicPrefix=cyclicPrefix ...
+                    );
 
                 % configure the CORESET according to the test parameters
                 coreset = nrCORESETConfig( ...
@@ -211,16 +217,16 @@ classdef srsPDCCHdmrsUnittest < srsTest.srsBlockUnittest
                     DMRSsymbolsVector, symbolIndicesVector);
 
                 % generate a 'slot_point' configuration string
-                slotPointConfig = {numerology, NFrame, ...
-                    floor(NSlotLoc / carrier.SlotsPerSubframe), ...
-                    rem(NSlotLoc, carrier.SlotsPerSubframe)};
+                slotPointConfig = {numerology, nFrame, ...
+                    floor(nSlot / carrier.SlotsPerSubframe), ...
+                    rem(nSlot, carrier.SlotsPerSubframe)};
 
                 % generate a RB allocation mask string
                 rbAllocationMask = RBallocationMask2string(symbolIndicesVector);
 
 
                 % Convert cyclic prefix to string.
-                cpString = ['cyclic_prefix::', upper(CyclicPrefix)];
+                cpString = ['cyclic_prefix::', upper(cyclicPrefix)];
 
                 configCell = {...
                     slotPointConfig, ...    % slot
