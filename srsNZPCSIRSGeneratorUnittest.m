@@ -121,7 +121,6 @@ classdef srsNZPCSIRSGeneratorUnittest < srsTest.srsBlockUnittest
             import srsTest.helpers.matlab2srsCyclicPrefix
 
             import srsLib.phy.helpers.srsConfigureCarrier
-            import srsLib.phy.helpers.srsConfigureCSIRS
             import srsLib.phy.upper.signal_processors.srsCSIRSnzp
             import srsLib.phy.helpers.srsCSIRSGetNofFreqRefs
             import srsLib.phy.helpers.srsCSIRSValidateConfig
@@ -161,21 +160,21 @@ classdef srsNZPCSIRSGeneratorUnittest < srsTest.srsBlockUnittest
                     return;
             end
 
-            NumRB = randi([4, floor(NSizeGrid)]);
-            RBOffset = randi([0, NSizeGrid - NumRB]);
-            NID = randi([0, 1023]);
+            numRB = randi([4, floor(NSizeGrid)]);
+            RBOffset = randi([0, NSizeGrid - numRB]);
+            nID = randi([0, 1023]);
             amplitude = 0.1 * randi([1, 100]);
 
             % Generate the remaining location references.
             nofKiRefs = srsCSIRSGetNofFreqRefs(RowNumber);
 
-            SubcarrierLocations = zeros(nofKiRefs, 1);
+            subcarrierLocations = zeros(nofKiRefs, 1);
             for i = 1 : nofKiRefs
-                SubcarrierLocations(i) = k_0 + 2 * (i - 1);
+                subcarrierLocations(i) = k_0 + 2 * (i - 1);
             end
 
-            SubcarrierLocations = {SubcarrierLocations};
-            SymbolLocations = {l_0};
+            subcarrierLocations = {subcarrierLocations};
+            symbolLocations = {l_0};
 
             SubcarrierSpacing = 15 * (2 .^ Numerology);
 
@@ -187,12 +186,21 @@ classdef srsNZPCSIRSGeneratorUnittest < srsTest.srsBlockUnittest
                 return;
             end
 
-            % Create the CSIRS configuration for the MATLAB processor.
-            CSIRS = srsConfigureCSIRS(Density, RowNumber, SymbolLocations, ...
-                SubcarrierLocations, NumRB, NID, RBOffset, CSIRSType, CSIRSPeriod);
-
-            if (isempty(CSIRS))
-                return;
+            try
+                % Create the CSIRS configuration for the MATLAB processor.
+                CSIRS = nrCSIRSConfig( ...
+                    Density=Density, ...
+                    RowNumber=RowNumber, ...
+                    SymbolLocations=symbolLocations, ...
+                    SubcarrierLocations=subcarrierLocations, ...
+                    NumRB=numRB, ...
+                    NID=nID, ...
+                    RBOffset=RBOffset, ...
+                    CSIRSType=CSIRSType, ...
+                    CSIRSPeriod=CSIRSPeriod ...
+                );
+            catch
+                obj.AssumeFail('The current configuration results in an invalid CSIRS.');
             end
 
             % Invalid test case configurations are skipped.
@@ -222,7 +230,7 @@ classdef srsNZPCSIRSGeneratorUnittest < srsTest.srsBlockUnittest
             CDMStr = matlab2srsCDMType(CSIRS.CDMType);
 
             % Generate the Subcarrier indices string.
-            SubcarrierRefStr = cellarray2str(SubcarrierLocations, true);
+            SubcarrierRefStr = cellarray2str(subcarrierLocations, true);
 
             % Precoding configuration that maps layers to ports one to one.
             precodingString = ['precoding_configuration::make_wideband(make_identity(' num2str(CSIRS.NumCSIRSPorts) '))'];
@@ -231,14 +239,14 @@ classdef srsNZPCSIRSGeneratorUnittest < srsTest.srsBlockUnittest
                 slotPointConfig, ...  % slot
                 CyclicPrefixStr, ...  % cp
                 RBOffset, ...         % start_rb
-                NumRB, ...            % nof_rb
+                numRB, ...            % nof_rb
                 RowNumber, ...        % csi_rs_mapping_table_row
                 SubcarrierRefStr, ... % freq_allocation_ref_idx
                 l_0, ...              % symbol_l0
                 l_1, ...              % symbol_l1
                 CDMStr, ...           % cdm
                 DensityStr, ...       % freq_density
-                NID, ...              % scrambling_id
+                nID, ...              % scrambling_id
                 amplitude, ...        % amplitude
                 precodingString...    % precoding
                 };
