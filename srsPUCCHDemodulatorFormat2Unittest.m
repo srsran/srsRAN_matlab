@@ -114,7 +114,6 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
             import srsTest.helpers.writeInt8File
             import srsTest.helpers.writeComplexFloatFile
             import srsLib.phy.helpers.srsConfigureCarrier
-            import srsLib.phy.helpers.srsConfigurePUCCH
             import srsLib.phy.upper.channel_processors.srsPUCCH2
 
             % Generate a unique test ID.
@@ -136,17 +135,17 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
             NStartGrid = 0;
 
             % BWP start relative to CRB0.
-            NStartBWP = randi([0, MaxGridSize - PRBNum - 1]);
+            nStartBWP = randi([0, MaxGridSize - PRBNum - 1]);
 
             % BWP size.
             % PUCCH Format 2 frequency allocation must fit inside the BWP.
-            NSizeBWP = randi([PRBNum, MaxGridSize - NStartBWP]);
+            nSizeBWP = randi([PRBNum, MaxGridSize - nStartBWP]);
 
             % PUCCH PRB Start relative to the BWP.
-            PRBStart = randi([0, NSizeBWP - PRBNum]);
+            PRBStart = randi([0, nSizeBWP - PRBNum]);
 
             % Fit resource grid size to the BWP.
-            NSizeGrid = NStartBWP + NSizeBWP;
+            NSizeGrid = nStartBWP + nSizeBWP;
 
             % PRB set assigned to PUCCH Format 2 within the BWP.
             % Each element within the PRB set indicates the location of a
@@ -165,11 +164,18 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
             nofGridSymbols = carrier.SymbolsPerSlot;
 
             % No frequency hopping.
-            FrequencyHopping = 'neither';
+            frequencyHopping = 'neither';
 
             % Configure the PUCCH.
-            pucch = srsConfigurePUCCH(2, NStartBWP, NSizeBWP, SymbolAllocation, ...
-                 PRBSet, FrequencyHopping, NID, RNTI);
+            pucch = nrPUCCH2Config( ...
+                NStartBWP=nStartBWP, ...
+                NSizeBWP=nSizeBWP, ...
+                SymbolAllocation=SymbolAllocation, ...
+                PRBSet=PRBSet, ...
+                FrequencyHopping=frequencyHopping, ...
+                NID=NID, ...
+                RNTI=RNTI ...
+                );
 
             % Number of PUCCH Subcarriers.
             nofPUCCHSubcs = PRBNum * 12;
@@ -246,7 +252,7 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
             portsString = '{0}';
 
             % First PRB within the resource grid allocated to PUCCH.
-            firstPRB = NStartBWP + PRBStart;
+            firstPRB = nStartBWP + PRBStart;
 
             pucchF2Config = {...
                 portsString, ...         % rx_ports

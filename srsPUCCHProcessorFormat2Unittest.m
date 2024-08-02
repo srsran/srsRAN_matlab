@@ -139,7 +139,6 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
         % Sets secondary simulation variables and MATLAB NR configuration objects.
 
             import srsLib.phy.helpers.srsConfigureCarrier
-            import srsLib.phy.helpers.srsConfigurePUCCH
 
             % Generate random cell ID.
             NCellID = randi([0, 1007]);
@@ -157,7 +156,7 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
             CyclicPrefix = 'normal';
 
             % No frequency hopping.
-            FrequencyHopping = 'neither';
+            frequencyHopping = 'neither';
 
             % QPSK modulation has 2 bit per symbol.
             modulationOrder = 2;
@@ -198,17 +197,17 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
             NStartGrid = 0;
 
             % BWP start relative to CRB0.
-            NStartBWP = randi([0, MaxGridSize - PRBNum]);
+            nStartBWP = randi([0, MaxGridSize - PRBNum]);
 
             % BWP size. PUCCH Format 2 frequency allocation must fit inside
             % the BWP.
-            NSizeBWP = randi([PRBNum, MaxGridSize - NStartBWP]);
+            nSizeBWP = randi([PRBNum, MaxGridSize - nStartBWP]);
 
             % PUCCH PRB Start relative to the BWP.
-            PRBStart = randi([0, NSizeBWP - PRBNum]);
+            PRBStart = randi([0, nSizeBWP - PRBNum]);
 
             % Fit resource grid size to the BWP.
-            NSizeGrid = NStartBWP + NSizeBWP;
+            NSizeGrid = nStartBWP + nSizeBWP;
 
             % PRB set assigned to PUCCH Format 2 within the BWP.
             % Each element within the PRB set indicates the location of a
@@ -220,8 +219,16 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
                 NStartGrid, CyclicPrefix);
 
             % Configure the PUCCH Format 2
-            testCase.PUCCH = srsConfigurePUCCH(2, NStartBWP, NSizeBWP, SymbolAllocation, ...
-                 PRBSet, FrequencyHopping, NID, NID0, RNTI);
+            testCase.PUCCH = nrPUCCH2Config( ...
+                NStartBWP=nStartBWP, ...
+                NSizeBWP=nSizeBWP, ...
+                SymbolAllocation=SymbolAllocation, ...
+                PRBSet=PRBSet, ...
+                FrequencyHopping=frequencyHopping, ...
+                NID=NID, ...
+                NID0=NID0, ...
+                RNTI=RNTI ...
+                );
         end % of function setupsimulation(testCase, SymbolAllocation, ...
 
     end % methods (Access = private)

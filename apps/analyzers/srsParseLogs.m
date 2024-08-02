@@ -118,8 +118,10 @@ function [carrier, phych, extra] = srsParseLogs
         fPattern = "format=" + digitsPattern;
         fType = extract(allLines{1}, fPattern);
         format = str2double(fType{1}(end));
-        if ismember(format, [1, 2])
-            phych = srsLib.phy.helpers.srsConfigurePUCCH(format);
+        if (format == 1)
+            phych = nrPUCCH1Config;
+        elseif (format == 2)
+            phych = nrPUCCH2Config;
         else
             error('PUCCH Format %d is not supported.', format);
         end
