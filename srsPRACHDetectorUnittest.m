@@ -159,37 +159,42 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
 
             import srsLib.phy.helpers.srsConfigurePRACH
 
-            RestrictedSetLoc = obj.RestrictedSet;
-            RBOffsetLoc = obj.RBOffset;
+            restrictedSet = obj.RestrictedSet;
+            rbOffset = obj.RBOffset;
 
             % Select PRACH random parameters.
-            SequenceIndex = randi([0, 1023], 1, 1);
-            PreambleIndex = randi([0, 63], 1, 1);
+            sequenceIndex = randi([0, 1023], 1, 1);
+            preambleIndex = randi([0, 63], 1, 1);
 
             % Generate carrier configuration.
             obj.carrier = nrCarrierConfig;
             obj.carrier.CyclicPrefix = 'normal';
             obj.carrier.NSizeGrid = obj.CarrierBandwidth;
 
-            ZeroCorrelationZone = 0;
+            zeroCorrelationZone = 0;
 
             % Select zero correlation zone according to TS38.104 Table A.6-1.
             if UseZCZ
                 if strlength(PreambleFormat) == 1
-                    ZeroCorrelationZone = 1;
+                    zeroCorrelationZone = 1;
                 else
                     if strcmp(DuplexMode, 'FDD') 
-                        ZeroCorrelationZone = 11;
+                        zeroCorrelationZone = 11;
                     else
-                        ZeroCorrelationZone = 14;
+                        zeroCorrelationZone = 14;
                     end
                 end
             end
 
             % Generate PRACH configuration.
-            obj.prach = srsConfigurePRACH(DuplexMode,  SequenceIndex, ...
-                PreambleIndex, RestrictedSetLoc, ZeroCorrelationZone, ...
-                RBOffsetLoc, PreambleFormat);
+            obj.prach = srsConfigurePRACH( PreambleFormat, ...
+                DuplexMode=DuplexMode, ...
+                SequenceIndex=sequenceIndex, ...
+                PreambleIndex=preambleIndex, ...
+                RestrictedSet=restrictedSet, ...
+                ZeroCorrelationZone=zeroCorrelationZone, ...
+                RBOffset=rbOffset ...
+                );
 
             % Set parameters that depend on the duplex mode.
             switch DuplexMode

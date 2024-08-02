@@ -117,7 +117,7 @@ classdef srsPRACHGeneratorUnittest < srsTest.srsBlockUnittest
 
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet, ZeroCorrelationZone, RBOffset)
-        %testvectorGenerationCases Generates a test vector for the given 
+        %testvectorGenerationCases Generates a test vector for the given
         %DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet,
         %ZeroCorrelationZone and RBOffset. The parameters SequenceIndex
         %and PreambleIndex are generated randomly.
@@ -128,16 +128,23 @@ classdef srsPRACHGeneratorUnittest < srsTest.srsBlockUnittest
 
             % Generate a unique test ID
             TestID = testCase.generateTestID;
-            
+
             % Generate carrier configuration
             carrier = nrCarrierConfig;
             carrier.CyclicPrefix = 'normal';
             carrier.NSizeGrid = CarrierBandwidth;
 
             % Generate PRACH configuration.
-            SequenceIndex = randi([0, 1023], 1, 1);
-            PreambleIndex = randi([0, 63], 1, 1);
-            prach = srsConfigurePRACH(DuplexMode, SequenceIndex, PreambleIndex, RestrictedSet, ZeroCorrelationZone, RBOffset, PreambleFormat);
+            sequenceIndex = randi([0, 1023], 1, 1);
+            preambleIndex = randi([0, 63], 1, 1);
+            prach = srsConfigurePRACH(PreambleFormat, ...
+                DuplexMode=DuplexMode, ...
+                SequenceIndex=sequenceIndex, ...
+                PreambleIndex=preambleIndex, ...
+                RestrictedSet=RestrictedSet, ...
+                ZeroCorrelationZone=ZeroCorrelationZone, ...
+                RBOffset=RBOffset ...
+                );
 
             % Set parameters that depend on the duplex mode.
             switch DuplexMode
