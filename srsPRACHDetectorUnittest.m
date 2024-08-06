@@ -171,6 +171,16 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
             obj.carrier.CyclicPrefix = 'normal';
             obj.carrier.NSizeGrid = obj.CarrierBandwidth;
 
+            % Set parameters that depend on the duplex mode.
+            switch DuplexMode
+                case 'FDD'
+                    obj.carrier.SubcarrierSpacing = 15;
+                case 'TDD'
+                    obj.carrier.SubcarrierSpacing = 30;
+                otherwise
+                    error('Invalid duplex mode %s', obj.DuplexMode);
+            end
+
             zeroCorrelationZone = 0;
 
             % Select zero correlation zone according to TS38.104 Table A.6-1.
@@ -189,22 +199,13 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
             % Generate PRACH configuration.
             obj.prach = srsConfigurePRACH( PreambleFormat, ...
                 DuplexMode=DuplexMode, ...
+                SubcarrierSpacing=obj.carrier.SubcarrierSpacing, ...
                 SequenceIndex=sequenceIndex, ...
                 PreambleIndex=preambleIndex, ...
                 RestrictedSet=restrictedSet, ...
                 ZeroCorrelationZone=zeroCorrelationZone, ...
                 RBOffset=rbOffset ...
                 );
-
-            % Set parameters that depend on the duplex mode.
-            switch DuplexMode
-                case 'FDD'
-                    obj.carrier.SubcarrierSpacing = 15;
-                case 'TDD'
-                    obj.carrier.SubcarrierSpacing = 30;
-                otherwise
-                    error('Invalid duplex mode %s', obj.DuplexMode);
-            end
         end % of function setupsimulation(obj, PreambleFormat, UseZCZ)
 
         function grid = generatePRACH(obj, nAntennas) 
