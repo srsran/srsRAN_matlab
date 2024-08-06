@@ -145,15 +145,15 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
             % Set parameters that depend on the duplex mode.
             switch DuplexMode
                 case 'FDD'
-                    FrequencyRange = 'FR1';
+                    frequencyRange = 'FR1';
                     SubcarrierSpacing = 15;
                     preambleFormats = testCase.PreambleFormatsFR1;
                 case 'TDD'
-                    FrequencyRange = 'FR1';
+                    frequencyRange = 'FR1';
                     SubcarrierSpacing = 30;
                     preambleFormats = testCase.PreambleFormatsFR1;
                 case 'TDD-FR2'
-                    FrequencyRange = 'FR2';
+                    frequencyRange = 'FR2';
                     SubcarrierSpacing = 120;
                     DuplexMode = 'TDD';
                     preambleFormats = testCase.PreambleFormatsFR2;
@@ -175,6 +175,7 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
                 PreambleFormat, ...
                 FrequencyRange=frequencyRange, ...
                 DuplexMode=DuplexMode, ...
+                SubcarrierSpacing=SubcarrierSpacing, ...
                 SequenceIndex=sequenceIndex, ...
                 RestrictedSet=RestrictedSet, ...
                 ZeroCorrelationZone=ZeroCorrelationZone, ...
@@ -207,7 +208,7 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
                     [occasionTmp, gridset, info] = srsPRACHgenerator(carrier, prach);
 
                     % Padd occasion with zeros to match the waveform size.
-                    occasion = [occasioccasionTmpon; zeros(numel(waveform) - numel(occasionTmp), 1)];
+                    occasion = [occasionTmp; zeros(numel(waveform) - numel(occasionTmp), 1)];
 
                     % Combine the waveform of each occasion.
                     waveform = occasion + waveform;
