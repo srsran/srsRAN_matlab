@@ -146,15 +146,15 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
             switch DuplexMode
                 case 'FDD'
                     frequencyRange = 'FR1';
-                    SubcarrierSpacing = 15;
+                    subcarrierSpacing = 15;
                     preambleFormats = testCase.PreambleFormatsFR1;
                 case 'TDD'
                     frequencyRange = 'FR1';
-                    SubcarrierSpacing = 30;
+                    subcarrierSpacing  = 30;
                     preambleFormats = testCase.PreambleFormatsFR1;
                 case 'TDD-FR2'
                     frequencyRange = 'FR2';
-                    SubcarrierSpacing = 120;
+                    subcarrierSpacing  = 120;
                     DuplexMode = 'TDD';
                     preambleFormats = testCase.PreambleFormatsFR2;
                 otherwise
@@ -164,10 +164,11 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
             PreambleFormat = preambleFormats{randi([1, numel(preambleFormats)])};
 
             % Generate carrier configuration
-            carrier = nrCarrierConfig;
-            carrier.CyclicPrefix = 'normal';
-            carrier.NSizeGrid = CarrierBandwidth;
-            carrier.SubcarrierSpacing = SubcarrierSpacing;
+            carrier = nrCarrierConfig( ...
+                CyclicPrefix='normal', ...
+                NSizeGrid=CarrierBandwidth, ...
+                SubcarrierSpacing=subcarrierSpacing ...
+                );
 
             % Generate PRACH configuration.
             sequenceIndex = randi([0, 1023], 1, 1);
@@ -207,7 +208,7 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
                     % Generate waveform for each occasion.
                     [occasionTmp, gridset, info] = srsPRACHgenerator(carrier, prach);
 
-                    % Padd occasion with zeros to match the waveform size.
+                    % Pad occasion with zeros to match the waveform size.
                     occasion = [occasionTmp; zeros(numel(waveform) - numel(occasionTmp), 1)];
 
                     % Combine the waveform of each occasion.
