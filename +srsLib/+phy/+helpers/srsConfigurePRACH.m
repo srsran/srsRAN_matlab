@@ -67,6 +67,9 @@ function prach = setPreambleFormat(prach, preambleFormat)
             prach.LRA = 839;
         otherwise
             prach.RestrictedSet = 'UnrestrictedSet';
+            if (prach.SubcarrierSpacing < 15)
+                prach.SubcarrierSpacing = 15;
+            end
             if strcmp(prach.DuplexMode, 'TDD')
                 prach.ActivePRACHSlot = 1;
             end
