@@ -9,7 +9,7 @@
 %
 %   srsBlock      - The tested block (i.e., 'pdsch_encoder').
 %   srsBlockType  - The type of the tested block, including layer
-%                   (i.e., 'phy/upper/channel_processors').
+%                   (i.e., 'phy/upper/channel_processors/pdsch').
 %
 %   srsPDSCHEncoderUnittest Properties (ClassSetupParameter):
 %
@@ -55,7 +55,7 @@ classdef srsPDSCHEncoderUnittest < srsTest.srsBlockUnittest
         srsBlock = 'pdsch_encoder'
 
         %Type of the tested block.
-        srsBlockType = 'phy/upper/channel_processors'
+        srsBlockType = 'phy/upper/channel_processors/pdsch'
     end
 
     properties (ClassSetupParameter)
