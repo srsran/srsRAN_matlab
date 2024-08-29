@@ -77,12 +77,13 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
     end
 
     methods (Access = protected)
-        function addTestIncludesToHeaderFile(obj, fileID)
+        function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
-            addTestIncludesToHeaderFilePHYchproc(obj, fileID);
+            fprintf(fileID, '#include "../../../support/resource_grid_test_doubles.h"\n');
+            fprintf(fileID, '#include "srsran/phy/upper/channel_processors/pdsch/pdsch_modulator.h"\n');
             fprintf(fileID, '#include "srsran/ran/precoding/precoding_codebooks.h"\n');
+            fprintf(fileID, '#include "srsran/support/file_vector.h"\n');
         end
-
         function addTestDefinitionToHeaderFile(obj, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
             addTestDefinitionToHeaderFilePHYchproc(obj, fileID);
