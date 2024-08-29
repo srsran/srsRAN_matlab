@@ -20,7 +20,6 @@
 #include "prach_detector_mex.h"
 #include "srsran_matlab/support/matlab_to_srs.h"
 #include "srsran/phy/upper/channel_processors/channel_processor_formatters.h"
-#include "srsran/srsvec/copy.h"
 
 using matlab::mex::ArgumentList;
 using namespace matlab::data;
@@ -66,13 +65,10 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
   }
 
   // Extract dimensions.
-  unsigned nof_re       = buffer_dimensions[0];
-  unsigned nof_symbols  = buffer_dimensions[1];
-  unsigned nof_rx_ports = 1;
-  if (buffer_dimensions.size() == 3) {
-    // The number of ports is one except if there is a third dimension.
-    buffer_dimensions[2];
-  }
+  unsigned nof_re      = buffer_dimensions[0];
+  unsigned nof_symbols = buffer_dimensions[1];
+  // The number of ports is one if there is no third dimension.
+  unsigned nof_rx_ports = (buffer_dimensions.size() == 3) ? buffer_dimensions[2] : 1;
 
   // Restricted sets are not implemented. Skip.
   prach_detector::configuration detector_config = {};
