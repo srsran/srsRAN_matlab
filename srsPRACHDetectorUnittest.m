@@ -74,7 +74,8 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
         %Carrier duplexing mode, set to
         %   - FDD for paired spectrum with 15kHz subcarrier spacing, or
         %   - TDD for unpaired spectrum with 30kHz subcarrier spacing.
-        DuplexMode = {'FDD', 'TDD'}
+        %   - TDD-FR2 for unpaired spectrum with 120kHz subcarrier spacing (Frequency Range 2).
+        DuplexMode = {'FDD', 'TDD', 'TDD-FR2'}
 
         %Preamble formats.
         PreambleFormat = {'0', '1', '2', 'A1','B4'}
@@ -159,6 +160,9 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
 
             import srsLib.phy.helpers.srsConfigurePRACH
 
+            obj.assumeTrue(~strcmp(DuplexMode, 'TDD-FR2') || ismember(PreambleFormat, {'A1', 'B4'}), ...
+                'Only short formats allowed in FR2.');
+
             restrictedSet = obj.RestrictedSet;
             rbOffset = obj.RBOffset;
 
@@ -171,12 +175,17 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
             obj.carrier.CyclicPrefix = 'normal';
             obj.carrier.NSizeGrid = obj.CarrierBandwidth;
 
+            frequencyRange = 'FR1';
+
             % Set parameters that depend on the duplex mode.
             switch DuplexMode
                 case 'FDD'
                     obj.carrier.SubcarrierSpacing = 15;
                 case 'TDD'
                     obj.carrier.SubcarrierSpacing = 30;
+                case 'TDD-FR2'
+                    obj.carrier.SubcarrierSpacing = 120;
+                    frequencyRange = 'FR2';
                 otherwise
                     error('Invalid duplex mode %s', obj.DuplexMode);
             end
@@ -197,8 +206,9 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
             end
 
             % Generate PRACH configuration.
-            obj.prach = srsConfigurePRACH( PreambleFormat, ...
-                DuplexMode=DuplexMode, ...
+            obj.prach = srsConfigurePRACH(PreambleFormat, ...
+                FrequencyRange=frequencyRange, ...
+                DuplexMode=DuplexMode(1:3), ...
                 SubcarrierSpacing=obj.carrier.SubcarrierSpacing, ...
                 SequenceIndex=sequenceIndex, ...
                 PreambleIndex=preambleIndex, ...
