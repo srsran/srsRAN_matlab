@@ -175,8 +175,7 @@ classdef CheckPUCCHF2Conformance < matlab.unittest.TestCase
             pp.NSizeGrid = TestConfig.NSizeGrid;
             pp.PRBSet = 0:3;
             pp.SymbolAllocation = [13 1];
-            pp.NumACKBits = 0;
-            pp.NumCSI1Bits = 22;
+            pp.NumACKBits = 4;
             pp.NRxAnts = TestConfig.NRxAnts;
             pp.DelayProfile = 'TDLC300';
             pp.MaximumDopplerShift = 100;
