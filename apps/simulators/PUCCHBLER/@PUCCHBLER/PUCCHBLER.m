@@ -157,7 +157,7 @@ classdef PUCCHBLER < matlab.System
         Modulation (1, :) char {mustBeMember(Modulation, {'BPSK', 'pi/2-BPSK', 'QPSK'})} = 'QPSK'
         %PUCCH Format (0, 1, 2, 3).
         PUCCHFormat double {mustBeInteger, mustBeInRange(PUCCHFormat, 0, 3)} = 2
-        %Frequency hopping ('intraSlot', 'interSlot', 'either')
+        %Frequency hopping ('intraSlot', 'interSlot', 'neither')
         FrequencyHopping  {mustBeMember(FrequencyHopping, {'intraSlot', 'interSlot', 'neither'})} = 'neither'
         %Number of HARQ-ACK bits.
         NumACKBits double {mustBeInteger, mustBeInRange(NumACKBits, 0, 1706)} = 4
@@ -341,8 +341,8 @@ classdef PUCCHBLER < matlab.System
         end
 
         function checkImplementationandHopping(obj)
-            if (~strcmp(obj.ImplementationType, 'matlab') && ~strcmp(obj.FrequencyHopping, 'neither'))
-                error('Intra- or inter-slot frequency hopping only works with ImplementationType=''matlab''.');
+            if (~strcmp(obj.ImplementationType, 'matlab') && strcmp(obj.FrequencyHopping, 'interSlot'))
+                error('Inter-slot frequency hopping only works with ImplementationType=''matlab''.');
             end
         end
 
