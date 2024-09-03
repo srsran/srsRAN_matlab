@@ -65,10 +65,19 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
 
     properties (TestParameter)
 
-        %Symbols allocated to the PUCCH transmission. The symbol allocation is described
-        %   by a two-element array with the starting symbol (0...13) and the length (1...14)
-        %   of the PUCCH transmission. Example: [13, 1].
-        SymbolAllocation = {[0, 1], [6, 2], [12, 2]};
+        %Symbols allocated to the PUCCH transmission.
+        %
+        %   The symbol allocation is by a structure with two fields:
+        %   - a two-element array with the starting symbol (0...13) and the length (1...14)
+        %     of the PUCCH transmission. Example: [13, 1], and
+        %   - a logical flag for intra-slot frequency hopping.
+        SymbolAllocation = { ...
+            struct('Allocation', [0, 1], 'FrequencyHopping', false), ...
+            struct('Allocation', [6, 2], 'FrequencyHopping', false), ...
+            struct('Allocation', [12, 2], 'FrequencyHopping', false), ...
+            struct('Allocation', [6, 2], 'FrequencyHopping', true), ...
+            struct('Allocation', [12, 2], 'FrequencyHopping', true), ...
+            };
 
         %Number of contiguous PRB allocated to PUCCH Format 2 (1...16).
         PRBNum = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
@@ -167,15 +176,22 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
             nofGridSymbols = carrier.SymbolsPerSlot;
 
             % No frequency hopping.
-            frequencyHopping = 'neither';
+            if SymbolAllocation.FrequencyHopping
+                frequencyHopping = 'intraSlot';
+                secondPRBStart = randi([0, nSizeBWP - PRBNum]);
+            else
+                frequencyHopping = 'neither';
+                secondPRBStart = 1;
+            end
 
             % Configure the PUCCH.
             pucch = nrPUCCH2Config( ...
                 NStartBWP=nStartBWP, ...
                 NSizeBWP=nSizeBWP, ...
-                SymbolAllocation=SymbolAllocation, ...
+                SymbolAllocation=SymbolAllocation.Allocation, ...
                 PRBSet=PRBSet, ...
                 FrequencyHopping=frequencyHopping, ...
+                SecondHopStartPRB=secondPRBStart, ...
                 NID=NID, ...
                 RNTI=RNTI ...
                 );
@@ -190,7 +206,7 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
             nofPUCCHDataSubcs = nofPUCCHSubcs - nofPUCCHDMRSSubcs;
 
             % Number of PUCCH data RE in a single slot.
-            nofPUCCHDataRE = nofPUCCHDataSubcs * SymbolAllocation(2);
+            nofPUCCHDataRE = nofPUCCHDataSubcs * SymbolAllocation.Allocation(2);
 
             % Number of bits that can be mapped to the available radio
             % resources.
@@ -256,15 +272,22 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
 
             % First PRB within the resource grid allocated to PUCCH.
             firstPRB = nStartBWP + PRBStart;
+            % First PRB within the resource grid allocated to PUCCH for the second hop, if any.
+            if SymbolAllocation.FrequencyHopping
+                secondHopPRB = nStartBWP + secondPRBStart;
+            else
+                secondHopPRB = {};
+            end
 
             pucchF2Config = {...
-                portsString, ...         % rx_ports
-                firstPRB, ...            % first_prb
-                PRBNum, ...              % nof_prb
-                SymbolAllocation(1), ... % start_symbol_index
-                SymbolAllocation(2), ... % nof_symbols
-                RNTI, ...                % rnti
-                NID, ...                 % n_id
+                portsString, ...                    % rx_ports
+                firstPRB, ...                       % first_prb
+                secondHopPRB, ...                   % second_hop_prb
+                PRBNum, ...                         % nof_prb
+                SymbolAllocation.Allocation(1), ... % start_symbol_index
+                SymbolAllocation.Allocation(2), ... % nof_symbols
+                RNTI, ...                           % rnti
+                NID, ...                            % n_id
                 };
 
             testCaseContext = { ...
