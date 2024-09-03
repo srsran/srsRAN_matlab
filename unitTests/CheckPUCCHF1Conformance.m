@@ -147,7 +147,9 @@ classdef CheckPUCCHF1Conformance < matlab.unittest.TestCase
             pp.PerfectChannelEstimator = false;
             pp.QuickSimulation = false;
             pp.DisplaySimulationInformation = true;
-            % TODO: enable intra-slot frequency hopping when ready in srsRAN.
+            pp.FrequencyHopping = 'intraSlot';
+            % The PUCCHBLER object takes care of picking the last PRB in the
+            % band for the second hop.
 
         end % of function pp = preparePUCCH(obj, TestConfig)
     end % of methods (Access = private)
