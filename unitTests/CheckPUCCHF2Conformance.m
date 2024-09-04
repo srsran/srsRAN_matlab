@@ -207,6 +207,8 @@ classdef CheckPUCCHF2Conformance < matlab.unittest.TestCase
             pp.NSizeGrid = TestConfig.NSizeGrid;
             pp.PRBSet = 0:8;
             pp.SymbolAllocation = [12 2];
+            pp.FrequencyHopping = 'intraSlot';
+            % The PUCCHBLER object takes care of picking the last PRBs in the second hop.
             pp.NumACKBits = 22;
             pp.NRxAnts = TestConfig.NRxAnts;
             pp.DelayProfile = 'TDLC300';
@@ -215,7 +217,6 @@ classdef CheckPUCCHF2Conformance < matlab.unittest.TestCase
             pp.PerfectChannelEstimator = false;
             pp.QuickSimulation = false;
             pp.DisplaySimulationInformation = true;
-            % TODO: enable intra-slot frequency hopping when ready in srsRAN.
         end % of function pp = preparePUCCHshort(obj, TestConfig)
     end % of methods (Access = private)
 end % of classdef CheckPUCCHF2Conformance < matlab.unittest.TestCase
