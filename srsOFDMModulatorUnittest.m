@@ -20,7 +20,6 @@
 %   numerology   - Defines the subcarrier spacing (0, 1).
 %   DFTsize      - Size of the DFT (128, 256, 384, 512, 768, 1024, 1536, 2048, 3072, 4096).
 %   CyclicPrefix - Cyclic prefix type ('normal', 'extended').
-%   NSlot        - Slot index (0...15).
 %
 %   srsOFDMModulatorUnittest Methods (TestTags = {'testvector'}):
 %
@@ -66,16 +65,13 @@ classdef srsOFDMModulatorUnittest < srsTest.srsBlockUnittest
 
     properties (TestParameter)
         %Defines the subcarrier spacing (0, 1, 2, 3, 4).
-        numerology = {0, 1, 2}
+        numerology = {0, 1, 2, 3}
 
         %Size of the DFT (256, 512, 1024, 2048, 4096). Only standard values.
         DFTsize = {256, 512, 1024, 2048, 4096}
 
         %Cyclic prefix type ('normal', 'extended').
         CyclicPrefix = {'normal', 'extended'}
-
-        %Slot index (0...15).
-        NSlot = num2cell(0:15)
     end
 
     methods (Access = protected)
@@ -108,7 +104,6 @@ classdef srsOFDMModulatorUnittest < srsTest.srsBlockUnittest
         %   DFTsize and CyclicPrefix. NSlot, port index, scale and center carrier 
         %   frequency are randomly generated.
 
-            import srsLib.phy.helpers.srsConfigureCarrier
             import srsLib.phy.helpers.srsRandomGridEntry
             import srsTest.helpers.approxbf16
             import srsTest.helpers.writeResourceGridEntryFile
@@ -120,28 +115,34 @@ classdef srsOFDMModulatorUnittest < srsTest.srsBlockUnittest
             % Use a unique port index and scale for each test.
             portIdx = randi([0, 15]);
             scale = 2 * rand - 1;
-            NSlotLoc = randi([0 pow2(numerology)-1]);
+            nSlot = randi([0 pow2(numerology)-1]);
 
             % Select a random carrier frequency from 0 to 3 GHz to avoid
             % any multiple of the sampling rate. Granularity 100 kHz.
             CarrierFrequency = round(rand() * 3e4) * 1e5;
 
             % Current fixed parameter values.
-            NStartGrid = 0;
-            NFrame = 0;
+            nStartGrid = 0;
+            nFrame = 0;
 
             % Calculate the number of RBs to be used.
-            NSizeGrid = floor(192 * (DFTsize / 4096));
+            nSizeGrid = floor(192 * (DFTsize / 4096));
 
             % Skip those invalid configuration cases.
             isCPTypeOK = ((numerology == 2) || strcmp(CyclicPrefix, 'normal'));
-            isNSizeGridOK = NSizeGrid > 0;
+            isNSizeGridOK = nSizeGrid > 0;
 
             if isCPTypeOK && isNSizeGridOK
                 % Configure the carrier according to the test parameters.
-                SubcarrierSpacing = 15 * (2 .^ numerology);
-                carrier = srsConfigureCarrier(SubcarrierSpacing, NStartGrid, NSizeGrid, ...
-                    NSlotLoc, NFrame, CyclicPrefix);
+                subcarrierSpacing = 15 * (2 .^ numerology);
+                carrier = nrCarrierConfig( ...
+                    SubcarrierSpacing=subcarrierSpacing, ...
+                    NStartGrid=nStartGrid, ...
+                    NSizeGrid=nSizeGrid, ...
+                    NSlot=nSlot, ...
+                    NFrame=nFrame, ...
+                    CyclicPrefix=CyclicPrefix ...
+                    );
 
                 % Generate the DFT input data and related indices.
                 [inputData, inputIndices] = srsRandomGridEntry(carrier, portIdx);
@@ -151,7 +152,7 @@ classdef srsOFDMModulatorUnittest < srsTest.srsBlockUnittest
                     @writeResourceGridEntryFile, inputData, inputIndices);
 
                 % Call the OFDM modulator MATLAB functions.
-                timeDomainData = nrOFDMModulate(carrier, reshape(approxbf16(inputData), [NSizeGrid * 12, carrier.SymbolsPerSlot]), ...
+                timeDomainData = nrOFDMModulate(carrier, reshape(approxbf16(inputData), [nSizeGrid * 12, carrier.SymbolsPerSlot]), ...
                     'Windowing', 0, 'CarrierFrequency', CarrierFrequency);
 
                 % Apply the requested scale and homogenize the output values with those of srsran.
@@ -163,9 +164,9 @@ classdef srsOFDMModulatorUnittest < srsTest.srsBlockUnittest
                     @writeComplexFloatFile, timeDomainData);
 
                 % Generate the test case entry.
-                testCaseString = testCase.testCaseToString(testID, {{numerology, NSizeGrid, ...
+                testCaseString = testCase.testCaseToString(testID, {{numerology, nSizeGrid, ...
                     DFTsize, ['cyclic_prefix::', upper(CyclicPrefix)], scale, CarrierFrequency}, ...
-                    portIdx, NSlotLoc}, true, '_test_input', '_test_output');
+                    portIdx, nSlot}, true, '_test_input', '_test_output');
 
                 % Add the test to the file header.
                 testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);

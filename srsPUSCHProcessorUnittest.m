@@ -1,7 +1,7 @@
-%srsPUSCHProcessorUnittest Unit tests for PUSCH processor functions.
+ %srsPUSCHProcessorUnittest Unit tests for PUSCH processor functions.
 %   This class implements unit tests for the PUSCH symbol processor
 %   functions using the matlab.unittest framework. The simplest use
-%   consists in creating an object with 
+%   consists in creating an object with
 %      testCase = srsPUSCHProcessorUnittest
 %   and then running all the tests with
 %      testResults = testCase.run
@@ -18,9 +18,7 @@
 %
 %   srsPUSCHProcessorUnittest Properties (TestParameter):
 %
-%   Modulation       - Modulation scheme.
 %   SymbolAllocation - PUSCH start symbol index and number of symbols.
-%   targetCodeRate   - UL-SCH rate matching Target code rate.
 %   nofHarqAck       - Number of HARQ-ACK feedback bits multiplexed.
 %   nofCsiBits       - Number of CSI-Part1 and CSI-Part2 report bits multiplexed.
 %   NumRxPorts       - Number of receive antenna ports for PUSCH.
@@ -60,6 +58,17 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
 
         %Type of the tested block.
         srsBlockType = 'phy/upper/channel_processors/pusch'
+
+        %List of possible BWP sizes.
+        BWPSizes = [50, 75, 100, 150, 200, 250, 270]
+
+        %Valid number of RB that accept transform precoding.
+        ValidNumPRB = [...
+               1,   2,   3,   4,   5,   6,   8,   9,  10,  12,  15,  16,...
+              18,  20,  24,  25,  27,  30,  32,  36,  40,  45,  48,  50,...
+              54,  60,  64,  72,  75,  80,  81,  90,  96, 100, 108, 120,...
+             125, 128, 135, 144, 150, 160, 162, 180, 192, 200, 216, 225,...
+             240, 243, 250, 256, 270]
     end
 
     properties (ClassSetupParameter)
@@ -89,7 +98,7 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
     methods (Access = protected)
         function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
-            
+
             fprintf(fileID, '#include "../../../support/resource_grid_test_doubles.h"\n');
             fprintf(fileID, '#include "srsran/phy/upper/channel_processors/pusch/pusch_processor.h"\n');
             fprintf(fileID, '#include "srsran/support/file_vector.h"\n');
@@ -98,7 +107,7 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
 
         function addTestDefinitionToHeaderFile(~, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
-            
+
             fprintf(fileID, 'struct test_case_context {\n');
             fprintf(fileID, '  unsigned               rg_nof_rb;\n');
             fprintf(fileID, '  unsigned               rg_nof_symb;\n');
@@ -125,21 +134,19 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
         %   parameters such as physical cell identifier, BWP dimensions,
         %   slot number, RNTI, scrambling identifiers, frequency allocation
         %   and DM-RS additional positions are randomly selected.
-            import srsLib.phy.helpers.srsConfigureCarrier
-            import srsLib.phy.helpers.srsConfigurePUSCH
             import srsTest.helpers.rbAllocationIndexes2String
             import srsTest.helpers.symbolAllocationMask2string
             import srsTest.helpers.bitPack
             import srsTest.helpers.mcsDescription2Cell
             import srsTest.helpers.writeUint8File
-            import srsTest.helpers.writeResourceGridEntryFile            
+            import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.cellarray2str
 
             % Generate a unique test ID.
             testID = testCase.generateTestID;
-     
+
             % Select a random cell ID.
-            NCellID = randi([0, 1007]);
+            nCellID = randi([0, 1007]);
 
             % Extract the number of CSI Part 1 and 2 message bits.
             nofCsiPart1 = nofCsiBits(1);
@@ -147,62 +154,76 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
 
             % Minimum number of PRB. It increases when UCI needs to be
             % multiplexed on the PUSCH resources.
-            MinNumPrb = 1 + (nofHarqAck + nofCsiPart1 + nofCsiPart2);
-            
+            minNumPrb = 1 + (nofHarqAck + nofCsiPart1 + nofCsiPart2);
+
             % Maximum number of PRB of a 5G NR resource grid.
-            MaxGridBW = 274;
+            maxGridBW = max(testCase.BWPSizes);
 
             % Randomly select BWP start and size values that satisfy the
             % size constraints. 
-            BWPStart = randi([0, MaxGridBW - MinNumPrb]);
-            BWPSize = randi([MinNumPrb, MaxGridBW - BWPStart]);
+            BWPSize = testCase.BWPSizes(randi([1, numel(testCase.BWPSizes)]));
+            BWPStart = randi([0, maxGridBW - BWPSize]);
 
-            NSizeGrid = BWPStart + BWPSize;
-            NStartGrid = 0;
-          
+            nSizeGrid = BWPStart + BWPSize;
+            nStartGrid = 0;
+
             % PUSCH PRB start within the BWP.
-            PrbStart = randi([0, BWPSize - MinNumPrb]);
-          
+            prbStart = randi([0, BWPSize - minNumPrb]);
+
             % Fix a maximum number of PRB allocated to PUSCH to limit the
             % size of the test vectors.
-            MaxNumPrb = min(25, BWPSize - PrbStart);
+            maxNumPrb = BWPSize - prbStart;
 
-            % Number of PRB allocated to PUSCH.
-            NumPrb = randi([MinNumPrb, MaxNumPrb]);
-            
+            % Select a valid number of PRB allocated to PUSCH.
+            validNumPrb = testCase.ValidNumPRB((testCase.ValidNumPRB >= minNumPrb) & (testCase.ValidNumPRB <= maxNumPrb));
+            numPrb = validNumPrb(randi([1, numel(validNumPrb)]));
+
             % Random modulation.
-            ModulationOpts = {'QPSK', '16QAM', '64QAM', '256QAM'};
-            Modulation = ModulationOpts{randi([1, 4])};
+            modulationOpts = {'QPSK', '16QAM', '64QAM', '256QAM'};
+            modulation = modulationOpts{randi([1, 4])};
 
             % Random target code rate between 0.1 to 0.7.
             targetCodeRate = 0.6 * rand() + 0.1;
 
             % Generate carrier configuration.
-            carrier = srsConfigureCarrier(NCellID, NSizeGrid, NStartGrid);
+            carrier = nrCarrierConfig( ...
+                NCellID=nCellID, ...
+                NSizeGrid=nSizeGrid, ...
+                NStartGrid=nStartGrid ...
+                );
 
             % Random parameters.
-            NSlot = randi([0, carrier.SlotsPerFrame]);
+            nSlot = randi([0, carrier.SlotsPerFrame]);
             RNTI = randi([1, 65535]);
-            NID = randi([0, 1023]);
+            nID = randi([0, 1023]);
             DMRSAdditionalPosition = randi([0, 3]);
             NIDNSCID = randi([0, 65535]);
             NSCID = randi([0, 1]);
-            DCPosition = randi(12 * [PrbStart, PrbStart + NumPrb]) + BWPStart;
+            NRSID = randi([0, 1007]);
+            DCPosition = randi(12 * [prbStart, prbStart + numPrb]) + BWPStart;
+            transformPrecoding = randi([0, 1]);
 
             % Fix parameters.
             rv = 0;
 
             % Generate PUSCH configuration.
-            pusch = srsConfigurePUSCH(Modulation, SymbolAllocation, RNTI, NID);
+            pusch = nrPUSCHConfig( ...
+                Modulation=modulation, ...
+                SymbolAllocation=SymbolAllocation, ...
+                RNTI=RNTI, ...
+                NID=nID...
+                );
 
             % Set parameters.
-            carrier.NSlot = NSlot;
+            carrier.NSlot = nSlot;
             pusch.NStartBWP = BWPStart;
             pusch.NSizeBWP = BWPSize;
-            pusch.PRBSet = PrbStart + (0:NumPrb - 1);
+            pusch.PRBSet = prbStart + (0:numPrb - 1);
             pusch.DMRS.DMRSAdditionalPosition = DMRSAdditionalPosition;
             pusch.DMRS.NIDNSCID = NIDNSCID;
             pusch.DMRS.NSCID = NSCID;
+            pusch.DMRS.NRSID = NRSID;
+            pusch.TransformPrecoding = transformPrecoding;
 
             % Generate PUSCH resource grid indices.
             [puschResourceIndices, puschInfo] = nrPUSCHIndices(carrier, pusch);
@@ -226,15 +247,15 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             encUL = nrULSCH;
             encUL.TargetCodeRate = targetCodeRate;
             setTransportBlock(encUL, schData);
-            EncSchData = encUL(Modulation, pusch.NumLayers, ...
+            encSchData = encUL(modulation, pusch.NumLayers, ...
                 ulschInfo.GULSCH, rv);
-            EncHarqAck = nrUCIEncode(harqAck, ulschInfo.GACK, Modulation);
-            EncCsiPart1 = nrUCIEncode(csiPart1, ulschInfo.GCSI1, Modulation);
-            EncCsiPart2 = nrUCIEncode(csiPart2, ulschInfo.GCSI2, Modulation);
+            encHarqAck = nrUCIEncode(harqAck, ulschInfo.GACK, modulation);
+            encCsiPart1 = nrUCIEncode(csiPart1, ulschInfo.GCSI1, modulation);
+            encCsiPart2 = nrUCIEncode(csiPart2, ulschInfo.GCSI2, modulation);
 
             % Multiplex data and UCI.
             codeword = nrULSCHMultiplex(pusch, targetCodeRate, tbs, ...
-                EncSchData, EncHarqAck, EncCsiPart1, EncCsiPart2);
+                encSchData, encHarqAck, encCsiPart1, encCsiPart2);
 
             % Create resource grid.
             grid = nrResourceGrid(carrier);
@@ -253,17 +274,17 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
             % Add the number of receive ports to the receive grid
             % dimensions.
             rxGridDims = [size(grid) NumRxPorts];
-           
+
             ce = complex(nan(rxGridDims));
             rxGrid = complex(nan(rxGridDims));
 
             for iPort = 1 : NumRxPorts
-                % Add a random phase offset to each Rx port.    
+                % Add a random phase offset to each Rx port.
                 startPhase = 2 * pi * rand();
-    
+
                 % Phase of the last subcarrier in the grid.
                 endPhase = startPhase + (2 * pi);
-    
+
                 % Generate channel estimates as a phase rotation in frequency
                 % domain.
                 ce(:, :, iPort) = transpose(ones(rxGridDims(2), 1) * ...
@@ -304,7 +325,7 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
 
             % Extract the elements of interest from the grid.
             rxGridSymbols = rxGrid(rxGridLinIndices);
-            
+
             % Write the entire resource grid to a file.
             testCase.saveDataFile('_test_input_grid', testID, ...
                 @writeResourceGridEntryFile, rxGridSymbols, rxGridIndices);
@@ -368,6 +389,25 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
 
             mcsDescr = mcsDescription2Cell(pusch.Modulation, targetCodeRate);
 
+            if transformPrecoding == 0
+                DMRSConfig = {...
+                    dmrsTypeString, ...                     % dmrs
+                    pusch.DMRS.NIDNSCID, ...                % scrambling_id
+                    pusch.DMRS.NSCID, ...                   % n_scid
+                    pusch.DMRS.NumCDMGroupsWithoutData, ... % nof_cdm_groups_without_data
+                    };
+                DMRSDescr = ['pusch_processor::dmrs_configuration('...
+                    cellarray2str(DMRSConfig, true)...
+                    ')'];
+            else
+                DMRSConfig = {...
+                    pusch.DMRS.NRSID, ... % n_rs_id
+                    };
+                DMRSDescr = ['pusch_processor::dmrs_transform_precoding_configuration('...
+                    cellarray2str(DMRSConfig, true)...
+                    ')'];
+            end
+
             pduDescription = {...
                 'std::nullopt', ...                           % context
                 slotConfig, ...                               % slot
@@ -382,10 +422,7 @@ classdef srsPUSCHProcessorUnittest < srsTest.srsBlockUnittest
                 pusch.NumAntennaPorts, ...                    % nof_tx_layers
                 portsString, ...                              % rx_ports
                 dmrsSymbolMask, ...                           % dmrs_symbol_mask
-                dmrsTypeString, ...                           % dmrs
-                pusch.DMRS.NIDNSCID, ...                      % scrambling_id
-                pusch.DMRS.NSCID, ...                         % n_scid
-                pusch.DMRS.NumCDMGroupsWithoutData, ...       % nof_cdm_groups_without_data
+                DMRSDescr, ...                                % dmrs
                 RBAllocationString, ...                       % freq_alloc
                 pusch.SymbolAllocation(1), ...                % start_symbol_index
                 pusch.SymbolAllocation(2), ...                % nof_symbols

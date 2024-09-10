@@ -125,7 +125,6 @@ classdef srsSSBProcessorUnittest < srsTest.srsBlockUnittest
         %   random NCellID and a random codeword.
 
             import srsTest.helpers.cellarray2str
-            import srsLib.phy.helpers.srsConfigureCarrier
             import srsLib.phy.helpers.srsSSBgetNumerology
             import srsLib.phy.helpers.srsSSBgetFirstSymbolIndex
             import srsLib.phy.helpers.srsSSBgetFirstSubcarrierIndex
@@ -150,7 +149,7 @@ classdef srsSSBProcessorUnittest < srsTest.srsBlockUnittest
             % current fixed parameter values as required by the C code
             pointAoffset = 0;
             SSBoffset = 0;
-            CyclicPrefix = 'normal';
+            cyclicPrefix = 'normal';
             SSBportsStr = cellarray2str({portIdx}, true);
 
             % skip those invalid configuration cases
@@ -162,8 +161,8 @@ classdef srsSSBProcessorUnittest < srsTest.srsBlockUnittest
                 numerology = srsSSBgetNumerology(SSBpattern);
 
                 % configure the carrier according to the test parameters
-                SubcarrierSpacing = 15 * (2 .^ numerology);
-                carrier = srsConfigureCarrier(SubcarrierSpacing, CyclicPrefix);
+                subcarrierSpacing = 15 * (2 .^ numerology);
+                carrier = nrCarrierConfig(SubcarrierSpacing=subcarrierSpacing, CyclicPrefix=cyclicPrefix);
 
                 % deduce derivative configuration parameters
                 SSBfirstSymbolIndex = srsSSBgetFirstSymbolIndex(SSBpattern, SSBindex);
@@ -218,7 +217,7 @@ classdef srsSSBProcessorUnittest < srsTest.srsBlockUnittest
                     SSBsymbols, SSBindices);
 
                 % create common SCS string assuming it is equal to the SS/PBCH block SCS
-                commonSCSStr = sprintf('subcarrier_spacing::kHz%d', SubcarrierSpacing);
+                commonSCSStr = sprintf('subcarrier_spacing::kHz%d', subcarrierSpacing);
 
                 % generate the test case entry
                 testCaseString = testCase.testCaseToString(testID, ...

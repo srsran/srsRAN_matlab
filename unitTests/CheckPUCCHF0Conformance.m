@@ -130,8 +130,11 @@ classdef CheckPUCCHF0Conformance < matlab.unittest.TestCase
             pp.PRBSet = 0;
             if (TestConfig.NSymbols == 1)
                 pp.SymbolAllocation = [13 1];
+                pp.FrequencyHopping = 'neither';
             else
                 pp.SymbolAllocation = [12 2];
+                pp.FrequencyHopping = 'intraSlot';
+                % The PUCCHBLER object already uses the last PRB in the band for the second hop.
             end
             pp.NumACKBits = 1;
             pp.NRxAnts = TestConfig.NRxAnts;
@@ -140,7 +143,6 @@ classdef CheckPUCCHF0Conformance < matlab.unittest.TestCase
             pp.ImplementationType = 'srs';
             pp.QuickSimulation = false;
             pp.DisplaySimulationInformation = true;
-            % TODO: enable intra-slot frequency hopping when ready in srsRAN.
 
         end % of function pp = preparePUCCH(obj, TestConfig)
     end % of methods (Access = private)

@@ -73,7 +73,7 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
         %Intra-slot frequency hopping usage (inter-slot hopping is not tested).
         intraSlotFreqHopping = {false, true}
 
-        %Two test vectors with randomized parameters (e.g. cell ID, slot number etc.) 
+        %Two test vectors with randomized parameters (e.g. cell ID, slot number etc.)
         %are generated for each set of unittest parameters
         testCaseTrial = {1, 2}
 
@@ -160,8 +160,6 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
         %testvectorGenerationCases Generates a test vector for the given numerology, format and frequency hopping,
         %  while using a random NCellID, random NSlot and random symbol and PRB length.
 
-            import srsLib.phy.helpers.srsConfigureCarrier
-            import srsLib.phy.helpers.srsConfigurePUCCH
             import srsLib.phy.upper.signal_processors.srsPUCCHdmrs
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.cellarray2str
@@ -171,47 +169,47 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
             % generated so far.
             testID = testCase.generateTestID;
 
-            % Use a unique NCellIDLoc, NSlotLoc for each test.
+            % Use a unique NCellID, NSlot for each test.
             randomizedCellID = testCase.randomizeTestvector(testID + 1);
-            NCellIDLoc = testCase.NCellID{randomizedCellID};
+            nCellID = testCase.NCellID{randomizedCellID};
 
             % Use a random slot number from the allowed range.
             if numerology == 0
-                NSlotLoc = randi([0, 9]);
+                nSlot = randi([0, 9]);
             else
-                NSlotLoc = randi([0, 19]);
+                nSlot = randi([0, 19]);
             end
             % Format name following srsran naming.
             formatString = [testCase.srsFormatName, num2str(format)];
 
             % Fixed parameter values.
-            NSizeGrid  = 52;
-            NStartGrid = 0;
-            NFrame     = 0;
-            CyclicPrefix = 'normal';
-            GroupHopping = 'neither';
-            FrequencyHopping = 'neither';
-            SecondHopStartPRB = 0;
+            nSizeGrid  = 52;
+            nStartGrid = 0;
+            nFrame     = 0;
+            cyclicPrefix = 'normal';
+            groupHopping = 'neither';
+            frequencyHopping = 'neither';
+            secondHopStartPRB = 0;
 
             % Fix nid and nid0 to physical CellID.
-            nid  = NCellIDLoc;
-            nid0 = NCellIDLoc;
+            nid  = nCellID;
+            nid0 = nCellID;
 
             % Currently fixed to 1 port of random number from [0, 7].
             ports = randi([0, 7]);
             portsStr = cellarray2str({ports}, true);
 
             % Random initial cyclic shift.
-            InitialCyclicShift = randi([0, 11]);
-            
+            initialCyclicShift = randi([0, 11]);
+
             % Random start PRB index and length in number of PRBs.
-            PRBSet  = generateRandomPRBallocation(testCase, NSizeGrid, format);
+            PRBSet  = generateRandomPRBallocation(testCase, nSizeGrid, format);
             nofPRBs = size(PRBSet, 2);
 
             % Random start symbol and length in symbols.
             symbolLength = randi([testCase.formatLengthSymbols(format + 1, 1), ...
                                   testCase.formatLengthSymbols(format + 1, 2)]);
-            
+
             % Intra-slot frequency hopping requires at least 2 OFDM
             % symbols.
             if (intraSlotFreqHopping && symbolLength == 1)
@@ -225,12 +223,12 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
                 startSymbolIndex = 0;
             end
 
-            SymbolAllocation = [startSymbolIndex symbolLength];
+            symbolAllocation = [startSymbolIndex symbolLength];
 
             % Orhtogonal Cover Code Index.
             OCCI = 0;
             if (format == 1) || (format == 4)
-                % When intraslot frequency hopping is disabled, the OCCI value must be less 
+                % When intraslot frequency hopping is disabled, the OCCI value must be less
                 % than the floor of half of the number of OFDM symbols allocated for the PUCCH.
                 if ~intraSlotFreqHopping
                     OCCI = randi([0, (floor(symbolLength / 2) - 1)]);
@@ -246,47 +244,65 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
                 end
             end
 
-            % Randomly select SecondHopStartPRB if intra-slot frequency
+            % Randomly select secondHopStartPRB if intra-slot frequency
             % hopping is enabled.
             if intraSlotFreqHopping
-                SecondHopStartPRB = generateRandomSecondHopPRB(NSizeGrid, PRBSet);
+                secondHopStartPRB = generateRandomSecondHopPRB(nSizeGrid, PRBSet);
                 % Set respective MATLAB parameter.
-                FrequencyHopping   = 'intraSlot';
+                frequencyHopping   = 'intraSlot';
             end
 
             % Configure the carrier according to the test parameters.
-            SubcarrierSpacing = 15 * (2 .^ numerology);
-            carrier = srsConfigureCarrier(NCellIDLoc, SubcarrierSpacing, NSizeGrid, ...
-                NStartGrid, NSlotLoc, NFrame, CyclicPrefix);
+            subcarrierSpacing = 15 * (2 .^ numerology);
+            carrier = nrCarrierConfig( ...
+                NCellID=nCellID, ...
+                SubcarrierSpacing=subcarrierSpacing, ...
+                NSizeGrid=nSizeGrid, ...
+                NStartGrid=nStartGrid, ...
+                NSlot=nSlot, ...
+                NFrame=nFrame, ...
+                CyclicPrefix=cyclicPrefix ...
+                );
 
             % Configure the PUCCH according to the test parameters.
-            pucch = srsConfigurePUCCH(format, SymbolAllocation, PRBSet,...
-                FrequencyHopping, GroupHopping, SecondHopStartPRB, ...
-                InitialCyclicShift, OCCI);
+            pucch = createPUCCHConfig(format);
+            pucch.SymbolAllocation = symbolAllocation;
+            pucch.PRBSet = PRBSet;
+            pucch.FrequencyHopping = frequencyHopping;
+            pucch.SecondHopStartPRB = secondHopStartPRB;
+            pucch.OCCI = OCCI;
+
+            if ((format == 1) || (format == 3) || (format == 4))
+                pucch.GroupHopping = groupHopping;
+            end % of if ((format == 1) || (format == 3) || (format == 4))
+
+            if (format == 1)
+                pucch.InitialCyclicShift = initialCyclicShift;
+            end % of if (format == 1)
 
             % Call the PUCCH DM-RS symbol processor MATLAB functions.
             [DMRSsymbols, DMRSindices] = srsPUCCHdmrs(carrier, pucch);
 
             % Set the DM-RS port indexes.
             DMRSindices(:, 3) = ports;
-            
+
             % Write the complex symbols along with their associated indices
             % into a binary file.
             testCase.saveDataFile('_test_output', testID, ...
                 @writeResourceGridEntryFile, DMRSsymbols, DMRSindices);
 
             % Generate a 'slot_point' configuration string.
-            slotPointConfig = cellarray2str({numerology, NSlotLoc}, true);
+            slotPointConfig = cellarray2str({numerology, nSlot}, true);
             % Group hopping string following srsran naming.
-            GroupHoppingStr = ['pucch_group_hopping::', upper(GroupHopping)];
+            GroupHoppingStr = ['pucch_group_hopping::', upper(groupHopping)];
             % Write as true/false.
             intraSlotFreqHoppingStr = logical2str(intraSlotFreqHopping);
 
             % Generate the test case entry.
             testCaseString = testCase.testCaseToString(testID, ...
-                {formatString, slotPointConfig, ['cyclic_prefix::', upper(CyclicPrefix)], ...
+                {formatString, slotPointConfig, ['cyclic_prefix::', upper(cyclicPrefix)], ...
                 GroupHoppingStr, startSymbolIndex, symbolLength, PRBSet(1), ...
-                intraSlotFreqHoppingStr, SecondHopStartPRB, nofPRBs, InitialCyclicShift, ...
+                intraSlotFreqHoppingStr, secondHopStartPRB, nofPRBs, initialCyclicShift, ...
                  OCCI, 'false', nid, nid0, portsStr}, true, '_test_output');
 
             % Add the test to the file header.
@@ -295,8 +311,8 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
     end % of methods (Test, TestTags = {'testvector'})
 end % of classdef srsPUCCHdmrsUnittest
 
-function SecondHopStartPRB = generateRandomSecondHopPRB(gridSize, PRBSet)
-%generateRandomSecondHopPRB Randomly select a valid starting PRB 
+function secondHopStartPRB = generateRandomSecondHopPRB(gridSize, PRBSet)
+%generateRandomSecondHopPRB Randomly select a valid starting PRB
 %   of a second hop in the grid.
 %
 %   Parameters:
@@ -315,5 +331,20 @@ function SecondHopStartPRB = generateRandomSecondHopPRB(gridSize, PRBSet)
     % Exclude PRBset used by the first hop.
     validStartIndexes(PRBSet + 1) = 0;
     validSecondHopPRBs = gridPRBs(validStartIndexes);
-    SecondHopStartPRB  = validSecondHopPRBs(randi([1, size(validSecondHopPRBs, 2)]));
+    secondHopStartPRB  = validSecondHopPRBs(randi([1, size(validSecondHopPRBs, 2)]));
 end % of function generateRandomSecondHopPRB
+
+function pucch = createPUCCHConfig(format)
+    switch format
+        case 1
+            pucch = nrPUCCH1Config;
+        case 2
+            pucch = nrPUCCH2Config;
+        case 3
+            pucch = nrPUCCH3Config;
+        case 4
+            pucch = nrPUCCH4Config;
+        otherwise
+            error('Unknown PUCCH format %d', format);
+    end
+end % of function createPUCCHConfig(format)

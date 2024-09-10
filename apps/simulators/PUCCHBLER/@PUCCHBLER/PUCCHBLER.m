@@ -100,8 +100,12 @@
 %   ACKDetectionRateSRS          - ACK Detection rate (PUCCH Format 0 or 1, SRS case).
 %   MissedSRsMATLABCtr           - Counter of missed SR bits (PUCCH Format 0, MATLAB case).
 %   MissedSRsSRSCtr              - Counter of missed SR bits (PUCCH Format 0, SRS case).
+%   FalseSRsMATLABCtr            - Counter of false SR bits (PUCCH Format 0, MATLAB case).
+%   FalseSRsSRSCtr               - Counter of false SR bits (PUCCH Format 0, SRS case).
 %   SRDetectionRateMATLAB        - SR Detection rate (PUCCH Format 0, MATLAB case).
 %   SRDetectionRateSRS           - SR Detection rate (PUCCH Format 0, SRS case).
+%   FalseSRDetectionRateMATLAB   - False SR Detection rate (PUCCH Format 0, MATLAB case).
+%   FalseSRDetectionRateSRS      - False SR Detection rate (PUCCH Format 0, SRS case).
 %
 %   Remark: The simulation loop is heavily based on the <a href="https://www.mathworks.com/help/5g/ug/nr-pucch-block-error-rate.html">NR PUCCH Block Error Rate</a> MATLAB example by MathWorks.
 
@@ -153,7 +157,7 @@ classdef PUCCHBLER < matlab.System
         Modulation (1, :) char {mustBeMember(Modulation, {'BPSK', 'pi/2-BPSK', 'QPSK'})} = 'QPSK'
         %PUCCH Format (0, 1, 2, 3).
         PUCCHFormat double {mustBeInteger, mustBeInRange(PUCCHFormat, 0, 3)} = 2
-        %Frequency hopping ('intraSlot', 'interSlot', 'either')
+        %Frequency hopping ('intraSlot', 'interSlot', 'neither')
         FrequencyHopping  {mustBeMember(FrequencyHopping, {'intraSlot', 'interSlot', 'neither'})} = 'neither'
         %Number of HARQ-ACK bits.
         NumACKBits double {mustBeInteger, mustBeInRange(NumACKBits, 0, 1706)} = 4
@@ -212,6 +216,10 @@ classdef PUCCHBLER < matlab.System
         MissedSRsMATLABCtr = []
         %Counter of missed SR bits (SRS case).
         MissedSRsSRSCtr = []
+        %Counter of false SR bits (MATLAB case).
+        FalseSRsMATLABCtr = []
+        %Counter of false SR bits (SRS case).
+        FalseSRsSRSCtr = []
     end % of properties (SetAccess = private)
 
     properties (Dependent)
@@ -247,6 +255,12 @@ classdef PUCCHBLER < matlab.System
         %SR Detection rate (for PUCCH F0, SRS case).
         %   Probability of detecting an SR bit when it is transmitted.
         SRDetectionRateSRS
+        %False SR detection rate (for PUCCH F0, MATLAB case).
+        %   Probability of detecting an SR when the input is only noise.
+        FalseSRDetectionRateMATLAB
+        %False SR detection rate (for PUCCH F0, SRS case).
+        %   Probability of detecting an SR when the input is only noise.
+        FalseSRDetectionRateSRS
     end % of properties (Dependable)
 
     properties (Access = private, Hidden)
@@ -327,8 +341,8 @@ classdef PUCCHBLER < matlab.System
         end
 
         function checkImplementationandHopping(obj)
-            if (~strcmp(obj.ImplementationType, 'matlab') && ~strcmp(obj.FrequencyHopping, 'neither'))
-                error('Intra- or inter-slot frequency hopping only works with ImplementationType=''matlab''.');
+            if (~strcmp(obj.ImplementationType, 'matlab') && strcmp(obj.FrequencyHopping, 'interSlot'))
+                error('Inter-slot frequency hopping only works with ImplementationType=''matlab''.');
             end
         end
 
@@ -630,6 +644,42 @@ classdef PUCCHBLER < matlab.System
             srdr = 1 - obj.MissedSRsSRSCtr ./ obj.TotalBlocksCtr;
         end
 
+        function srfdr = get.FalseSRDetectionRateMATLAB(obj)
+            if obj.isDetectionTest
+                warning('off', 'backtrace');
+                warning('The FalseSRDetectionRateMATLAB property is inactive when TestType == ''Detection''.');
+                warning('on', 'backtrace');
+                srfdr = [];
+                return
+            end
+            if (obj.PUCCHFormat ~= 0)
+                warning('off', 'backtrace');
+                warning('The FalseSRDetectionRateMATLAB property is inactive for PUCCH Formats other than 0.');
+                warning('on', 'backtrace');
+                srfdr = [];
+                return
+            end
+            srfdr = obj.FalseSRsMATLABCtr ./ obj.TotalBlocksCtr;
+        end
+
+        function srfdr = get.FalseSRDetectionRateSRS(obj)
+            if obj.isDetectionTest
+                warning('off', 'backtrace');
+                warning('The FalseSRDetectionRateSRS property is inactive when TestType == ''Detection''.');
+                warning('on', 'backtrace');
+                srfdr = [];
+                return
+            end
+            if (obj.PUCCHFormat ~= 0)
+                warning('off', 'backtrace');
+                warning('The FalseSRDetectionRateSRS property is inactive for PUCCH Formats other than 0.');
+                warning('on', 'backtrace');
+                srfdr = [];
+                return
+            end
+            srfdr = obj.FalseSRsSRSCtr ./ obj.TotalBlocksCtr;
+        end
+
         function plot(obj)
         %Display the measured throughput and BLER.
 
@@ -681,8 +731,12 @@ classdef PUCCHBLER < matlab.System
             obj.TransmittedNACKsCtr = [];
             obj.MissedACKsMATLABCtr = [];
             obj.MissedACKsSRSCtr = [];
+            obj.MissedSRsMATLABCtr = [];
+            obj.MissedSRsSRSCtr = [];
             obj.FalseACKsMATLABCtr = [];
             obj.FalseACKsSRSCtr = [];
+            obj.FalseSRsMATLABCtr = [];
+            obj.FalseSRsSRSCtr = [];
         end % of function resetImpl(obj)
 
         function releaseImpl(obj)
@@ -740,6 +794,10 @@ classdef PUCCHBLER < matlab.System
                     flag = isempty(obj.SNRrange) || (obj.PUCCHFormat ~= 0) || ~obj.isDetectionTest || strcmp(obj.ImplementationType, 'srs');
                 case {'MissedSRsSRSCtr', 'SRDetectionRateSRS'}
                     flag = isempty(obj.SNRrange) || (obj.PUCCHFormat ~= 0) || ~obj.isDetectionTest || strcmp(obj.ImplementationType, 'matlab');
+                case {'FalseSRsMATLABCtr', 'FalseSRDetectionRateMATLAB'}
+                    flag = isempty(obj.SNRrange) || (obj.PUCCHFormat ~= 0) || obj.isDetectionTest || strcmp(obj.ImplementationType, 'srs');
+                case {'FalseSRsSRSCtr', 'FalseSRDetectionRateSRS'}
+                    flag = isempty(obj.SNRrange) || (obj.PUCCHFormat ~= 0) || obj.isDetectionTest || strcmp(obj.ImplementationType, 'matlab');
                 case 'PerfectChannelEstimator'
                     flag = (obj.PUCCHFormat == 0);
                 otherwise
@@ -772,7 +830,8 @@ classdef PUCCHBLER < matlab.System
                 'MissedACKsSRSCtr', 'FalseACKsSRSCtr', ...
                 'FalseACKDetectionRateMATLAB', 'NACK2ACKDetectionRateMATLAB', 'ACKDetectionRateMATLAB', ...
                 'FalseACKDetectionRateSRS', 'NACK2ACKDetectionRateSRS', 'ACKDetectionRateSRS', ...
-                'MissedSRsMATLABCtr', 'MissedSRsSRSCtr', 'SRDetectionRateMATLAB', 'SRDetectionRateSRS'};
+                'MissedSRsMATLABCtr', 'MissedSRsSRSCtr', 'SRDetectionRateMATLAB', 'SRDetectionRateSRS', ...
+                'FalseSRsMATLABCtr', 'FalseSRsSRSCtr', 'FalseSRDetectionRateMATLAB', 'FalseSRDetectionRateSRS'};
             resProps = {};
             for i = 1:numel(results)
                 tt = results{i};
@@ -817,6 +876,10 @@ classdef PUCCHBLER < matlab.System
                 s.FalseACKsMATLABCtr = obj.FalseACKsMATLABCtr;
                 s.MissedACKsSRSCtr = obj.MissedACKsSRSCtr;
                 s.FalseACKsSRSCtr = obj.FalseACKsSRSCtr;
+                s.MissedSRsMATLABCtr = obj.MissedSRsMATLABCtr;
+                s.MissedSRsSRSCtr = obj.MissedSRsSRSCtr;
+                s.FalseSRsMATLABCtr = obj.FalseSRsMATLABCtr;
+                s.FalseSRsSRSCtr = obj.FalseSRsSRSCtr;
             end
         end % of function s = saveObjectImpl(obj)
 
@@ -849,6 +912,10 @@ classdef PUCCHBLER < matlab.System
                 obj.FalseACKsMATLABCtr = s.FalseACKsMATLABCtr;
                 obj.MissedACKsSRSCtr = s.MissedACKsSRSCtr;
                 obj.FalseACKsSRSCtr = s.FalseACKsSRSCtr;
+                obj.MissedSRsMATLABCtr = s.MissedSRsMATLABCtr;
+                obj.MissedSRsSRSCtr = s.MissedSRsSRSCtr;
+                obj.FalseSRsMATLABCtr = s.FalseSRsMATLABCtr;
+                obj.FalseSRsSRSCtr = s.FalseSRsSRSCtr;
             end
 
             % Load all public properties.
@@ -875,18 +942,27 @@ function plotF0(obj)
     if plotMATLAB
         hold on;
         if obj.isDetectionTest
-            semilogy(obj.SNRrange, obj.MissedACKsMATLABCtr ./ obj.TransmittedACKsCtr, 'square:', ...
-                'LineWidth', 1, 'Color', [0 0.4470 0.7410]);
-            legendstrings{end + 1} = 'MATLAB - ACK Error';
+            if (obj.NumACKBits > 0)
+                semilogy(obj.SNRrange, obj.MissedACKsMATLABCtr ./ obj.TransmittedACKsCtr, 'square:', ...
+                    'LineWidth', 1, 'Color', [0 0.4470 0.7410]);
+                legendstrings{end + 1} = 'MATLAB - ACK Error';
+            end
             if (obj.NumSRBits > 0)
                 semilogy(obj.SNRrange, obj.MissedSRsMATLABCtr ./ obj.TotalBlocksCtr, 'o-.', ...
                     'LineWidth', 1, 'Color', [0 0.4470 0.7410]);
                 legendstrings{end + 1} = 'MATLAB - SR Error';
             end
         else
-            semilogy(obj.SNRrange, obj.FalseACKsMATLABCtr ./ obj.TotalBlocksCtr / obj.NumACKBits, 'square:', ...
-                'LineWidth', 1, 'Color', [0 0.4470 0.7410]);
-            legendstrings{end + 1} = 'MATLAB - False ACK';
+            if (obj.NumACKBits > 0)
+                semilogy(obj.SNRrange, obj.FalseACKsMATLABCtr ./ obj.TotalBlocksCtr / obj.NumACKBits, 'square:', ...
+                    'LineWidth', 1, 'Color', [0 0.4470 0.7410]);
+                legendstrings{end + 1} = 'MATLAB - False ACK';
+            end
+            if (obj.NumSRBits > 0)
+                semilogy(obj.SNRrange, obj.FalseSRsMATLABCtr ./ obj.TotalBlocksCtr, 'o-.', ...
+                    'LineWidth', 1, 'Color', [0 0.4470 0.7410]);
+                legendstrings{end + 1} = 'MATLAB - False SR';
+            end
         end
         hold off;
     end
@@ -894,18 +970,27 @@ function plotF0(obj)
     if plotSRS
         hold on;
         if obj.isDetectionTest
-            semilogy(obj.SNRrange, obj.MissedACKsSRSCtr ./ obj.TransmittedACKsCtr, 'square:', ...
-                'LineWidth', 1, 'Color', [0.8500 0.3250 0.0980]);
-            legendstrings{end + 1} = 'SRS - ACK Error';
+            if (obj.NumACKBits > 0)
+                semilogy(obj.SNRrange, obj.MissedACKsSRSCtr ./ obj.TransmittedACKsCtr, 'square:', ...
+                    'LineWidth', 1, 'Color', [0.8500 0.3250 0.0980]);
+                legendstrings{end + 1} = 'SRS - ACK Error';
+            end
             if (obj.NumSRBits > 0)
                 semilogy(obj.SNRrange, obj.MissedSRsSRSCtr ./ obj.TotalBlocksCtr, 'o-.', ...
                     'LineWidth', 1, 'Color', [0.8500 0.3250 0.0980]);
                 legendstrings{end + 1} = 'MATLAB - SR Error';
             end
         else
-            semilogy(obj.SNRrange, obj.FalseACKsSRSCtr ./ obj.TotalBlocksCtr / obj.NumACKBits, 'square:', ...
-                'LineWidth', 1, 'Color', [0.8500 0.3250 0.0980]);
-            legendstrings{end + 1} = 'SRS - False ACK';
+            if (obj.NumACKBits > 0)
+                semilogy(obj.SNRrange, obj.FalseACKsSRSCtr ./ obj.TotalBlocksCtr / obj.NumACKBits, 'square:', ...
+                    'LineWidth', 1, 'Color', [0.8500 0.3250 0.0980]);
+                legendstrings{end + 1} = 'SRS - False ACK';
+            end
+            if (obj.NumSRBits > 0)
+                semilogy(obj.SNRrange, obj.FalseSRsSRSCtr ./ obj.TotalBlocksCtr, 'o-.', ...
+                    'LineWidth', 1, 'Color', [0.8500 0.3250 0.0980]);
+                legendstrings{end + 1} = 'SRS - False SR';
+            end
         end
         hold off;
     end

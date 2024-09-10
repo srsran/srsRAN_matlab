@@ -60,6 +60,14 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
 
         %Type of the tested block.
         srsBlockType = 'phy/upper/signal_processors'
+
+        %Valid number of RB that accept transform precoding.
+        ValidNumPRB = [...
+               1,   2,   3,   4,   5,   6,   8,   9,  10,  12,  15,  16,...
+              18,  20,  24,  25,  27,  30,  32,  36,  40,  45,  48,  50,...
+              54,  60,  64,  72,  75,  80,  81,  90,  96, 100, 108, 120,...
+             125, 128, 135, 144, 150, 160, 162, 180, 192, 200, 216, 225,...
+             240, 243, 250, 256, 270]
     end
 
     properties (Hidden)
@@ -134,13 +142,11 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
         %   DMRSConfigurationType and testLabel. NCellID, NSlot and PRB are randomly generated.
 
             import srsTest.helpers.cellarray2str
-            import srsLib.phy.helpers.srsConfigureCarrier
-            import srsLib.phy.helpers.srsConfigurePUSCHdmrs
-            import srsLib.phy.helpers.srsConfigurePUSCH
             import srsLib.phy.upper.signal_processors.srsPUSCHdmrs
             import srsLib.phy.upper.signal_processors.srsChannelEstimator
             import srsLib.ran.utils.scs2cps
             import srsTest.helpers.approxbf16
+            import srsTest.helpers.cellarray2str
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.symbolAllocationMask2string
             import srsTest.helpers.RBallocationMask2string
@@ -155,47 +161,84 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
             % Generate a unique test ID.
             testID = testCase.generateTestID;
 
+            % Limit the resource grid size.
+            nSizeGrid = 275;
+
             % Use a unique NCellID, NSlot, scrambling ID and PRB allocation for each test.
-            NCellID = testCase.randomizeTestvector(testID + 1) - 1;
+            nCellID = testCase.randomizeTestvector(testID + 1) - 1;
             if numerology == 0
-                NSlot = randi([0, 9]);
+                nSlot = randi([0, 9]);
             else
-                NSlot = randi([0, 19]);
+                nSlot = randi([0, 19]);
             end
             NSCID = randi([0, 1]);
-            PRBstart = randi([0, 136]);
-            PRBend = randi([136, 271]);
+
+            % Select a random PRB allocation.
+            NumPRB = testCase.ValidNumPRB(randi([1, numel(testCase.ValidNumPRB)]));
+            PRBstart = randi([0, nSizeGrid - NumPRB]);
+            PRBend = PRBstart + NumPRB - 1;
 
             % Current fixed parameter values (e.g., number of CDM groups without data).
-            NSizeGrid = 272;
-            NStartGrid = 0;
-            NFrame = 0;
-            CyclicPrefix = 'normal';
+            nStartGrid = 0;
+            nFrame = 0;
+            cyclicPrefix = 'normal';
             RNTI = 0;
-            NStartBWP = 0;
-            NSizeBWP = NSizeGrid;
-            NIDNSCID = NCellID;
-            NID = NCellID;
-            Modulation = '16QAM';
-            MappingType = 'A';
-            SymbolAllocation = [1 13];
+            nStartBWP = 0;
+            nSizeBWP = nSizeGrid;
+            NIDNSCID = nCellID;
+            nID = nCellID;
+            NRSID = nCellID;
+            modulation = '16QAM';
+            mappingType = 'A';
+            symbolAllocation = [1 13];
             PRBSet = PRBstart:PRBend;
             amplitude = sqrt(2);
             PUSCHports = 0:(NumLayers-1);
 
+            % Select randomly transform precoding if only one layer and 
+            % configuration type 1.
+            transformPrecoding = 0;
+            if (NumLayers == 1) && (DMRSConfigurationType == 1)
+                transformPrecoding = randi([0, 1]);
+            end
+
             % Configure the carrier according to the test parameters.
-            SubcarrierSpacing = 15 * (2 .^ numerology);
-            carrier = srsConfigureCarrier(NCellID, SubcarrierSpacing, ...
-                NSizeGrid, NStartGrid, NSlot, NFrame, CyclicPrefix);
+            subcarrierSpacing = 15 * (2 .^ numerology);
+            carrier = nrCarrierConfig( ...
+                NCellID=nCellID, ...
+                SubcarrierSpacing=subcarrierSpacing, ...
+                NSizeGrid=nSizeGrid, ...
+                NStartGrid=nStartGrid, ...
+                NSlot=nSlot, ...
+                NFrame=nFrame, ...
+                CyclicPrefix=cyclicPrefix ...
+                );
 
             % Configure the PUSCH DM-RS symbols according to the test parameters.
-            DMRS = srsConfigurePUSCHdmrs(DMRSConfigurationType, ...
-                DMRSTypeAPosition, DMRSAdditionalPosition, DMRSLength, ...
-                NIDNSCID, NSCID);
+            DMRS = nrPUSCHDMRSConfig( ...
+                DMRSConfigurationType=DMRSConfigurationType, ...
+                DMRSTypeAPosition=DMRSTypeAPosition, ...
+                DMRSAdditionalPosition=DMRSAdditionalPosition, ...
+                DMRSLength=DMRSLength, ...
+                NIDNSCID=NIDNSCID, ...
+                NSCID=NSCID, ...
+                NRSID=NRSID ...
+                );
 
             % Configure the PUSCH according to the test parameters.
-            pusch = srsConfigurePUSCH(DMRS, NStartBWP, NSizeBWP, NID, RNTI, ...
-                Modulation, NumLayers, MappingType, SymbolAllocation, PRBSet);
+            pusch = nrPUSCHConfig( ...
+                DMRS=DMRS, ...
+                NStartBWP=nStartBWP, ...
+                NSizeBWP=nSizeBWP, ...
+                NID=nID, ...
+                RNTI=RNTI, ...
+                Modulation=modulation, ...
+                NumLayers=NumLayers, ...
+                MappingType=mappingType, ...
+                SymbolAllocation=symbolAllocation, ...
+                PRBSet=PRBSet, ...
+                TransformPrecoding=transformPrecoding ...
+                );
 
             % Call the PUSCH DM-RS symbol processor MATLAB functions.
             [DMRSsymbols, symbolIndices] = srsPUSCHdmrs(carrier, pusch);
@@ -216,7 +259,7 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
                     'Multi-layer channel estimation not enabled yet.');
                 channel = createChannel(carrier);
 
-                sizeRG = [NSizeGrid * 12, 14];
+                sizeRG = [nSizeGrid * 12, 14];
                 symbolIndicesLinear = sub2ind(sizeRG, symbolIndices(:, 1) + 1, ...
                     symbolIndices(:, 2) + 1);
                 receivedRG = channel;
@@ -233,8 +276,8 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
                 pilots = reshape(DMRSsymbols, [], nOFDMSymbols);
                 cfg.DMRSSymbolMask = hop.DMRSsymbols;
                 cfg.DMRSREmask = hop.DMRSREmask;
-                cfg.scs = SubcarrierSpacing * 1000;
-                cfg.CyclicPrefixDurations = scs2cps(SubcarrierSpacing);
+                cfg.scs = subcarrierSpacing * 1000;
+                cfg.CyclicPrefixDurations = scs2cps(subcarrierSpacing);
                 receivedRG = approxbf16(receivedRG);
                 [estChannel, estNoiseVar, estRSRP] = srsChannelEstimator(receivedRG, ...
                     pilots, amplitude, hop, hop2, cfg);
@@ -248,9 +291,9 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
             end
 
             % Generate a 'slot_point' configuration string.
-            slotPointConfig = cellarray2str({numerology, NFrame, ...
-                floor(NSlot / carrier.SlotsPerSubframe), ...
-                rem(NSlot, carrier.SlotsPerSubframe)}, true);
+            slotPointConfig = cellarray2str({numerology, nFrame, ...
+                floor(nSlot / carrier.SlotsPerSubframe), ...
+                rem(nSlot, carrier.SlotsPerSubframe)}, true);
 
             % DMRS type
             DmrsTypeStr = ['dmrs_type::TYPE', num2str(DMRSConfigurationType)];
@@ -264,21 +307,37 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
             % generate a RB allocation mask string
             rbAllocationMask = RBallocationMask2string(PRBstart, PRBend);
 
+            if transformPrecoding == 0
+                SequenceConfig = {...
+                    DmrsTypeStr, ...         % type
+                    NumLayers, ...           % nof_tx_layers
+                    pusch.DMRS.NIDNSCID, ... % scrambling_id
+                    pusch.DMRS.NSCID, ...    % n_scid
+                    }; 
+                SequenceDescr = ['dmrs_pusch_estimator::pseudo_random_sequence_configuration('...
+                    cellarray2str(SequenceConfig, true)...
+                    ')'];
+            else
+                SequenceConfig = {...
+                    pusch.DMRS.NRSID, ... % n_rs_id
+                    };
+                SequenceDescr = ['dmrs_pusch_estimator::low_papr_sequence_configuration('...
+                    cellarray2str(SequenceConfig, true)...
+                    ')'];
+            end
+
 
             % Prepare DMRS configuration cell
             dmrsConfigCell = { ...
-                slotPointConfig, ...           % slot
-                DmrsTypeStr, ...               % type
-                NIDNSCID, ...                  % Scrambling_id
-                NSCID, ...                     % n_scid
-                amplitude, ...                 % scaling
-                cyclicPrefixStr, ...           % c_prefix
-                symbolAllocationMask, ...      % symbol_mask
-                rbAllocationMask, ...          % rb_mask
-                pusch.SymbolAllocation(1), ... % first_symbol
-                pusch.SymbolAllocation(2), ... % nof_symbols
-                NumLayers, ...                 % nof_tx_layers
-                {PUSCHports}, ...              % rx_ports
+                slotPointConfig, ...             % slot
+                SequenceDescr, ...               % sequence_config
+                amplitude, ...                   % scaling
+                cyclicPrefixStr, ...             % c_prefix
+                symbolAllocationMask, ...        % symbol_mask
+                rbAllocationMask, ...            % rb_mask
+                pusch.SymbolAllocation(1), ...   % first_symbol
+                pusch.SymbolAllocation(2), ...   % nof_symbols
+                {PUSCHports}, ...                % rx_ports
                 };
 
             testCell = {['test_label::' testLabel], dmrsConfigCell, estNoiseVar, estRSRP};
@@ -304,12 +363,12 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
                 end
                 hop_.PRBstart = PRBstart;
                 hop_.nPRBs = length(PRBSet);
-                hop_.maskPRBs = false(NSizeGrid, 1);
+                hop_.maskPRBs = false(nSizeGrid, 1);
                 hop_.maskPRBs(PRBSet + 1) = true;
-                hop_.startSymbol = SymbolAllocation(1);
-                hop_.nAllocatedSymbols = SymbolAllocation(2);
+                hop_.startSymbol = symbolAllocation(1);
+                hop_.nAllocatedSymbols = symbolAllocation(2);
                 hop_.CHsymbols = false(14, 1);
-                hop_.CHsymbols((1:SymbolAllocation(2)) + SymbolAllocation(1)) = true;
+                hop_.CHsymbols((1:symbolAllocation(2)) + symbolAllocation(1)) = true;
             end
         end % of function testvectorGenerationCases
     end % of methods (Test, TestTags = {'testvector'})

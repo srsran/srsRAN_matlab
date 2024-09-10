@@ -17,8 +17,7 @@
 %
 %   srsPUCCHProcessorFormat2Unittest Properties (TestParameter):
 %
-%   SymbolAllocation - PUCCH Format 2 time allocation as array containing
-%                      the start symbol index and the number of symbols.
+%   SymbolAllocation - PUCCH Format 2 time allocation.
 %   nofHarqAck       - Number of bits of the HARQ-ACK payload.
 %   nofSR            - Number of bits of the SR payload.
 %   nofCSIPart1      - Number of bits of the CSI Part 1 payload.
@@ -81,10 +80,13 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
 
     properties (TestParameter)
 
-        %Symbols allocated to the PUCCH transmission. The symbol allocation is described
-        %   by a two-element array with the starting symbol (0...13) and the length (1...14)
-        %   of the PUCCH transmission.
-        SymbolAllocation = {[0, 1], [12, 2]};
+        %Symbols allocated to the PUCCH transmission as a strcture with two fields:
+        %   - an array containing the start symbol index and the number of symbols, and
+        %   - a frequency-hopping flag (true for intra-slot f.h., false for no f.h.).
+        SymbolAllocation = {...
+            struct('Allocation', [0, 1], 'FrequencyHopping', false), ...
+            struct('Allocation', [12, 2], 'FrequencyHopping', false), ...
+            struct('Allocation', [12, 2], 'FrequencyHopping', true)};
 
         %Number of bits of the HARQ-ACK payload (1...7).
         nofHarqAck = {3, 7};
@@ -138,11 +140,8 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
                 nofHarqAck, nofSR, nofCSIPart1, nofCSIPart2, maxCodeRate)
         % Sets secondary simulation variables and MATLAB NR configuration objects.
 
-            import srsLib.phy.helpers.srsConfigureCarrier
-            import srsLib.phy.helpers.srsConfigurePUCCH
-
             % Generate random cell ID.
-            NCellID = randi([0, 1007]);
+            nCellID = randi([0, 1007]);
 
             % Generate a random NID.
             NID = randi([0, 1023]);
@@ -154,10 +153,7 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
             RNTI = randi([1, 65535]);
 
             % Normal cyclic prefix.
-            CyclicPrefix = 'normal';
-
-            % No frequency hopping.
-            FrequencyHopping = 'neither';
+            cyclicPrefix = 'normal';
 
             % QPSK modulation has 2 bit per symbol.
             modulationOrder = 2;
@@ -185,7 +181,7 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
             % of PRB required to fit the codeword into the PUCCH Format 2
             % resource.
             PRBNum = ceil(nofCodeBlockBits / ...
-                (maxCodeRate * modulationOrder * dataREFormat2 * SymbolAllocation(2)));
+                (maxCodeRate * modulationOrder * dataREFormat2 * SymbolAllocation.Allocation(2)));
 
             % Skip test cases where the UCI codeword does not fit into the
             % PUCCH Format 2 resources.
@@ -195,33 +191,55 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
             MaxGridSize = 275;
 
             % Resource grid starts at CRB0.
-            NStartGrid = 0;
+            nStartGrid = 0;
 
             % BWP start relative to CRB0.
-            NStartBWP = randi([0, MaxGridSize - PRBNum]);
+            nStartBWP = randi([0, MaxGridSize - PRBNum]);
 
             % BWP size. PUCCH Format 2 frequency allocation must fit inside
             % the BWP.
-            NSizeBWP = randi([PRBNum, MaxGridSize - NStartBWP]);
+            nSizeBWP = randi([PRBNum, MaxGridSize - nStartBWP]);
 
             % PUCCH PRB Start relative to the BWP.
-            PRBStart = randi([0, NSizeBWP - PRBNum]);
+            PRBStart = randi([0, nSizeBWP - PRBNum]);
 
             % Fit resource grid size to the BWP.
-            NSizeGrid = NStartBWP + NSizeBWP;
+            nSizeGrid = nStartBWP + nSizeBWP;
 
             % PRB set assigned to PUCCH Format 2 within the BWP.
             % Each element within the PRB set indicates the location of a
             % Resource Block relative to the BWP starting PRB.
             PRBSet = PRBStart : (PRBStart + PRBNum - 1);
 
+            % Frequency hopping.
+            if SymbolAllocation.FrequencyHopping
+                frequencyHopping = 'intraSlot';
+                secondPRB = randi([0, nSizeBWP - PRBNum]);
+            else
+                frequencyHopping = 'neither';
+                secondPRB = 1;
+            end
+
             % Configure the carrier according to the test parameters.
-            testCase.Carrier = srsConfigureCarrier(NCellID, NSizeGrid, ...
-                NStartGrid, CyclicPrefix);
+            testCase.Carrier = nrCarrierConfig( ...
+                NCellID=nCellID, ...
+                NSizeGrid=nSizeGrid, ...
+                NStartGrid=nStartGrid, ...
+                CyclicPrefix=cyclicPrefix ...
+                );
 
             % Configure the PUCCH Format 2
-            testCase.PUCCH = srsConfigurePUCCH(2, NStartBWP, NSizeBWP, SymbolAllocation, ...
-                 PRBSet, FrequencyHopping, NID, NID0, RNTI);
+            testCase.PUCCH = nrPUCCH2Config( ...
+                NStartBWP=nStartBWP, ...
+                NSizeBWP=nSizeBWP, ...
+                SymbolAllocation=SymbolAllocation.Allocation, ...
+                PRBSet=PRBSet, ...
+                FrequencyHopping=frequencyHopping, ...
+                SecondHopStartPRB=secondPRB, ...
+                NID=NID, ...
+                NID0=NID0, ...
+                RNTI=RNTI ...
+                );
         end % of function setupsimulation(testCase, SymbolAllocation, ...
 
     end % methods (Access = private)
@@ -319,7 +337,7 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
             % Extract the elements of interest from the grid.
             nofRePort = length(pucchDataIndices) + length(pucchDmrsIndices);
             rxGridSymbols = complex(nan(1, numRxPorts * nofRePort));
-            rxGridIndexes = complex(nan(numRxPorts * nofRePort, 3));
+            rxGridIndexes = nan(numRxPorts * nofRePort, 3);
             onePortindexes = [nrPUCCHIndices(carrier, pucch, 'IndexStyle','subscript', 'IndexBase','0based'); ...
                     nrPUCCHDMRSIndices(carrier, pucch, 'IndexStyle','subscript', 'IndexBase','0based')];
             for iRxPort = 0:(numRxPorts - 1)
@@ -357,26 +375,33 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
             % Convert cyclic prefix to string.
             cyclicPrefixStr = matlab2srsCyclicPrefix(carrier.CyclicPrefix);
 
+            % Second Hop PRB.
+            if strcmp(pucch.FrequencyHopping, 'intraSlot')
+                secondHopPRB = pucch.SecondHopStartPRB;
+            else
+                secondHopPRB = {};
+            end
+
             % Generate PUCCH Format 2 configuration.
             pucchF2Config = {...
-                'std::nullopt', ...      % context
-                slotConfig, ...          % slot
-                cyclicPrefixStr, ...     % cp
-                portsString, ...         % rx_ports
-                pucch.NSizeBWP, ...      % bwp_size_rb
-                pucch.NStartBWP, ...     % bwp_start_rb
-                pucch.PRBSet(1), ...     % starting_prb
-                {}, ...                  % second_hop_prb
-                numel(pucch.PRBSet), ... % nof_prb
-                SymbolAllocation(1), ... % start_symbol_index
-                SymbolAllocation(2), ... % nof_symbols
-                pucch.RNTI, ...          % rnti
-                pucch.NID, ...           % n_id
-                pucch.NID0, ...          % n_id_0
-                nofHarqAck, ...          % nof_harq_ack
-                nofSR, ...               % nof_sr
-                nofCSIPart1, ...         % nof_csi_part1
-                nofCSIPart2, ...         % nof_csi_part2
+                'std::nullopt', ...                 % context
+                slotConfig, ...                     % slot
+                cyclicPrefixStr, ...                % cp
+                portsString, ...                    % rx_ports
+                pucch.NSizeBWP, ...                 % bwp_size_rb
+                pucch.NStartBWP, ...                % bwp_start_rb
+                pucch.PRBSet(1), ...                % starting_prb
+                secondHopPRB, ...                   % second_hop_prb
+                numel(pucch.PRBSet), ...            % nof_prb
+                SymbolAllocation.Allocation(1), ... % start_symbol_index
+                SymbolAllocation.Allocation(2), ... % nof_symbols
+                pucch.RNTI, ...                     % rnti
+                pucch.NID, ...                      % n_id
+                pucch.NID0, ...                     % n_id_0
+                nofHarqAck, ...                     % nof_harq_ack
+                nofSR, ...                          % nof_sr
+                nofCSIPart1, ...                    % nof_csi_part1
+                nofCSIPart2, ...                    % nof_csi_part2
                 };
 
             % Generate test case context.

@@ -148,8 +148,6 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
         function setupsimulation(obj, SymbolAllocation, PRBAllocation, mcs)
         % Sets secondary simulation variables.
 
-            import srsLib.phy.helpers.srsConfigureCarrier
-            import srsLib.phy.helpers.srsConfigurePUSCH
             import srsLib.phy.helpers.srsExpandMCS
             import srsLib.phy.helpers.srsGetModulation
 
@@ -169,24 +167,26 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
             obj.HARQProcessID = randi([1, obj.NHARQProcesses]);
 
             % Configure the carrier according to the test parameters.
-            NSizeGridLoc = obj.NSizeGrid;
-            NStartGridLoc = obj.NStartGrid;
-            carrier = srsConfigureCarrier(NSizeGridLoc, NStartGridLoc);
+            nSizeGrid = obj.NSizeGrid;
+            nStartGrid = obj.NStartGrid;
+            carrier = nrCarrierConfig(NSizeGrid=nSizeGrid, NStartGrid=nStartGrid);
             obj.Carrier = carrier;
 
             % Get the target code rate (R) and modulation order (Qm) corresponding
             % to the current modulation and scheme configuration.
             [R, Qm] = srsExpandMCS(mcs, obj.mcsTable);
             obj.TargetCodeRate = R/1024;
-            ModulationLoc = srsGetModulation(Qm);
-            obj.Modulation = ModulationLoc;
+            modulation = srsGetModulation(Qm);
+            obj.Modulation = modulation;
 
-            % Configure the PUSCH according to the test parameters.
-            NStartBWPLoc = obj.NStartBWP;
-            NSizeBWPLoc = obj.NSizeBWP;
-            NumLayersLoc = obj.NumLayers;
-            pusch = srsConfigurePUSCH(NStartBWPLoc, NSizeBWPLoc, ModulationLoc, ...
-                NumLayersLoc, SymbolAllocation, PRBSet);
+            pusch = nrPUSCHConfig( ...
+                NStartBWP=obj.NStartBWP, ...
+                NSizeBWP=obj.NSizeBWP, ...
+                Modulation=modulation, ...
+                NumLayers=obj.NumLayers, ...
+                SymbolAllocation=SymbolAllocation, ...
+                PRBSet=PRBSet ...
+                );
             obj.PUSCH = pusch;
 
             % Get the encoded TB length.
@@ -195,7 +195,7 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
             obj.encodedTBLength = PUSCHInfo.G;
 
             % Compute the transport block size.
-            obj.TransportBlockSize = nrTBS(ModulationLoc, obj.NumLayers, ...
+            obj.TransportBlockSize = nrTBS(modulation, obj.NumLayers, ...
                 numel(PRBSet), PUSCHInfo.NREPerPRB, obj.TargetCodeRate);
 
             % Get UL-SCH coding information.
@@ -209,8 +209,6 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
         %   PRBAllocation and mcs. Other parameters (e.g., the HARQProcessID) are
         %   generated randomly.
 
-            import srsLib.phy.helpers.srsConfigureULSCHEncoder
-            import srsLib.phy.helpers.srsConfigureULSCHDecoder
             import srsLib.phy.helpers.srsModulationFromMatlab
             import srsTest.helpers.bitPack
             import srsTest.helpers.writeUint8File
@@ -225,12 +223,18 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
             TB = randi([0 1], obj.TransportBlockSize, 1);
 
             % Configure the PUSCH encoder and decoder.
-            MultipleHARQProcessesLoc = obj.MultipleHARQProcesses;
-            TargetCodeRateLoc = obj.TargetCodeRate;
-            TransportBlockLength = obj.TransportBlockSize;
-            ULSCHEncoder = srsConfigureULSCHEncoder(MultipleHARQProcessesLoc, TargetCodeRateLoc);
-            ULSCHDecoder = srsConfigureULSCHDecoder(MultipleHARQProcessesLoc, ...
-                TargetCodeRateLoc, TransportBlockLength);
+            multipleHARQProcesses = obj.MultipleHARQProcesses;
+            targetCodeRate = obj.TargetCodeRate;
+            transportBlockLength = obj.TransportBlockSize;
+            ULSCHEncoder = nrULSCH(...
+                MultipleHARQProcesses=multipleHARQProcesses, ...
+                TargetCodeRate=targetCodeRate ...
+                );
+            ULSCHDecoder = nrULSCHDecoder( ...
+                MultipleHARQProcesses=multipleHARQProcesses, ...
+                TargetCodeRate=targetCodeRate, ...
+                TransportBlockLength=transportBlockLength ...
+                );
 
             % Add the generated TB to the encoder.
             setTransportBlock(ULSCHEncoder, TB, obj.HARQProcessID);
@@ -299,7 +303,6 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
         %   decoded using the mex wrapper of the SRSRAN C++ component. The test is considered
         %   as passed if the transmitted and received transport blocks are equal.
 
-            import srsLib.phy.helpers.srsConfigureULSCHEncoder
             import srsMEX.phy.srsPUSCHDecoder
             import srsTest.helpers.bitPack
 
@@ -309,9 +312,12 @@ classdef srsPUSCHDecoderUnittest < srsTest.srsBlockUnittest
             TB = randi([0 1], obj.TransportBlockSize, 1);
 
             % Configure the PUSCH encoder.
-            MultipleHARQProcessesLoc = obj.MultipleHARQProcesses;
+            multipleHARQProcesses = obj.MultipleHARQProcesses;
             TargetCodeRateLoc = obj.TargetCodeRate;
-            ULSCHEncoder = srsConfigureULSCHEncoder(MultipleHARQProcessesLoc, TargetCodeRateLoc);
+            ULSCHEncoder = nrULSCH( ...
+                MultipleHARQProcesses=multipleHARQProcesses, ...
+                TargetCodeRate=TargetCodeRateLoc ...
+                );
 
             % Configure the SRS PUSCH decoder mex.
             ULSCHDecoder = srsPUSCHDecoder('MaxCodeblockSize', obj.ulschInfo.N, ...

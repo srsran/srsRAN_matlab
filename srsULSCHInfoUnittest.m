@@ -1,7 +1,7 @@
 %srsULSCHInfoUnittest Unit tests for UL-SCH information functions.
 %   This class implements unit tests for the UL-SCH information
 %   functions using the matlab.unittest framework. The simplest use
-%   consists in creating an object with 
+%   consists in creating an object with
 %      testCase = srsULSCHInfoUnittest
 %   and then running all the tests with
 %      testResults = testCase.run
@@ -24,7 +24,7 @@
 %   nofHarqAckBits        - Number of HARQ-ACK bits to multiplex.
 %   nofCsiPart1Bits       - Number of CSI-Part1 bits to multiplex.
 %   nofCsiPart2Bits       - Number of CSI-Part2 bits to multiplex.
-%   UlSchDataEnabled      - Adds UL-SCH data to the PUSCH. 
+%   UlSchDataEnabled      - Adds UL-SCH data to the PUSCH.
 %
 %   srsULSCHInfoUnittest Methods (TestTags = {'testvector'}):
 %
@@ -94,7 +94,7 @@ classdef srsULSCHInfoUnittest < srsTest.srsBlockUnittest
     methods (Access = protected)
         function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
-            
+
             fprintf(fileID, '#include "srsran/ran/pusch/ulsch_info.h"\n');
         end
 
@@ -113,12 +113,9 @@ classdef srsULSCHInfoUnittest < srsTest.srsBlockUnittest
                 DMRSConfigurationType, targetCodeRate, nofHarqAckBits, ...
                 nofCsiPart1Bits, nofCsiPart2Bits, UlSchDataEnabled)
         %testvectorGenerationCases Generates a test vectors given the
-        %   combinations of NumLayers, NumPRB, DMRSConfigurationType,
-        %   Modulation, targetCodeRate, nofHarqAckBits, nofCsiPart1Bits,
-        %   nofCsiPart2Bits and UlSchDataEnabled.
+        %   combinations of NumLayers, DMRSConfigurationType, targetCodeRate,
+        %   nofHarqAckBits, nofCsiPart1Bits, nofCsiPart2Bits and UlSchDataEnabled.
 
-            import srsLib.phy.helpers.srsConfigureCarrier
-            import srsLib.phy.helpers.srsConfigurePUSCH
             import srsLib.phy.upper.signal_processors.srsPUSCHdmrs
             import srsTest.helpers.cellarray2str
             import srsTest.helpers.symbolAllocationMask2string
@@ -129,17 +126,21 @@ classdef srsULSCHInfoUnittest < srsTest.srsBlockUnittest
             NumPRB = randi([1, 52]);
 
             % Random modulation.
-            ModulationOpts = {'QPSK', '16QAM', '64QAM', '256QAM'};
-            Modulation = ModulationOpts{randi([1, 4])};
+            modulationOpts = {'QPSK', '16QAM', '64QAM', '256QAM'};
+            modulation = modulationOpts{randi([1, 4])};
 
             % Configure carrier.
-            carrier = srsConfigureCarrier;
+            carrier = nrCarrierConfig;
 
             % Prepare PRB set.
             PRBSet = 0:(NumPRB-1);
 
             % Configure PUSCH.
-            pusch = srsConfigurePUSCH(NumLayers, Modulation, PRBSet);
+            pusch = nrPUSCHConfig(...
+                NumLayers=NumLayers, ...
+                Modulation=modulation, ...
+                PRBSet=PRBSet ...
+                );
             pusch.DMRS.DMRSConfigurationType = DMRSConfigurationType;
             pusch.DMRS.DMRSAdditionalPosition = 3;
 
@@ -156,8 +157,7 @@ classdef srsULSCHInfoUnittest < srsTest.srsBlockUnittest
                     puschInfo.NREPerPRB, ...
                     targetCodeRate);
             end
-                
-           
+
             ulschInfo = nrULSCHInfo(pusch, targetCodeRate, tbs, ...
                 nofHarqAckBits, nofCsiPart1Bits, nofCsiPart2Bits);
 
@@ -214,7 +214,7 @@ classdef srsULSCHInfoUnittest < srsTest.srsBlockUnittest
                 ulschInfo.QdCSI1, ...                   % nof_csi_part1_re
                 ulschInfo.QdCSI2, ...                   % nof_csi_part2_re
                 };
-                       
+
             testCaseCell = {...
                 ulschConfiguration, ... % config
                 ulschInformation, ...   % info

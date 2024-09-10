@@ -117,8 +117,6 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
         %   combinations of Modulation, nofHarqAckBits,
         %   nofCsiPart1Bits and nofCsiPart2Bits. 
 
-            import srsLib.phy.helpers.srsConfigureCarrier
-            import srsLib.phy.helpers.srsConfigurePUSCH
             import srsLib.phy.helpers.srsModulationFromMatlab
             import srsLib.phy.upper.signal_processors.srsPUSCHdmrs
             import srsLib.phy.upper.channel_processors.pusch.srsULSCHScramblingPlaceholders
@@ -131,23 +129,27 @@ classdef srsULSCHDemultiplexUnittest < srsTest.srsBlockUnittest
             testID = testCase.generateTestID;
 
             % Configure carrier.
-            carrier = srsConfigureCarrier;
+            carrier = nrCarrierConfig;
 
             % Prepare PRB set.
-            NumPRB = randi([1, carrier.NSizeGrid]);
-            PRBSet = 0:(NumPRB-1);
+            numPRB = randi([1, carrier.NSizeGrid]);
+            PRBSet = 0:(numPRB-1);
 
             % Select a target code rate between 0.5 and 0.9.
             targetCodeRate = round(0.4 * rand + 0.5, 1);
 
             % Configure PUSCH.
-            NumLayers = randi([1, 4]);
-            pusch = srsConfigurePUSCH(NumLayers, Modulation, PRBSet);
-            pusch.NID = 1;
+            numLayers = randi([1, 4]);
+            pusch = nrPUSCHConfig( ...
+                NumLayers=numLayers, ...
+                Modulation=Modulation, ...
+                PRBSet=PRBSet, ...
+                NID=1 ...
+                );
             pusch.DMRS.DMRSConfigurationType = randi([1, 2]);
             pusch.DMRS.DMRSAdditionalPosition = randi([0, 3]);
             pusch.DMRS.NumCDMGroupsWithoutData = pusch.DMRS.DMRSConfigurationType + 1;
-            if NumLayers == 1 
+            if numLayers == 1
                 pusch.DMRS.NumCDMGroupsWithoutData = 1;
             end
 

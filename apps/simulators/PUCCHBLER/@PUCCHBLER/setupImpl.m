@@ -129,7 +129,12 @@ function stats = updateStatsF0(stats, uci, uciRx, ouci, isDetectTest, snrIdx)
         end
     else % false alarm test
         % False ACK.
-        stats.falseACK(snrIdx) = stats.falseACK(snrIdx) + numel(uciRx{1});
+        if (ouci(1) > 0)
+            stats.falseACK(snrIdx) = stats.falseACK(snrIdx) + numel(uciRx{1});
+        end
+        if (ouci(2) > 0)
+            stats.falseSR(snrIdx) = stats.falseSR(snrIdx) + numel(uciRx{2});
+        end
     end % if isDetectTest
 end
 
@@ -182,7 +187,12 @@ function stats = updateStatsSRSF0(stats, uci, msg, isDetectTest, snrIdx)
     else % false alarm test
         % False ACK.
         if msg.isValid
-            stats.falseACKSRS(snrIdx) = stats.falseACKSRS(snrIdx) + numel(uci{1});
+            if ~isempty(uci{1})
+                stats.falseACKSRS(snrIdx) = stats.falseACKSRS(snrIdx) + numel(uci{1});
+            end
+            if ~isempty(uci{2})
+                stats.falseSRSRS(snrIdx) = stats.falseSRSRS(snrIdx) + numel(uci{2});
+            end
         end
     end
 end
@@ -227,6 +237,8 @@ function printMessagesF0(stats, usedFrames, nSRs, SNRIn, isDetectTest, snrIdx)
     else
         fprintf(['PUCCH Format 0 - false ACK detection rate for %d frame(s) at ', ...
             'SNR %.1f dB: %g\n'], usedFrames, SNRIn(snrIdx), stats.falseACK(snrIdx)/stats.nACKs(snrIdx));
+        fprintf(['PUCCH Format 0 - false SR detection rate for %d frame(s) at ', ...
+            'SNR %.1f dB: %g\n'], usedFrames, SNRIn(snrIdx), stats.falseSR(snrIdx)/stats.nSRs(snrIdx));
     end
 end
 
@@ -262,6 +274,8 @@ function printMessagesSRSF0(stats, usedFrames, nSRs, SNRIn, isDetectTest, snrIdx
     else
         fprintf(['SRS - PUCCH Format 0 - false ACK detection rate for %d frame(s) at ', ...
             'SNR %.1f dB: %g\n'], usedFrames, SNRIn(snrIdx), stats.falseACKSRS(snrIdx)/stats.nACKs(snrIdx));
+        fprintf(['SRS - PUCCH Format 0 - false SR detection rate for %d frame(s) at ', ...
+            'SNR %.1f dB: %g\n'], usedFrames, SNRIn(snrIdx), stats.falseSRSRS(snrIdx)/stats.nSRs(snrIdx));
     end
 end
 

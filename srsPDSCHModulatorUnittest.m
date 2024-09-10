@@ -95,8 +95,6 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
         %   Modulation scheme and number of layers. Other parameters (e.g.,
         %   the RNTI) are generated randomly.
 
-            import srsLib.phy.helpers.srsConfigurePDSCHdmrs
-            import srsLib.phy.helpers.srsConfigurePDSCH
             import srsLib.phy.helpers.srsGetBitsSymbol
             import srsLib.phy.helpers.srsModulationFromMatlab
             import srsLib.phy.upper.channel_processors.srsPDSCHmodulator
@@ -114,7 +112,11 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
             carrier = nrCarrierConfig;
 
             % Configure the PDSCH according to the test parameters.
-            pdsch = srsConfigurePDSCH(SymbolAllocation, Modulation, NumLayers);
+            pdsch = nrPDSCHConfig( ...
+                SymbolAllocation=SymbolAllocation, ...
+                Modulation=Modulation, ...
+                NumLayers=NumLayers ...
+                );
 
             % Set randomized values.
             pdsch.NID = randi([1, 1023]);

@@ -117,10 +117,6 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
         import srsLib.phy.upper.signal_processors.srsPDCCHdmrs
         import srsLib.ran.pdcch.srsPDCCHCandidatesUE
         import srsTest.helpers.writeUint8File
-        import srsLib.phy.helpers.srsConfigurePDCCH
-        import srsLib.phy.helpers.srsConfigureCORESET
-        import srsLib.phy.helpers.srsConfigureSearchSpace
-        import srsLib.phy.helpers.srsConfigureCarrier
         import srsTest.helpers.RBallocationMask2string
 
         % Generate a unique test ID.
@@ -128,60 +124,83 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
 
         % Generate random parameters.
         testCellID = randi([0, 1007]);
-        NSlot = randi([0, 9]);
+        nSlot = randi([0, 9]);
         RNTI = randi([0, 65519]);
         maxAllowedStartSymbol = 14 - Duration;
-        StartSymbolWithinSlot = randi([1 maxAllowedStartSymbol]);
+        startSymbolWithinSlot = randi([1 maxAllowedStartSymbol]);
         if strcmp(CCEREGMapping, 'interleaved')
-            InterleaverSize = testCase.InterleaverSizes(randi([1, 3]));
+            interleaverSize = testCase.InterleaverSizes(randi([1, 3]));
             REGBundleSize = testCase.REGBundleSizes(Duration, randi([1, 2]));
         else
-            InterleaverSize = 2;
+            interleaverSize = 2;
             REGBundleSize = 6;
         end
-        CORESETID = randi([1, 10]);
+        coresetID = randi([1, 10]);
 
         % Current fixed parameter values (e.g., maximum grid size with current interleaving
         % configuration, CORESET will use all available frequency resources).
-        CyclicPrefix = 'normal';
-        NStartGrid = 0;
-        NFrame = randi([0, 1023]);
-        FrequencyResources = ones(1, floor(NSizeGrid / 6));
-        SearchSpaceType = 'ue';
-        NStartBWP = 0;
-        NSizeBWP = NSizeGrid;
+        cyclicPrefix = 'normal';
+        nStartGrid = 0;
+        nFrame = randi([0, 1023]);
+        frequencyResources = ones(1, floor(NSizeGrid / 6));
+        searchSpaceType = 'ue';
+        nStartBWP = 0;
+        nSizeBWP = NSizeGrid;
         DMRSScramblingID = testCellID;
 
         % Configure the carrier according to the test parameters.
-        carrier = srsConfigureCarrier(NSizeGrid, NStartGrid, ...
-            NSlot, NFrame, CyclicPrefix);
+        carrier = nrCarrierConfig( ...
+            NSizeGrid=NSizeGrid, ...
+            NStartGrid=nStartGrid, ...
+            NSlot=nSlot, ...
+            NFrame=nFrame, ...
+            CyclicPrefix=cyclicPrefix ...
+            );
 
         % Configure the CORESET according to the test parameters.
-        CORESET = srsConfigureCORESET(FrequencyResources, Duration, ...
-            CCEREGMapping, REGBundleSize, InterleaverSize, CORESETID);
+        coreset = nrCORESETConfig( ...
+            FrequencyResources=frequencyResources, ...
+            Duration=Duration, ...
+            CCEREGMapping=CCEREGMapping, ...
+            REGBundleSize=REGBundleSize, ...
+            InterleaverSize=interleaverSize, ...
+            CORESETID=coresetID ...
+            );
 
         % Select number of candidates.
-        NumCandidates = floor(CORESET.NCCE ./ [1, 2, 4, 8, 16]);
-        NumCandidates(NumCandidates > 8) = 8;
+        numCandidates = floor(coreset.NCCE ./ [1, 2, 4, 8, 16]);
+        numCandidates(numCandidates > 8) = 8;
 
         % Configure Search Space.
-        SearchSpace = srsConfigureSearchSpace(SearchSpaceType, StartSymbolWithinSlot, CORESETID, NumCandidates);
+        searchSpace = nrSearchSpaceConfig( ...
+            SearchSpaceType=searchSpaceType, ...
+            StartSymbolWithinSlot=startSymbolWithinSlot, ...
+            CORESETID=coresetID, ...
+            NumCandidates=numCandidates ...
+            );
 
         % Skip if no candidates available.
         AggregationLevelIndex = floor(log2(AggregationLevel)) + 1;
-        if NumCandidates(AggregationLevelIndex) == 0
+        if numCandidates(AggregationLevelIndex) == 0
             return;
         end
 
         % Configure the PDCCH according to the test parameters.
-        pdcch = srsConfigurePDCCH(CORESET, SearchSpace, NStartBWP, NSizeBWP, RNTI, ...
-            AggregationLevel, SearchSpaceType, DMRSScramblingID);
+        pdcch = nrPDCCHConfig( ...
+            CORESET=coreset, ...
+            SearchSpace=searchSpace, ...
+            NStartBWP=nStartBWP, ...
+            NSizeBWP=nSizeBWP, ...
+            RNTI=RNTI, ...
+            AggregationLevel=AggregationLevel, ...
+            DMRSScramblingID=DMRSScramblingID ...
+            );
 
         % Calculate the available candidates CCE initial positions.
-        candidatesCCE = srsPDCCHCandidatesUE(CORESET.NCCE, NumCandidates(AggregationLevelIndex), AggregationLevel, CORESET.CORESETID, RNTI, carrier.NSlot);
-        
+        candidatesCCE = srsPDCCHCandidatesUE(coreset.NCCE, numCandidates(AggregationLevelIndex), AggregationLevel, coreset.CORESETID, RNTI, carrier.NSlot);
+
         % Select random candidate and initial CCE.
-        candidateIndex = randi([1, NumCandidates(AggregationLevelIndex)]);
+        candidateIndex = randi([1, numCandidates(AggregationLevelIndex)]);
         pdcch.AllocatedCandidate = candidateIndex;
         ncce = candidatesCCE(candidateIndex);
 
@@ -217,11 +236,11 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
             @writeResourceGridEntryFile, [dataSymbols; dmrsSymbols], ...
             [dataIndices; dmrsIndices]);
 
-        slotIndex = NFrame * carrier.SlotsPerSubframe * 10 + NSlot;
+        slotIndex = nFrame * carrier.SlotsPerSubframe * 10 + nSlot;
 
         % Generate slot configuration.
         slotConfig = {...
-            0, ...         % numerology 
+            0, ...         % numerology
             slotIndex, ... % slot
             };
 
@@ -230,11 +249,11 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
         CCEREGMappingStr = 'pdcch_processor::cce_to_reg_mapping_type::NON_INTERLEAVED';
 
         coresetConfig = {...
-            NSizeBWP, ...              % bwp_size_rb
-            NStartBWP, ...             % bwp_start_rb
-            StartSymbolWithinSlot, ... % start_symbol_index
+            nSizeBWP, ...              % bwp_size_rb
+            nStartBWP, ...             % bwp_start_rb
+            startSymbolWithinSlot, ... % start_symbol_index
             Duration, ...              % duration
-            FrequencyResources, ...    % frequency_resources
+            frequencyResources, ...    % frequency_resources
             CCEREGMappingStr, ...      % cce_to_reg_mapping
             0, ...                     % reg_bundle_size
             0, ...                     % interleaver_size

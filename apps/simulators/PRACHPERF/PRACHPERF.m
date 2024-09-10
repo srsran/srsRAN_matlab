@@ -56,7 +56,7 @@
 %   SequenceIndex           - Logical root sequence index of the target preamble (0...838).
 %   PreambleIndex           - Preamble index within cell of the target preamble (0...63).
 %   NCS                     - Cyclic shift width.
-%   PUSCHSubcarrierSpacing  - PUSCH subcarrier spacing in kHz (15, 30, 60, 120).
+%   PUSCHSubcarrierSpacing  - PUSCH subcarrier spacing in kHz (15, 30, 120).
 %   DelayProfile            - Channel delay profile ('AWGN', 'TDLC300').
 %   NumReceiveAntennas      - Number of receive antennas.
 %   FrequencyOffset         - Frequency offset in Hz.
@@ -116,9 +116,9 @@ classdef PRACHPERF < matlab.System
         %   Parameter NCS as defined in TS38.211 Tables 6.3.3.1-5, 6.3.3.1-6, 6.3.3.1-7.
         %   Default is 0.
         NCS (1, 1) double {mustBeInteger, mustBeNonnegative} = 0
-        %PUSCH subcarrier spacing in kHz (15, 30, 60, 120).
+        %PUSCH subcarrier spacing in kHz (15, 30, 120).
         %   Default is 15 kHz.
-        PUSCHSubcarrierSpacing (1, 1) double {mustBeMember(PUSCHSubcarrierSpacing, [15 30 60 120])} = 15
+        PUSCHSubcarrierSpacing (1, 1) double {mustBeMember(PUSCHSubcarrierSpacing, [15 30 120])} = 15
         %Channel delay profile ('AWGN', 'TDLC300').
         %   Default is 'AWGN'.
         DelayProfile (1, :) char {mustBeMember(DelayProfile, {'AWGN', 'TDLC300'})} = 'AWGN'
@@ -225,6 +225,14 @@ classdef PRACHPERF < matlab.System
                         'NCS %d is not valid for short formats.', obj.NCS);
             end
         end
+
+        function checkSCSandFormat(obj)
+            % Checks that the PUSCH subcarrier spacing is compatible with the Format.
+            if (obj.PUSCHSubcarrierSpacing > 30)
+                assert(ismember(obj.Format, {'A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'B4', 'C0', 'C2'}), ...
+                    'Format %s is not valid in FR2.', obj.Format);
+            end
+        end % of function checkSCSandFormat(obj)
     end % of methods (Access = private)
 
     methods (Access = protected)
@@ -238,37 +246,54 @@ classdef PRACHPERF < matlab.System
             % Compute the OFDM-related information.
             obj.OFDMInfo = nrOFDMInfo(obj.Carrier);
 
-            % PRACH Configuration
-            PreambleFormat = obj.Format;
-            obj.PRACH = srsLib.phy.helpers.srsConfigurePRACH(PreambleFormat);
-            obj.PRACH.FrequencyRange = 'FR1';                    % Frequency range
-            obj.PRACH.RestrictedSet = 'UnrestrictedSet';         % Normal mode
-            obj.PRACH.FrequencyStart = 0;                        % Frequency location
-            obj.PRACH.SequenceIndex = obj.SequenceIndex;         % Logical sequence index
-            obj.PRACH.PreambleIndex = obj.PreambleIndex;         % Preamble index
-
-            if ~ismember(PreambleFormat, {'0', '1', '2', '3'})
-                obj.PRACH.SubcarrierSpacing = obj.PUSCHSubcarrierSpacing;
-                if (obj.PUSCHSubcarrierSpacing == 30)
-                    obj.PRACH.ActivePRACHSlot = 1;
-                end
+            % Pick the frequency range based on the PUSCH subcarrier spacing.
+            if (obj.PUSCHSubcarrierSpacing <= 30)
+                frequencyRange = 'FR1';
+            else
+                frequencyRange = 'FR2';
             end
+
+            % Pick the duplexing mode based on the subcarrier spacing.
+            if (obj.PUSCHSubcarrierSpacing == 15)
+                duplexMode = 'FDD';
+            else
+                duplexMode = 'TDD';
+            end
+
+
+            preambleFormat = obj.Format;
+            restrictedSet = 'UnrestrictedSet';
 
             % Define the value of ZeroCorrelationZone using the NCS table stored in
             % the nrPRACHConfig object.
-            switch obj.PRACH.Format
+            % Pick the subcarrier spacing.
+            switch preambleFormat
                 case {'0','1','2'}
                     ncsTable = nrPRACHConfig.Tables.NCSFormat012;
-                    ncsTableCol = (string(ncsTable.Properties.VariableNames) == obj.PRACH.RestrictedSet);
+                    ncsTableCol = (string(ncsTable.Properties.VariableNames) == restrictedSet);
+                    subcarrierSpacing = 1.25;
                 case '3'
                     ncsTable = nrPRACHConfig.Tables.NCSFormat3;
-                    ncsTableCol = (string(ncsTable.Properties.VariableNames) == obj.PRACH.RestrictedSet);
+                    ncsTableCol = (string(ncsTable.Properties.VariableNames) == restrictedSet);
+                    subcarrierSpacing = 5;
                 otherwise
                     ncsTable = nrPRACHConfig.Tables.NCSFormatABC;
-                    ncsTableCol = contains(string(ncsTable.Properties.VariableNames), num2str(obj.PRACH.LRA));
+                    ncsTableCol = contains(string(ncsTable.Properties.VariableNames), '139');
+                    subcarrierSpacing = obj.PUSCHSubcarrierSpacing;
             end
             zeroCorrelationZone = ncsTable.ZeroCorrelationZone(ncsTable{:,ncsTableCol} == obj.NCS);
-            obj.PRACH.ZeroCorrelationZone = zeroCorrelationZone; % Cyclic shift index.
+
+            % PRACH Configuration
+            obj.PRACH = srsLib.phy.helpers.srsConfigurePRACH(preambleFormat, ...
+                RestrictedSet=restrictedSet, ...             % Normal mode
+                FrequencyStart=0, ...                        % Frequency location
+                SequenceIndex=obj.SequenceIndex, ...         % Logical sequence index
+                PreambleIndex=obj.PreambleIndex, ...         % Preamble index
+                FrequencyRange=frequencyRange, ...           % Frequency range
+                SubcarrierSpacing=subcarrierSpacing, ...     % Subcarrier spacing
+                DuplexMode=duplexMode, ...                   % Duplexing mode
+                ZeroCorrelationZone=zeroCorrelationZone ...  % Cyclic shift index.
+            );
 
             % Propagation Channel Configuration
             if strcmp(obj.DelayProfile, 'AWGN')
@@ -296,6 +321,7 @@ classdef PRACHPERF < matlab.System
         function validatePropertiesImpl(obj)
             checkSeqIndexandFormat(obj);
             checkNCSandFormat(obj);
+            checkSCSandFormat(obj);
         end
 
         function stepImpl(obj, SNRdB, nPRACHOccasions)

@@ -65,10 +65,19 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
 
     properties (TestParameter)
 
-        %Symbols allocated to the PUCCH transmission. The symbol allocation is described
-        %   by a two-element array with the starting symbol (0...13) and the length (1...14)
-        %   of the PUCCH transmission. Example: [13, 1].
-        SymbolAllocation = {[0, 1], [6, 2], [12, 2]};
+        %Symbols allocated to the PUCCH transmission.
+        %
+        %   The symbol allocation is by a structure with two fields:
+        %   - a two-element array with the starting symbol (0...13) and the length (1...14)
+        %     of the PUCCH transmission. Example: [13, 1], and
+        %   - a logical flag for intra-slot frequency hopping.
+        SymbolAllocation = { ...
+            struct('Allocation', [0, 1], 'FrequencyHopping', false), ...
+            struct('Allocation', [6, 2], 'FrequencyHopping', false), ...
+            struct('Allocation', [12, 2], 'FrequencyHopping', false), ...
+            struct('Allocation', [6, 2], 'FrequencyHopping', true), ...
+            struct('Allocation', [12, 2], 'FrequencyHopping', true), ...
+            };
 
         %Number of contiguous PRB allocated to PUCCH Format 2 (1...16).
         PRBNum = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
@@ -113,15 +122,13 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.writeInt8File
             import srsTest.helpers.writeComplexFloatFile
-            import srsLib.phy.helpers.srsConfigureCarrier
-            import srsLib.phy.helpers.srsConfigurePUCCH
             import srsLib.phy.upper.channel_processors.srsPUCCH2
 
             % Generate a unique test ID.
             testID = testCase.generateTestID;
 
             % Generate random cell ID.
-            NCellID = randi([0, 1007]);
+            nCellID = randi([0, 1007]);
 
             % Generate a random NID.
             NID = randi([0, 1023]);
@@ -133,20 +140,20 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
             MaxGridSize = 275;
 
             % Resource grid starts at CRB0.
-            NStartGrid = 0;
+            nStartGrid = 0;
 
             % BWP start relative to CRB0.
-            NStartBWP = randi([0, MaxGridSize - PRBNum - 1]);
+            nStartBWP = randi([0, MaxGridSize - PRBNum - 1]);
 
             % BWP size.
             % PUCCH Format 2 frequency allocation must fit inside the BWP.
-            NSizeBWP = randi([PRBNum, MaxGridSize - NStartBWP]);
+            nSizeBWP = randi([PRBNum, MaxGridSize - nStartBWP]);
 
             % PUCCH PRB Start relative to the BWP.
-            PRBStart = randi([0, NSizeBWP - PRBNum]);
+            PRBStart = randi([0, nSizeBWP - PRBNum]);
 
             % Fit resource grid size to the BWP.
-            NSizeGrid = NStartBWP + NSizeBWP;
+            nSizeGrid = nStartBWP + nSizeBWP;
 
             % PRB set assigned to PUCCH Format 2 within the BWP.
             % Each element within the PRB set indicates the location of a
@@ -154,22 +161,40 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
             PRBSet = PRBStart : PRBStart + PRBNum - 1;
 
             % Normal cyclic prefix.
-            CyclicPrefix = 'normal';
+            cyclicPrefix = 'normal';
 
             % Configure the carrier according to the test parameters.
-            carrier = srsConfigureCarrier(NCellID, NSizeGrid, ...
-                NStartGrid, CyclicPrefix);
+            carrier = nrCarrierConfig( ...
+                NCellID=nCellID, ...
+                NSizeGrid=nSizeGrid, ...
+                NStartGrid=nStartGrid, ...
+                CyclicPrefix=cyclicPrefix ...
+                );
 
             % Resource grid dimensions.
-            nofGridSubcs = NSizeGrid * 12;
+            nofGridSubcs = nSizeGrid * 12;
             nofGridSymbols = carrier.SymbolsPerSlot;
 
             % No frequency hopping.
-            FrequencyHopping = 'neither';
+            if SymbolAllocation.FrequencyHopping
+                frequencyHopping = 'intraSlot';
+                secondPRBStart = randi([0, nSizeBWP - PRBNum]);
+            else
+                frequencyHopping = 'neither';
+                secondPRBStart = 1;
+            end
 
             % Configure the PUCCH.
-            pucch = srsConfigurePUCCH(2, NStartBWP, NSizeBWP, SymbolAllocation, ...
-                 PRBSet, FrequencyHopping, NID, RNTI);
+            pucch = nrPUCCH2Config( ...
+                NStartBWP=nStartBWP, ...
+                NSizeBWP=nSizeBWP, ...
+                SymbolAllocation=SymbolAllocation.Allocation, ...
+                PRBSet=PRBSet, ...
+                FrequencyHopping=frequencyHopping, ...
+                SecondHopStartPRB=secondPRBStart, ...
+                NID=NID, ...
+                RNTI=RNTI ...
+                );
 
             % Number of PUCCH Subcarriers.
             nofPUCCHSubcs = PRBNum * 12;
@@ -181,7 +206,7 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
             nofPUCCHDataSubcs = nofPUCCHSubcs - nofPUCCHDMRSSubcs;
 
             % Number of PUCCH data RE in a single slot.
-            nofPUCCHDataRE = nofPUCCHDataSubcs * SymbolAllocation(2);
+            nofPUCCHDataRE = nofPUCCHDataSubcs * SymbolAllocation.Allocation(2);
 
             % Number of bits that can be mapped to the available radio
             % resources.
@@ -246,20 +271,27 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
             portsString = '{0}';
 
             % First PRB within the resource grid allocated to PUCCH.
-            firstPRB = NStartBWP + PRBStart;
+            firstPRB = nStartBWP + PRBStart;
+            % First PRB within the resource grid allocated to PUCCH for the second hop, if any.
+            if SymbolAllocation.FrequencyHopping
+                secondHopPRB = nStartBWP + secondPRBStart;
+            else
+                secondHopPRB = {};
+            end
 
             pucchF2Config = {...
-                portsString, ...         % rx_ports
-                firstPRB, ...            % first_prb
-                PRBNum, ...              % nof_prb
-                SymbolAllocation(1), ... % start_symbol_index
-                SymbolAllocation(2), ... % nof_symbols
-                RNTI, ...                % rnti
-                NID, ...                 % n_id
+                portsString, ...                    % rx_ports
+                firstPRB, ...                       % first_prb
+                secondHopPRB, ...                   % second_hop_prb
+                PRBNum, ...                         % nof_prb
+                SymbolAllocation.Allocation(1), ... % start_symbol_index
+                SymbolAllocation.Allocation(2), ... % nof_symbols
+                RNTI, ...                           % rnti
+                NID, ...                            % n_id
                 };
 
             testCaseContext = { ...
-                NSizeGrid, ...      % grid_nof_prb
+                nSizeGrid, ...      % grid_nof_prb
                 nofGridSymbols, ... % grid_nof_symbols
                 noiseVar, ...       % noise_var
                 pucchF2Config, ...  % config

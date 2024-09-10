@@ -60,6 +60,14 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
 
         %Type of the tested block.
         srsBlockType = 'phy/lower/modulation'
+
+        %Preamble formats for FR1.
+        PreambleFormatsFR1 = {'0', '1', '2', '3', 'A1', 'A1/B1', 'A2', ...
+            'A2/B2', 'A3', 'A3/B3', 'B1', 'B4', 'C0', 'C2'}
+
+        %Preamble formats for FR2.
+        PreambleFormatsFR2 = {'A1', 'A1/B1', 'A2', 'A2/B2', 'A3', ...
+            'A3/B3', 'B1', 'B4', 'C0', 'C2'}
     end
 
     properties (ClassSetupParameter)
@@ -71,14 +79,11 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
         %Carrier duplexing mode, set to
         %   - FDD for paired spectrum with 15kHz subcarrier spacing, or
         %   - TDD for unpaired spectrum with 30kHz subcarrier spacing.
-        DuplexMode = {'FDD', 'TDD'}
+        %   - TDD-FR2 for unpaired spectrum in frequency range 2 with 120kHz subcarrier spacing.
+        DuplexMode = {'FDD', 'TDD', 'TDD-FR2'}
 
         %Carrier bandwidth in PRB.
-        CarrierBandwidth = {79, 106}
-
-        %Preamble formats.
-        PreambleFormat = {'0', '1', '2', '3', 'A1', 'A1/B1', 'A2', ...
-            'A2/B2', 'A3', 'A3/B3', 'B1', 'B4', 'C0', 'C2'}
+        CarrierBandwidth = {79, 106, 212, 275}
 
         %Restricted set type.
         %   Possible values are {'UnrestrictedSet', 'RestrictedSetTypeA', 'RestrictedSetTypeB'}.
@@ -90,7 +95,7 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
         %Frequency-domain sequence mapping.
         %   Starting resource block (RB) index of the initial uplink bandwidth
         %   part (BWP) relative to carrier resource grid.
-        RBOffset = {0, 2};
+        RBOffset = {0, 2, 4, 10};
     end
 
     methods (Access = protected)
@@ -124,11 +129,11 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
     end % of methods (Access = protected)
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(testCase, DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet, ZeroCorrelationZone, RBOffset)
+        function testvectorGenerationCases(testCase, DuplexMode, CarrierBandwidth, RestrictedSet, ZeroCorrelationZone, RBOffset)
         %testvectorGenerationCases Generates a test vector for the given
-        %   DuplexMode, CarrierBandwidth, PreambleFormat, RestrictedSet,
-        %   ZeroCorrelationZone and RBOffset. The parameters SequenceIndex
-        %   and PreambleIndex are generated randomly.
+        %   DuplexMode, CarrierBandwidth, RestrictedSet, 
+        %   ZeroCorrelationZone and RBOffset. The parameters SequenceIndex,
+        %   PreambleFormat and PreambleIndex are generated randomly.
 
             import srsTest.helpers.writeComplexFloatFile
             import srsLib.phy.helpers.srsConfigurePRACH
@@ -137,27 +142,49 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
             % Generate a unique test ID
             TestID = testCase.generateTestID;
 
-            % Generate carrier configuration
-            carrier = nrCarrierConfig;
-            carrier.CyclicPrefix = 'normal';
-            carrier.NSizeGrid = CarrierBandwidth;
-
-            % Generate PRACH configuration.
-            SequenceIndex = randi([0, 1023], 1, 1);
-            prach = srsConfigurePRACH(DuplexMode, SequenceIndex, RestrictedSet, ZeroCorrelationZone, RBOffset, PreambleFormat);
-
-            % Select a symbolic number of frequency-domain occasions.
-            NumFreqOccasions = 2;
-
             % Set parameters that depend on the duplex mode.
             switch DuplexMode
                 case 'FDD'
-                    carrier.SubcarrierSpacing = 15;
+                    frequencyRange = 'FR1';
+                    subcarrierSpacing = 15;
+                    preambleFormats = testCase.PreambleFormatsFR1;
                 case 'TDD'
-                    carrier.SubcarrierSpacing = 30;
+                    frequencyRange = 'FR1';
+                    subcarrierSpacing  = 30;
+                    preambleFormats = testCase.PreambleFormatsFR1;
+                case 'TDD-FR2'
+                    frequencyRange = 'FR2';
+                    subcarrierSpacing  = 120;
+                    DuplexMode = 'TDD';
+                    preambleFormats = testCase.PreambleFormatsFR2;
                 otherwise
                     error('Invalid duplex mode %s', DuplexMode);
             end
+
+            PreambleFormat = preambleFormats{randi([1, numel(preambleFormats)])};
+
+            % Generate carrier configuration
+            carrier = nrCarrierConfig( ...
+                CyclicPrefix='normal', ...
+                NSizeGrid=CarrierBandwidth, ...
+                SubcarrierSpacing=subcarrierSpacing ...
+                );
+
+            % Generate PRACH configuration.
+            sequenceIndex = randi([0, 1023], 1, 1);
+            prach = srsConfigurePRACH( ...
+                PreambleFormat, ...
+                FrequencyRange=frequencyRange, ...
+                DuplexMode=DuplexMode, ...
+                SubcarrierSpacing=subcarrierSpacing, ...
+                SequenceIndex=sequenceIndex, ...
+                RestrictedSet=RestrictedSet, ...
+                ZeroCorrelationZone=ZeroCorrelationZone, ...
+                RBOffset=RBOffset ...
+                );
+
+            % Select a symbolic number of frequency-domain occasions.
+            NumFreqOccasions = 2;
 
             % Get PRACH modulation information.
             PrachOfdmInfo = nrPRACHOFDMInfo(carrier, prach);
@@ -179,7 +206,10 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
                     prach.PreambleIndex = randi([0, 63]);
 
                     % Generate waveform for each occasion.
-                    [occasion, gridset, info] = srsPRACHgenerator(carrier, prach);
+                    [occasionTmp, gridset, info] = srsPRACHgenerator(carrier, prach);
+
+                    % Pad occasion with zeros to match the waveform size.
+                    occasion = [occasionTmp; zeros(numel(waveform) - numel(occasionTmp), 1)];
 
                     % Combine the waveform of each occasion.
                     waveform = occasion + waveform;
@@ -218,17 +248,19 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
                 @writeComplexFloatFile, PRACHSymbols);
 
             srsPRACHFormat = sprintf('to_prach_format_type("%s")', PreambleFormat);
-            Numerology = ['subcarrier_spacing::kHz' num2str(carrier.SubcarrierSpacing)];
+
+            % Slot configuration.
+            slotConfig = {log2(carrier.SubcarrierSpacing/15), info.NPRACHSlot};
 
             % srsran PRACH configuration
             srsPRACHConfig = {...
+                slotConfig, ...                       % slot
                 srsPRACHFormat, ...                   % format
                 max([1, prach.NumTimeOccasions]), ... % nof_td_occasions
                 max([1, NumFreqOccasions]), ...       % nof_fd_occasions
                 StartSymbolWithinSlot , ...           % start_symbol
                 prach.RBOffset, ...                   % rb_offset
                 carrier.NSizeGrid, ...                % nof_prb_ul_grid
-                Numerology, ...                       % pusch_scs
                 };
 
             % test context

@@ -90,7 +90,7 @@ function [carrier, phych, extra] = srsParseLogs
     allLines = splitlines(logs);
     nLines = length(allLines);
 
-    carrier = srsLib.phy.helpers.srsConfigureCarrier();
+    carrier = nrCarrierConfig;
 
     % The subcarrier spacing must be provided manually.
     scs = input('Subcarrier spacing in kHz: ');
@@ -111,15 +111,17 @@ function [carrier, phych, extra] = srsParseLogs
 
     isPUSH = true;
     if strcmp(chType{1}, 'PUSCH')
-        phych = srsLib.phy.helpers.srsConfigurePUSCH();
+        phych = nrPUSCHConfig;
     elseif strcmp(chType{1}, 'PUCCH')
         isPUSH = false;
         % If a PUCCH entry, we need the PUCCH format.
         fPattern = "format=" + digitsPattern;
         fType = extract(allLines{1}, fPattern);
         format = str2double(fType{1}(end));
-        if ismember(format, [1, 2])
-            phych = srsLib.phy.helpers.srsConfigurePUCCH(format);
+        if (format == 1)
+            phych = nrPUCCH1Config;
+        elseif (format == 2)
+            phych = nrPUCCH2Config;
         else
             error('PUCCH Format %d is not supported.', format);
         end

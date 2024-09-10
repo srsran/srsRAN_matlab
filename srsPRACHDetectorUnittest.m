@@ -74,7 +74,8 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
         %Carrier duplexing mode, set to
         %   - FDD for paired spectrum with 15kHz subcarrier spacing, or
         %   - TDD for unpaired spectrum with 30kHz subcarrier spacing.
-        DuplexMode = {'FDD', 'TDD'}
+        %   - TDD-FR2 for unpaired spectrum with 120kHz subcarrier spacing (Frequency Range 2).
+        DuplexMode = {'FDD', 'TDD', 'TDD-FR2'}
 
         %Preamble formats.
         PreambleFormat = {'0', '1', '2', 'A1','B4'}
@@ -159,37 +160,22 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
 
             import srsLib.phy.helpers.srsConfigurePRACH
 
-            RestrictedSetLoc = obj.RestrictedSet;
-            RBOffsetLoc = obj.RBOffset;
+            obj.assumeTrue(~strcmp(DuplexMode, 'TDD-FR2') || ismember(PreambleFormat, {'A1', 'B4'}), ...
+                'Only short formats allowed in FR2.');
+
+            restrictedSet = obj.RestrictedSet;
+            rbOffset = obj.RBOffset;
 
             % Select PRACH random parameters.
-            SequenceIndex = randi([0, 1023], 1, 1);
-            PreambleIndex = randi([0, 63], 1, 1);
+            sequenceIndex = randi([0, 1023], 1, 1);
+            preambleIndex = randi([0, 63], 1, 1);
 
             % Generate carrier configuration.
             obj.carrier = nrCarrierConfig;
             obj.carrier.CyclicPrefix = 'normal';
             obj.carrier.NSizeGrid = obj.CarrierBandwidth;
 
-            ZeroCorrelationZone = 0;
-
-            % Select zero correlation zone according to TS38.104 Table A.6-1.
-            if UseZCZ
-                if strlength(PreambleFormat) == 1
-                    ZeroCorrelationZone = 1;
-                else
-                    if strcmp(DuplexMode, 'FDD') 
-                        ZeroCorrelationZone = 11;
-                    else
-                        ZeroCorrelationZone = 14;
-                    end
-                end
-            end
-
-            % Generate PRACH configuration.
-            obj.prach = srsConfigurePRACH(DuplexMode,  SequenceIndex, ...
-                PreambleIndex, RestrictedSetLoc, ZeroCorrelationZone, ...
-                RBOffsetLoc, PreambleFormat);
+            frequencyRange = 'FR1';
 
             % Set parameters that depend on the duplex mode.
             switch DuplexMode
@@ -197,9 +183,39 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
                     obj.carrier.SubcarrierSpacing = 15;
                 case 'TDD'
                     obj.carrier.SubcarrierSpacing = 30;
+                case 'TDD-FR2'
+                    obj.carrier.SubcarrierSpacing = 120;
+                    frequencyRange = 'FR2';
                 otherwise
                     error('Invalid duplex mode %s', obj.DuplexMode);
             end
+
+            zeroCorrelationZone = 0;
+
+            % Select zero correlation zone according to TS38.104 Table A.6-1.
+            if UseZCZ
+                if strlength(PreambleFormat) == 1
+                    zeroCorrelationZone = 1;
+                else
+                    if strcmp(DuplexMode, 'FDD') 
+                        zeroCorrelationZone = 11;
+                    else
+                        zeroCorrelationZone = 14;
+                    end
+                end
+            end
+
+            % Generate PRACH configuration.
+            obj.prach = srsConfigurePRACH(PreambleFormat, ...
+                FrequencyRange=frequencyRange, ...
+                DuplexMode=DuplexMode(1:3), ...
+                SubcarrierSpacing=obj.carrier.SubcarrierSpacing, ...
+                SequenceIndex=sequenceIndex, ...
+                PreambleIndex=preambleIndex, ...
+                RestrictedSet=restrictedSet, ...
+                ZeroCorrelationZone=zeroCorrelationZone, ...
+                RBOffset=rbOffset ...
+                );
         end % of function setupsimulation(obj, PreambleFormat, UseZCZ)
 
         function grid = generatePRACH(obj, nAntennas) 

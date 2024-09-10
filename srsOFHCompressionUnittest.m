@@ -108,6 +108,7 @@ classdef srsOFHCompressionUnittest < srsTest.srsBlockUnittest
             import srsTest.helpers.writeUint8File
             import srsTest.helpers.writeInt16File
             import srsTest.helpers.writeComplexFloatFile
+            import srsTest.helpers.approxbf16
             import srsLib.ofh.compression.srsCompressor
 
             % Generate a unique test ID by looking at the number of files generated so far.
@@ -116,20 +117,28 @@ classdef srsOFHCompressionUnittest < srsTest.srsBlockUnittest
             % Generate random test input.
             iqData = (-1 + 2 * rand(nPRBs * 12, 2)) * [1; 1i];
 
+            % Set two random PRBs to small values.
+            smallPRBs = randperm(nPRBs, 2) - 1;
+            for n = smallPRBs
+                iqData(n*12+1:(n+1)*12) = (-1 + 2 * randi([0 1], 12, 2)) * [0.01; 0.01i];
+            end
+
+            % Approximate a brain floating point 16 conversion.
+            iqData = approxbf16(iqData);
+
             % Scaling factor applied prior to quantization.
             scale = 0.25 + rand(1, 1);
             if (scale > 1)
                 scale = 1.0;
             end
+            iqDataScaled = iqData .* scale;
 
             if (strcmp(method, 'none'))
-                iqDataScaled = iqData .* scale;
                 % Simply quantize data based on cIQwidth test parameter.
                 quantScaleFactor = 2 ^ (cIQwidth - 1) - 1;
                 cIQData          = round(quantScaleFactor * iqDataScaled);
                 cParam           = zeros(nPRBs, 1);
             else
-                iqDataScaled = iqData .* scale;
                 % Convert to int16 representation.
                 quantScaleFactor = 2 ^ 15 - 1;
                 iqDataQuantized  = round(quantScaleFactor * iqDataScaled);

@@ -190,29 +190,34 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
     methods (Access = private)
         function setupsimulation(obj, DMRSConfigurationType, Modulation, nofRxPorts, NumLayers, TransformPrecoding)
         % Sets secondary simulation variables.
-            import srsLib.phy.helpers.srsConfigureCarrier
-            import srsLib.phy.helpers.srsConfigurePUSCH
 
             % Select a random number of PRB.
-            NumPRB = obj.ValidNumPRB(randi([1, length(obj.ValidNumPRB)]));
+            numPRB = obj.ValidNumPRB(randi([1, length(obj.ValidNumPRB)]));
 
             % Configure carrier.
-            NCellID = randi([0, 1007]);
-            NSizeGrid = NumPRB;
-            obj.carrier = srsConfigureCarrier(NCellID, NSizeGrid);
+            nCellID = randi([0, 1007]);
+            nSizeGrid = numPRB;
+            obj.carrier = nrCarrierConfig(NCellID=nCellID, NSizeGrid=nSizeGrid);
 
             % Set symbol allocation.
             startSymbol = randi([0 2]);
             nofSymbols = randi([7 (14 - startSymbol)]);
-            SymbolAllocation = [startSymbol, nofSymbols];
+            symbolAllocation = [startSymbol, nofSymbols];
 
             % Prepare PRB set.
-            PRBSet = 0:(NumPRB-1);
-            NID = obj.carrier.NCellID;
+            PRBSet = 0:(numPRB-1);
+            nID = obj.carrier.NCellID;
 
             % Configure PUSCH.
             RNTI = randi([1, 65535]);
-            obj.pusch = srsConfigurePUSCH(NumLayers, Modulation, PRBSet, SymbolAllocation, NID, RNTI);
+            obj.pusch = nrPUSCHConfig( ...
+                NumLayers=NumLayers, ...
+                Modulation=Modulation, ...
+                PRBSet=PRBSet, ...
+                SymbolAllocation=symbolAllocation, ...
+                NID=nID, ...
+                RNTI=RNTI ...
+                );
             obj.pusch.DMRS.DMRSConfigurationType = DMRSConfigurationType;
             obj.pusch.DMRS.DMRSAdditionalPosition = randi([0, 3]);
             obj.pusch.DMRS.NumCDMGroupsWithoutData = randi([1, obj.pusch.DMRS.DMRSConfigurationType + 1]);

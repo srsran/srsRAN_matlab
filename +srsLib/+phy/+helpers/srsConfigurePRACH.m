@@ -1,10 +1,9 @@
 %srsConfigurePRACH Generates a physical random access channel (PRACH) configuration object.
-%   PRACH = srsConfigurePRACH(VARARGIN) returns a PRACH configuration object with the requested configuration.
-%   The names of the input parameters are assumed to coincide with those of the properties of
-%   nrPRACHConfig, with the exception of the suffix 'Loc' which is accepted. Moreover, the
-%   'PreambleFormat' parameter is also accepted and used to configure the subcarrier spacing and
-%   the length of Zadoff-Chu preamble sequence. If the requested configuration is invalid, PRACH
-%   is returned empty.
+%   PRACH = srsConfigurePRACH(PREAMBLEFORMAT, Name, Value, Name, Value, ...) returns a PRACH
+%   configuration object with the requested configuration. PREAMBLEFORMAT may be any valid
+%   PRACH preamble format (e.g., '0', 'B4', or 'A1/B1'). The properties that can be specified with
+%   Name-Value pairs are the same as those of an nrPRACHConfig object. If the requested
+%   configuration is invalid, the function returns an empty array.
 %
 %   See also nrPRACHConfig.
 
@@ -23,33 +22,37 @@
 %   A copy of the BSD 2-Clause License can be found in the LICENSE
 %   file in the top-level directory of this distribution.
 
-function prach = srsConfigurePRACH(varargin)
+function prach = srsConfigurePRACH(preambleFormat, prachParams)
+    arguments
+        preambleFormat {mustBeMember(preambleFormat, ...
+            {'0', '1', '2', '3', 'A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'B4', ...
+             'C0', 'C2', 'A1/B1', 'A2/B2', 'A3/B3'})}
+        prachParams.?nrPRACHConfig
+    end
+
     prach = nrPRACHConfig;
     try
-        nofInputParams = length(varargin);
-        for index = 1:nofInputParams
-            paramName = erase(inputname(index), 'Loc');
-            if strcmp(paramName,'PreambleFormat')
-                prach = setPreambleFormat(prach, varargin{index});
-            else
-                prach.(paramName) = varargin{index};
-            end
+        paramList = fieldnames(prachParams);
+        for iParam = 1:numel(paramList)
+            paramName = paramList{iParam};
+            prach.(paramName) = prachParams.(paramName);
         end
     catch
         prach = [];
     end
+    prach = setPreambleFormat(prach, preambleFormat);
 end
 
 
-function prach = setPreambleFormat(prach, PreambleFormat)
+function prach = setPreambleFormat(prach, preambleFormat)
     import srsLib.phy.helpers.srsSelectPRACHConfigurationIndex
-    
+
     % Select configuration index according to the duplex mode and preamble
     % format.
-    prach.ConfigurationIndex = srsSelectPRACHConfigurationIndex(prach.DuplexMode, PreambleFormat);
+    prach.ConfigurationIndex = srsSelectPRACHConfigurationIndex(prach.FrequencyRange, prach.DuplexMode, preambleFormat);
 
     % Force PRACH parameters that depend on the format.
-    switch PreambleFormat
+    switch preambleFormat
         case '0'
             prach.SubcarrierSpacing = 1.25;
             prach.LRA = 839;
@@ -64,11 +67,11 @@ function prach = setPreambleFormat(prach, PreambleFormat)
             prach.LRA = 839;
         otherwise
             prach.RestrictedSet = 'UnrestrictedSet';
+            if (prach.SubcarrierSpacing < 15)
+                prach.SubcarrierSpacing = 15;
+            end
             if strcmp(prach.DuplexMode, 'TDD')
                 prach.ActivePRACHSlot = 1;
-                prach.SubcarrierSpacing = 30;
-            else
-                prach.SubcarrierSpacing = 15;
             end
             prach.LRA = 139;
     end
