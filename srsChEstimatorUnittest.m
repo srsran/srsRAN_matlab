@@ -248,74 +248,21 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
         %testvectorGenerationCases - Generates a test vector according to the provided
         %   CONFIGURATION, SUBCARRIERSPACING, FREQUENCYHOPPING type and CARRIEROFFSET.
 
-            import srsLib.phy.upper.signal_processors.srsChannelEstimator
-            import srsLib.ran.utils.scs2cps
-            import srsTest.helpers.approxbf16
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.writeComplexFloatFile
 
-            obj.assumeFalse(((configuration.nPRBs == obj.NSizeBWP) || (configuration.symbolAllocation(2) == 1)) ...
-                && strcmp(FrequencyHopping, 'intraSlot'), ...
-                'Cannot do frequency hopping if the entire BWP is allocated or if using a single OFDM symbol.');
-
-            assert((sum(configuration.symbolAllocation) <= obj.nSymbolsSlot), ...
-                'srsran_matlab:srsChEstimatorUnittest', 'Time allocation exceeds slot length.');
+            [fullConfig, channel, receivedRG, results] = obj.configureAndMatlab(configuration, ...
+                SubcarrierSpacing, FrequencyHopping, CarrierOffset);
 
             % Generate a unique test ID.
             testID = obj.generateTestID;
 
-            % Configure each hop.
-            [hop1, hop2] = obj.configureHops(configuration, FrequencyHopping);
-
-            % Build DM-RS-like pilots.
-            nDMRSsymbols = sum(obj.DMRSsymbols);
-            nPilots = configuration.nPRBs * sum(obj.DMRSREmask) * nDMRSsymbols;
-            pilots = (2 * randi([0 1], nPilots, 2) - 1) * [1; 1j] / sqrt(2);
-            pilots = reshape(pilots, [], nDMRSsymbols);
-
-            betaDMRS = 10^(-configuration.betaDMRS / 20);
-
-            % Place pilots on the resource grid.
-            transmittedRG = obj.transmitPilots(pilots, betaDMRS, hop1, hop2);
-
-            % For now, consider a single-tap channel (max delay is 1/4 of
-            % the cyclic prefix length).
-            fftSize =  obj.NSizeGrid * obj.NRE;
-            channelDelay = randi([0, floor(fftSize * 0.07 * 0.25)]);
-            channelCoef = exp(2j * pi * rand);
-            channelTF = fft([zeros(channelDelay, 1); channelCoef; zeros(5, 1)], fftSize);
-            channelTF = fftshift(channelTF);
-            % We assume the channel constant over the entire slot...
-            channelRG = repmat(channelTF, 1, obj.nSymbolsSlot);
-            % ... but for CFO.
-            cfo = CarrierOffset; % Fraction of the SCS.
-            CPDurations = scs2cps(SubcarrierSpacing);
-
-            if cfo ~= 0
-                cfoVal = CPDurations * SubcarrierSpacing;
-                cfoVal(2:end) = cfoVal(2:end) + 1;
-                cfoVal = cumsum(cfoVal) * cfo;
-                cfoVal = exp(2j * pi * cfoVal);
-                channelRG = (channelRG .* cfoVal) * exp(1j * pi * ((fftSize - 1) / fftSize) * cfo);
-            end
-
-            % Compute received resource grid.
-            receivedRG = channelRG .* transmittedRG;
-            SNR = 20; % dB
-            noiseVar = 10^(-SNR/10);
-            noise = randn(size(receivedRG)) + 1j * randn(size(receivedRG));
-            noise(receivedRG == 0) = 0;
-            noise = noise * sqrt(noiseVar / 2);
-            receivedRG = receivedRG + noise;
-
-            EstimatorConfig.DMRSSymbolMask = obj.DMRSsymbols;
-            EstimatorConfig.DMRSREmask = obj.DMRSREmask;
-            EstimatorConfig.scs = SubcarrierSpacing * 1000;
-            EstimatorConfig.CyclicPrefixDurations = CPDurations;
-            EstimatorConfig.Smoothing = configuration.smoothing;
-            EstimatorConfig.CFOCompensate = configuration.cfocompensate;
-            [channelEst, noiseEst, rsrp, epre, timeAlignment, cfoEst] = srsChannelEstimator(approxbf16(receivedRG), ...
-                pilots, betaDMRS, hop1, hop2, EstimatorConfig);
+            channelEst = results.ChannelEst;
+            noiseEst = results.NoiseEst;
+            rsrp = results.RSRP;
+            epre = results.EPRE;
+            timeAlignment = results.TimeAlignment;
+            cfoEst = results.CFO;
 
             % TODO: The ratio of the two quantities below should give a metric that allows us
             % to decide whether pilots were sent or not. However, it should be normalized
@@ -323,6 +270,15 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             % detectMetricNum = detectMetricNum / nDMRSsymbols;
             % detectMetricDen = noiseEst;
             % detectionMetric = detectMetricNum / detectMetricDen;
+
+            SNR = channel.SNR;
+            channelRG = channel.RG;
+            noiseVar = 10^(-SNR/10);
+            channelDelay = channel.Delay;
+            cfo = channel.CFO;
+
+            betaDMRS = fullConfig.BetaDMRS;
+            fftSize = fullConfig.FFTSize;
 
             snrEst = rsrp / betaDMRS^2 / noiseEst;
 
@@ -350,9 +306,12 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             obj.saveDataFile('_test_output_ch_est', testID, @writeResourceGridEntryFile, ...
                 vals, [scs, syms, zeros(length(scs), 1)] - 1);
 
+            pilots = fullConfig.Pilots;
             % Write the pilots.
             obj.saveDataFile('_test_pilots', testID, @writeComplexFloatFile, pilots(:));
 
+            hop1 = fullConfig.Hop1;
+            hop2 = fullConfig.Hop2;
             dmrsPattern = {...
                 obj.DMRSsymbols, ...    % symbols
                 hop1.maskPRBs,   ...    % rb_mask
@@ -409,70 +368,22 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
         %compareMex - Compare mex results with those from the reference estimator for
         %   a given CONFIGURATION, SUBCARRIERSPACING, FREQUENCYHOPPING type and CARRIEROFFSET.
 
-            import srsLib.phy.upper.signal_processors.srsChannelEstimator
-            import srsLib.ran.utils.scs2cps
             import srsMEX.phy.srsMultiPortChannelEstimator
-            import srsTest.helpers.approxbf16
 
-            obj.assumeFalse(((configuration.nPRBs == obj.NSizeBWP) || (configuration.symbolAllocation(2) == 1)) ...
-                && strcmp(FrequencyHopping, 'intraSlot'), ...
-                'Cannot do frequency hopping if the entire BWP is allocated or if using a single OFDM symbol.');
+            [fullConfig, channel, receivedRG, results] = configureAndMatlab(obj, ...
+                configuration, SubcarrierSpacing, FrequencyHopping, CarrierOffset);
 
-            assert((sum(configuration.symbolAllocation) <= obj.nSymbolsSlot), ...
-                'srsran_matlab:srsChEstimatorUnittest', 'Time allocation exceeds slot length.');
+            hop1 = fullConfig.Hop1;
+            hop2 = fullConfig.Hop2;
+            pilots = fullConfig.Pilots;
+            betaDMRS = fullConfig.BetaDMRS;
 
-            % Configure each hop.
-            [hop1, hop2] = obj.configureHops(configuration, FrequencyHopping);
-
-            % Build DM-RS-like pilots.
-            nDMRSsymbols = sum(obj.DMRSsymbols);
-            nPilots = configuration.nPRBs * sum(obj.DMRSREmask) * nDMRSsymbols;
-            pilots = (2 * randi([0 1], nPilots, 2) - 1) * [1; 1j] / sqrt(2);
-            pilots = reshape(pilots, [], nDMRSsymbols);
-
-            betaDMRS = 10^(-configuration.betaDMRS / 20);
-
-            % Place pilots on the resource grid.
-            transmittedRG = obj.transmitPilots(pilots, betaDMRS, hop1, hop2);
-
-            % For now, consider a single-tap channel (max delay is 1/4 of
-            % the cyclic prefix length).
-            fftSize =  obj.NSizeGrid * obj.NRE;
-            channelDelay = randi([0, floor(fftSize * 0.07 * 0.25)]);
-            channelCoef = exp(2j * pi * rand);
-            channelTF = fft([zeros(channelDelay, 1); channelCoef; zeros(5, 1)], fftSize);
-            channelTF = fftshift(channelTF);
-            % We assume the channel constant over the entire slot...
-            channelRG = repmat(channelTF, 1, obj.nSymbolsSlot);
-            % ... but for CFO.
-            cfo = CarrierOffset; % Fraction of the SCS.
-            CPDurations = scs2cps(SubcarrierSpacing);
-
-            if cfo ~= 0
-                cfoVal = CPDurations * SubcarrierSpacing;
-                cfoVal(2:end) = cfoVal(2:end) + 1;
-                cfoVal = cumsum(cfoVal) * cfo;
-                cfoVal = exp(2j * pi * cfoVal);
-                channelRG = (channelRG .* cfoVal) * exp(1j * pi * ((fftSize - 1) / fftSize) * cfo);
-            end
-
-            % Compute received resource grid.
-            receivedRG = channelRG .* transmittedRG;
-            SNR = 20; % dB
-            noiseVar = 10^(-SNR/10);
-            noise = randn(size(receivedRG)) + 1j * randn(size(receivedRG));
-            noise(receivedRG == 0) = 0;
-            noise = noise * sqrt(noiseVar / 2);
-            receivedRG = receivedRG + noise;
-
-            EstimatorConfig.DMRSSymbolMask = obj.DMRSsymbols;
-            EstimatorConfig.DMRSREmask = obj.DMRSREmask;
-            EstimatorConfig.scs = 15000;
-            EstimatorConfig.CyclicPrefixDurations = CPDurations;
-            EstimatorConfig.Smoothing = configuration.smoothing;
-            EstimatorConfig.CFOCompensate = configuration.cfocompensate;
-            [channelEst, noiseEst, rsrp, epre, timeAlignment, cfoEst] = srsChannelEstimator(approxbf16(receivedRG), ...
-                pilots, betaDMRS, hop1, hop2, EstimatorConfig);
+            channelEst = results.ChannelEst;
+            noiseEst = results.NoiseEst;
+            rsrp = results.RSRP;
+            epre = results.EPRE;
+            timeAlignment = results.TimeAlignment;
+            cfoEst = results.CFO;
 
             % Cast input for the mex estimator.
             pilotRBMask = hop1.maskPRBs * hop1.DMRSsymbols';
@@ -482,10 +393,16 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             pilotMask = kron(pilotRBMask, hop1.DMRSREmask);
             pilotIndices = find(pilotMask);
 
-            mexEstimator = srsMultiPortChannelEstimator(Smoothing = configuration.smoothing, CompensateCFO = configuration.cfocompensate);
+            mexEstimator = srsMultiPortChannelEstimator(...
+                Smoothing=configuration.smoothing, ...
+                CompensateCFO=configuration.cfocompensate ...
+                );
             [channelEstMEX, noiseEstMEX, extra] ...
-                = mexEstimator(receivedRG, configuration.symbolAllocation, pilotIndices, ...
-                pilots(:), HoppingIndex = hop2.startSymbol, BetaScaling = betaDMRS); %#ok<FNDSB>
+                = mexEstimator(receivedRG, configuration.symbolAllocation, pilotIndices, pilots(:), ...
+                    SubcarrierSpacing=SubcarrierSpacing, ...
+                    HoppingIndex=hop2.startSymbol, ...
+                    BetaScaling=betaDMRS ...
+                    ); %#ok<FNDSB>
 
             toleranceTA = 1000 / (4096 * SubcarrierSpacing);
             chEstIdx = (channelEst ~= 0);
@@ -553,13 +470,12 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                 obj.NSizeGrid = obj.NStartBWP + obj.NSizeBWP;
             end
 
-            % Cannot do frequency hopping if the entire BWP is allocated or if using a single OFDM symbol.
-            assert(~(((configuration.nPRBs == obj.NSizeBWP) || (configuration.symbolAllocation(2) == 1)) ...
-                    && strcmp(FrequencyHopping, 'intraSlot')), 'srsgnb_matlab:srsChEstimatorUnittest', ...
-                    'Unfeasible configuration-frequency hopping combination.');
+            fullConfig = configureAndMatlab(obj, configuration, scs, FrequencyHopping, []);
 
-            assert((sum(configuration.symbolAllocation) <= obj.nSymbolsSlot), ...
-                'srsgnb_matlab:srsChEstimatorUnittest', 'Time allocation exceeds slot length.');
+            hop1 = fullConfig.Hop1;
+            hop2 = fullConfig.Hop2;
+            pilots = fullConfig.Pilots;
+            betaDMRS = fullConfig.BetaDMRS;
 
             % Configure carrier.
             carrier = nrCarrierConfig;
@@ -571,17 +487,6 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             waveformInfo = nrOFDMInfo(carrier);
             channel = configureChannel(channelType, delay, doppler, waveformInfo.SampleRate, ...
                 carrier.SubcarrierSpacing);
-
-            % Configure each hop.
-            [hop1, hop2] = obj.configureHops(configuration, FrequencyHopping);
-
-            % Build DM-RS-like pilots.
-            nDMRSsymbols = sum(obj.DMRSsymbols);
-            nPilots = configuration.nPRBs * sum(obj.DMRSREmask) * nDMRSsymbols;
-            pilots = (2 * randi([0 1], nPilots, 2) - 1) * [1; 1j] / sqrt(2);
-            pilots = reshape(pilots, [], nDMRSsymbols);
-
-            betaDMRS = 10^(-configuration.betaDMRS / 20);
 
             % Place pilots on the resource grid.
             transmittedRG = obj.transmitPilots(pilots, betaDMRS, hop1, hop2);
@@ -793,6 +698,103 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                 transmittedRG(maskREs_, hop_.DMRSsymbols) = betaDMRS * pilots_;
             end % of function processHop(hop_, pilots_)
         end % of function transmittedRG = transmitPilots(pilots, hop1, hop2)
+
+        function [fullConfig, channel, receivedRG, results] = configureAndMatlab(obj, ...
+            configuration, SubcarrierSpacing, FrequencyHopping, CarrierOffset)
+        %Computes secondary configuration parameters and, if the number of output arguments
+        %   is larger than one, runs the MATLAB-based channel estimator.
+
+            import srsLib.phy.upper.signal_processors.srsChannelEstimator
+            import srsLib.ran.utils.scs2cps
+            import srsTest.helpers.approxbf16
+
+            obj.assumeFalse(((configuration.nPRBs == obj.NSizeBWP) || (configuration.symbolAllocation(2) == 1)) ...
+                && strcmp(FrequencyHopping, 'intraSlot'), ...
+                'Cannot do frequency hopping if the entire BWP is allocated or if using a single OFDM symbol.');
+
+            assert((sum(configuration.symbolAllocation) <= obj.nSymbolsSlot), ...
+                'srsran_matlab:srsChEstimatorUnittest', 'Time allocation exceeds slot length.');
+
+            % Configure each hop.
+            [hop1, hop2] = obj.configureHops(configuration, FrequencyHopping);
+
+            % Build DM-RS-like pilots.
+            nDMRSsymbols = sum(obj.DMRSsymbols);
+            nPilots = configuration.nPRBs * sum(obj.DMRSREmask) * nDMRSsymbols;
+            pilots = (2 * randi([0 1], nPilots, 2) - 1) * [1; 1j] / sqrt(2);
+            pilots = reshape(pilots, [], nDMRSsymbols);
+
+            betaDMRS = 10^(-configuration.betaDMRS / 20);
+            fftSize =  obj.NSizeGrid * obj.NRE;
+
+            fullConfig = struct(...
+                'Pilots', pilots, ...
+                'Hop1', hop1, ...
+                'Hop2', hop2, ...
+                'BetaDMRS', betaDMRS, ...
+                'FFTSize', fftSize ...
+                );
+
+            if nargout > 1
+                % Place pilots on the resource grid.
+                transmittedRG = obj.transmitPilots(pilots, betaDMRS, hop1, hop2);
+
+                % For now, consider a single-tap channel (max delay is 1/4 of
+                % the cyclic prefix length).
+                channelDelay = randi([0, floor(fftSize * 0.07 * 0.25)]);
+                channelCoef = exp(2j * pi * rand);
+                channelTF = fft([zeros(channelDelay, 1); channelCoef; zeros(5, 1)], fftSize);
+                channelTF = fftshift(channelTF);
+                % We assume the channel constant over the entire slot...
+                channelRG = repmat(channelTF, 1, obj.nSymbolsSlot);
+                % ... but for CFO.
+                cfo = CarrierOffset; % Fraction of the SCS.
+                CPDurations = scs2cps(SubcarrierSpacing);
+
+                if cfo ~= 0
+                    cfoVal = CPDurations * SubcarrierSpacing;
+                    cfoVal(2:end) = cfoVal(2:end) + 1;
+                    cfoVal = cumsum(cfoVal) * cfo;
+                    cfoVal = exp(2j * pi * cfoVal);
+                    channelRG = (channelRG .* cfoVal) * exp(1j * pi * ((fftSize - 1) / fftSize) * cfo);
+                end
+
+                % Compute received resource grid.
+                receivedRG = channelRG .* transmittedRG;
+                SNR = 20; % dB
+                noiseVar = 10^(-SNR/10);
+                noise = randn(size(receivedRG)) + 1j * randn(size(receivedRG));
+                noise(receivedRG == 0) = 0;
+                noise = noise * sqrt(noiseVar / 2);
+                receivedRG = receivedRG + noise;
+
+                EstimatorConfig.DMRSSymbolMask = obj.DMRSsymbols;
+                EstimatorConfig.DMRSREmask = obj.DMRSREmask;
+                EstimatorConfig.scs = SubcarrierSpacing * 1000;
+                EstimatorConfig.CyclicPrefixDurations = CPDurations;
+                EstimatorConfig.Smoothing = configuration.smoothing;
+                EstimatorConfig.CFOCompensate = configuration.cfocompensate;
+                [channelEst, noiseEst, rsrp, epre, timeAlignment, cfoEst] = srsChannelEstimator(approxbf16(receivedRG), ...
+                    pilots, betaDMRS, hop1, hop2, EstimatorConfig);
+
+                results = struct(...
+                    'ChannelEst', channelEst, ...
+                    'NoiseEst', noiseEst, ...
+                    'RSRP', rsrp, ...
+                    'EPRE', epre, ...
+                    'TimeAlignment', timeAlignment, ...
+                    'CFO', cfoEst ...
+                    );
+
+                channel = struct(...
+                    'RG', channelRG, ...
+                    'Delay', channelDelay, ...
+                    'CFO', cfo, ...
+                    'SNR', SNR ...
+                    );
+            end % of if nargout > 1
+        end % of function configureAndMatlab(obj, ...)
+
     end % of methods (Access = private)
 end % of classdef srsChEstimatorUnittest
 
