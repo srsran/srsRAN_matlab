@@ -153,7 +153,8 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
 
             % Skip those invalid configuration cases.
             isDMRSLengthOK = (DMRSLength == 1 || DMRSAdditionalPosition < 2);
-            isChEstimationOK = strcmp(testLabel, 'dmrs_creation') || (NumLayers == 1);
+            isChEstimationOK = strcmp(testLabel, 'dmrs_creation') || (NumLayers == 1) ...
+                || ((NumLayers == 2) && (DMRSConfigurationType == 1) && (DMRSLength == 1));
             if ~(isDMRSLengthOK && isChEstimationOK)
                 return;
             end
@@ -193,7 +194,6 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
             symbolAllocation = [1 13];
             PRBSet = PRBstart:PRBend;
             amplitude = sqrt(2);
-            PUSCHports = 0:(NumLayers-1);
 
             % Select randomly transform precoding if only one layer and 
             % configuration type 1.
@@ -253,27 +253,32 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
                     @writeResourceGridEntryFile, [], uint32.empty(0,3));
                 estRSRP = 0;
                 estNoiseVar = 0;
+                PUSCHports = 0:(NumLayers-1);
             else
-                % Ensure we are transmitting on a single layer.
-                assert(all(symbolIndices(:, 3) == 0), 'srsran_matlab:srsPUSCHdmrsUnittest', ...
-                    'Multi-layer channel estimation not enabled yet.');
-                channel = createChannel(carrier);
+                PUSCHports = 0;
+
+                channel = createChannel(carrier, NumLayers);
 
                 sizeRG = [nSizeGrid * 12, 14];
-                symbolIndicesLinear = sub2ind(sizeRG, symbolIndices(:, 1) + 1, ...
-                    symbolIndices(:, 2) + 1);
-                receivedRG = channel;
-                receivedRG(symbolIndicesLinear) = receivedRG(symbolIndicesLinear) ...
-                    .* DMRSsymbols * amplitude;
+                symbolIndicesLinear = sub2ind([sizeRG, NumLayers], symbolIndices(:, 1) + 1, ...
+                    symbolIndices(:, 2) + 1, symbolIndices(:, 3) + 1);
+                symbolIndicesLinear = reshape(symbolIndicesLinear, [], NumLayers);
+                receivedRG = channel(:, :, 1);
+                receivedRG(symbolIndicesLinear(:, 1)) = receivedRG(symbolIndicesLinear(:, 1)) ...
+                    .* DMRSsymbols(:, 1) * amplitude;
+                for iLayer = 2:NumLayers
+                    receivedRG(symbolIndicesLinear(:, 1)) = receivedRG(symbolIndicesLinear(:, 1)) ...
+                        + channel(symbolIndicesLinear(:, iLayer)) .* DMRSsymbols(:, iLayer) * amplitude;
+                end
                 noiseVar = 0.1; % 10 dB
-                noiseRG = randn(sizeRG) + 1j * randn(sizeRG) * sqrt(noiseVar / 2);
+                noiseRG = (randn(sizeRG) + 1j * randn(sizeRG)) * sqrt(noiseVar / 2);
                 receivedRG = receivedRG + noiseRG;
 
                 hop = configureHop();
                 % Empty second hop.
                 hop2.DMRSsymbols = [];
                 nOFDMSymbols = sum(hop.DMRSsymbols);
-                pilots = reshape(DMRSsymbols, [], nOFDMSymbols);
+                pilots = reshape(DMRSsymbols, [], nOFDMSymbols, NumLayers);
                 cfg.DMRSSymbolMask = hop.DMRSsymbols;
                 cfg.DMRSREmask = hop.DMRSREmask;
                 cfg.scs = subcarrierSpacing * 1000;
@@ -283,11 +288,12 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
                     pilots, amplitude, hop, hop2, cfg);
 
                 % Write simulation data.
+                symbolIndicesMask = (symbolIndices(:, 3) == 0);
                 testCase.saveDataFile('_test_output', testID, ...
-                    @writeResourceGridEntryFile, receivedRG(symbolIndicesLinear), symbolIndices);
+                    @writeResourceGridEntryFile, receivedRG(symbolIndicesLinear(symbolIndicesMask)), symbolIndices(symbolIndicesMask, :));
                 [subcarriers, syms, vals] = find(estChannel);
                 testCase.saveDataFile('_ch_estimates', testID, ...
-                    @writeResourceGridEntryFile, approxbf16(vals), [subcarriers, syms, zeros(length(subcarriers), 1)] - 1);
+                    @writeResourceGridEntryFile, approxbf16(vals), [subcarriers - 1, mod(syms - 1, 14), floor((syms - 1) / 14)]);
             end
 
             % Generate a 'slot_point' configuration string.
@@ -374,16 +380,20 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
     end % of methods (Test, TestTags = {'testvector'})
 end % of classdef srsPUSCHdmrsUnittest
 
-function channel = createChannel(carrier)
+function channel = createChannel(carrier, nLayers)
 %Generates the frequency-response of single-tap channel that is consistent with
 %   the simulation setup.
     nSubcarriers = carrier.NSizeGrid * 12;
     nOFDMSymbols = 14;
     % Compute maximum delay (1/4 CP length) in number of samples.
     maxDelay = floor(0.7 * 0.25 * nSubcarriers);
-    % Random delay and random gain.
-    delay = randi(maxDelay);
-    gain = randn(1, 2) * [1; 1j] / sqrt(2);
-    channel = repmat(gain * exp(-2j * pi / nSubcarriers * delay ...
-        * (-nSubcarriers/2:nSubcarriers/2-1).'), 1, nOFDMSymbols);
+
+    channel = complex(nan(nSubcarriers, nOFDMSymbols, nLayers), nan(nSubcarriers, nOFDMSymbols, nLayers));
+    for iLayer = 1:nLayers
+        % Random delay and random gain.
+        delay = randi(maxDelay);
+        gain = randn(1, 2) * [1; 1j] / sqrt(2 * nLayers);
+        channel(:, :, iLayer) = repmat(gain * exp(-2j * pi / nSubcarriers * delay ...
+            * (-nSubcarriers/2:nSubcarriers/2-1).'), 1, nOFDMSymbols);
+    end
 end
