@@ -2,12 +2,12 @@
 %   [CHANNELESTRG, NOISEEST, RSRP, EPRE, TIMEALIGNMENT, CFO] = srsChannelEstimator(RECEIVEDRG, PILOTS, BETADMRS, HOP1, HOP2, CONFIG)
 %   estimates the channel coefficients for the REs resulting from the provided
 %   configuration (see below) from the observations in the resource grid RECEIVEDRG.
-%   The transmission is assumed to be single-layer.
+%   The transmission is assumed to be either single-layer or two-layer.
 %
 %   Inputs:
 %   RECEIVEDRG - Observed signal samples organized in a resource grid
-%   PILOTS     - Matrix of DM-RS pilots (each column represents the pilots carried
-%                by a single OFDM symbol)
+%   PILOTS     - Multidimensional array of DM-RS pilots (each column represents the pilots carried
+%                by a single OFDM symbol, for each layer)
 %   BETADMRS   - DM-RS-to-information linear amplitude gain
 %   HOP1       - Configuration of the first intraSlot frequency hop (see below)
 %   HOP2       - Configuration of the second intraSlot frequency hop (see below)
@@ -56,12 +56,14 @@
 function [channelEstRG, noiseEst, rsrp, epre, timeAlignment, cfo] = ...
     srsChannelEstimator(receivedRG, pilots, betaDMRS, hop1, hop2, config)
 
+    nLayers = 1 + (numel(size(pilots)) == 3);
+
     cfoCompensate = true;
     if (isfield(config, 'CFOCompensate'))
         cfoCompensate = config.CFOCompensate;
     end
 
-    channelEstRG = complex(zeros(size(receivedRG)));
+    channelEstRG = complex(zeros([size(receivedRG), nLayers]));
     noiseEst = 0;
     rsrp = 0;
     epre = 0;
@@ -85,16 +87,16 @@ function [channelEstRG, noiseEst, rsrp, epre, timeAlignment, cfo] = ...
         symbolStartTime = cumsum([CyclicPrefixDurations(1) CyclicPrefixDurations(2:14) + 1]);
     end
 
-    processHop(hop1, pilots(:, 1:nPilotSymbolsHop1), smoothing);
+    processHop(hop1, pilots(:, 1:nPilotSymbolsHop1, :), smoothing);
 
     if ~isempty(hop2.DMRSsymbols)
-        processHop(hop2, pilots(:, (nPilotSymbolsHop1 + 1):end), smoothing);
+        processHop(hop2, pilots(:, (nPilotSymbolsHop1 + 1):end, :), smoothing);
     end
 
     nDMRSsymbols = sum(config.DMRSSymbolMask);
     nPilots = hop1.nPRBs * sum(config.DMRSREmask) * nDMRSsymbols;
 
-    rsrp = rsrp / nPilots;
+    rsrp = rsrp / nPilots / nLayers;
     epre = epre / nPilots;
 
     noiseEst = noiseEst / (nPilots - 1);
@@ -142,13 +144,25 @@ function [channelEstRG, noiseEst, rsrp, epre, timeAlignment, cfo] = ...
             end
         end
 
-        estimatedChannelP_ = sum(recXpilotsNOCFO_, 2) / betaDMRS / nDMRSsymbols_;
+        estimatedChannelP_ = squeeze(sum(recXpilotsNOCFO_, 2) / betaDMRS / nDMRSsymbols_);
         % TODO: at this point, we should compute a metric for signal detection.
         % detectMetricNum = detectMetricNum + norm(recXpilots_, 'fro')^2;
 
+        nLayers_ = 1 + (numel(size(pilots_)) == 3);
+        if nLayers_ == 2
+            % For two layers, we assume DM-RS Type 1, Mapping Type A, ports {0, 1} - that is,
+            % pilots for the two layers are transmitted on the same REs. Also, the pilots for
+            % layer 2 are the same as those of layer 1, but for a sign flip every other pilot.
+            % The estimator assumes the channel constant over two consecutive DM-RS REs, and
+            % the contribution of the "other" layer can be removed by averaging after
+            % multiplication by the conjugate of the DM-RS sequences.
+            estimatedChannelP_(1:2:end, :) = (estimatedChannelP_(1:2:end, :) + estimatedChannelP_(2:2:end, :)) / 2;
+            estimatedChannelP_(2:2:end, :) = estimatedChannelP_(1:2:end, :);
+        end
+
         switch smoothing_
             case 'mean'
-                estimatedChannelP_ = ones(size(estimatedChannelP_)) * mean(estimatedChannelP_);
+                estimatedChannelP_ = ones(size(estimatedChannelP_)) .* mean(estimatedChannelP_);
             case 'filter'
                 % Denoising with RC filter.
                 rcFilter_ = getRCfilter(12/sum(config.DMRSREmask), min(3, sum(maskPRBs_)));
@@ -159,12 +173,14 @@ function [channelEstRG, noiseEst, rsrp, epre, timeAlignment, cfo] = ...
                     nPils_ = sum(config.DMRSREmask);
                 end
 
-                % Create some virtual pilots on both sides of the allocated band.
-                vPilsBegin_ = createVirtualPilots(estimatedChannelP_(1:nPils_), nPils_);
-                vPilsEnd_ = createVirtualPilots(estimatedChannelP_(end:-1:end-nPils_+1), nPils_);
+                for iLayer_ = 1:nLayers_
+                    % Create some virtual pilots on both sides of the allocated band.
+                    vPilsBegin_ = createVirtualPilots(estimatedChannelP_(1:nPils_, iLayer_), nPils_);
+                    vPilsEnd_ = createVirtualPilots(estimatedChannelP_(end:-1:end-nPils_+1, iLayer_), nPils_);
 
-                tmp_ = conv([vPilsBegin_; estimatedChannelP_; flipud(vPilsEnd_)], rcFilter_, "same");
-                estimatedChannelP_ = tmp_(nPils_+1:end-nPils_);
+                    tmp_ = conv([vPilsBegin_; estimatedChannelP_(:, iLayer_); flipud(vPilsEnd_)], rcFilter_, "same");
+                    estimatedChannelP_(:, iLayer_) = tmp_(nPils_+1:end-nPils_);
+                end
             case 'none'
                 % estimatedChannelP_ is passed forward.
             otherwise
@@ -172,29 +188,35 @@ function [channelEstRG, noiseEst, rsrp, epre, timeAlignment, cfo] = ...
         end
 
         % Estimate time alignment.
-        estChannelSC_ = zeros(length(maskREs_), 1);
-        estChannelSC_(maskREs_) = estimatedChannelP_;
+        estChannelSC_ = complex(zeros(length(maskREs_), nLayers_));
+        estChannelSC_(maskREs_, :) = estimatedChannelP_;
         fftSize_ = 4096;
-        channelIRlp_ = ifft(estChannelSC_, fftSize_);
+        channelIRlp_ = sum(abs(ifft(estChannelSC_, fftSize_)).^2, 2);
         halfCPLength_ = floor((144 / 2) * fftSize_ / 2048);
         [maxDelay_, iMaxDelay_] = max(channelIRlp_(1:halfCPLength_));
         [maxAdvance_, iMaxAdvance_] = max(channelIRlp_(end-halfCPLength_+1:end));
-        if abs(maxDelay_) >= abs(maxAdvance_)
+        if maxDelay_ >= maxAdvance_
             iMax_ = iMaxDelay_ - 1;
         else
             iMax_ = -(halfCPLength_ - iMaxAdvance_ + 1);
         end
         timeAlignment = timeAlignment + iMax_ / fftSize_ / scs;
 
+        estimatedRx_ = complex(zeros(size(receivedPilots_)));
         if (cfoCompensate && ~isempty(cfoHop_))
             PHcorrection = 2 * pi * symbolStartTime * cfoHop_;
-            noiseEst = noiseEst + norm(receivedPilots_ - betaDMRS * pilots_ ...
-                .* (estimatedChannelP_ * reshape(exp(1j * PHcorrection(hop_.DMRSsymbols)), 1, [])), 'fro')^2;
+            for iLayer_ = 1:nLayers_
+                estimatedRx_ = estimatedRx_ + betaDMRS * pilots_(:, :, iLayer_) ...
+                .* (estimatedChannelP_(:, iLayer_) * reshape(exp(1j * PHcorrection(hop_.DMRSsymbols)), 1, []));
+            end
         else
-            noiseEst = noiseEst + norm(receivedPilots_ - betaDMRS * pilots_ ...
-                .* repmat(estimatedChannelP_, 1, nDMRSsymbols_), 'fro')^2;
+            for iLayer_ = 1:nLayers_
+                estimatedRx_ = estimatedRx_ + betaDMRS * pilots_(:, :, iLayer_) ...
+                .* repmat(estimatedChannelP_(:, iLayer_), 1, nDMRSsymbols_);
+            end
         end
-        rsrp = rsrp + betaDMRS^2 * norm(estimatedChannelP_)^2 * nDMRSsymbols_;
+        noiseEst = noiseEst + norm(receivedPilots_ - estimatedRx_,'fro')^2;
+        rsrp = rsrp + betaDMRS^2 * norm(estimatedChannelP_, 'fro')^2 * nDMRSsymbols_;
 
         % The other subcarriers are linearly interpolated.
         channelEstRG = fillChEst(channelEstRG, estimatedChannelP_, hop_);
@@ -205,25 +227,29 @@ function channelOut = fillChEst(channelIn, estimated, hop)
 %Linearly interpolates the missing subcarriers and organizes the estimates on
 %   a resource grid.
     NRE = 12;
+    nLayers = 1 + (numel(size(channelIn)) == 3);
     channelOut = channelIn;
-    estimatedAll = complex(nan(hop.nPRBs * NRE, 1));
+    estimatedAll = complex(nan(hop.nPRBs * NRE, nLayers));
     maskAll = repmat(hop.DMRSREmask, hop.nPRBs, 1);
-    estimatedAll(maskAll) = estimated;
+    estimatedAll(maskAll, :) = estimated;
     filledIndices = find(maskAll);
     nFilledIndices = length(filledIndices);
     for i = 1:nFilledIndices-1
         start = filledIndices(i) + 1;
         stop = filledIndices(i+1) - 1;
         stride = stop - start + 1;
-        span = estimatedAll(stop + 1) - estimatedAll(start - 1);
-        estimatedAll(start:stop) = estimatedAll(start - 1) + span * (1:stride) / (stride + 1);
+        span = estimatedAll(stop + 1, :) - estimatedAll(start - 1, :);
+        estimatedAll(start:stop, :) = estimatedAll(start - 1, :) + span * (1:stride) / (stride + 1);
     end
-    estimatedAll(filledIndices(end):end) = estimatedAll(filledIndices(end));
-    estimatedAll(1:filledIndices(1)) = estimatedAll(filledIndices(1));
 
     occupiedSCs = (NRE * hop.PRBstart):(NRE * (hop.PRBstart + hop.nPRBs) - 1);
     occupiedSymbols = hop.startSymbol + (0:hop.nAllocatedSymbols-1);
-    channelOut(1 + occupiedSCs, 1 + occupiedSymbols) = repmat(estimatedAll, 1, hop.nAllocatedSymbols);
+
+    for iLayer = 1:nLayers
+        estimatedAll(filledIndices(end):end, iLayer) = estimatedAll(filledIndices(end), iLayer);
+        estimatedAll(1:filledIndices(1), iLayer) = estimatedAll(filledIndices(1), iLayer);
+        channelOut(1 + occupiedSCs, 1 + occupiedSymbols, iLayer) = repmat(estimatedAll(:, iLayer), 1, hop.nAllocatedSymbols);
+    end
 end
 
 function [rcFilter, correction] = getRCfilter(stride, nRBs)
@@ -274,11 +300,16 @@ function [recXpilotsOut, cfoOut] = compensateCFO(recXpilots, DMRSsymbols, ...
         return
     end
 
+    nLayers = 1 + (numel(size(recXpilots)) == 3);
+
     CPDs = CyclicPrefixDurations * SCS;
 
     dmrsIx = find(DMRSsymbols);
     nSyms = dmrsIx(2) - dmrsIx(1);
-    cfoOut = recXpilots(:, 1)' * recXpilots(:, 2);
+    cfoOut = complex(0);
+    for iLayer = 1:nLayers
+        cfoOut = cfoOut + recXpilots(:, 1, iLayer)' * recXpilots(:, 2, iLayer);
+    end
     nSamples = nSyms + sum(CPDs((dmrsIx(1) + 1):dmrsIx(2)));
     cfoOut = angle(cfoOut) / (2 * pi * nSamples);
 
