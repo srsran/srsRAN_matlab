@@ -56,6 +56,8 @@
 function [channelEstRG, noiseEst, rsrp, epre, timeAlignment, cfo] = ...
     srsChannelEstimator(receivedRG, pilots, betaDMRS, hop1, hop2, config)
 
+    % If pilots is a three-dimensional array, then the number of layers is 2.
+    % Otherwise, single layer.
     nLayers = 1 + (numel(size(pilots)) == 3);
 
     cfoCompensate = true;

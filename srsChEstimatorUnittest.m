@@ -19,6 +19,7 @@
 %
 %   configuration     - Description of the allocated REs and DM-RS pattern.
 %   SubcarrierSpacing - Subcarrier spacing in kHz.
+%   NumLayers         - Number of transmission layers.
 %   FrequencyHopping  - Frequency hopping type.
 %   CarrierOffset     - Carrier frequency offset, as a fraction of the subcarrier spacing.
 %
@@ -89,20 +90,22 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
     properties (TestParameter)
         %Configuration.
         %   A configuration structure array with fields:
-        %   nPRBs            - Number of allocated PRBs (0...51)
-        %   symbolAllocation - A two-element array denoting the first allocated OFDM symbol (0...13)
-        %                      and the number of allocated OFDM symbols (1...14).
-        %   dmrsOffset       - Number of non-DM-RS REs at the beginning of the RB (0, 1).
-        %   dmrsStrideSCS    - DM-RS frequency domain stride (1, 2, 3), that is the distance
-        %                      between two consecutive DM-RS REs (distance of 1 being back-to-back).
-        %   dmrsStrideTime   - Stride between OFDM symbols containing DM-RS (1, 2, 4, 6, 20).
-        %                      Use 20 for a single DM-RS symbol.
-        %   betaDMRS         - The gain of the DM-RS pilots with respect to the data
-        %                      symbols in dB (0, 3).
-        %   smoothing        - The frequency-domain smoothing strategy to be used with the
-        %                      current configuration ('filter', 'mean', 'none').
-        %   cfocompensate    - A boolean flag denoting whether the channel estimator should
-        %                      compensate (true) or not (false) the CFO.
+        %   nPRBs              - Number of allocated PRBs (0...51)
+        %   symbolAllocation   - A two-element array denoting the first allocated OFDM symbol (0...13)
+        %                        and the number of allocated OFDM symbols (1...14).
+        %   dmrsOffset         - Number of non-DM-RS REs at the beginning of the RB (0, 1).
+        %   dmrsStrideSCS      - DM-RS frequency domain stride (1, 2, 3), that is the distance
+        %                        between two consecutive DM-RS REs (distance of 1 being back-to-back).
+        %   dmrsStrideTime     - Stride between OFDM symbols containing DM-RS (1, 2, 4, 6, 20).
+        %                        Use 20 for a single DM-RS symbol.
+        %   betaDMRS           - The gain of the DM-RS pilots with respect to the data
+        %                        symbols in dB (0, 3).
+        %   supportMultiLayer  - Boolean flag that specifies whether the configuration supports
+        %                        multiple transmission layers (true) or not (false).
+        %   smoothing          - The frequency-domain smoothing strategy to be used with the
+        %                        current configuration ('filter', 'mean', 'none').
+        %   cfocompensate      - A boolean flag denoting whether the channel estimator should
+        %                        compensate (true) or not (false) the CFO.
         configuration = {...
             struct(...        % #1: PUSCH DM-RS configuration Type 1 (inspired to).
                'nPRBs', 3, ...
@@ -111,6 +114,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                'dmrsStrideSCS', 2, ...
                'dmrsStrideTime', 4, ...
                'betaDMRS', -3, ...
+               'supportMultiLayer', true, ...
                'smoothing', 'filter', ...
                'cfocompensate', true ...
                ),...
@@ -121,6 +125,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                'dmrsStrideSCS', 2, ...
                'dmrsStrideTime', 4, ...
                'betaDMRS', -3, ...
+               'supportMultiLayer', true, ...
                'smoothing', 'filter', ...
                'cfocompensate', true ...
                ), ...
@@ -131,6 +136,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                'dmrsStrideSCS', 2, ...
                'dmrsStrideTime', 4, ...
                'betaDMRS', -3, ...
+               'supportMultiLayer', true, ...
                'smoothing', 'filter', ...
                'cfocompensate', true ...
                ), ...
@@ -141,6 +147,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                'dmrsStrideSCS', 1, ...
                'dmrsStrideTime', 2, ...
                'betaDMRS', 0, ...
+               'supportMultiLayer', false, ...
                'smoothing', 'mean', ...
                'cfocompensate', false ...
                ), ...
@@ -151,6 +158,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                'dmrsStrideSCS', 1, ...
                'dmrsStrideTime', 2, ...
                'betaDMRS', 0, ...
+               'supportMultiLayer', false, ...
                'smoothing', 'mean', ...
                'cfocompensate', false ...
                ), ...
@@ -161,6 +169,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                'dmrsStrideSCS', 3, ...
                'dmrsStrideTime', 1, ...
                'betaDMRS', 0, ...
+               'supportMultiLayer', false, ...
                'smoothing', 'filter', ...
                'cfocompensate', true ...
                ), ...
@@ -171,6 +180,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                'dmrsStrideSCS', 3, ...
                'dmrsStrideTime', 1, ...
                'betaDMRS', 0, ...
+               'supportMultiLayer', false, ...
                'smoothing', 'filter', ...
                'cfocompensate', true ...
                ), ...
@@ -181,6 +191,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                'dmrsStrideSCS', 3, ...
                'dmrsStrideTime', 1, ...
                'betaDMRS', 0, ...
+               'supportMultiLayer', false, ...
                'smoothing', 'filter', ...
                'cfocompensate', true ...
                ), ...
@@ -188,6 +199,9 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
 
         %Subcarrier spacing in kHz.
         SubcarrierSpacing = {15, 30}
+
+        %Number of transmission layers.
+        NumLayers = {1, 2}
 
         %Frequency hopping type ('neither', 'intraSlot').
         %   Note: Interslot frequency hopping is currently not considered.
@@ -244,15 +258,15 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
 
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(obj, configuration, SubcarrierSpacing, ...
-            FrequencyHopping, CarrierOffset)
+            NumLayers, FrequencyHopping, CarrierOffset)
         %testvectorGenerationCases - Generates a test vector according to the provided
-        %   CONFIGURATION, SUBCARRIERSPACING, FREQUENCYHOPPING type and CARRIEROFFSET.
+        %   CONFIGURATION, SUBCARRIERSPACING, NUMLAYERS, FREQUENCYHOPPING type and CARRIEROFFSET.
 
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.writeComplexFloatFile
 
             [fullConfig, channel, receivedRG, results] = obj.configureAndMatlab(configuration, ...
-                SubcarrierSpacing, FrequencyHopping, CarrierOffset);
+                SubcarrierSpacing, NumLayers, FrequencyHopping, CarrierOffset);
 
             % Generate a unique test ID.
             testID = obj.generateTestID;
@@ -286,7 +300,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             if (configuration.nPRBs > 2)
                 chEstIdx = (channelEst ~= 0);
                 obj.assertEqual(channelEst(chEstIdx), channelRG(chEstIdx), "Wrong channel coefficients.", RelTol = 0.4);
-                obj.assertEqual(noiseEst, noiseVar, "Wrong noise variance.", RelTol = 0.8);
+                obj.assertEqual(noiseEst, noiseVar, "Wrong noise variance.", RelTol = 1.2 * NumLayers);
                 obj.assertEqual(snrEst, 10^(SNR/10), "Wrong SNR.", RelTol = 2.5);
                 obj.assertEqual(timeAlignment, channelDelay / fftSize / SubcarrierSpacing / 1000, ...
                     "Wrong time alignment.", AbsTol = 2e-7);
@@ -304,7 +318,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             % Write the estimated channel.
             [scs, syms, vals] = find(channelEst);
             obj.saveDataFile('_test_output_ch_est', testID, @writeResourceGridEntryFile, ...
-                vals, [scs, syms, zeros(length(scs), 1)] - 1);
+                vals, [scs - 1, mod(syms - 1, 14), floor((syms - 1) / 14)]);
 
             pilots = fullConfig.Pilots;
             % Write the pilots.
@@ -319,6 +333,11 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                 obj.secondHop,   ...    % hopping_symbol_index
                 obj.DMRSREmask,  ...    % re_pattern
                 };
+
+            if (NumLayers == 2)
+                % When transmitting two layers, we assume layers 0 and 1, which share DM-RS resources.
+                dmrsPattern = {dmrsPattern dmrsPattern};
+            end
 
             startSymbol = configuration.symbolAllocation(1);
             nAllocatedSymbols = configuration.symbolAllocation(2);
@@ -364,14 +383,19 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
     end % of methods (Test, TestTags = {'testvector'})
 
     methods (Test, TestTags = {'testmex'})
-        function compareMex(obj, configuration, SubcarrierSpacing, FrequencyHopping, CarrierOffset)
+        function compareMex(obj, configuration, SubcarrierSpacing, NumLayers, FrequencyHopping, CarrierOffset)
         %compareMex - Compare mex results with those from the reference estimator for
         %   a given CONFIGURATION, SUBCARRIERSPACING, FREQUENCYHOPPING type and CARRIEROFFSET.
 
             import srsMEX.phy.srsMultiPortChannelEstimator
 
-            [fullConfig, channel, receivedRG, results] = configureAndMatlab(obj, ...
-                configuration, SubcarrierSpacing, FrequencyHopping, CarrierOffset);
+            capabilitiesMEX = srsMEX.phy.srsPUSCHCapabilitiesMEX();
+
+            obj.assumeGreaterThanOrEqual(capabilitiesMEX.NumLayers, NumLayers, ...
+                sprintf('The current MEX version only works with max. %d layers, requested %d.', capabilitiesMEX.NumLayers, NumLayers));
+
+            [fullConfig, ~, receivedRG, results] = configureAndMatlab(obj, ...
+                configuration, SubcarrierSpacing, NumLayers, FrequencyHopping, CarrierOffset);
 
             hop1 = fullConfig.Hop1;
             hop2 = fullConfig.Hop2;
@@ -398,7 +422,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                 CompensateCFO=configuration.cfocompensate ...
                 );
             [channelEstMEX, noiseEstMEX, extra] ...
-                = mexEstimator(receivedRG, configuration.symbolAllocation, pilotIndices, pilots(:), ...
+                = mexEstimator(receivedRG, configuration.symbolAllocation, pilotIndices, reshape(pilots, [], NumLayers), ...
                     SubcarrierSpacing=SubcarrierSpacing, ...
                     HoppingIndex=hop2.startSymbol, ...
                     BetaScaling=betaDMRS ...
@@ -418,11 +442,11 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
 
     methods % public
         function [mse, noiseEst, rsrpEst, epreEst, cfoEst, crlb] = characterize(obj, configuration, ...
-                FrequencyHopping, scs, channelType, delay, doppler, cfo, snrValues, nRuns, sizeBWP)
+                FrequencyHopping, scs, nLayers, channelType, delay, doppler, cfo, snrValues, nRuns, sizeBWP)
         %characterize - Draw the empirical MSE performance curve of the estimator.
-        %   MSE = characterize(OBJ, CONFIGURATION, FREQUENCYHOPPING, SCS, CHANNELTYPE, DELAY, DOPPLER, CFO, SNRVALUES, NRUNS)
+        %   MSE = characterize(OBJ, CONFIGURATION, FREQUENCYHOPPING, SCS, NLAYERS, CHANNELTYPE, DELAY, DOPPLER, CFO, SNRVALUES, NRUNS)
         %   returns the empirical mean squared error of the channel estimation after NRUNS simulations
-        %   and for all SNRVALUES. CONFIGURATION, FREQUENCYHOPPING and SCS provide the physical
+        %   and for all SNRVALUES. CONFIGURATION, FREQUENCYHOPPING, SCS and NLAYERS provide the physical
         %   channel configuration and CHANNELTYPE, DELAY, DOPPLER and CFO specify the simulated channel model.
         %   Note: DELAY is the delay spread for the IEEE channel types, and the Path delay
         %   for the 'pure-delay' channel type.
@@ -447,6 +471,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                 configuration    (1, 1) struct {mustBeConfiguration}
                 FrequencyHopping (1, :) char   {mustBeMember(FrequencyHopping, {'neither', 'intraSlot'})}
                 scs              (1, 1) double {mustBeMember(scs, [15, 30])}
+                nLayers          (1, 1) double {mustBeMember(nLayers, [1, 2])}
                 channelType      (1, :) char   {mustBeMember(channelType, {'pure-delay', ...
                     'TDL-A', 'TDL-B', 'TDL-C', 'TDL-D', 'TDL-E', ...
                     'TDLA30', 'TDLB100', 'TDLC300', 'TDLC60'})}
@@ -470,7 +495,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                 obj.NSizeGrid = obj.NStartBWP + obj.NSizeBWP;
             end
 
-            fullConfig = configureAndMatlab(obj, configuration, scs, FrequencyHopping, []);
+            fullConfig = configureAndMatlab(obj, configuration, scs, nLayers, FrequencyHopping, []);
 
             hop1 = fullConfig.Hop1;
             hop2 = fullConfig.Hop2;
@@ -486,7 +511,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
 
             waveformInfo = nrOFDMInfo(carrier);
             channel = configureChannel(channelType, delay, doppler, waveformInfo.SampleRate, ...
-                carrier.SubcarrierSpacing);
+                carrier.SubcarrierSpacing, nLayers);
 
             % Place pilots on the resource grid.
             transmittedRG = obj.transmitPilots(pilots, betaDMRS, hop1, hop2);
@@ -498,7 +523,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                 nEstSCS = nEstSCS * 2;
             end
 
-            mse = zeros(length(snrValues), nEstSCS);
+            mse = zeros(length(snrValues), nEstSCS, nLayers);
             noiseEst = zeros(length(snrValues), nRuns);
             rsrpEst = zeros(length(snrValues), nRuns);
             epreEst = zeros(length(snrValues), nRuns);
@@ -551,28 +576,31 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
 
                     % Get the true channel, for comparison.
                     pathFilters = channel.getPathFilters();
-                    channelTrue = nrPerfectChannelEstimate(carrier, pathGains, pathFilters, 0, sampleTimes);
+                    channelTrue = squeeze(nrPerfectChannelEstimate(carrier, pathGains, pathFilters, 0, sampleTimes));
 
                     if cfo ~= 0
                         cfoNorm = cfo / scs / 1000;
                         cfoFreq = [waveformInfo.CyclicPrefixLengths(1) waveformInfo.CyclicPrefixLengths(2:14) + waveformInfo.Nfft];
                         cfoFreq = cumsum(cfoFreq) * cfoNorm / waveformInfo.Nfft;
                         cfoFreq = exp(2j * pi * cfoFreq);
-                        channelTrue = channelTrue * diag(cfoFreq) * exp(1j * pi * ((waveformInfo.Nfft - 1) / waveformInfo.Nfft) * cfoNorm);
+                        for iLayer = 1:nLayers
+                            channelTrue(:, :, iLayer) = channelTrue(:, :, iLayer) * diag(cfoFreq) * exp(1j * pi * ((waveformInfo.Nfft - 1) / waveformInfo.Nfft) * cfoNorm);
+                        end
                     end
 
                     % Just for debugging/analysis purposes: set to true to visualize
                     % the effect of channel and channel estimation on a random QAM
                     % points.
                     if false
-                        whatSymbol = 1+hop1.startSymbol; %#ok<UNRCH>
-                        whatSCS = (channelEst(:, whatSymbol) ~= 0);
+                        iLayer = 1; %#ok<UNRCH>
+                        whatSymbol = 1+hop1.startSymbol;
+                        whatSCS = (channelEst(:, whatSymbol, iLayer) ~= 0);
                         nSCS = sum(whatSCS);
                         % Create some random QAM points.
                         fakeSymbols = srsTest.helpers.randmod('QPSK', [nSCS, 50]);
 
                         % Apply the true channel and ZF-equalize with the estimated channel (SC-wise).
-                        rr = diag(channelTrue(whatSCS, whatSymbol) ./ channelEst(whatSCS, whatSymbol)) * fakeSymbols;
+                        rr = diag(channelTrue(whatSCS, whatSymbol, iLayer) ./ channelEst(whatSCS, whatSymbol, iLayer)) * fakeSymbols;
 
                         if (size(rr, 1) >= 60)
                             % Split edge and middle points, to visualize the difference in
@@ -587,17 +615,19 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                     end
 
                     scsIdx = obj.NRE * hop1.PRBstart + (1: obj.NRE * hop1.nPRBs);
-                    estErrors = channelEst(scsIdx, hop1.CHsymbols) - channelTrue(scsIdx, hop1.CHsymbols);
-                    SQestErrors = sum(abs(estErrors).^2, 2);
+                    estErrors = channelEst(scsIdx, hop1.CHsymbols, :) - channelTrue(scsIdx, hop1.CHsymbols, :);
+                    SQestErrors = squeeze(sum(abs(estErrors).^2, 2));
                     if ~isempty(hop2.maskPRBs)
                         scsIdx = obj.NRE * hop2.PRBstart + (1: obj.NRE * hop2.nPRBs);
-                        estErrors2 = channelEst(scsIdx, hop2.CHsymbols) - channelTrue(scsIdx, hop2.CHsymbols);
-                        SQestErrors2 = sum(abs(estErrors2).^2, 2);
+                        estErrors2 = channelEst(scsIdx, hop2.CHsymbols, :) - channelTrue(scsIdx, hop2.CHsymbols, :);
+                        SQestErrors2 = squeeze(sum(abs(estErrors2).^2, 2));
                     else
-                        SQestErrors2 = [];
+                        SQestErrors2 = double.empty(0, nLayers);
                     end
 
-                    mse(iSNR, :) = mse(iSNR, :) + [SQestErrors; SQestErrors2]' / nRuns;
+                    for iLayer = 1:nLayers
+                        mse(iSNR, :, iLayer) = mse(iSNR, :, iLayer) + [SQestErrors(:, iLayer); SQestErrors2(:, iLayer)]' / nRuns;
+                    end
                 end
             end
 
@@ -676,14 +706,15 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
 
         function transmittedRG = transmitPilots(obj, pilots, betaDMRS, hop1, hop2)
         %Places the pilots on the correct REs and with the correct power on the resource grid.
-            transmittedRG = zeros(obj.NSizeGrid * obj.NRE, obj.nSymbolsSlot);
+            nLayers = 1 + (numel(size(pilots)) == 3);
+            transmittedRG = complex(zeros(obj.NSizeGrid * obj.NRE, obj.nSymbolsSlot, nLayers));
 
             nPilotSymbolsHop1 = sum(hop1.DMRSsymbols);
 
-            processHop(hop1, pilots(:, 1:nPilotSymbolsHop1));
+            processHop(hop1, pilots(:, 1:nPilotSymbolsHop1, :));
 
             if ~isempty(hop2.DMRSsymbols)
-                processHop(hop2, pilots(:, (nPilotSymbolsHop1 + 1):end));
+                processHop(hop2, pilots(:, (nPilotSymbolsHop1 + 1):end, :));
             end
 
             %     Nested functions
@@ -695,12 +726,12 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                 maskPRBs_ = hop_.maskPRBs;
                 maskREs_ = (kron(maskPRBs_, obj.DMRSREmask) > 0);
 
-                transmittedRG(maskREs_, hop_.DMRSsymbols) = betaDMRS * pilots_;
+                transmittedRG(maskREs_, hop_.DMRSsymbols, :) = betaDMRS * pilots_;
             end % of function processHop(hop_, pilots_)
         end % of function transmittedRG = transmitPilots(pilots, hop1, hop2)
 
         function [fullConfig, channel, receivedRG, results] = configureAndMatlab(obj, ...
-            configuration, SubcarrierSpacing, FrequencyHopping, CarrierOffset)
+            configuration, SubcarrierSpacing, NumLayers, FrequencyHopping, CarrierOffset)
         %Computes secondary configuration parameters and, if the number of output arguments
         %   is larger than one, runs the MATLAB-based channel estimator.
 
@@ -712,6 +743,9 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                 && strcmp(FrequencyHopping, 'intraSlot'), ...
                 'Cannot do frequency hopping if the entire BWP is allocated or if using a single OFDM symbol.');
 
+            obj.assumeFalse(~configuration.supportMultiLayer && (NumLayers == 2), ...
+                'Two transmission layers not supported for this configuration.');
+
             assert((sum(configuration.symbolAllocation) <= obj.nSymbolsSlot), ...
                 'srsran_matlab:srsChEstimatorUnittest', 'Time allocation exceeds slot length.');
 
@@ -721,8 +755,17 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             % Build DM-RS-like pilots.
             nDMRSsymbols = sum(obj.DMRSsymbols);
             nPilots = configuration.nPRBs * sum(obj.DMRSREmask) * nDMRSsymbols;
-            pilots = (2 * randi([0 1], nPilots, 2) - 1) * [1; 1j] / sqrt(2);
-            pilots = reshape(pilots, [], nDMRSsymbols);
+            pilots = complex(nan(nPilots * NumLayers, 1), nan(nPilots * NumLayers, 1));
+            pilots(1:nPilots) = (2 * randi([0 1], nPilots, 2) - 1) * [1; 1j] / sqrt(2);
+            pilots = reshape(pilots, [], nDMRSsymbols, NumLayers);
+            if NumLayers == 2
+                % We only simulate the case corresponding to DM-RS configuration type 1,
+                % CDM group 0 on ports {0, 1}, that is DM-RS for the two ports are sent
+                % over the same REs. Also, the pilots for the two ports are the same but
+                % for a sign change in every other pilot of the second port.
+                pilots(:, :, 2) = pilots(:, :, 1);
+                pilots(2:2:end, :, 2) = -pilots(2:2:end, :, 2);
+            end
 
             betaDMRS = 10^(-configuration.betaDMRS / 20);
             fftSize =  obj.NSizeGrid * obj.NRE;
@@ -739,28 +782,34 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                 % Place pilots on the resource grid.
                 transmittedRG = obj.transmitPilots(pilots, betaDMRS, hop1, hop2);
 
-                % For now, consider a single-tap channel (max delay is 1/4 of
-                % the cyclic prefix length).
-                channelDelay = randi([0, floor(fftSize * 0.07 * 0.25)]);
-                channelCoef = exp(2j * pi * rand);
-                channelTF = fft([zeros(channelDelay, 1); channelCoef; zeros(5, 1)], fftSize);
-                channelTF = fftshift(channelTF);
-                % We assume the channel constant over the entire slot...
-                channelRG = repmat(channelTF, 1, obj.nSymbolsSlot);
-                % ... but for CFO.
                 cfo = CarrierOffset; % Fraction of the SCS.
                 CPDurations = scs2cps(SubcarrierSpacing);
 
-                if cfo ~= 0
-                    cfoVal = CPDurations * SubcarrierSpacing;
-                    cfoVal(2:end) = cfoVal(2:end) + 1;
-                    cfoVal = cumsum(cfoVal) * cfo;
-                    cfoVal = exp(2j * pi * cfoVal);
-                    channelRG = (channelRG .* cfoVal) * exp(1j * pi * ((fftSize - 1) / fftSize) * cfo);
+                receivedRG = complex(zeros(fftSize, obj.nSymbolsSlot));
+                channelRG = complex(nan(fftSize, obj.nSymbolsSlot, NumLayers));
+
+                % For now, consider a single-tap channel (max delay is 1/4 of
+                % the cyclic prefix length).
+                channelDelay = randi([0, floor(fftSize * 0.07 * 0.25)]);
+                for iLayer = 1:NumLayers
+                    channelCoef = exp(2j * pi * rand) / sqrt(NumLayers);
+                    channelTF = fft([zeros(channelDelay, 1); channelCoef; zeros(5, 1)], fftSize);
+                    channelTF = fftshift(channelTF);
+                    % We assume the channel constant over the entire slot...
+                    channelRG(:, :, iLayer) = repmat(channelTF, 1, obj.nSymbolsSlot);
+                    % ... but for CFO.
+                    if cfo ~= 0
+                        cfoVal = CPDurations * SubcarrierSpacing;
+                        cfoVal(2:end) = cfoVal(2:end) + 1;
+                        cfoVal = cumsum(cfoVal) * cfo;
+                        cfoVal = exp(2j * pi * cfoVal);
+                        channelRG(:, :, iLayer) = (channelRG(:, :, iLayer) .* cfoVal) * exp(1j * pi * ((fftSize - 1) / fftSize) * cfo);
+                    end
+
+                    % Compute received resource grid.
+                    receivedRG = receivedRG + channelRG(:, :, iLayer) .* transmittedRG(:, :, iLayer);
                 end
 
-                % Compute received resource grid.
-                receivedRG = channelRG .* transmittedRG;
                 SNR = 20; % dB
                 noiseVar = 10^(-SNR/10);
                 noise = randn(size(receivedRG)) + 1j * randn(size(receivedRG));
@@ -798,9 +847,9 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
     end % of methods (Access = private)
 end % of classdef srsChEstimatorUnittest
 
-function channel = configureChannel(chModel, delay, doppler, SampleRate, SubcarrierSpacing)
+function channel = configureChannel(chModel, delay, doppler, SampleRate, SubcarrierSpacing, nLayers)
     channel = nrTDLChannel;
-    channel.NumTransmitAntennas = 1;
+    channel.NumTransmitAntennas = nLayers;
     channel.NumReceiveAntennas = 1;
     channel.MaximumDopplerShift = doppler;
     channel.SampleRate = SampleRate;
