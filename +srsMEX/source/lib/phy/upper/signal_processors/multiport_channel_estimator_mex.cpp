@@ -26,6 +26,7 @@
 #include "srsran_matlab/support/to_span.h"
 #include "srsran/phy/support/resource_grid_writer.h"
 #include "srsran/srsvec/conversion.h"
+#include <MatlabDataArray/ArrayDimensions.hpp>
 
 using namespace matlab::data;
 using namespace srsran;
@@ -84,9 +85,16 @@ void MexFunction::check_step_outputs_inputs(ArgumentList outputs, ArgumentList i
     mex_abort("Input 'symbolAllocation' should contain two elements only.");
   }
 
-  if ((inputs[3].getType() != ArrayType::COMPLEX_SINGLE) ||
-      (inputs[3].getDimensions()[0] != inputs[3].getNumberOfElements())) {
-    mex_abort("Input 'refSym' should be a column array of complex float symbols.");
+  if (inputs[3].getType() != ArrayType::COMPLEX_SINGLE) {
+    mex_abort("Input 'refSym' should contain complex float symbols.");
+  }
+
+  ArrayDimensions in3dims = inputs[3].getDimensions();
+  if (in3dims.size() > 2) {
+    mex_abort("Input 'refSym' can have at most 2 dimensions provided size {}.", in3dims.size());
+  }
+  if ((in3dims.size() != 1) && (in3dims[1] > 2)) {
+    mex_abort("Input 'refSym' can have at most 2 columns (i.e., 2 Tx layers) - provided size {}.", in3dims[1]);
   }
 
   if ((inputs[4].getType() != ArrayType::STRUCT) || (inputs[4].getNumberOfElements() > 1)) {
@@ -121,26 +129,32 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
   cfg.first_symbol                       = static_cast<unsigned>(in_allocation[0]);
   cfg.nof_symbols                        = static_cast<unsigned>(in_allocation[1]);
 
-  // For now, one Tx layer only.
-  cfg.dmrs_pattern.resize(1);
-  port_channel_estimator::layer_dmrs_pattern& dmrs_pattern = cfg.dmrs_pattern[0];
+  ArrayDimensions pilots_dimensions = inputs[3].getDimensions();
+  unsigned        nof_layers        = pilots_dimensions[1];
 
-  const TypedArray<bool> in_symbols = in_cfg["Symbols"];
-  dmrs_pattern.symbols              = bounded_bitset<MAX_NSYMB_PER_SLOT>(in_symbols.cbegin(), in_symbols.cend());
+  cfg.dmrs_pattern.resize(nof_layers);
 
-  const TypedArray<bool> in_rb_mask = in_cfg["RBMask"];
-  dmrs_pattern.rb_mask              = bounded_bitset<MAX_RB>(in_rb_mask.cbegin(), in_rb_mask.cend());
+  for (unsigned i_layer = 0; i_layer != nof_layers; ++i_layer) {
+    // Since we consider at most the first two layers (0 and 1), the corresponding DM-RS occupy the same resources.
+    port_channel_estimator::layer_dmrs_pattern& dmrs_pattern = cfg.dmrs_pattern[i_layer];
 
-  const TypedArray<double> in_hop = in_cfg["HoppingIndex"];
-  if (!in_hop.isEmpty()) {
-    dmrs_pattern.hopping_symbol_index = static_cast<unsigned>(in_hop[0]);
+    const TypedArray<bool> in_symbols = in_cfg["Symbols"];
+    dmrs_pattern.symbols              = bounded_bitset<MAX_NSYMB_PER_SLOT>(in_symbols.cbegin(), in_symbols.cend());
 
-    const TypedArray<bool> in_rb_mask2 = in_cfg["RBMask2"];
-    dmrs_pattern.rb_mask2              = bounded_bitset<MAX_RB>(in_rb_mask2.cbegin(), in_rb_mask2.cend());
+    const TypedArray<bool> in_rb_mask = in_cfg["RBMask"];
+    dmrs_pattern.rb_mask              = bounded_bitset<MAX_RB>(in_rb_mask.cbegin(), in_rb_mask.cend());
+
+    const TypedArray<double> in_hop = in_cfg["HoppingIndex"];
+    if (!in_hop.isEmpty()) {
+      dmrs_pattern.hopping_symbol_index = static_cast<unsigned>(in_hop[0]);
+
+      const TypedArray<bool> in_rb_mask2 = in_cfg["RBMask2"];
+      dmrs_pattern.rb_mask2              = bounded_bitset<MAX_RB>(in_rb_mask2.cbegin(), in_rb_mask2.cend());
+    }
+
+    const TypedArray<bool> in_re_pattern = in_cfg["REPattern"];
+    dmrs_pattern.re_pattern              = bounded_bitset<NRE>(in_re_pattern.cbegin(), in_re_pattern.cend());
   }
-
-  const TypedArray<bool> in_re_pattern = in_cfg["REPattern"];
-  dmrs_pattern.re_pattern              = bounded_bitset<NRE>(in_re_pattern.cbegin(), in_re_pattern.cend());
 
   cfg.scaling = static_cast<float>(in_cfg["BetaScaling"][0]);
 
@@ -164,41 +178,49 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
   // Read the DM-RS.
   const TypedArray<cf_t> in_pilots = inputs[3];
 
+  port_channel_estimator::layer_dmrs_pattern& dmrs_pattern = cfg.dmrs_pattern[0];
   unsigned nof_pilot_res     = dmrs_pattern.rb_mask.count() * dmrs_pattern.re_pattern.count();
   unsigned nof_pilot_symbols = dmrs_pattern.symbols.count();
-  if (in_pilots.getNumberOfElements() != nof_pilot_res * nof_pilot_symbols) {
-    mex_abort(
-        "Expected {} DM-RS symbols, received {}.", nof_pilot_res * nof_pilot_symbols, in_pilots.getNumberOfElements());
+  if (in_pilots.getNumberOfElements() != nof_pilot_res * nof_pilot_symbols * nof_layers) {
+    mex_abort("Expected {} DM-RS symbols over {} layers, received {}.",
+              nof_pilot_res * nof_pilot_symbols * nof_layers,
+              nof_layers,
+              in_pilots.getNumberOfElements());
   }
   span<const cf_t> pilot_view = to_span(in_pilots);
 
   re_measurement_dimensions pilot_dims;
   pilot_dims.nof_subc    = nof_pilot_res;
   pilot_dims.nof_symbols = nof_pilot_symbols;
-  pilot_dims.nof_slices  = nof_rx_ports;
+  pilot_dims.nof_slices  = nof_layers;
+
+  unsigned         nof_pilot_layer = nof_pilot_res * nof_pilot_symbols;
   dmrs_symbol_list pilots(pilot_dims);
-  for (unsigned i_port = 0; i_port != nof_rx_ports; ++i_port) {
-    pilots.set_slice(pilot_view, i_port);
+  for (unsigned i_layer = 0; i_layer != nof_layers; ++i_layer) {
+    pilots.set_slice(pilot_view.first(nof_pilot_layer), i_layer);
+    pilot_view = pilot_view.last(pilot_view.size() - nof_pilot_layer);
   }
 
   channel_estimate::channel_estimate_dimensions ch_est_dims;
   ch_est_dims.nof_prb       = dmrs_pattern.rb_mask.size();
   ch_est_dims.nof_symbols   = dmrs_pattern.symbols.size();
   ch_est_dims.nof_rx_ports  = nof_rx_ports;
-  ch_est_dims.nof_tx_layers = 1;
+  ch_est_dims.nof_tx_layers = nof_layers;
   channel_estimate ch_estimate(ch_est_dims);
 
   TypedArray<cf_t> ch_est_out = factory.createArray<cf_t>(
-      {static_cast<size_t>(ch_est_dims.nof_prb * NRE), ch_est_dims.nof_symbols, nof_rx_ports});
+      {static_cast<size_t>(ch_est_dims.nof_prb * NRE), ch_est_dims.nof_symbols, nof_rx_ports, nof_layers});
   span<cf_t> ch_est_out_view = to_span(ch_est_out);
   for (unsigned i_port = 0; i_port != nof_rx_ports; ++i_port) {
     estimator->compute(ch_estimate, grid->get_reader(), i_port, pilots, cfg);
 
-    span<const cbf16_t> ch_estimate_view = ch_estimate.get_path_ch_estimate(i_port, 0);
+    for (unsigned i_layer = 0; i_layer != nof_layers; ++i_layer) {
+      span<const cbf16_t> ch_estimate_view = ch_estimate.get_path_ch_estimate(i_port, i_layer);
 
-    srsvec::convert(ch_est_out_view.first(ch_estimate_view.size()), ch_estimate_view);
+      srsvec::convert(ch_est_out_view.first(ch_estimate_view.size()), ch_estimate_view);
 
-    ch_est_out_view = ch_est_out_view.last(ch_est_out_view.size() - ch_estimate_view.size());
+      ch_est_out_view = ch_est_out_view.last(ch_est_out_view.size() - ch_estimate_view.size());
+    }
   }
 
   StructArray info_out =

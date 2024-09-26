@@ -93,7 +93,7 @@ classdef srsMultiPortChannelEstimator < matlab.System
                 rxGrid                   (:, 14, :) double {srsTest.helpers.mustBeResourceGrid}
                 symbolAllocation         (1, 2)     double {mustBeInteger, mustBeNonnegative}
                 refInd                   (:, 1)     double {mustBeInteger, mustBePositive}
-                refSym                   (:, 1)     double {mustBeNumeric}
+                refSym                   (:, :)     double {mustBeNumeric}
                 config.PortIndices       (:, 1)     double {mustBeInteger, mustBeNonnegative} = 0
                 config.CyclicPrefix      (1, :)     char   {mustBeMember(config.CyclicPrefix, {'normal', 'extended'})} = 'normal'
                 config.SubcarrierSpacing (1, 1)     double {mustBeMember(config.SubcarrierSpacing, [15 30])} = 15
@@ -104,6 +104,12 @@ classdef srsMultiPortChannelEstimator < matlab.System
             assert(symbolAllocation(1) < 14, 'First allocated symbol out of range.');
             lastSymbol = sum(symbolAllocation) - 1;
             assert(lastSymbol < 14, 'Last allocated symbol out of range.');
+
+            [nPilots, nLayers] = size(refSym);
+            assert(nLayers <= 2, 'Currently, max 2 layers supported, provided %d.', nLayers);
+            assert(nPilots == numel(refInd), ...
+                ['The number of pilots per layer %d and the number of pilot resources %d ', ...
+                 'do not match.'], nPilots, numel(refInd));
 
             if ~isempty(config.HoppingIndex)
                 validateattributes(config.HoppingIndex, {'double'}, ...
@@ -154,7 +160,7 @@ classdef srsMultiPortChannelEstimator < matlab.System
                 symbolAllocation, single(refSym), config);
 
             % Format outputs.
-            channelEst = double(channelEstS);
+            channelEst = double(squeeze(channelEstS));
             if (isscalar(config.PortIndices))
                 % If there was a single port, use its info.
                 infoOut = info(1);
@@ -177,6 +183,7 @@ classdef srsMultiPortChannelEstimator < matlab.System
 
             import srsLib.phy.upper.signal_processors.srsChannelEstimator
             import srsLib.ran.utils.scs2cps
+            import srsTest.helpers.approxbf16
 
             % Build hop configuration structures.
             gridsize = size(rxGrid);
@@ -187,7 +194,8 @@ classdef srsMultiPortChannelEstimator < matlab.System
             DMRSsymbols(unique(pSyms)) = true;
 
             nDMRSsymbols = sum(DMRSsymbols);
-            pilots = reshape(refSym, [], nDMRSsymbols);
+            nLayers = size(refSym, 2);
+            pilots = reshape(refSym, [], nDMRSsymbols, nLayers);
 
             pSCS = reshape(pSCS, [], nDMRSsymbols);
             nPRBs = ceil((pSCS(end, 1) - pSCS(1, 1)) / 12);
@@ -246,7 +254,7 @@ classdef srsMultiPortChannelEstimator < matlab.System
                 nPorts = gridsize(3);
             end
 
-            channelEst = nan(gridsize);
+            channelEst = nan([gridsize(1:2), nLayers, nPorts]);
             if nPorts == 1
                 extra = struct('RSRP', 0, 'EPRE', 0, 'SINR', 0, 'TimeAlignment', 0, 'CFO', []);
             else
@@ -261,8 +269,8 @@ classdef srsMultiPortChannelEstimator < matlab.System
             cfo = [];
 
             for iPort = 1:nPorts
-                [channelEst(:, :, iPort), noiseEstTmp, rsrpTmp, epreTmp, taTmp, cfoTmp] = ...
-                    srsChannelEstimator(rxGrid(:, :, iPort), pilots, config.BetaScaling, hop1, hop2, configNew);
+                [channelEst(:, :, :, iPort), noiseEstTmp, rsrpTmp, epreTmp, taTmp, cfoTmp] = ...
+                    srsChannelEstimator(approxbf16(rxGrid(:, :, iPort)), pilots, config.BetaScaling, hop1, hop2, configNew);
 
                 noiseEst = noiseEst + noiseEstTmp / nPorts;
                 rsrp = rsrp + rsrpTmp / nPorts;
