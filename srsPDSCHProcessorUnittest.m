@@ -58,7 +58,7 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
         srsBlock = 'pdsch_processor'
 
         %Type of the tested block.
-        srsBlockType = 'phy/upper/channel_processors'
+        srsBlockType = 'phy/upper/channel_processors/pdsch'
 
         %Maximum number of layers.
         MaxNumLayers = 4
@@ -95,8 +95,8 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
 
             fprintf(fileID, [...
-                '#include "../../support/resource_grid_test_doubles.h"\n'...
-                '#include "srsran/phy/upper/channel_processors/pdsch_processor.h"\n'...
+                '#include "../../../support/resource_grid_test_doubles.h"\n'...
+                '#include "srsran/phy/upper/channel_processors/pdsch/pdsch_processor.h"\n'...
                 '#include "srsran/ran/precoding/precoding_codebooks.h"\n'...
                 '#include "srsran/support/file_vector.h"\n'...
                 ]);
@@ -365,6 +365,7 @@ classdef srsPDSCHProcessorUnittest < srsTest.srsBlockUnittest
                 baseGraphString, ...           % ldpc_base_graph
                 TBSLBRMStr, ...                % tbs_lbrm
                 rvdREPatternList, ...          % reserved
+                'std::nullopt', ...            % ptrs
                 betaDMRSdB, ...                % ratio_pdsch_dmrs_to_sss_dB
                 betaDatadB, ...                % ratio_pdsch_data_to_sss_dB
                 precodingString                % precoding

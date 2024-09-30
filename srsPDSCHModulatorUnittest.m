@@ -9,7 +9,7 @@
 %
 %   srsBlock      - The tested block (i.e., 'pdsch_modulator').
 %   srsBlockType  - The type of the tested block, including layer
-%                   (i.e., 'phy/upper/channel_processors').
+%                   (i.e., 'phy/upper/channel_processors/pdsch').
 %
 %   srsPDSCHModulatorUnittest Properties (ClassSetupParameter):
 %
@@ -55,7 +55,7 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
         srsBlock = 'pdsch_modulator'
 
         %Type of the tested block.
-        srsBlockType = 'phy/upper/channel_processors'
+        srsBlockType = 'phy/upper/channel_processors/pdsch'
     end
 
     properties (ClassSetupParameter)
@@ -77,12 +77,13 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
     end
 
     methods (Access = protected)
-        function addTestIncludesToHeaderFile(obj, fileID)
+        function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
-            addTestIncludesToHeaderFilePHYchproc(obj, fileID);
+            fprintf(fileID, '#include "../../../support/resource_grid_test_doubles.h"\n');
+            fprintf(fileID, '#include "srsran/phy/upper/channel_processors/pdsch/pdsch_modulator.h"\n');
             fprintf(fileID, '#include "srsran/ran/precoding/precoding_codebooks.h"\n');
+            fprintf(fileID, '#include "srsran/support/file_vector.h"\n');
         end
-
         function addTestDefinitionToHeaderFile(obj, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
             addTestDefinitionToHeaderFilePHYchproc(obj, fileID);
