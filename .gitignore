@@ -1,5 +1,7 @@
 # runSRSRANUnittest results.
 /testvector_outputs
+# Conformance tests CSV results.
+/unitTests/conformanceResults
 # MATLAB automatic save files.
 *.asv
 # MEX libraries.
