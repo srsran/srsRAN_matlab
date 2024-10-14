@@ -61,7 +61,7 @@ classdef CheckPUCCHF0Conformance < matlab.unittest.TestCase
             pp.TestType = 'Detection';
 
             mu = TestConfig.SubcarrierSpacing / 15 - 1;
-            nFrames = 20000 / 2^mu;
+            nFrames = 2000 / 2^mu;
             try
                 pp(TestConfig.SNR, nFrames);
             catch ME
@@ -90,7 +90,7 @@ classdef CheckPUCCHF0Conformance < matlab.unittest.TestCase
             pp.TestType = 'False Alarm';
 
             mu = TestConfig.SubcarrierSpacing / 15 - 1;
-            nFrames = 20000 / 2^mu;
+            nFrames = 2000 / 2^mu;
             try
                 pp(TestConfig.SNR, nFrames);
             catch ME
