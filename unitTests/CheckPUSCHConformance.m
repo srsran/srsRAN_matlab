@@ -71,9 +71,9 @@ classdef CheckPUSCHConformance < matlab.unittest.TestCase
             fff = fopen(obj.OutputFile, 'w');
 
             % Write file header.
-            fprintf(fff, '#datatype,measurement,tag,double,dateTime:RFC339\n');
-            fprintf(fff, '#default,,,,\n');
-            fprintf(fff, ',m,config,tp,time\n');
+            fprintf(fff, '#datatype measurement,tag,tag,double,dateTime:RFC3339\n');
+            fprintf(fff, '#default,,,\n');
+            fprintf(fff, 'm,suite,test,value,time\n');
 
             fclose(fff);
         end % of function preparecsv(obj)
@@ -165,7 +165,7 @@ classdef CheckPUSCHConformance < matlab.unittest.TestCase
 
             fff = fopen(obj.OutputFile, 'a');
             currTime = char(datetime('now', 'Format', 'yyyy-MM-dd''T''HH:mm:ss.SSS''Z'''));
-            fprintf(fff, ',PUSCH Throughput,%s,%.3f,%s\n', casename, tp, currTime);
+            fprintf(fff, 'Throughput,matlab/PUSCH conformance,%s,%.3f,%s\n', casename, tp, currTime);
 
             fclose(fff);
         end % of function writecsv(obj)
