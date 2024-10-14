@@ -46,6 +46,13 @@ classdef CheckPUSCHConformance < matlab.unittest.TestCase
         FRC = createFRC()
     end % of properties (Constant)
 
+    properties (Constant, Hidden)
+        %Folder for storing the test results in csv format.
+        OutputFolder = 'conformanceResults'
+        %File for storing the results in csv format.
+        OutputFile = fullfile(pwd, CheckPUSCHConformance.OutputFolder, ['conformancePUSCH', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss')), '.csv'])
+    end % of properties (Constant, Hidden)
+
     properties (TestParameter)
         %PUSCH test configurations.
         %   Defines, for each test, the DelayProfile, the DelaySpread and the
@@ -53,6 +60,24 @@ classdef CheckPUSCHConformance < matlab.unittest.TestCase
         %   the FRC and the target SNR.
         TestConfig = createTestConfig()
     end % of properties (TestParameter)
+
+    methods (TestClassSetup)
+        function preparecsv(obj)
+        %Creates a csv file for storing the results of all tests.
+
+            if ~exist(obj.OutputFolder, 'dir')
+                mkdir(obj.OutputFolder);
+            end
+            fff = fopen(obj.OutputFile, 'w');
+
+            % Write file header.
+            fprintf(fff, '#datatype,measurement,tag,double,dateTime:RFC339\n');
+            fprintf(fff, '#default,,,,\n');
+            fprintf(fff, ',m,config,tp,time\n');
+
+            fclose(fff);
+        end % of function preparecsv(obj)
+    end % of methods (TestClassSetup)
 
     methods (Test, TestTags = {'conformance'})
         function checkPUSCHconformance(obj, TestConfig)
@@ -128,10 +153,23 @@ classdef CheckPUSCHConformance < matlab.unittest.TestCase
                 obj.assertGreaterThan(tp, 0.70, 'ERROR: Throughput for a TS case is below the hard acceptance threshold of 70%.');
             end
 
-            % TODO: export throughput (and possibly other metrics) to grafana.
+            % Export throughput in csv format to be imported in grafana.
+            writecsv(obj, TestConfig.Name, tp * 100);
 
         end % of function checkPUSCHconformance(obj, TestConfig)
     end % of methods (Test, TestTags = {'conformance'})
+
+    methods (Access=private)
+        function writecsv(obj, casename, tp)
+        %Writes the test entry in the csv file.
+
+            fff = fopen(obj.OutputFile, 'a');
+            currTime = char(datetime('now', 'Format', 'yyyy-MM-dd''T''HH:mm:ss.SSS''Z'''));
+            fprintf(fff, ',PUSCH Throughput,%s,%.3f,%s\n', casename, tp, currTime);
+
+            fclose(fff);
+        end % of function writecsv(obj)
+    end % of methods (Access=private)
 end % of classdef CheckConformance < matlab.unittest.TestCase
 
 function frcdictionary = createFRC()
