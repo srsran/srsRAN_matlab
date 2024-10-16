@@ -18,9 +18,10 @@
 %
 %   srsTPMISelectUnittest Properties (TestParameter):
 %
-%   NumTxPorts - Number of transmission ports.
-%   NumRxPorts - Number of receive ports.
-%   Repetition - Number of test cases with the same channel topology.
+%   NumTxPorts     - Number of transmission ports.
+%   NumRxPorts     - Number of receive ports.
+%   CodebookSubset - Codebook subset.
+%   Repetition     - Number of test cases with the same channel topology.
 %
 %   srsULSCHInfoUnittest Methods (TestTags = {'testvector'}):
 %
@@ -71,6 +72,9 @@ classdef srsTPMISelectUnittest < srsTest.srsBlockUnittest
         %Number of receive ports.
         NumRxPorts = {1, 2, 4}
 
+        %Codebook subset.
+        CodebookSubset = {'fully_and_partial_and_non_coherent', 'partial_and_non_coherent' 'non_coherent'};
+
         %Repetition.
         Repetition = num2cell(1:16);
     end
@@ -87,18 +91,19 @@ classdef srsTPMISelectUnittest < srsTest.srsBlockUnittest
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
 
             fprintf(fileID, 'struct test_case_t {\n');
-            fprintf(fileID, '  srs_channel_matrix     channel_matrix;\n');
-            fprintf(fileID, '  float                  noise_variance;\n');
-            fprintf(fileID, '  pusch_tpmi_select_info info;\n');
+            fprintf(fileID, '  srs_channel_matrix        channel_matrix;\n');
+            fprintf(fileID, '  tx_scheme_codebook_subset codebook_subset;\n');
+            fprintf(fileID, '  float                     noise_variance;\n');
+            fprintf(fileID, '  pusch_tpmi_select_info    info;\n');
             fprintf(fileID, '};\n');
         end
     end % of methods (Access = protected)
 
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, NumTxPorts, ...
-                NumRxPorts, Repetition) %#ok<INUSD>
+                NumRxPorts, CodebookSubset, Repetition) %#ok<INUSD>
         %testvectorGenerationCases Generates a test vector given the
-        %   combinations of NumTxPorts, NumRxPorts.
+        %   combinations of NumTxPorts, NumRxPorts and CodebookSubset.
         %
         %   Remark: Input Repetition is used just as a placeholder for repeating
         %   several tests with the same configuration - it does not affect the
@@ -115,7 +120,7 @@ classdef srsTPMISelectUnittest < srsTest.srsBlockUnittest
             NoiseVar = -10 * log10(rand());
 
             % Select TPMI.
-            TpmiInfo = srsTPMISelect(H, NoiseVar);
+            TpmiInfo = srsTPMISelect(H, CodebookSubset, NoiseVar);
 
             % Prepare TPMI information string.
             TpmiInfoStr = ['{' num2str(struct2array((TpmiInfo)), '{%d, %f},') '}'];
@@ -123,12 +128,17 @@ classdef srsTPMISelectUnittest < srsTest.srsBlockUnittest
             % Convert channel matrix to string.
             channelStr = ['srs_channel_matrix({' array2str(H(:)) '}, ' ...
                 num2str(NumRxPorts) ', ' num2str(NumTxPorts) ')'];
+            
+            % Convert codebook subset to string.
+            CodebookSubsetStr = ['tx_scheme_codebook_subset::' ...
+                CodebookSubset];
 
             % Create test case entry.
             testCaseCell = {...
-                channelStr, ...  % channel_matrix
-                NoiseVar, ...    % noise_variance
-                TpmiInfoStr, ... % info
+                channelStr, ...        % channel_matrix
+                CodebookSubsetStr, ... % codebook subset
+                NoiseVar, ...          % noise_variance
+                TpmiInfoStr, ...       % info
                 };
 
             % Add the test to the file header.

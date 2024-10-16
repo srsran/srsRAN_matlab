@@ -1,11 +1,12 @@
 %srsTPMISelect Selects a transmission precoding matrix indicator for PUSCH transmissions.
 %
-%   INFO = srsTPMISelect(H, NoiseVar) selects the best transmit precoding
-%   matrix indicators (TPMIs) for the given channel matrix H and noise
-%   variance NoiseVar. H is an N-by-M array, where N is the number of
-%   receive ports and M is the number of transmit ports. The output INFO is
-%   a structure array of size min(N, M) providing, for each possible
-%   transmission layer, the best TPMI and the resulting estimated SINR.
+%   INFO = srsTPMISelect(H, CodebookSubset, NoiseVar) selects the best
+%   transmit precoding matrix indicators (TPMIs) for the given channel
+%   matrix H, codebook subset CodebookSubset and noise variance NoiseVar.
+%   H is an N-by-M array, where N is the number of receive ports and M is
+%   the number of transmit ports. The output INFO is a structure array of
+%   size min(N, M) providing, for each possible transmission layer, the
+%   best TPMI and the resulting estimated SINR.
 %
 %   See also nrPUSCHCodebook.
 
@@ -24,7 +25,12 @@
 %   A copy of the BSD 2-Clause License can be found in the LICENSE
 %   file in the top-level directory of this distribution.
 
-function info = srsTPMISelect(H, NoiseVar)
+function info = srsTPMISelect(H, CodebookSubset, NoiseVar)
+arguments
+    H              (:, :) double {mustBeNumeric}
+    CodebookSubset (1, :) char   {mustBeMember(CodebookSubset, {'fully_and_partial_and_non_coherent', 'partial_and_non_coherent' 'non_coherent'})}
+    NoiseVar       (1, 1) double {mustBePositive}
+end
 
 % Extract number of transmit ports.
 NumTxPorts = size(H, 2);
@@ -41,9 +47,9 @@ info = struct("TPMI", num2cell(nan(MaxNumLayers, 1)), "SINR", nan);
 
 % Iterate the possible number of layers.
 for NumLayers = 1:MaxNumLayers
-    % Get the codebook size from the number of transmission ports and
-    % layers.
-    CodebookSize = getCodebookSize(NumTxPorts, NumLayers);
+    % Get the codebook size from the number of transmission ports, layers
+    % and codebook subset.
+    CodebookSize = getCodebookSize(NumTxPorts, NumLayers, CodebookSubset);
 
     % Parameters for best SINR.
     bestSINR = -inf;
@@ -70,20 +76,52 @@ end
 
 end
 
-function N = getCodebookSize(NumPorts, NumLayers)
+function N = getCodebookSize(NumPorts, NumLayers, CodebookSubset)
 
     if (NumPorts == 2) && (NumLayers == 1)
-        N = 6;
+        if strcmp(CodebookSubset, 'non_coherent')
+            N = 2;
+        else
+            N = 6;
+        end
     elseif (NumPorts == 4) && (NumLayers == 1)
-        N = 28;
+        if strcmp(CodebookSubset, 'partial_and_non_coherent')
+            N = 12;
+        elseif strcmp(CodebookSubset, 'non_coherent')
+            N = 4;
+        else
+            N = 28;
+        end
     elseif (NumPorts == 2) && (NumLayers == 2)
-        N = 3;
+        if strcmp(CodebookSubset, 'non_coherent')
+            N = 1;
+        else
+            N = 3;
+        end
     elseif (NumPorts == 4) && (NumLayers == 2)
-        N = 22;
+        if strcmp(CodebookSubset, 'partial_and_non_coherent')
+            N = 14;
+        elseif strcmp(CodebookSubset, 'non_coherent')
+            N = 6;
+        else
+            N = 22;
+        end
     elseif (NumPorts == 4) && (NumLayers == 3)
-        N = 7;
+        if strcmp(CodebookSubset, 'partial_and_non_coherent')
+            N = 3;
+        elseif strcmp(CodebookSubset, 'non_coherent')
+            N = 1;
+        else
+            N = 7;
+        end
     elseif (NumPorts == 4) && (NumLayers == 4)
-        N = 5;
+        if strcmp(CodebookSubset, 'partial_and_non_coherent')
+            N = 3;
+        elseif strcmp(CodebookSubset, 'non_coherent')
+            N = 1;
+        else
+            N = 5;
+        end
     else
         error('Invalid number of ports (i.e., %d) and layers (i.e., %d)', NumPorts, NumLayers);
     end
