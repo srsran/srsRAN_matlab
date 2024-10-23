@@ -64,7 +64,7 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
         srsBlock = 'pucch_processor_format1'
 
         %Type of the tested block.
-        srsBlockType = 'phy/upper/channel_processors'
+        srsBlockType = 'phy/upper/channel_processors/pucch'
     end
 
     properties (ClassSetupParameter)
@@ -89,8 +89,8 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
     methods (Access = protected)
         function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
-            fprintf(fileID, '#include "../../support/resource_grid_test_doubles.h"\n');
-            fprintf(fileID, '#include "srsran/phy/upper/channel_processors/pucch_processor.h"\n');
+            fprintf(fileID, '#include "../../../support/resource_grid_test_doubles.h"\n');
+            fprintf(fileID, '#include "srsran/phy/upper/channel_processors/pucch/pucch_processor.h"\n');
             fprintf(fileID, '#include "srsran/support/file_vector.h"\n');
         end
 

@@ -64,7 +64,7 @@ classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
         srsBlock = 'pucch_detector'
 
         %Type of the tested block, including layers.
-        srsBlockType = 'phy/upper/channel_processors'
+        srsBlockType = 'phy/upper/channel_processors/pucch'
     end
 
     properties (ClassSetupParameter)
@@ -105,8 +105,8 @@ classdef srsPUCCHDetectorFormat1Unittest < srsTest.srsBlockUnittest
         %addTestIncludesToHeaderFile(OBJ, FILEID) adds include directives to
         %   the header file pointed by FILEID, which describes the test vectors.
 
-            fprintf(fileID, '#include "../../support/resource_grid_test_doubles.h"\n');
-            fprintf(fileID, '#include "srsran/phy/upper/channel_processors/pucch_detector.h"\n');
+            fprintf(fileID, '#include "../../../support/resource_grid_test_doubles.h"\n');
+            fprintf(fileID, '#include "srsran/phy/upper/channel_processors/pucch/pucch_detector.h"\n');
             fprintf(fileID, '#include "srsran/ran/cyclic_prefix.h"\n');
             fprintf(fileID, '#include "srsran/ran/pucch/pucch_mapping.h"\n');
             fprintf(fileID, '#include "srsran/support/file_vector.h"\n');

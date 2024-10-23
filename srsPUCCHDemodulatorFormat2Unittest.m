@@ -55,7 +55,7 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
         srsBlock = 'pucch_demodulator_format2'
 
         %Type of the tested block.
-        srsBlockType = 'phy/upper/channel_processors'
+        srsBlockType = 'phy/upper/channel_processors/pucch'
     end
 
     properties (ClassSetupParameter)
@@ -87,8 +87,8 @@ classdef srsPUCCHDemodulatorFormat2Unittest < srsTest.srsBlockUnittest
         function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
 
-            fprintf(fileID, '#include "../../support/resource_grid_test_doubles.h"\n');
-            fprintf(fileID, '#include "srsran/phy/upper/channel_processors/pucch_demodulator.h"\n');
+            fprintf(fileID, '#include "../../../support/resource_grid_test_doubles.h"\n');
+            fprintf(fileID, '#include "srsran/phy/upper/channel_processors/pucch/pucch_demodulator.h"\n');
             fprintf(fileID, '#include "srsran/support/file_vector.h"\n');
         end
 
