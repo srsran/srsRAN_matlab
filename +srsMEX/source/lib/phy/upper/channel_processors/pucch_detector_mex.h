@@ -23,8 +23,8 @@
 #pragma once
 
 #include "srsran_matlab/srsran_mex_dispatcher.h"
-#include "srsran/phy/upper/channel_processors/channel_processor_factories.h"
-#include "srsran/phy/upper/channel_processors/pucch_detector.h"
+#include "srsran/phy/upper/channel_processors/pucch/factories.h"
+#include "srsran/phy/upper/channel_processors/pucch/pucch_detector.h"
 #include "srsran/phy/upper/equalization/channel_equalizer_algorithm_type.h"
 #include "srsran/phy/upper/equalization/equalization_factories.h"
 #include "srsran/phy/upper/sequence_generators/sequence_generator_factories.h"
