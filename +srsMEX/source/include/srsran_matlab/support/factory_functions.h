@@ -22,7 +22,6 @@
 
 #pragma once
 
-#include "srsran/phy/generic_functions/precoding/precoding_factories.h"
 #include "srsran/phy/support/resource_grid.h"
 #include "srsran/phy/support/support_factories.h"
 
@@ -32,11 +31,7 @@ create_resource_grid(unsigned nof_subc, unsigned nof_symbols, unsigned nof_ports
 {
   using namespace srsran;
 
-  std::shared_ptr<channel_precoder_factory> precoding_factory = create_channel_precoder_factory("auto");
-  if (!precoding_factory) {
-    return nullptr;
-  }
-  std::shared_ptr<resource_grid_factory> rg_factory = create_resource_grid_factory(precoding_factory);
+  std::shared_ptr<resource_grid_factory> rg_factory = create_resource_grid_factory();
   if (!rg_factory) {
     return nullptr;
   }
