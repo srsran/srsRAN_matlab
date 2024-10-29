@@ -3,7 +3,7 @@
 %   Format 3 message containing the UCICW UCI codeword. It returns the
 %   complex symbols SYMBOLS as well as a column vector of RE indices INDICES.
 %
-%   See also nrPUCCH3 and NRPUCCHIndices.
+%   See also nrPUCCH3 and nrPUCCHIndices.
 
 %   Copyright 2021-2024 Software Radio Systems Limited
 %
@@ -20,10 +20,9 @@
 %   A copy of the BSD 2-Clause License can be found in the LICENSE
 %   file in the top-level directory of this distribution.
 
-function [symbols, indices] = srsPUCCH3(carrier, pucch, uciCW, modulation)
+function [symbols, indices] = srsPUCCH3(carrier, pucch, uciCW)
 
-    modSymb = nrPUCCH3(uciCW, modulation, pucch.NID, pucch.RNTI, length(pucch.PRBSet), "OutputDataType", "single");
-    symbols = nrTransformPrecode(modSymb, length(pucch.PRBSet));
+    symbols = nrPUCCH3(uciCW, pucch.Modulation, pucch.NID, pucch.RNTI, length(pucch.PRBSet), "OutputDataType", "single");
 
     indices = nrPUCCHIndices(carrier, pucch, 'IndexStyle', 'subscript', 'IndexBase', '0based');
 end

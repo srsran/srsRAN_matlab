@@ -119,7 +119,8 @@ classdef srsPUCCHDemodulatorFormat3Unittest < srsTest.srsBlockUnittest
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, SymbolAllocation, PRBNum, FrequencyHopping, AdditionalDMRS, Modulation)
         %testvectorGenerationCases Generates a test vector for the given
-        % Fixed Reference Channel.
+        % symbol allocation, number of PRB, frequency hopping, additional
+        % DM-RS and modulation parameters.
 
             import srsLib.phy.upper.channel_modulation.srsDemodulator
             import srsLib.phy.upper.equalization.srsChannelEqualizer
@@ -200,26 +201,17 @@ classdef srsPUCCHDemodulatorFormat3Unittest < srsTest.srsBlockUnittest
                 AdditionalDMRS=AdditionalDMRS ...
                 );
 
-            % Number of PUCCH RE.
-            nofPUCCHRE = PRBNum * 12 * SymbolAllocation(2);
-
-            % Number of PUCCH RE used for DM-RS.
-            % DM-RS is mapped to all subcarriers of 1, 2, or 4 symbols of each PRB.
-            nofPUCCHDMRSRE = 12 * getNofPUCCHDMRSSymbols(SymbolAllocation(2), FrequencyHopping, AdditionalDMRS) * PRBNum;
-
-            % Number of PUCCH data RE in a single slot.
-            nofPUCCHDataRE = nofPUCCHRE - nofPUCCHDMRSRE;
-
             % Number of bits that can be mapped to the available radio
             % resources.
             [~, info] = nrPUCCHIndices(carrier, pucch);
             uciCWLength = info.G;
+            nofPUCCHDataRE = info.Gd;
 
             % Generate a random UCI codeword that fills the available PUCCH resources.
             uciCW = randi([0, 1], uciCWLength, 1);
 
             % Modulate PUCCH Format 3.
-            [modulatedSymbols, dataSymbolIndices] = srsPUCCH3(carrier, pucch, uciCW, Modulation);
+            [modulatedSymbols, dataSymbolIndices] = srsPUCCH3(carrier, pucch, uciCW);
 
             if (length(dataSymbolIndices) ~= nofPUCCHDataRE)
                 error("Inconsistent UCI Codeword and PUCCH index list lengths");
@@ -257,12 +249,12 @@ classdef srsPUCCHDemodulatorFormat3Unittest < srsTest.srsBlockUnittest
             modSymbols = nrTransformDeprecode(eqSymbols, PRBNum);
 
             % Convert equalized symbols into softbits.
-            schSoftBits = srsDemodulator(modSymbols(:), 'QPSK', eqNoiseVars(:));
+            schSoftBits = srsDemodulator(modSymbols(:), Modulation, eqNoiseVars(:));
 
             % Scrambling sequence for PUCCH.
             [scSequence, ~] = nrPUCCHPRBS(NID, RNTI, length(schSoftBits));
 
-            % Encode thpucch_format2e scrambling sequence into the sign, so it can be
+            % Encode the scrambling sequence into the sign, so it can be
             % used with soft bits.
             scSequence = -(scSequence * 2) + 1;
 
@@ -313,24 +305,3 @@ classdef srsPUCCHDemodulatorFormat3Unittest < srsTest.srsBlockUnittest
         end % of function testvectorGenerationCases
     end % of methods (Test, TestTags = {'testvector'})
 end % of classdef srsPUCCHDemodulatorFormat3Unittest
-
-function [nofPUCCHDMRSSymbols] = getNofPUCCHDMRSSymbols(nofPUCCHSymbols, frequencyHopping, additionalDMRS)
-%getNofPUCCHDMRSSymbols Returns the number of symbols used for DM-RS in a
-% PUCCH3 resource given its number of symbols, frequencyHopping and
-% additionalDMRS configuration.
-    if nofPUCCHSymbols == 4
-        if strcmp(frequencyHopping, 'intraSlot')
-            nofPUCCHDMRSSymbols = 2;
-        else
-            nofPUCCHDMRSSymbols = 1;
-        end
-    elseif nofPUCCHSymbols < 10
-        nofPUCCHDMRSSymbols = 2;
-    else
-        if additionalDMRS
-            nofPUCCHDMRSSymbols = 4;
-        else
-            nofPUCCHDMRSSymbols = 2;
-        end
-    end
-end % of function getNofPUCCHDMRSSymbols
