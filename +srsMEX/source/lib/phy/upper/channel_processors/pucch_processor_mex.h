@@ -32,6 +32,7 @@
 #include "srsran/phy/upper/equalization/equalization_factories.h"
 #include "srsran/phy/upper/sequence_generators/sequence_generator_factories.h"
 #include "srsran/phy/upper/signal_processors/signal_processor_factories.h"
+#include "srsran/ran/pucch/pucch_constants.h"
 
 #include <memory>
 
@@ -142,6 +143,8 @@ create_pucch_processor()
       create_port_channel_estimator_factory_sw(ta_est_factory);
   std::shared_ptr<dmrs_pucch_estimator_factory> dmrs_factory =
       create_dmrs_pucch_estimator_factory_sw(prg_factory, lpapr_collection_factory, estimator_factory);
+  std::shared_ptr<transform_precoder_factory> precoding_factory =
+      create_dft_transform_precoder_factory(dft_factory, pucch_constants::FORMAT3_MAX_NPRB + 1);
 
   std::shared_ptr<channel_equalizer_factory> equalizer_factory =
       create_channel_equalizer_generic_factory(channel_equalizer_algorithm_type::zf);
@@ -150,7 +153,7 @@ create_pucch_processor()
 
   std::shared_ptr<channel_modulation_factory> modulation_factory = create_channel_modulation_sw_factory();
   std::shared_ptr<pucch_demodulator_factory>  demodulator_factory =
-      create_pucch_demodulator_factory_sw(equalizer_factory, modulation_factory, prg_factory);
+      create_pucch_demodulator_factory_sw(equalizer_factory, modulation_factory, prg_factory, precoding_factory);
 
   std::shared_ptr<short_block_detector_factory> short_block_dec_factory = create_short_block_detector_factory_sw();
   std::shared_ptr<polar_factory>                polar_dec_factory       = create_polar_factory_sw();

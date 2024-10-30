@@ -107,6 +107,7 @@ target_link_libraries(pucch_processor_mex
     srsran::srsran_channel_processors
     srsran::srsran_channel_equalizer
     srsran::srsran_phy_support
+    srsran::srsran_transform_precoding
 )
 
 set_target_properties(pucch_processor_mex
