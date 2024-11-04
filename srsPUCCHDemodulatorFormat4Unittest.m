@@ -261,10 +261,10 @@ classdef srsPUCCHDemodulatorFormat4Unittest < srsTest.srsBlockUnittest
             spreadSymbols = nrTransformDeprecode(eqSymbols, PRBNum);
 
             % Inverse block-wise spreading.
-            modSymbols = pucch4InverseBlockwiseSpreading(spreadSymbols, SpreadingFactor, info.Gd, OCCI);
+            [modSymbols, noiseVars] = pucch4InverseBlockwiseSpreading(spreadSymbols, eqNoiseVars, SpreadingFactor, info.Gd, OCCI);
 
             % Convert equalized symbols into softbits.
-            schSoftBits = srsDemodulator(modSymbols(:), Modulation, eqNoiseVars(:));
+            schSoftBits = srsDemodulator(modSymbols(:), Modulation, noiseVars(:));
 
             % Scrambling sequence for PUCCH.
             [scSequence, ~] = nrPUCCHPRBS(NID, RNTI, length(schSoftBits));
@@ -322,7 +322,7 @@ classdef srsPUCCHDemodulatorFormat4Unittest < srsTest.srsBlockUnittest
     end % of methods (Test, TestTags = {'testvector'})
 end % of classdef srsPUCCHDemodulatorFormat4Unittest
 
-function [originalSymbols] = pucch4InverseBlockwiseSpreading(spreadSymbols, spreadingFactor, nofModSymbols, occi)
+function [originalSymbols, noiseVars] = pucch4InverseBlockwiseSpreading(spreadSymbols, eqNoiseVars, spreadingFactor, nofModSymbols, occi)
     % Get the orthogonal sequence.
     if spreadingFactor == 2
         if occi == 0
@@ -348,7 +348,8 @@ function [originalSymbols] = pucch4InverseBlockwiseSpreading(spreadSymbols, spre
         error('Invalid SpreadingFactor: %d.', spreadingFactor);
     end
 
-    originalSymbols = zeros(size(spreadSymbols));
+    originalSymbols = zeros(size(spreadSymbols, 1) / spreadingFactor, 1);
+    noiseVars = zeros(size(originalSymbols));
 
     % Number of subcarriers for PUCCH Format 4.
     nofSubcarriers = 12;
@@ -357,10 +358,13 @@ function [originalSymbols] = pucch4InverseBlockwiseSpreading(spreadSymbols, spre
     for k = 0:nofSubcarriers-1
         for l = 0:lMax-1
             originalIndex = l * modulus + mod(k, modulus) + 1;
+            spreadIndex = l*12 + k + 1;
             % Take into account the contributions of every spread symbol
             % when recovering the original symbols.
             originalSymbols(originalIndex) = originalSymbols(originalIndex) ...
-                + spreadSymbols(l*12 + k + 1) / wn(k+1);
+                + spreadSymbols(spreadIndex) / wn(k+1);
+            noiseVars(originalIndex) = noiseVars(originalIndex) ...
+                + eqNoiseVars(spreadIndex);
         end
     end
 
