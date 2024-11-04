@@ -1,34 +1,34 @@
-%srsPUCCHDemodulatorFormat3Unittest Unit tests for PUCCH Format 3 symbol demodulator functions.
-%   This class implements unit tests for the PUCCH Format 3 symbol demodulator functions using
+%srsPUCCHDemodulatorFormat4Unittest Unit tests for PUCCH Format 4 symbol demodulator functions.
+%   This class implements unit tests for the PUCCH Format 4 symbol demodulator functions using
 %   the matlab.unittest framework. The simplest use consists in creating an object with
-%      testCase = srsPUCCHDemodulatorFormat3Unittest
+%      testCase = srsPUCCHDemodulatorFormat4Unittest
 %   and then running all the tests with
 %      testResults = testCase.run
 %
-%   srsPUCCHDemodulatorFormat3Unittest Properties (Constant):
+%   srsPUCCHDemodulatorFormat4Unittest Properties (Constant):
 %
-%   srsBlock      - The tested block (i.e., 'pucch_demodulator_format3').
+%   srsBlock      - The tested block (i.e., 'pucch_demodulator_format4').
 %   srsBlockType  - The type of the tested block, including layer
 %                   (i.e., 'phy/upper/channel_processors/pucch').
 %
-%   srsPUCCHDemodulatorFormat3Unittest Properties (ClassSetupParameter):
+%   srsPUCCHDemodulatorFormat4Unittest Properties (ClassSetupParameter):
 %
 %   outputPath - Path to the folder where the test results are stored.
 %
-%   srsPUCCHDemodulatorFormat3Unittest Properties (TestParameter):
+%   srsPUCCHDemodulatorFormat4Unittest Properties (TestParameter):
 %
 %   SymbolAllocation  - Symbols allocated to the PUCCH transmission.
-%   PRBNum            - Number of contiguous PRB allocated to PUCCH Format 3.
 %   FrequencyHopping  - Frequency hopping type ('neither', 'intraSlot').
 %   AdditionalDMRS    - AdditionalDMRS flag.
 %   Modulation        - Modulation type ('QPSK', 'pi/2-BPSK').
+%   SpreadingFactor   - Spreading factor (2, 4).
 %
-%   srsPUCCHDemodulatorFormat3Unittest Methods (TestTags = {'testvector'}):
+%   srsPUCCHDemodulatorFormat4Unittest Methods (TestTags = {'testvector'}):
 %
 %   testvectorGenerationCases - Generates a test vector according to the provided
 %                               parameters.
 %
-%   srsPUCCHDemodulatorFormat3Unittest Methods (Access = protected):
+%   srsPUCCHDemodulatorFormat4Unittest Methods (Access = protected):
 %
 %   addTestIncludesToHeaderFile     - Adds include directives to the test header file.
 %   addTestDefinitionToHeaderFile   - Adds details (e.g., type/variable declarations)
@@ -51,18 +51,18 @@
 %   A copy of the BSD 2-Clause License can be found in the LICENSE
 %   file in the top-level directory of this distribution.
 
-classdef srsPUCCHDemodulatorFormat3Unittest < srsTest.srsBlockUnittest
+classdef srsPUCCHDemodulatorFormat4Unittest < srsTest.srsBlockUnittest
     properties (Constant)
         %Name of the tested block.
-        srsBlock = 'pucch_demodulator_format3'
+        srsBlock = 'pucch_demodulator_format4'
 
         %Type of the tested block.
         srsBlockType = 'phy/upper/channel_processors/pucch'
     end
 
     properties (ClassSetupParameter)
-        %Path to results folder (old 'pucch_demodulator_format3' tests will be erased).
-        outputPath = {['testPUCCHDemodulatorFormat3', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
+        %Path to results folder (old 'pucch_demodulator_format4' tests will be erased).
+        outputPath = {['testPUCCHDemodulatorFormat4', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
     end
 
     properties (TestParameter)
@@ -73,9 +73,6 @@ classdef srsPUCCHDemodulatorFormat3Unittest < srsTest.srsBlockUnittest
         %   symbols.
         SymbolAllocation = {[0, 14], [1, 13], [5, 5], [10, 4]};
 
-        %Number of contiguous PRB allocated to PUCCH Format 3.
-        PRBNum = {1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 15, 16};
-
         %Frequency hopping type ('neither', 'intraSlot').
         %   Note: Interslot frequency hopping is currently not considered.
         FrequencyHopping = {'neither', 'intraSlot'};
@@ -85,6 +82,9 @@ classdef srsPUCCHDemodulatorFormat3Unittest < srsTest.srsBlockUnittest
 
         %Modulation type ('QPSK', 'pi/2-BPSK').
         Modulation = {'QPSK', 'pi/2-BPSK'};
+
+        %Spreading factor (2, 4).
+        SpreadingFactor = {2, 4};
     end
 
     methods (Access = protected)
@@ -103,7 +103,7 @@ classdef srsPUCCHDemodulatorFormat3Unittest < srsTest.srsBlockUnittest
             fprintf(fileID, '  unsigned                                 grid_nof_prb;\n');
             fprintf(fileID, '  unsigned                                 grid_nof_symbols;\n');
             fprintf(fileID, '  float                                    noise_var;\n');
-            fprintf(fileID, '  pucch_demodulator::format3_configuration config;\n');
+            fprintf(fileID, '  pucch_demodulator::format4_configuration config;\n');
             fprintf(fileID, '};\n');
             fprintf(fileID, '\n');
             fprintf(fileID, 'struct test_case_t {\n');
@@ -117,7 +117,7 @@ classdef srsPUCCHDemodulatorFormat3Unittest < srsTest.srsBlockUnittest
     end % of methods (Access = protected)
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(testCase, SymbolAllocation, PRBNum, FrequencyHopping, AdditionalDMRS, Modulation)
+        function testvectorGenerationCases(testCase, SymbolAllocation, FrequencyHopping, AdditionalDMRS, Modulation, SpreadingFactor)
         %testvectorGenerationCases Generates a test vector for the given
         % symbol allocation, number of PRB, frequency hopping, additional
         % DM-RS and modulation parameters.
@@ -127,10 +127,13 @@ classdef srsPUCCHDemodulatorFormat3Unittest < srsTest.srsBlockUnittest
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.writeInt8File
             import srsTest.helpers.writeComplexFloatFile
-            import srsLib.phy.upper.channel_processors.srsPUCCH3
+            import srsLib.phy.upper.channel_processors.srsPUCCH4
 
             % Generate a unique test ID.
             testID = testCase.generateTestID;
+
+            % Number of PRB for PUCCH Format 4.
+            PRBNum = 1;
 
             % Generate random cell ID.
             nCellID = randi([0, 1007]);
@@ -151,7 +154,7 @@ classdef srsPUCCHDemodulatorFormat3Unittest < srsTest.srsBlockUnittest
             nStartBWP = randi([0, MaxGridSize - PRBNum - 1]);
 
             % BWP size.
-            % PUCCH Format 3 frequency allocation must fit inside the BWP.
+            % PUCCH Format 4 frequency allocation must fit inside the BWP.
             nSizeBWP = randi([PRBNum, MaxGridSize - nStartBWP]);
 
             % PUCCH PRB Start relative to the BWP.
@@ -160,13 +163,20 @@ classdef srsPUCCHDemodulatorFormat3Unittest < srsTest.srsBlockUnittest
             % Fit resource grid size to the BWP.
             nSizeGrid = nStartBWP + nSizeBWP;
 
-            % PRB set assigned to PUCCH Format 3 within the BWP.
+            % PRB set assigned to PUCCH Format 4 within the BWP.
             % Each element within the PRB set indicates the location of a
             % Resource Block relative to the BWP starting PRB.
             PRBSet = PRBStart : PRBStart + PRBNum - 1;
 
             % Normal cyclic prefix.
             cyclicPrefix = 'normal';
+
+            % Orthogonal cover code index.
+            if SpreadingFactor == 2
+                OCCI = randi([0, 1]);
+            else
+                OCCI = randi([0, 3]);
+            end
 
             % Configure the carrier according to the test parameters.
             carrier = nrCarrierConfig( ...
@@ -188,7 +198,7 @@ classdef srsPUCCHDemodulatorFormat3Unittest < srsTest.srsBlockUnittest
             end
 
             % Configure the PUCCH.
-            pucch = nrPUCCH3Config( ...
+            pucch = nrPUCCH4Config( ...
                 NStartBWP=nStartBWP, ...
                 NSizeBWP=nSizeBWP, ...
                 Modulation=Modulation, ...
@@ -196,6 +206,8 @@ classdef srsPUCCHDemodulatorFormat3Unittest < srsTest.srsBlockUnittest
                 PRBSet=PRBSet, ...
                 FrequencyHopping=FrequencyHopping, ...
                 SecondHopStartPRB=secondPRBStart, ...
+                SpreadingFactor=SpreadingFactor, ...
+                OCCI=OCCI, ...
                 NID=NID, ...
                 RNTI=RNTI, ...
                 AdditionalDMRS=AdditionalDMRS ...
@@ -205,13 +217,13 @@ classdef srsPUCCHDemodulatorFormat3Unittest < srsTest.srsBlockUnittest
             % resources.
             [~, info] = nrPUCCHIndices(carrier, pucch);
             uciCWLength = info.G;
-            nofPUCCHDataRE = info.Gd;
+            nofPUCCHDataRE = info.Gd * SpreadingFactor;
 
             % Generate a random UCI codeword that fills the available PUCCH resources.
             uciCW = randi([0, 1], uciCWLength, 1);
 
-            % Modulate PUCCH Format 3.
-            [modulatedSymbols, dataSymbolIndices] = srsPUCCH3(carrier, pucch, uciCW);
+            % Modulate PUCCH Format 4.
+            [modulatedSymbols, dataSymbolIndices] = srsPUCCH4(carrier, pucch, uciCW);
 
             if (length(dataSymbolIndices) ~= nofPUCCHDataRE)
                 error("Inconsistent UCI Codeword and PUCCH index list lengths");
@@ -246,7 +258,10 @@ classdef srsPUCCHDemodulatorFormat3Unittest < srsTest.srsBlockUnittest
             testCase.saveDataFile('_test_input_estimates', testID, @writeComplexFloatFile, estimates(:));
 
             % Inverse transform precoding.
-            modSymbols = nrTransformDeprecode(eqSymbols, PRBNum);
+            spreadSymbols = nrTransformDeprecode(eqSymbols, PRBNum);
+
+            % Inverse block-wise spreading.
+            modSymbols = pucch4InverseBlockwiseSpreading(spreadSymbols, SpreadingFactor, info.Gd, OCCI);
 
             % Convert equalized symbols into softbits.
             schSoftBits = srsDemodulator(modSymbols(:), Modulation, eqNoiseVars(:));
@@ -276,24 +291,25 @@ classdef srsPUCCHDemodulatorFormat3Unittest < srsTest.srsBlockUnittest
                 secondHopPRB = {};
             end
 
-            pucchF3Config = {...
-                portsString, ...                % rx_ports
-                firstPRB, ...                   % first_prb
-                secondHopPRB, ...               % second_hop_prb
-                PRBNum, ...                     % nof_prb
-                SymbolAllocation(1), ...        % start_symbol_index
-                SymbolAllocation(2), ...        % nof_symbols
-                RNTI, ...                       % rnti
-                NID, ...                        % n_id
-                AdditionalDMRS, ...             % additional_dmrs
-                strcmp(Modulation, 'pi/2-BPSK') % pi2_bpsk
+            pucchF4Config = {...
+                portsString, ...                     % rx_ports
+                firstPRB, ...                        % first_prb
+                secondHopPRB, ...                    % second_hop_prb
+                SymbolAllocation(1), ...             % start_symbol_index
+                SymbolAllocation(2), ...             % nof_symbols
+                RNTI, ...                            % rnti
+                NID, ...                             % n_id
+                AdditionalDMRS, ...                  % additional_dmrs
+                strcmp(Modulation, 'pi/2-BPSK'), ... % pi2_bpsk
+                SpreadingFactor, ...                 % spreading_factor
+                OCCI                                 % occi
                 };
 
             testCaseContext = { ...
                 nSizeGrid, ...      % grid_nof_prb
                 nofGridSymbols, ... % grid_nof_symbols
                 noiseVar, ...       % noise_var
-                pucchF3Config, ...  % config
+                pucchF4Config, ...  % config
                 };
 
             testCaseString = testCase.testCaseToString(testID, testCaseContext, true, ...
@@ -304,4 +320,51 @@ classdef srsPUCCHDemodulatorFormat3Unittest < srsTest.srsBlockUnittest
 
         end % of function testvectorGenerationCases
     end % of methods (Test, TestTags = {'testvector'})
-end % of classdef srsPUCCHDemodulatorFormat3Unittest
+end % of classdef srsPUCCHDemodulatorFormat4Unittest
+
+function [originalSymbols] = pucch4InverseBlockwiseSpreading(spreadSymbols, spreadingFactor, nofModSymbols, occi)
+    % Get the orthogonal sequence.
+    if spreadingFactor == 2
+        if occi == 0
+            wn = [+1 +1 +1 +1 +1 +1 +1 +1 +1 +1 +1 +1];
+        elseif occi == 1
+            wn = [+1 +1 +1 +1 +1 +1 -1 -1 -1 -1 -1 -1];
+        else
+            error('Invalid SpreadingFactor and OCCI combination: {%d, %d}.', spreadingFactor, occi);
+        end
+    elseif spreadingFactor == 4
+        if occi == 0
+            wn = [+1 +1 +1 +1 +1 +1 +1 +1 +1 +1 +1 +1];
+        elseif occi == 1
+            wn = [+1 +1 +1 -1j -1j -1j -1 -1 -1 +1j +1j +1j];
+        elseif occi == 2
+            wn = [+1 +1 +1 -1 -1 -1 +1 +1 +1 -1 -1 -1];
+        elseif occi == 3
+            wn = [+1 +1 +1 +1j +1j +1j -1 -1 -1 -1j -1j -1j];
+        else
+            error('Invalid SpreadingFactor and OCCI combination: {%d, %d}.', spreadingFactor, occi);
+        end
+    else
+        error('Invalid SpreadingFactor: %d.', spreadingFactor);
+    end
+
+    originalSymbols = zeros(size(spreadSymbols));
+
+    % Number of subcarriers for PUCCH Format 4.
+    nofSubcarriers = 12;
+    modulus = 12 / spreadingFactor;
+    lMax = spreadingFactor * nofModSymbols / 12;
+    for k = 0:nofSubcarriers-1
+        for l = 0:lMax-1
+            originalIndex = l * modulus + mod(k, modulus) + 1;
+            % Take into account the contributions of every spread symbol
+            % when recovering the original symbols.
+            originalSymbols(originalIndex) = originalSymbols(originalIndex) ...
+                + spreadSymbols(l*12 + k + 1) / wn(k+1);
+        end
+    end
+
+    % Scale according to the spreading factor.
+    originalSymbols = originalSymbols / spreadingFactor;
+
+end % of function pucch4InverseBlockwiseSpreading
