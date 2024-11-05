@@ -19,7 +19,7 @@
 %
 %   SymbolAllocation  - Symbols allocated to the PUCCH transmission.
 %   FrequencyHopping  - Frequency hopping type ('neither', 'intraSlot').
-%   AdditionalDMRS    - AdditionalDMRS flag.
+%   AdditionalDMRS    - Additional DM-RS flag.
 %   Modulation        - Modulation type ('QPSK', 'pi/2-BPSK').
 %   SpreadingFactor   - Spreading factor (2, 4).
 %
@@ -77,7 +77,7 @@ classdef srsPUCCHDemodulatorFormat4Unittest < srsTest.srsBlockUnittest
         %   Note: Interslot frequency hopping is currently not considered.
         FrequencyHopping = {'neither', 'intraSlot'};
 
-        %AdditionalDMRS flag.
+        %Additional DM-RS flag. If true, more OFDM symbols are filled with DM-RS.
         AdditionalDMRS = {true, false};
 
         %Modulation type ('QPSK', 'pi/2-BPSK').
@@ -215,7 +215,7 @@ classdef srsPUCCHDemodulatorFormat4Unittest < srsTest.srsBlockUnittest
 
             % Number of bits that can be mapped to the available radio
             % resources.
-            [~, info] = nrPUCCHIndices(carrier, pucch);
+            [dataSymbolIndices, info] = nrPUCCHIndices(carrier, pucch, IndexStyle='subscript', IndexBase='0based');
             uciCWLength = info.G;
             nofPUCCHDataRE = info.Gd * SpreadingFactor;
 
@@ -223,7 +223,7 @@ classdef srsPUCCHDemodulatorFormat4Unittest < srsTest.srsBlockUnittest
             uciCW = randi([0, 1], uciCWLength, 1);
 
             % Modulate PUCCH Format 4.
-            [modulatedSymbols, dataSymbolIndices] = srsPUCCH4(carrier, pucch, uciCW);
+            modulatedSymbols = nrPUCCH(carrier, pucch, uciCW, OutputDataType='single');
 
             if (length(dataSymbolIndices) ~= nofPUCCHDataRE)
                 error("Inconsistent UCI Codeword and PUCCH index list lengths");
@@ -231,13 +231,13 @@ classdef srsPUCCHDemodulatorFormat4Unittest < srsTest.srsBlockUnittest
 
             % Create some noise samples with different variances. Round standard
             % deviation to reduce double to float error in the soft-demodulator.
-            normNoise = (randn(nofPUCCHDataRE, 1) + 1i * randn(nofPUCCHDataRE, 1)) / sqrt(2);
-            noiseStd = round(0.1 + 0.9 * rand(), 1);
+            normNoise = (randn(nofPUCCHDataRE, 1) + 1j * randn(nofPUCCHDataRE, 1)) / sqrt(2);
+            noiseStd = 0.1 + 0.9 * rand();
             noiseVar = noiseStd.^2;
 
             % Create random channel estimates with a single Rx port and Tx layer.
             % Create a full resource grid of estimates.
-            estimates = (0.1 + 0.9 * rand(nofGridSubcs, nofGridSymbols)) + 1i * (0.1 + 0.9 * rand(nofGridSubcs, nofGridSymbols));
+            estimates = (0.1 + 0.9 * rand(nofGridSubcs, nofGridSymbols)) + 1j * (0.1 + 0.9 * rand(nofGridSubcs, nofGridSymbols));
             estimates = estimates / sqrt(2);
 
             % Extract channel estimation coefficients corresponding to
@@ -348,27 +348,31 @@ function [originalSymbols, noiseVars] = pucch4InverseBlockwiseSpreading(spreadSy
         error('Invalid SpreadingFactor: %d.', spreadingFactor);
     end
 
-    originalSymbols = zeros(size(spreadSymbols, 1) / spreadingFactor, 1);
-    noiseVars = zeros(size(originalSymbols));
-
     % Number of subcarriers for PUCCH Format 4.
     nofSubcarriers = 12;
-    modulus = 12 / spreadingFactor;
-    lMax = spreadingFactor * nofModSymbols / 12;
-    for k = 0:nofSubcarriers-1
-        for l = 0:lMax-1
-            originalIndex = l * modulus + mod(k, modulus) + 1;
-            spreadIndex = l*12 + k + 1;
-            % Take into account the contributions of every spread symbol
-            % when recovering the original symbols.
-            originalSymbols(originalIndex) = originalSymbols(originalIndex) ...
-                + spreadSymbols(spreadIndex) / wn(k+1);
-            noiseVars(originalIndex) = noiseVars(originalIndex) ...
-                + eqNoiseVars(spreadIndex);
-        end
+    symbPerOFDMsymb = nofSubcarriers / spreadingFactor;
+    lMax = spreadingFactor * nofModSymbols / nofSubcarriers;
+
+    % Reshape spreadSymbols and eqNoiseVars for processing.
+    spreadSymbolsMatrix = reshape(spreadSymbols, nofSubcarriers, []);
+    eqNoiseVarsMatrix = reshape(eqNoiseVars, nofSubcarriers, []);
+
+    % Apply the orthogonal sequence.
+    spreadSymbolsMatrix = spreadSymbolsMatrix ./ wn(:);
+
+    % Sum the submatrices to get the original symbols.
+    originalSymbolsMatrix = complex(zeros(symbPerOFDMsymb, lMax));
+    noiseVarsMatrix = zeros(size(originalSymbolsMatrix));
+    for i = 0:spreadingFactor-1
+        originalSymbolsMatrix = originalSymbolsMatrix ...
+            + spreadSymbolsMatrix(i * symbPerOFDMsymb + 1 : (i + 1) * symbPerOFDMsymb, :);
+        noiseVarsMatrix = noiseVarsMatrix ...
+            + eqNoiseVarsMatrix(i * symbPerOFDMsymb + 1 : (i + 1) * symbPerOFDMsymb, :);
     end
 
-    % Scale according to the spreading factor.
-    originalSymbols = originalSymbols / spreadingFactor;
+    % Reshape into a vector and scale the modulation symbols according to
+    % the spreading factor.
+    originalSymbols = originalSymbolsMatrix(:) / spreadingFactor;
+    noiseVars = noiseVarsMatrix(:);
 
 end % of function pucch4InverseBlockwiseSpreading
