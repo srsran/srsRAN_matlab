@@ -228,9 +228,10 @@ classdef srsPUCCHDemodulatorFormat4Unittest < srsTest.srsBlockUnittest
                 error("Inconsistent UCI Codeword and PUCCH index list lengths");
             end
 
-            % Create some noise samples with different variances.
-            normNoise = (randn(nofPUCCHDataRE, 1) + 1j * randn(nofPUCCHDataRE, 1)) / sqrt(2);
-            noiseStd = 0.1 + 0.9 * rand();
+            % Create some noise samples with different variances. Round standard
+            % deviation to reduce double to float error in the soft-demodulator.
+            normNoise = (randn(nofPUCCHDataRE, 1) + 1i * randn(nofPUCCHDataRE, 1)) / sqrt(2);
+            noiseStd = round(0.1 + 0.9 * rand(), 1);
             noiseVar = noiseStd.^2;
 
             % Create random channel estimates with a single Rx port and Tx layer.
@@ -363,9 +364,9 @@ function [originalSymbols, noiseVars] = pucch4InverseBlockwiseSpreading(spreadSy
     noiseVarsMatrix = zeros(size(originalSymbolsMatrix));
     for i = 0:spreadingFactor-1
         originalSymbolsMatrix = originalSymbolsMatrix ...
-            + spreadSymbolsMatrix(i * symbPerOFDMsymb + 1 : (i + 1) * symbPerOFDMsymb, :);
+            + spreadSymbolsMatrix(i * symbPerOFDMsymb + (1:symbPerOFDMsymb), :);
         noiseVarsMatrix = noiseVarsMatrix ...
-            + eqNoiseVarsMatrix(i * symbPerOFDMsymb + 1 : (i + 1) * symbPerOFDMsymb, :);
+            + eqNoiseVarsMatrix(i * symbPerOFDMsymb + (1:symbPerOFDMsymb), :);
     end
 
     % Reshape into a vector and scale the modulation symbols according to

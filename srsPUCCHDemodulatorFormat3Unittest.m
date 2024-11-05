@@ -216,9 +216,10 @@ classdef srsPUCCHDemodulatorFormat3Unittest < srsTest.srsBlockUnittest
                 error("Inconsistent UCI Codeword and PUCCH index list lengths");
             end
 
-            % Create some noise samples with different variances.
+            % Create some noise samples with different variances. Round standard
+            % deviation to reduce double to float error in the soft-demodulator.
             normNoise = (randn(nofPUCCHDataRE, 1) + 1i * randn(nofPUCCHDataRE, 1)) / sqrt(2);
-            noiseStd = 0.1 + 0.9 * rand();
+            noiseStd = round(0.1 + 0.9 * rand(), 1);
             noiseVar = noiseStd.^2;
 
             % Create random channel estimates with a single Rx port and Tx layer.
