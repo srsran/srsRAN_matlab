@@ -127,7 +127,6 @@ classdef srsPUCCHDemodulatorFormat4Unittest < srsTest.srsBlockUnittest
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.writeInt8File
             import srsTest.helpers.writeComplexFloatFile
-            import srsLib.phy.upper.channel_processors.srsPUCCH4
 
             % Generate a unique test ID.
             testID = testCase.generateTestID;
@@ -229,8 +228,7 @@ classdef srsPUCCHDemodulatorFormat4Unittest < srsTest.srsBlockUnittest
                 error("Inconsistent UCI Codeword and PUCCH index list lengths");
             end
 
-            % Create some noise samples with different variances. Round standard
-            % deviation to reduce double to float error in the soft-demodulator.
+            % Create some noise samples with different variances.
             normNoise = (randn(nofPUCCHDataRE, 1) + 1j * randn(nofPUCCHDataRE, 1)) / sqrt(2);
             noiseStd = 0.1 + 0.9 * rand();
             noiseVar = noiseStd.^2;

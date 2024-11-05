@@ -20,7 +20,7 @@
 %   SymbolAllocation  - Symbols allocated to the PUCCH transmission.
 %   PRBNum            - Number of contiguous PRB allocated to PUCCH Format 3.
 %   FrequencyHopping  - Frequency hopping type ('neither', 'intraSlot').
-%   AdditionalDMRS    - AdditionalDMRS flag.
+%   AdditionalDMRS    - Additional DM-RS flag.
 %   Modulation        - Modulation type ('QPSK', 'pi/2-BPSK').
 %
 %   srsPUCCHDemodulatorFormat3Unittest Methods (TestTags = {'testvector'}):
@@ -80,7 +80,7 @@ classdef srsPUCCHDemodulatorFormat3Unittest < srsTest.srsBlockUnittest
         %   Note: Interslot frequency hopping is currently not considered.
         FrequencyHopping = {'neither', 'intraSlot'};
 
-        %AdditionalDMRS flag.
+        %Additional DM-RS flag. If true, more OFDM symbols are filled with DM-RS.
         AdditionalDMRS = {true, false};
 
         %Modulation type ('QPSK', 'pi/2-BPSK').
@@ -127,7 +127,6 @@ classdef srsPUCCHDemodulatorFormat3Unittest < srsTest.srsBlockUnittest
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.writeInt8File
             import srsTest.helpers.writeComplexFloatFile
-            import srsLib.phy.upper.channel_processors.srsPUCCH3
 
             % Generate a unique test ID.
             testID = testCase.generateTestID;
@@ -203,7 +202,7 @@ classdef srsPUCCHDemodulatorFormat3Unittest < srsTest.srsBlockUnittest
 
             % Number of bits that can be mapped to the available radio
             % resources.
-            [~, info] = nrPUCCHIndices(carrier, pucch);
+            [dataSymbolIndices, info] = nrPUCCHIndices(carrier, pucch, IndexStyle='subscript', IndexBase='0based');
             uciCWLength = info.G;
             nofPUCCHDataRE = info.Gd;
 
@@ -211,16 +210,15 @@ classdef srsPUCCHDemodulatorFormat3Unittest < srsTest.srsBlockUnittest
             uciCW = randi([0, 1], uciCWLength, 1);
 
             % Modulate PUCCH Format 3.
-            [modulatedSymbols, dataSymbolIndices] = srsPUCCH3(carrier, pucch, uciCW);
+            modulatedSymbols = nrPUCCH(carrier, pucch, uciCW, OutputDataType='single');
 
             if (length(dataSymbolIndices) ~= nofPUCCHDataRE)
                 error("Inconsistent UCI Codeword and PUCCH index list lengths");
             end
 
-            % Create some noise samples with different variances. Round standard
-            % deviation to reduce double to float error in the soft-demodulator.
+            % Create some noise samples with different variances.
             normNoise = (randn(nofPUCCHDataRE, 1) + 1i * randn(nofPUCCHDataRE, 1)) / sqrt(2);
-            noiseStd = round(0.1 + 0.9 * rand(), 1);
+            noiseStd = 0.1 + 0.9 * rand();
             noiseVar = noiseStd.^2;
 
             % Create random channel estimates with a single Rx port and Tx layer.
