@@ -308,10 +308,10 @@ classdef srsSRSEstimatorUnittest < srsTest.srsBlockUnittest
                 };
 
             resultCell = { ...
-                channelCell, ...     % channel_matrix
-                10*log10(epre), ...  % epre_dB
-                0, ...               % noise_variance
-                tAlignStr, ...       % time_align
+                channelCell, ...               % channel_matrix
+                round(10*log10(epre), 5), ...  % epre_dB
+                0, ...                         % noise_variance
+                tAlignStr, ...                 % time_align
                 };
 
             testContext = {...
