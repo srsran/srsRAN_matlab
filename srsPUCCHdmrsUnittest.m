@@ -18,7 +18,7 @@
 %   srsPUCCHdmrsUnittest Properties (TestParameter):
 %
 %   numerology           - Defines the subcarrier spacing (0, 1).
-%   format               - PUCCH format (1, 2).
+%   format               - PUCCH format (1, 2, 3, 4).
 %   intraSlotFreqHopping - Intra-slot frequency hopping (false - enabled, true - enabled)
 %
 %   srsPUCCHdmrsUnittest Methods (TestTags = {'testvector'}):
@@ -67,14 +67,14 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
         %Defines the subcarrier spacing (0, 1).
         numerology = {0, 1}
 
-        %PUCCH format indexes (for now only formats 1 and 2 are supported).
-        format = {1, 2}
+        %PUCCH format indexes.
+        format = {1, 2, 3, 4}
 
         %Intra-slot frequency hopping usage (inter-slot hopping is not tested).
         intraSlotFreqHopping = {false, true}
 
         %Two test vectors with randomized parameters (e.g. cell ID, slot number etc.)
-        %are generated for each set of unittest parameters
+        %are generated for each set of unittest parameters.
         testCaseTrial = {1, 2}
 
     end % of properties (TestParameter)
@@ -225,9 +225,9 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
 
             symbolAllocation = [startSymbolIndex symbolLength];
 
-            % Orhtogonal Cover Code Index.
+            % Orthogonal Cover Code Index.
             OCCI = 0;
-            if (format == 1) || (format == 4)
+            if (format == 1)
                 % When intraslot frequency hopping is disabled, the OCCI value must be less
                 % than the floor of half of the number of OFDM symbols allocated for the PUCCH.
                 if ~intraSlotFreqHopping
@@ -242,6 +242,15 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
                         OCCI = randi([0, maxOCCindex]);
                     end
                 end
+            elseif (format == 4)
+                spreadingFactor = randsample([2 4], 1);
+                OCCI = randi([0 spreadingFactor-1]);
+            end
+
+            % Additional DM-RS.
+            additionalDMRS = false;
+            if (format == 3) || (format == 4)
+                additionalDMRS = randsample([true false], 1);
             end
 
             % Randomly select secondHopStartPRB if intra-slot frequency
@@ -280,6 +289,14 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
                 pucch.InitialCyclicShift = initialCyclicShift;
             end % of if (format == 1)
 
+            if (format == 3) || (format == 4)
+                pucch.AdditionalDMRS = additionalDMRS;
+            end % of if (format == 3) || (format == 4)
+
+            if (format == 4)
+                pucch.SpreadingFactor = spreadingFactor;
+            end % of if (format == 4)
+
             % Call the PUCCH DM-RS symbol processor MATLAB functions.
             [DMRSsymbols, DMRSindices] = srsPUCCHdmrs(carrier, pucch);
 
@@ -303,7 +320,7 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
                 {formatString, slotPointConfig, ['cyclic_prefix::', upper(cyclicPrefix)], ...
                 GroupHoppingStr, startSymbolIndex, symbolLength, PRBSet(1), ...
                 intraSlotFreqHoppingStr, secondHopStartPRB, nofPRBs, initialCyclicShift, ...
-                 OCCI, 'false', nid, nid0, portsStr}, true, '_test_output');
+                 OCCI, additionalDMRS, nid, nid0, portsStr}, true, '_test_output');
 
             % Add the test to the file header.
             testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);
