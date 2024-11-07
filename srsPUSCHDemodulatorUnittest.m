@@ -367,7 +367,9 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
 
             % Revert transform precoding if it is present.
             if obj.pusch.TransformPrecoding
-                eqSymbols = nrTransformDeprecode(eqSymbols, length(obj.pusch.PRBSet));
+                numPRB = length(obj.pusch.PRBSet);
+                eqSymbols = nrTransformDeprecode(eqSymbols, numPRB);
+                eqNoise = processTransformPrecodingNoiseVariance(eqNoise, NumLayers, numPRB);
             end
 
             % Layer demapping.
@@ -524,7 +526,9 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
 
             % Revert transform precoding if it is present.
             if obj.pusch.TransformPrecoding
-                eqSymbols = nrTransformDeprecode(eqSymbols, length(obj.pusch.PRBSet));
+                numPRB = length(obj.pusch.PRBSet);
+                eqSymbols = nrTransformDeprecode(eqSymbols, numPRB);
+                eqNoise = processTransformPrecodingNoiseVariance(eqNoise, NumLayers, numPRB);
             end
 
             % Initialize the SRS PUSCH demodulator mex.
@@ -555,3 +559,13 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
         end % of function mextest
     end % of methods (Test, TestTags = {'testmex'})
 end % of classdef srsPUSCHDemodulatorUnittest
+
+%Processes the resultant noise variance from the equalizer after appliying
+%   transform precodding.
+function eqNoise = processTransformPrecodingNoiseVariance(eqNoise, numLayers, numPRB)
+    numSubC = 12 * numPRB;
+    numSymbols = length(eqNoise) / numSubC;
+    eqNoise = reshape(eqNoise, numSubC, numLayers * numSymbols);
+    eqNoise = ones(size(eqNoise)) .* mean(eqNoise);
+    eqNoise = reshape(eqNoise, numSubC * numSymbols, numLayers);
+end % of processTransformPrecodingNoiseVariance
