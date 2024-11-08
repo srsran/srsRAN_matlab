@@ -141,8 +141,8 @@ create_pucch_processor()
       create_time_alignment_estimator_dft_factory(dft_factory);
   std::shared_ptr<port_channel_estimator_factory> estimator_factory =
       create_port_channel_estimator_factory_sw(ta_est_factory);
-  std::shared_ptr<dmrs_pucch_estimator_factory> dmrs_factory =
-      create_dmrs_pucch_estimator_factory_sw(prg_factory, lpapr_collection_factory, estimator_factory);
+  std::shared_ptr<dmrs_pucch_estimator_factory> dmrs_factory = create_dmrs_pucch_estimator_factory_sw(
+      prg_factory, lpapr_collection_factory, lpapr_generator_factory, estimator_factory);
   std::shared_ptr<transform_precoder_factory> precoding_factory =
       create_dft_transform_precoder_factory(dft_factory, pucch_constants::FORMAT3_MAX_NPRB + 1);
 
