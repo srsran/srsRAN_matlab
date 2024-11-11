@@ -328,29 +328,52 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
                 secondHopStartPRBStr = '{}';
             end
 
-            commonConfig = {slotPointConfig, ['cyclic_prefix::', upper(cyclicPrefix)], ...
-                GroupHoppingStr, startSymbolIndex, symbolLength, PRBSet(1), ...
-                secondHopStartPRBStr, nid, portsStr};
+            commonConfig = {...
+                slotPointConfig, ...                            % slot
+                ['cyclic_prefix::', upper(cyclicPrefix)], ...   % cp
+                GroupHoppingStr, ...                            % group_hopping
+                startSymbolIndex, ...                           % start_symbol_index
+                symbolLength, ...                               % nof_symbols
+                PRBSet(1), ...                                  % starting_prb
+                secondHopStartPRBStr, ...                       % second_hop_prb
+                nid, ...                                        % n_id
+                portsStr, ...                                   % ports
+                };
 
             % Generate the test case entry.
             if format == 1
-                testCaseString = testCase.testCaseToString(testID, ...
-                    {commonConfig, initialCyclicShift, OCCI}, true, '_test_output');
+                config = {...
+                    commonConfig, ...
+                    initialCyclicShift, ... % initial_cyclic_shift
+                    OCCI, ...               % time_domain_occ
+                    };
             elseif format == 2
-                testCaseString = testCase.testCaseToString(testID, ...
-                    {commonConfig, nofPRBs, nid0}, true, '_test_output');
+                config = {...
+                    commonConfig, ...
+                    nofPRBs, ... % nof_prb
+                    nid0, ...    % n_id_0
+                    };
             elseif format == 3
-                testCaseString = testCase.testCaseToString(testID, ...
-                    {commonConfig, nofPRBs, additionalDMRS}, true, '_test_output');
+                config = {...
+                    commonConfig, ...
+                    nofPRBs, ...        % nof_prb
+                    additionalDMRS, ... % additional_dmrs
+                    };
             elseif format == 4
-                testCaseString = testCase.testCaseToString(testID, ...
-                    {commonConfig, additionalDMRS, OCCI}, true, '_test_output');
+                config = {...
+                    commonConfig, ...
+                    additionalDMRS, ... % additional_dmrs
+                    OCCI, ...           % occ_index
+                    };
             end
 
             % Insert the name of the config type in the test case string.
-            variantTypeString = ['dmrs_pucch_estimator::format', char(string(format)), '_configuration'];
-            variantTypeIndex = find(testCaseString == '{', 1);
-            testCaseString = [testCaseString(1:variantTypeIndex), variantTypeString, testCaseString(variantTypeIndex+1:end)];
+            configStr = ['dmrs_pucch_estimator::format', ...
+                char(string(format)), '_configuration', ...
+                cellarray2str(config, true)];
+
+            testCaseString = testCase.testCaseToString(testID, ...
+                    {configStr}, false, '_test_output');
 
             % Add the test to the file header.
             testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);

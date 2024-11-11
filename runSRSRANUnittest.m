@@ -81,7 +81,7 @@ function unittestClass = name2Class(name)
             unittestClass = ?srsPDCCHdmrsUnittest;
         case 'dmrs_pdsch_processor'
             unittestClass = ?srsPDSCHdmrsUnittest;
-        case 'dmrs_pucch_processor'
+        case 'dmrs_pucch_estimator'
             unittestClass = ?srsPUCCHdmrsUnittest;
         case 'dmrs_pusch_estimator'
             unittestClass = ?srsPUSCHdmrsUnittest;
