@@ -251,14 +251,14 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
                     end
                 end
             elseif (format == 4)
-                spreadingFactor = randsample([2 4], 1);
+                spreadingFactor = 2^randi([1 2]);
                 OCCI = randi([0 spreadingFactor-1]);
             end
 
             % Additional DM-RS.
             additionalDMRS = false;
             if (format == 3) || (format == 4)
-                additionalDMRS = randsample([true false], 1);
+                additionalDMRS = randi([0 1]) == 1;
             end
 
             % Randomly select secondHopStartPRB if intra-slot frequency
