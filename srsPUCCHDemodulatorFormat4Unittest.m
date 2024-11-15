@@ -124,6 +124,7 @@ classdef srsPUCCHDemodulatorFormat4Unittest < srsTest.srsBlockUnittest
 
             import srsLib.phy.upper.channel_modulation.srsDemodulator
             import srsLib.phy.upper.equalization.srsChannelEqualizer
+            import srsLib.phy.generic_functions.transform_precoding.srsTransformDeprecode
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.writeInt8File
             import srsTest.helpers.writeComplexFloatFile
@@ -257,10 +258,10 @@ classdef srsPUCCHDemodulatorFormat4Unittest < srsTest.srsBlockUnittest
             testCase.saveDataFile('_test_input_estimates', testID, @writeComplexFloatFile, estimates(:));
 
             % Inverse transform precoding.
-            spreadSymbols = nrTransformDeprecode(eqSymbols, PRBNum);
+            [spreadSymbols, spreadNoiseVars] = srsTransformDeprecode(eqSymbols, eqNoiseVars, PRBNum, 1);
 
             % Inverse block-wise spreading.
-            [modSymbols, noiseVars] = pucch4InverseBlockwiseSpreading(spreadSymbols, eqNoiseVars, SpreadingFactor, info.Gd, OCCI);
+            [modSymbols, noiseVars] = pucch4InverseBlockwiseSpreading(spreadSymbols, spreadNoiseVars, SpreadingFactor, info.Gd, OCCI);
 
             % Convert equalized symbols into softbits.
             schSoftBits = srsDemodulator(modSymbols(:), Modulation, noiseVars(:));

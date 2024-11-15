@@ -1,5 +1,5 @@
-%srsPUCCHdmrsUnittest Unit tests for PUCCH DMRS estimator functions.
-%   This class implements unit tests for the PUCCH DMRS estimator functions using the
+%srsPUCCHdmrsUnittest Unit tests for PUCCH DM-RS estimator functions.
+%   This class implements unit tests for the PUCCH DM-RS estimator functions using the
 %   matlab.unittest framework. The simplest use consists in creating an object with
 %       testCase = srsPUCCHdmrsUnittest
 %   and then running all the tests with
@@ -336,7 +336,6 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
                 symbolLength, ...                               % nof_symbols
                 PRBSet(1), ...                                  % starting_prb
                 secondHopStartPRBStr, ...                       % second_hop_prb
-                nid, ...                                        % n_id
                 portsStr, ...                                   % ports
                 };
 
@@ -344,6 +343,7 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
             if format == 1
                 config = {...
                     commonConfig, ...
+                    nid, ...                % n_id
                     initialCyclicShift, ... % initial_cyclic_shift
                     OCCI, ...               % time_domain_occ
                     };
@@ -356,12 +356,14 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
             elseif format == 3
                 config = {...
                     commonConfig, ...
+                    nid, ...            % n_id
                     nofPRBs, ...        % nof_prb
                     additionalDMRS, ... % additional_dmrs
                     };
             elseif format == 4
                 config = {...
                     commonConfig, ...
+                    nid, ...            % n_id
                     additionalDMRS, ... % additional_dmrs
                     OCCI, ...           % occ_index
                     };
