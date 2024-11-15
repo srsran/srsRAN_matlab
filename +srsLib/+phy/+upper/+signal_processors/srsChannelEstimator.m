@@ -11,12 +11,10 @@
 %   BETADMRS   - DM-RS-to-information linear amplitude gain
 %   HOP1       - Configuration of the first intraSlot frequency hop (see below)
 %   HOP2       - Configuration of the second intraSlot frequency hop (see below)
-%   CONFIG     - General configuration (struct with fields DMRSREmask, pattern
-%                of REs carrying DM-RS inside a DM-RS dedicated PRB, DMRSSymbolMask,
-%                pattern of OFDM symbols carrying DM-RS across both hops, scs,
-%                subcarrier spacing in hertz, CyclicPrefixDurations, the duration of
-%                of the CPs in milliseconds, Smoothing, the smoothing strategy, and
-%                CFOCompensate, a boolean flag to activate or not the CFO compensation).
+%   CONFIG     - General configuration (struct with fields scs, subcarrier spacing
+%                in hertz, CyclicPrefixDurations, the duration of the CPs in milliseconds,
+%                Smoothing, the smoothing strategy, and CFOCompensate, a boolean flag
+%                to activate or not the CFO compensation).
 %
 %   Each hop is configured by a struct with fields
 %   DMRSsymbols       - OFDM symbols carrying DM-RS in the first hop (logical mask)
@@ -91,12 +89,19 @@ function [channelEstRG, noiseEst, rsrp, epre, timeAlignment, cfo] = ...
 
     processHop(hop1, pilots(:, 1:nPilotSymbolsHop1, :), smoothing);
 
+    allDMRSsymbols = hop1.DMRSsymbols;
     if ~isempty(hop2.DMRSsymbols)
+        assert(~any(hop1.DMRSsymbols & hop2.DMRSsymbols), "Hops should not overlap.");
+        allDMRSsymbols = allDMRSsymbols | hop2.DMRSsymbols;
+
+        assert(all(hop1.DMRSREmask == hop2.DMRSREmask, 'all'), ...
+            "The DM-RS mask should be the same for the two hops.");
+
         processHop(hop2, pilots(:, (nPilotSymbolsHop1 + 1):end, :), smoothing);
     end
 
-    nDMRSsymbols = sum(config.DMRSSymbolMask);
-    nPilots = hop1.nPRBs * sum(config.DMRSREmask) * nDMRSsymbols;
+    nDMRSsymbols = sum(allDMRSsymbols);
+    nPilots = hop1.nPRBs * sum(hop1.DMRSREmask) * nDMRSsymbols;
 
     rsrp = rsrp / nPilots / nLayers;
     epre = epre / nPilots;
@@ -124,7 +129,8 @@ function [channelEstRG, noiseEst, rsrp, epre, timeAlignment, cfo] = ...
 
         % Create a mask for all subcarriers carrying DM-RS.
         maskPRBs_ = hop_.maskPRBs;
-        maskREs_ = (kron(maskPRBs_, config.DMRSREmask) > 0);
+        DMRSREmask_ = hop_.DMRSREmask;
+        maskREs_ = (kron(maskPRBs_, DMRSREmask_) > 0);
 
         % Pick the REs corresponding to the pilots.
         receivedPilots_ = receivedRG(maskREs_, hop_.DMRSsymbols);
@@ -167,12 +173,12 @@ function [channelEstRG, noiseEst, rsrp, epre, timeAlignment, cfo] = ...
                 estimatedChannelP_ = ones(size(estimatedChannelP_)) .* mean(estimatedChannelP_);
             case 'filter'
                 % Denoising with RC filter.
-                rcFilter_ = getRCfilter(12/sum(config.DMRSREmask), min(3, sum(maskPRBs_)));
+                rcFilter_ = getRCfilter(12/sum(DMRSREmask_), min(3, sum(maskPRBs_)));
 
                 if sum(maskPRBs_) > 1
                     nPils_ = min(12, floor(length(rcFilter_) / 2));
                 else
-                    nPils_ = sum(config.DMRSREmask);
+                    nPils_ = sum(DMRSREmask_);
                 end
 
                 for iLayer_ = 1:nLayers_

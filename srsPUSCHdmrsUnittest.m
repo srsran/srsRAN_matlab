@@ -279,8 +279,6 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
                 hop2.DMRSsymbols = [];
                 nOFDMSymbols = sum(hop.DMRSsymbols);
                 pilots = reshape(DMRSsymbols, [], nOFDMSymbols, NumLayers);
-                cfg.DMRSSymbolMask = hop.DMRSsymbols;
-                cfg.DMRSREmask = hop.DMRSREmask;
                 cfg.scs = subcarrierSpacing * 1000;
                 cfg.CyclicPrefixDurations = scs2cps(subcarrierSpacing);
                 receivedRG = approxbf16(receivedRG);

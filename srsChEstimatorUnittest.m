@@ -819,8 +819,6 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                 noise = noise * sqrt(noiseVar / 2);
                 receivedRG = receivedRG + noise;
 
-                EstimatorConfig.DMRSSymbolMask = obj.DMRSsymbols;
-                EstimatorConfig.DMRSREmask = obj.DMRSREmask;
                 EstimatorConfig.scs = SubcarrierSpacing * 1000;
                 EstimatorConfig.CyclicPrefixDurations = CPDurations;
                 EstimatorConfig.Smoothing = configuration.smoothing;
