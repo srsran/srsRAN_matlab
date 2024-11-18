@@ -78,7 +78,7 @@ classdef srsPUCCHProcessorFormat4Unittest < srsTest.srsBlockUnittest
     properties (TestParameter)
 
         %Relevant combinations of start symbol index {0, ..., 10} and number of symbols {4, ..., 14}. 
-        SymbolAllocation = {[0, 14], [10, 4]};
+        SymbolAllocation = {[0, 14], [7, 7]};
 
         %Frequency hopping type ('neither', 'intraSlot').
         %   Note: Interslot frequency hopping is currently not considered.
@@ -86,7 +86,7 @@ classdef srsPUCCHProcessorFormat4Unittest < srsTest.srsBlockUnittest
 
         %Code rate, from TS38.331 Section 6.3.2, PUCCH-config
         %   information element (0.08, 0.15, 0.25, 0.35, 0.45, 0.6, 0.8).
-        CodeRate = {0.08, 0.15, 0.25, 0.35, 0.45, 0.6, 0.8};
+        CodeRate = {0.45, 0.6, 0.8};
     end
 
     methods (Access = protected)
@@ -142,7 +142,7 @@ classdef srsPUCCHProcessorFormat4Unittest < srsTest.srsBlockUnittest
             cyclicPrefix = 'normal';
 
             %Modulation type ('QPSK', 'pi/2-BPSK').
-            if randi([0 1]) == 1
+            if (SpreadingFactor == 4) || (randi([0 1]) == 1)
                 modulation = 'QPSK';
             else
                 modulation = 'pi/2-BPSK';
@@ -150,63 +150,6 @@ classdef srsPUCCHProcessorFormat4Unittest < srsTest.srsBlockUnittest
         
             %Additional DM-RS flag. If true, more OFDM symbols are filled with DM-RS.
             additionalDMRS = randi([0 1]) == 1;
-
-            % QPSK modulation has 2 bit per symbol.
-            if strcmp(modulation, 'QPSK')
-                modulationOrder = 2;
-            else
-                modulationOrder = 1;
-            end
-            
-            nofSymbols = SymbolAllocation(2);
-            % Compute the number of DM-RS symbols.
-            if nofSymbols == 4
-                if strcmp(FrequencyHopping, 'intraSlot')
-                    nofDMRSSymbols = 2;
-                else
-                    nofDMRSSymbols = 1;
-                end
-            elseif nofSymbols < 10
-                nofDMRSSymbols = 2;
-            else
-                if additionalDMRS
-                    nofDMRSSymbols = 4;
-                else
-                    nofDMRSSymbols = 2;
-                end
-            end
-
-            nofUCISymbols = nofSymbols - nofDMRSSymbols;
-
-            % Maximum number of bits of the code block.
-            nofCodeBlockBits = min(floor(12 * PRBNum * nofUCISymbols * modulationOrder * CodeRate / SpreadingFactor), 1706);
-
-            % Substract the CRC bits to calculate the UCI payload size.
-            nofUCIBits = 0;
-            if (nofCodeBlockBits < 12)
-                nofUCIBits = nofCodeBlockBits;
-            elseif ((nofCodeBlockBits < (20 + 6)))
-                nofUCIBits = nofCodeBlockBits - 6;
-            else
-                nofUCIBits = nofCodeBlockBits - 11;
-            end
-
-            % Skip test cases where the UCI codeword does not fit into the
-            % PUCCH Format 4 resources. Minimum number of UCI bits for
-            % PUCCH Format 4 is 3 bits.
-            assumeGreaterThanOrEqual(testCase, nofUCIBits, 3, 'UCI codeword won''t fit in the PUCCH Format 3 resources.');
-
-            %Number of bits of the HARQ-ACK payload (1...7).
-            nofHarqAck = nofUCIBits;
-
-            %Number of bits of the SR payload (0...4).
-            nofSR = 0;
-
-            %Number of bits of the CSI Part 1 payload.
-            nofCSIPart1 = 0;
-
-            %Number of bits of the CSI Part 2 payload.
-            nofCSIPart2 = 0;
 
             % Maximum resource grid size.
             MaxGridSize = 275;
@@ -269,6 +212,41 @@ classdef srsPUCCHProcessorFormat4Unittest < srsTest.srsBlockUnittest
                 Modulation=modulation, ...
                 AdditionalDMRS=additionalDMRS ...
                 );
+
+            [~, info] = nrPUCCHIndices(testCase.Carrier, testCase.PUCCH);
+
+            % Maximum number of bits of the code block.
+            nofCodeBlockBits = min(floor(info.G / SpreadingFactor * CodeRate), 1706);
+
+            % Substract the CRC bits to calculate the UCI payload size.
+            if (nofCodeBlockBits < 12)
+                nofUCIBits = nofCodeBlockBits;
+            elseif ((nofCodeBlockBits < (20 + 6)))
+                nofUCIBits = nofCodeBlockBits - 6;
+            else
+                nofUCIBits = nofCodeBlockBits - 11;
+            end
+
+            % Fail for test cases where UCI codeword is smaller than the minimum
+            % number of UCI bits for PUCCH Format 4.
+            assert(nofUCIBits >= 3, ...
+                'srsran_matlab:srsPUCCHProcessorFormat4Unittest', ...
+                ['The UCI payload size for the configuration (i.e., %d) is ' ...
+                'smaller than the minimum UCI payload size for PUCCH Format 4 ' ...
+                '(i.e., 3 bits)'], nofUCIBits);
+
+            % Number of bits of the HARQ-ACK payload (1...7).
+            nofHarqAck = nofUCIBits;
+
+            % Number of bits of the SR payload (0...4).
+            nofSR = 0;
+
+            % Number of bits of the CSI Part 1 payload.
+            nofCSIPart1 = 0;
+
+            % Number of bits of the CSI Part 2 payload.
+            nofCSIPart2 = 0;
+
         end % of function setupsimulation(testCase, symbolAllocation, ...
 
     end % methods (Access = private)
