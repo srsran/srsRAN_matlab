@@ -66,9 +66,9 @@ public:
   }
 
 private:
-  /// \brief Processes a PUCCH Format 0, Format 1 or Format 2 transmission.
+  /// \brief Processes a PUCCH transmission of any format.
   ///
-  /// This method reads a PUCCH Format 0, Format 1 or Format 2 from a resource grid and returns the UCI message
+  /// This method reads a PUCCH from a resource grid and returns the UCI message
   /// (specifically, HARQ ACK bits, SR bits, CSI Part 1 and Part 2 bits, when applicable). Intermediate steps consist in
   /// channel estimation and equalization, detection or demodulation and decoding.
   ///
@@ -77,7 +77,7 @@ private:
   ///   - A resource grid, that is a two- or three-dimensional array of complex floats with the received samples
   ///     (subcarriers, OFDM symbols, antenna ports).
   ///   - A structure that provides the PUCCH configurations. The fields are
-  ///      - \c Format, the PUCCH format, specifically 0, 1 or 2;
+  ///      - \c Format, the PUCCH format, specifically 0, 1, 2, 3 or 4;
   ///      - \c SubcarrierSpacing, the subcarrier spacing;
   ///      - \c NSlot, slot counter (unsigned);
   ///      - \c CP, cyclic prefix (either 'normal' or 'extended');
@@ -88,21 +88,27 @@ private:
   ///        \f$\{0,\dots,274\}\f$;
   ///      - \c SecondHopStartPRB, starting PRB index, relative to the BWP, of the second hop \f$\{0,\dots,274\}\f$ or
   ///        set to [] if frequency offset is not used;
-  ///      - \c NumPRBs, number of contiguous PRB allocated to the PUCCH transmission \f$\{1,\dots,16\}\f$ (Format 2
+  ///      - \c NumPRBs, number of contiguous PRB allocated to the PUCCH transmission \f$\{1,\dots,16\}\f$ (Format 2 and
+  ///      3
   ///        only);
   ///      - \c StartSymbolIndex, first OFDM symbol index in allocated to the PUCCH transmission in the slot
   ///        \f$\{0,\dots, 12\}\f$;
   ///      - \c NumOFDMSymbols, number of OFDM symbols allocated to the PUCCH transmission in the slot
   ///        \f$\{1, \dots, 14\}\f$;
-  ///      - \c RNTI, radio network temporary identifier \f$\{0, \dots, 65535\}\f$ (Format 2 only);
+  ///      - \c RNTI, radio network temporary identifier \f$\{0, \dots, 65535\}\f$ (Formats 2, 3 and 4 only);
   ///      - \c NID, PUCCH scrambling identity \f$\{0, \dots, 1023\}\f$;
   ///      - \c NID0, DM-RS scrambling identity \f$\{0, \dots, 65535\}\f$ (Format 2 only);
   ///      - \c InitialCyclicShift, initial cyclic shift \f$\{0, \dots, 11\}\f$ (Formats 0 and 1 only);
-  ///      - \c OCCI, Orthogonal cover code index \f$\{0, \dots, 6\}\f$ (Format 1 only);
+  ///      - \c OCCI, Orthogonal cover code index \f$\{0, \dots, 6\}\f$ (Formats 1 and 4 only);
   ///      - \c NumHARQAck, number of HARQ ACK bits \f$\{0, \dots, 1706\}\f$;
-  ///      - \c NumSR, number of SR bits \f$\{0, \dots, 4\}\f$ (Formats 0 and 2 only);
-  ///      - \c NumCSIPart1, number of CSI Part 1 bits \f$\{0, \dots, 1706\}\f$ (Format 2 only);
-  ///      - \c NumCSIPart2, number of CSI Part 2 bits \f$\{0, \dots, 1706\}\f$ (Format 2 only).
+  ///      - \c NumSR, number of SR bits \f$\{0, \dots, 4\}\f$ (Formats 0, 2, 3 and 4 only);
+  ///      - \c NumCSIPart1, number of CSI Part 1 bits \f$\{0, \dots, 1706\}\f$ (Formats 2, 3 and 4 only);
+  ///      - \c NumCSIPart2, number of CSI Part 2 bits \f$\{0, \dots, 1706\}\f$ (Formats 2, 3 and 4 only).
+  ///      - \c NIDHopping, hopping identity \f$\{0, \dots, 1023\}\f$ (Formats 3 and 4 only);
+  ///      - \c NIDScrambling, PUCCH scrambling identity \f$\{0, \dots, 1023\}\f$ (Formats 3 and 4 only);
+  ///      - \c AdditionalDMRS, additional DM-RS flag (bool) (Formats 3 and 4 only).
+  ///      - \c Pi2BPSK, flag that indicates if the modulation is pi/2-bpsk (bool) (Formats 3 and 4 only).
+  ///      - \c SpreadingFactor, spreading factor \f$\{2, 4\}\f$ (Format 4 only).
   ///
   /// The method has five outputs.
   ///   - A string reporting the status of the message {'valid', 'invalid', 'unknown'}.

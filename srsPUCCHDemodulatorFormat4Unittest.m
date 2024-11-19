@@ -122,9 +122,7 @@ classdef srsPUCCHDemodulatorFormat4Unittest < srsTest.srsBlockUnittest
         % symbol allocation, number of PRB, frequency hopping, additional
         % DM-RS and modulation parameters.
 
-            import srsLib.phy.upper.channel_modulation.srsDemodulator
-            import srsLib.phy.upper.equalization.srsChannelEqualizer
-            import srsLib.phy.generic_functions.transform_precoding.srsTransformDeprecode
+            import srsLib.phy.upper.channel_processors.pucch.srsPUCCH4Demodulator
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.writeInt8File
             import srsTest.helpers.writeComplexFloatFile
@@ -191,10 +189,9 @@ classdef srsPUCCHDemodulatorFormat4Unittest < srsTest.srsBlockUnittest
             nofGridSymbols = carrier.SymbolsPerSlot;
 
             % No frequency hopping.
+            secondPRBStart = 1;
             if strcmp(FrequencyHopping, 'intraSlot')
                 secondPRBStart = randi([0, nSizeBWP - PRBNum]);
-            else
-                secondPRBStart = 1;
             end
 
             % Configure the PUCCH.
@@ -247,9 +244,6 @@ classdef srsPUCCHDemodulatorFormat4Unittest < srsTest.srsBlockUnittest
             % Create noisy modulated symbols.
             channelSymbols = dataChEsts .* modulatedSymbols + (noiseStd * normNoise);
 
-            % Equalize channel symbols.
-            [eqSymbols, eqNoiseVars] = srsChannelEqualizer(channelSymbols, dataChEsts, 'ZF', noiseVar, 1);
-
             % Write each complex symbol and their associated indices into a binary file.
             testCase.saveDataFile('_test_input_symbols', testID, ...
                 @writeResourceGridEntryFile, channelSymbols, dataSymbolIndices);
@@ -257,27 +251,11 @@ classdef srsPUCCHDemodulatorFormat4Unittest < srsTest.srsBlockUnittest
             % Write channel estimates to a binary file.
             testCase.saveDataFile('_test_input_estimates', testID, @writeComplexFloatFile, estimates(:));
 
-            % Inverse transform precoding.
-            [spreadSymbols, spreadNoiseVars] = srsTransformDeprecode(eqSymbols, eqNoiseVars, PRBNum, 1);
-
-            % Inverse block-wise spreading.
-            [modSymbols, noiseVars] = pucch4InverseBlockwiseSpreading(spreadSymbols, spreadNoiseVars, SpreadingFactor, info.Gd, OCCI);
-
-            % Convert equalized symbols into softbits.
-            schSoftBits = srsDemodulator(modSymbols(:), Modulation, noiseVars(:));
-
-            % Scrambling sequence for PUCCH.
-            [scSequence, ~] = nrPUCCHPRBS(NID, RNTI, length(schSoftBits));
-
-            % Encode the scrambling sequence into the sign, so it can be
-            % used with soft bits.
-            scSequence = -(scSequence * 2) + 1;
-
-            % Apply descrambling.
-            schSoftBits = schSoftBits .* scSequence;
+            % Demodulate PUCCH Format 4.
+            softBits = srsPUCCH4Demodulator(carrier, pucch, channelSymbols, dataChEsts, noiseVar);
 
             % Write soft bits to a binary file.
-            testCase.saveDataFile('_test_output_sch_soft_bits', testID, @writeInt8File, schSoftBits);
+            testCase.saveDataFile('_test_output_sch_soft_bits', testID, @writeInt8File, softBits);
 
             % Reception port list.
             portsString = '{0}';
@@ -321,58 +299,3 @@ classdef srsPUCCHDemodulatorFormat4Unittest < srsTest.srsBlockUnittest
         end % of function testvectorGenerationCases
     end % of methods (Test, TestTags = {'testvector'})
 end % of classdef srsPUCCHDemodulatorFormat4Unittest
-
-function [originalSymbols, noiseVars] = pucch4InverseBlockwiseSpreading(spreadSymbols, eqNoiseVars, spreadingFactor, nofModSymbols, occi)
-    % Get the orthogonal sequence.
-    if spreadingFactor == 2
-        if occi == 0
-            wn = [+1 +1 +1 +1 +1 +1 +1 +1 +1 +1 +1 +1];
-        elseif occi == 1
-            wn = [+1 +1 +1 +1 +1 +1 -1 -1 -1 -1 -1 -1];
-        else
-            error('Invalid SpreadingFactor and OCCI combination: {%d, %d}.', spreadingFactor, occi);
-        end
-    elseif spreadingFactor == 4
-        if occi == 0
-            wn = [+1 +1 +1 +1 +1 +1 +1 +1 +1 +1 +1 +1];
-        elseif occi == 1
-            wn = [+1 +1 +1 -1j -1j -1j -1 -1 -1 +1j +1j +1j];
-        elseif occi == 2
-            wn = [+1 +1 +1 -1 -1 -1 +1 +1 +1 -1 -1 -1];
-        elseif occi == 3
-            wn = [+1 +1 +1 +1j +1j +1j -1 -1 -1 -1j -1j -1j];
-        else
-            error('Invalid SpreadingFactor and OCCI combination: {%d, %d}.', spreadingFactor, occi);
-        end
-    else
-        error('Invalid SpreadingFactor: %d.', spreadingFactor);
-    end
-
-    % Number of subcarriers for PUCCH Format 4.
-    nofSubcarriers = 12;
-    symbPerOFDMsymb = nofSubcarriers / spreadingFactor;
-    lMax = spreadingFactor * nofModSymbols / nofSubcarriers;
-
-    % Reshape spreadSymbols and eqNoiseVars for processing.
-    spreadSymbolsMatrix = reshape(spreadSymbols, nofSubcarriers, []);
-    eqNoiseVarsMatrix = reshape(eqNoiseVars, nofSubcarriers, []);
-
-    % Apply the orthogonal sequence.
-    spreadSymbolsMatrix = spreadSymbolsMatrix ./ wn(:);
-
-    % Sum the submatrices to get the original symbols.
-    originalSymbolsMatrix = complex(zeros(symbPerOFDMsymb, lMax));
-    noiseVarsMatrix = zeros(size(originalSymbolsMatrix));
-    for i = 0:spreadingFactor-1
-        originalSymbolsMatrix = originalSymbolsMatrix ...
-            + spreadSymbolsMatrix(i * symbPerOFDMsymb + (1:symbPerOFDMsymb), :);
-        noiseVarsMatrix = noiseVarsMatrix ...
-            + eqNoiseVarsMatrix(i * symbPerOFDMsymb + (1:symbPerOFDMsymb), :);
-    end
-
-    % Reshape into a vector and scale the modulation symbols according to
-    % the spreading factor.
-    originalSymbols = originalSymbolsMatrix(:) / spreadingFactor;
-    noiseVars = noiseVarsMatrix(:);
-
-end % of function pucch4InverseBlockwiseSpreading

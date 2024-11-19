@@ -122,9 +122,7 @@ classdef srsPUCCHDemodulatorFormat3Unittest < srsTest.srsBlockUnittest
         % symbol allocation, number of PRB, frequency hopping, additional
         % DM-RS and modulation parameters.
 
-            import srsLib.phy.upper.channel_modulation.srsDemodulator
-            import srsLib.phy.upper.equalization.srsChannelEqualizer
-            import srsLib.phy.generic_functions.transform_precoding.srsTransformDeprecode
+            import srsLib.phy.upper.channel_processors.pucch.srsPUCCH3Demodulator
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.writeInt8File
             import srsTest.helpers.writeComplexFloatFile
@@ -235,9 +233,6 @@ classdef srsPUCCHDemodulatorFormat3Unittest < srsTest.srsBlockUnittest
             % Create noisy modulated symbols.
             channelSymbols = dataChEsts .* modulatedSymbols + (noiseStd * normNoise);
 
-            % Equalize channel symbols.
-            [eqSymbols, eqNoiseVars] = srsChannelEqualizer(channelSymbols, dataChEsts, 'ZF', noiseVar, 1);
-
             % Write each complex symbol and their associated indices into a binary file.
             testCase.saveDataFile('_test_input_symbols', testID, ...
                 @writeResourceGridEntryFile, channelSymbols, dataSymbolIndices);
@@ -245,24 +240,11 @@ classdef srsPUCCHDemodulatorFormat3Unittest < srsTest.srsBlockUnittest
             % Write channel estimates to a binary file.
             testCase.saveDataFile('_test_input_estimates', testID, @writeComplexFloatFile, estimates(:));
 
-            % Inverse transform precoding.
-            [modSymbols, noiseVars] = srsTransformDeprecode(eqSymbols, eqNoiseVars, PRBNum, 1);
-
-            % Convert equalized symbols into softbits.
-            schSoftBits = srsDemodulator(modSymbols(:), Modulation, noiseVars(:));
-
-            % Scrambling sequence for PUCCH.
-            [scSequence, ~] = nrPUCCHPRBS(NID, RNTI, length(schSoftBits));
-
-            % Encode the scrambling sequence into the sign, so it can be
-            % used with soft bits.
-            scSequence = -(scSequence * 2) + 1;
-
-            % Apply descrambling.
-            schSoftBits = schSoftBits .* scSequence;
+            % Demodulate PUCCH Format 3.
+            softBits = srsPUCCH3Demodulator(pucch, channelSymbols, dataChEsts, noiseVar);
 
             % Write soft bits to a binary file.
-            testCase.saveDataFile('_test_output_sch_soft_bits', testID, @writeInt8File, schSoftBits);
+            testCase.saveDataFile('_test_output_sch_soft_bits', testID, @writeInt8File, softBits);
 
             % Reception port list.
             portsString = '{0}';
