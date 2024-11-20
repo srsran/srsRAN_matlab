@@ -1,4 +1,23 @@
-function [softBits] = srsPUCCH4Demodulator(carrier, pucch, rxSymbols,dataChEsts, noiseVar)
+%srsPUCCH4Demodulator PUCCH Format 4 demodulation.
+%   softBits = srsPUCCH4Demodulator(CARRIER, PUCCH, RXSYMBOLS, DATACHESTS, NOISEVAR)
+%   demodulates the received symbols RXSYMBOLS for the given CARRIER and PUCCH
+%   configurations and returns the resulting SOFTBITS.
+
+%   Copyright 2021-2024 Software Radio Systems Limited
+%
+%   This file is part of srsRAN-matlab.
+%
+%   srsRAN-matlab is free software: you can redistribute it and/or
+%   modify it under the terms of the BSD 2-Clause License.
+%
+%   srsRAN-matlab is distributed in the hope that it will be useful,
+%   but WITHOUT ANY WARRANTY; without even the implied warranty of
+%   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+%   BSD 2-Clause License for more details.
+%
+%   A copy of the BSD 2-Clause License can be found in the LICENSE
+%   file in the top-level directory of this distribution.
+function softBits = srsPUCCH4Demodulator(carrier, pucch, rxSymbols,dataChEsts, noiseVar)
     import srsLib.phy.upper.channel_modulation.srsDemodulator
     import srsLib.phy.upper.equalization.srsChannelEqualizer
     import srsLib.phy.generic_functions.transform_precoding.srsTransformDeprecode

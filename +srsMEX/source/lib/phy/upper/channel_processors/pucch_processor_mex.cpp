@@ -375,8 +375,9 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
       const pucch_processor::format0_configuration cfg = populate_f0_configuration(in_cfg);
 
       // Ensure the provided configuration is valid.
-      if (!validator->is_valid(cfg)) {
-        mex_abort("The provided PUCCH Format 0 configuration is invalid.");
+      error_type<std::string> validation = validator->is_valid(cfg);
+      if (!validation.has_value()) {
+        mex_abort(fmt::format("The provided PUCCH Format 0 configuration is invalid: {}\n", validation.error()));
       }
 
       unsigned nof_conf_grid_ports = cfg.ports.size();
@@ -397,8 +398,9 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
       const pucch_processor::format1_configuration cfg = populate_f1_configuration(in_cfg);
 
       // Ensure the provided configuration is valid.
-      if (!validator->is_valid(cfg)) {
-        mex_abort("The provided PUCCH Format 1 configuration is invalid.");
+      error_type<std::string> validation = validator->is_valid(cfg);
+      if (!validation.has_value()) {
+        mex_abort(fmt::format("The provided PUCCH Format 1 configuration is invalid: {}\n", validation.error()));
       }
 
       unsigned nof_conf_grid_ports = cfg.ports.size();
@@ -419,8 +421,9 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
       const pucch_processor::format2_configuration cfg = populate_f2_configuration(in_cfg);
 
       // Ensure the provided configuration is valid.
-      if (!validator->is_valid(cfg)) {
-        mex_abort("The provided PUCCH Format 2 configuration is invalid.");
+      error_type<std::string> validation = validator->is_valid(cfg);
+      if (!validation.has_value()) {
+        mex_abort(fmt::format("The provided PUCCH Format 2 configuration is invalid: {}\n", validation.error()));
       }
 
       unsigned nof_conf_grid_ports = cfg.ports.size();
@@ -441,8 +444,9 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
       const pucch_processor::format3_configuration cfg = populate_f3_configuration(in_cfg);
 
       // Ensure the provided configuration is valid.
-      if (!validator->is_valid(cfg)) {
-        mex_abort("The provided PUCCH Format 3 configuration is invalid.");
+      error_type<std::string> validation = validator->is_valid(cfg);
+      if (!validation.has_value()) {
+        mex_abort(fmt::format("The provided PUCCH Format 3 configuration is invalid: {}\n", validation.error()));
       }
 
       unsigned nof_conf_grid_ports = cfg.ports.size();
@@ -463,8 +467,9 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
       const pucch_processor::format4_configuration cfg = populate_f4_configuration(in_cfg);
 
       // Ensure the provided configuration is valid.
-      if (!validator->is_valid(cfg)) {
-        mex_abort("The provided PUCCH Format 4 configuration is invalid.");
+      error_type<std::string> validation = validator->is_valid(cfg);
+      if (!validation.has_value()) {
+        mex_abort(fmt::format("The provided PUCCH Format 4 configuration is invalid: {}\n", validation.error()));
       }
 
       unsigned nof_conf_grid_ports = cfg.ports.size();
@@ -479,7 +484,6 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
 
       // Run the PUCCH processor.
       result = processor->process(grid->get_reader(), cfg);
-      break;
       break;
     }
     default:

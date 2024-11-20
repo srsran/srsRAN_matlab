@@ -172,9 +172,10 @@ classdef srsPUCCHProcessorFormat3Unittest < srsTest.srsBlockUnittest
             PRBSet = PRBStart : (PRBStart + PRBNum - 1);
 
             % Frequency hopping.
-            secondPRB = 1;
             if strcmp(FrequencyHopping, 'intraSlot')
                 secondPRB = randi([0, nSizeBWP - PRBNum]);
+            else
+                secondPRB = 1;
             end
 
             % Configure the carrier according to the test parameters.
@@ -315,7 +316,7 @@ classdef srsPUCCHProcessorFormat3Unittest < srsTest.srsBlockUnittest
                 rxGridSymbols(offset + (1:nofRePort)) = [rxGrid(pucchDataIndices); rxGrid(pucchDmrsIndices)];
 
                 indices = onePortIndices;
-                indices(:,3) = iRxPort;
+                indices(:, 3) = iRxPort;
 
                 rxGridIndices(offset + (1:nofRePort), :) = indices;
             end

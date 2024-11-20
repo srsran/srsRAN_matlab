@@ -1,4 +1,26 @@
-function [originalSymbols, noiseVars] = srsPUCCH4InverseBlockwiseSpreading(spreadSymbols, eqNoiseVars, spreadingFactor, nofModSymbols, occi)
+%srsPUCCH4InverseBlockwiseSpreading PUCCH Format 4 blockwise spreading inversion.
+%   [originalSymbols, noiseVars] = srsPUCCH4InverseBlockwiseSpreading(...
+%       SPREADSYMBOLS, EQNOISEVARS, SPREADINGFACTOR, NOFMODSYMBOLS, OCCI)
+%   inverts the blockwise spreading applied to the SPREADSYMBOLS of a 
+%   PUCCH Format 4 transmission, returning the unspread ORIGINALSYMBOLS
+%   and NOISEVARS.
+
+%   Copyright 2021-2024 Software Radio Systems Limited
+%
+%   This file is part of srsRAN-matlab.
+%
+%   srsRAN-matlab is free software: you can redistribute it and/or
+%   modify it under the terms of the BSD 2-Clause License.
+%
+%   srsRAN-matlab is distributed in the hope that it will be useful,
+%   but WITHOUT ANY WARRANTY; without even the implied warranty of
+%   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+%   BSD 2-Clause License for more details.
+%
+%   A copy of the BSD 2-Clause License can be found in the LICENSE
+%   file in the top-level directory of this distribution.
+function [originalSymbols, noiseVars] = srsPUCCH4InverseBlockwiseSpreading(...
+    spreadSymbols, eqNoiseVars, spreadingFactor, nofModSymbols, occi)
     % Get the orthogonal sequence.
     if spreadingFactor == 2
         if occi == 0

@@ -189,9 +189,10 @@ classdef srsPUCCHDemodulatorFormat4Unittest < srsTest.srsBlockUnittest
             nofGridSymbols = carrier.SymbolsPerSlot;
 
             % No frequency hopping.
-            secondPRBStart = 1;
             if strcmp(FrequencyHopping, 'intraSlot')
                 secondPRBStart = randi([0, nSizeBWP - PRBNum]);
+            else
+                secondPRBStart = 1;
             end
 
             % Configure the PUCCH.

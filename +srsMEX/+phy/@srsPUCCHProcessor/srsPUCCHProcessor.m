@@ -110,12 +110,17 @@ classdef srsPUCCHProcessor < matlab.System
                     'NumHARQAck', uciSizes.NumHARQAck, ...
                     'NumSR', uciSizes.NumSR, ...
                     'InitialCyclicShift', pucchConfig.InitialCyclicShift, ...
-                    'OCCI', [], ...         only PUCCH F1
-                    'NumPRBs', [], ...      only PUCCH F2
-                    'RNTI', [], ...         only PUCCH F2
-                    'NID0', [], ...         only PUCCH F2
-                    'NumCSIPart1', [], ...  only PUCCH F2
-                    'NumCSIPart2', [] ...   only PUCCH F2
+                    'OCCI', [], ...             only PUCCH F1 and F4
+                    'NumPRBs', [], ...          only PUCCH F2 and F3
+                    'RNTI', [], ...             only PUCCH F2
+                    'NID0', [], ...             only PUCCH F2, F3 and F4
+                    'NumCSIPart1', [], ...      only PUCCH F2, F3 and F4
+                    'NumCSIPart2', [], ...      only PUCCH F2, F3 and F4
+                    'AdditionalDMRS', [], ...   only PUCCH F3 and F4
+                    'Pi2BPSK', [], ...          only PUCCH F3 and F4
+                    'NIDHopping', [], ...       only PUCCH F3 and F4
+                    'NIDScrambling', [], ...    only PUCCH F3 and F4
+                    'SpreadingFactor', [] ...   only PUCCH F4
                 );
             elseif isa(pucchConfig, 'nrPUCCH1Config')
                 if ~isempty(pucchConfig.HoppingID)
@@ -137,12 +142,17 @@ classdef srsPUCCHProcessor < matlab.System
                     'NumHARQAck', uciSizes.NumHARQAck, ...
                     'InitialCyclicShift', pucchConfig.InitialCyclicShift, ...
                     'OCCI', pucchConfig.OCCI, ...
-                    'NumPRBs', [], ...      only PUCCH F2
-                    'RNTI', [], ...         only PUCCH F2
-                    'NID0', [], ...         only PUCCH F2
-                    'NumSR', [], ...        only PUCCH F0 and F2
-                    'NumCSIPart1', [], ...  only PUCCH F2
-                    'NumCSIPart2', [] ...   only PUCCH F2
+                    'NumPRBs', [], ...          only PUCCH F2 and F3
+                    'RNTI', [], ...             only PUCCH F2, F3 and F4
+                    'NID0', [], ...             only PUCCH F2
+                    'NumSR', [], ...            only PUCCH F0 and F2
+                    'NumCSIPart1', [], ...      only PUCCH F2, F3 and F4
+                    'NumCSIPart2', [], ...      only PUCCH F2, F3 and F4
+                    'AdditionalDMRS', [], ...   only PUCCH F3 and F4
+                    'Pi2BPSK', [], ...          only PUCCH F3 and F4
+                    'NIDHopping', [], ...       only PUCCH F3 and F4
+                    'NIDScrambling', [], ...    only PUCCH F3 and F4
+                    'SpreadingFactor', [] ...   only PUCCH F4
                     );
             elseif isa(pucchConfig, 'nrPUCCH2Config')
                 if ~isempty(pucchConfig.NID)
@@ -169,8 +179,13 @@ classdef srsPUCCHProcessor < matlab.System
                     'NumSR', uciSizes.NumSR, ...
                     'NumCSIPart1', uciSizes.NumCSIPart1, ...
                     'NumCSIPart2', uciSizes.NumCSIPart2, ...
-                    'InitialCyclicShift', [], ...  only PUCCH F0 and F1
-                    'OCCI', [] ...                 only PUCCH F1
+                    'InitialCyclicShift', [], ... only PUCCH F0 and F1
+                    'OCCI', [], ...               only PUCCH F1 and F4
+                    'AdditionalDMRS', [], ...     only PUCCH F3 and F4
+                    'Pi2BPSK', [], ...            only PUCCH F3 and F4
+                    'NIDHopping', [], ...         only PUCCH F3 and F4
+                    'NIDScrambling', [], ...      only PUCCH F3 and F4
+                    'SpreadingFactor', [] ...     only PUCCH F4
                     );
             elseif isa(pucchConfig, 'nrPUCCH3Config')
                 if ~isempty(pucchConfig.NID)
@@ -197,8 +212,12 @@ classdef srsPUCCHProcessor < matlab.System
                     'NumSR', uciSizes.NumSR, ...
                     'NumCSIPart1', uciSizes.NumCSIPart1, ...
                     'NumCSIPart2', uciSizes.NumCSIPart2, ...
-                    'AdditionalDMRS', pucchConfig.AdditionalDMRS, ...          only PUCCH F3 and F4
-                    'Pi2BPSK', strcmp(pucchConfig.Modulation, 'pi/2-BPSK') ... only PUCCH F3 and F4
+                    'AdditionalDMRS', pucchConfig.AdditionalDMRS, ...
+                    'Pi2BPSK', strcmp(pucchConfig.Modulation, 'pi/2-BPSK'), ...
+                    'InitialCyclicShift', [], ... only PUCCH F0 and F1
+                    'OCCI', [], ...               only PUCCH F1 and F4
+                    'NID0', [], ...               only PUCCH F2
+                    'SpreadingFactor', [] ...     only PUCCH F4
                     );
             else
                 if ~isempty(pucchConfig.NID)
@@ -224,10 +243,13 @@ classdef srsPUCCHProcessor < matlab.System
                     'NumSR', uciSizes.NumSR, ...
                     'NumCSIPart1', uciSizes.NumCSIPart1, ...
                     'NumCSIPart2', uciSizes.NumCSIPart2, ...
-                    'AdditionalDMRS', pucchConfig.AdditionalDMRS, ...            only PUCCH F3 and F4
-                    'Pi2BPSK', strcmp(pucchConfig.Modulation, 'pi/2-BPSK') , ... only PUCCH F3 and F4
-                    'OCCI', pucchConfig.OCCI, ...                                only PUCCH F4
-                    'SpreadingFactor', pucchConfig.SpreadingFactor ...           only PUCCH F4
+                    'AdditionalDMRS', pucchConfig.AdditionalDMRS, ...
+                    'Pi2BPSK', strcmp(pucchConfig.Modulation, 'pi/2-BPSK') , ...
+                    'OCCI', pucchConfig.OCCI, ...
+                    'SpreadingFactor', pucchConfig.SpreadingFactor, ...
+                    'InitialCyclicShift', [], ... only PUCCH F0 and F1
+                    'NumPRBs', [], ...            only PUCCH F2 and F3
+                    'NID0', [] ...                only PUCCH F2
                     );
             end
 
