@@ -428,14 +428,16 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                     BetaScaling=betaDMRS ...
                     ); %#ok<FNDSB>
 
-            toleranceTA = 1000 / (4096 * SubcarrierSpacing);
+            % The tolerance for the time alignment is one timing-advance step size
+            % (32 samples with a 4096-point DFT).
+            toleranceTA = 32000 / (4096 * SubcarrierSpacing);
             chEstIdx = (channelEst ~= 0);
             obj.assertEqual(channelEstMEX(chEstIdx), channelEst(chEstIdx), 'Wrong channel estimates.', AbsTol = 0.008);
             obj.assertEqual(noiseEstMEX, noiseEst, 'Wrong noise variance estimate.', AbsTol = 5e-4);
             obj.assertEqual(extra.RSRP, rsrp, 'Wrong RSRP estimate.', AbsTol = 5e-4);
             obj.assertEqual(extra.EPRE, epre, 'Wrong EPRE estimate.', AbsTol = 5e-4);
             obj.assertEqual(extra.SINR, rsrp / betaDMRS^2 / noiseEst, 'Wrong SINR estimate.', RelTol = 0.004);
-            obj.assertEqual(extra.TimeAlignment, timeAlignment, 'Wrong time alignment estimate.', RelTol = toleranceTA);
+            obj.assertEqual(extra.TimeAlignment, timeAlignment, 'Wrong time alignment estimate.', AbsTol = toleranceTA);
             obj.assertEqual(extra.CFO, cfoEst, 'Wrong CFO.', RelTol = 0.04);
         end % of function compareMex(...)
     end % of methods (Test, TestTags = {'testmex'})
