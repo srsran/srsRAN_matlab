@@ -88,8 +88,10 @@ classdef srsTransformPrecoderUnittest < srsTest.srsBlockUnittest
 
             fprintf(fileID, 'struct test_case_t {\n');
             fprintf(fileID, '  unsigned          M_rb;\n');
-            fprintf(fileID, '  file_vector<cf_t> deprecode_input;\n');
-            fprintf(fileID, '  file_vector<cf_t> deprecode_output;\n');
+            fprintf(fileID, '  file_vector<cf_t>  deprecode_data_input;\n');
+            fprintf(fileID, '  file_vector<float> deprecode_noise_input;\n');
+            fprintf(fileID, '  file_vector<cf_t>  deprecode_data_output;\n');
+            fprintf(fileID, '  file_vector<float> deprecode_noise_output;\n');
             fprintf(fileID, '};\n');
         end
     end % of methods (Access = protected)
@@ -99,7 +101,9 @@ classdef srsTransformPrecoderUnittest < srsTest.srsBlockUnittest
         %testvectorGenerationCases Generates a test vectors given the MRB. 
 
             import srsTest.helpers.writeComplexFloatFile
+            import srsTest.helpers.writeFloatFile
             import srsTest.helpers.randmod;
+            import srsLib.phy.generic_functions.transform_precoding.srsTransformDeprecode;
 
             % Generate a unique test ID by looking at the number of files
             % generated so far.
@@ -114,18 +118,24 @@ classdef srsTransformPrecoderUnittest < srsTest.srsBlockUnittest
             % Apply transform precoding.
             precoded = nrTransformPrecode(x, NumPRB);
 
+            % Generate noise variance.
+            eqNoiseVar = rand() + rand(size(precoded)) / 10;
+
             % Deprecode.
-            deprecoded = nrTransformDeprecode(precoded, NumPRB);
+            [deprecoded, noiseVar] = srsTransformDeprecode(precoded, eqNoiseVar, NumPRB, 1);
 
             % Save data before transform precoding.
-            testCase.saveDataFile('_test_input', testID, @writeComplexFloatFile, precoded);
+            testCase.saveDataFile('_test_input_data', testID, @writeComplexFloatFile, precoded);
+            testCase.saveDataFile('_test_input_noise', testID, @writeFloatFile, eqNoiseVar);
 
             % Save data after transform precoding.
-            testCase.saveDataFile('_test_output', testID, @writeComplexFloatFile, deprecoded);
-
+            testCase.saveDataFile('_test_output_data', testID, @writeComplexFloatFile, deprecoded);
+            testCase.saveDataFile('_test_output_noise', testID, @writeFloatFile, noiseVar);
 
             testCaseString = testCase.testCaseToString(testID, ...
-                {NumPRB}, false, '_test_input', '_test_output');
+                {NumPRB}, false, '_test_input_data', ...
+                '_test_input_noise', '_test_output_data', ...
+                '_test_output_noise');
 
             % Add the test to the file header.
             testCase.addTestToHeaderFile(testCase.headerFileID, ...

@@ -81,7 +81,7 @@ function unittestClass = name2Class(name)
             unittestClass = ?srsPDCCHdmrsUnittest;
         case 'dmrs_pdsch_processor'
             unittestClass = ?srsPDSCHdmrsUnittest;
-        case 'dmrs_pucch_processor'
+        case 'dmrs_pucch_estimator'
             unittestClass = ?srsPUCCHdmrsUnittest;
         case 'dmrs_pusch_estimator'
             unittestClass = ?srsPUSCHdmrsUnittest;
@@ -135,6 +135,10 @@ function unittestClass = name2Class(name)
             unittestClass = ?srsPDSCHPTRSGeneratorUnittest;
         case 'pucch_demodulator_format2'
             unittestClass = ?srsPUCCHDemodulatorFormat2Unittest;
+        case 'pucch_demodulator_format3'
+            unittestClass = ?srsPUCCHDemodulatorFormat3Unittest;
+        case 'pucch_demodulator_format4'
+            unittestClass = ?srsPUCCHDemodulatorFormat4Unittest;
         case 'pucch_detector'
             unittestClass = ?srsPUCCHDetectorFormat1Unittest;
         case 'pucch_processor_format0'
@@ -143,6 +147,10 @@ function unittestClass = name2Class(name)
             unittestClass = ?srsPUCCHProcessorFormat1Unittest;
         case 'pucch_processor_format2'
             unittestClass = ?srsPUCCHProcessorFormat2Unittest;
+        case 'pucch_processor_format3'
+            unittestClass = ?srsPUCCHProcessorFormat3Unittest;
+        case 'pucch_processor_format4'
+            unittestClass = ?srsPUCCHProcessorFormat4Unittest;
         case 'pusch_decoder'
             unittestClass = ?srsPUSCHDecoderUnittest;
         case 'pusch_demodulator'

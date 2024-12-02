@@ -17,7 +17,7 @@
 %
 %   srsSRSEstimatorUnittest Properties (TestParameter):
 %
-%   Numerology    - Defines the subcarrier spacing (0, 1, 2, 3, 4).
+%   Numerology    - Defines the subcarrier spacing (0, 1).
 %   NumSRSSymbols - Number of OFDM symbols for SRS.
 %   NumSRSPorts   - Number of transmit antenna ports.
 %   NumRxPorts    - Number of receive antenna ports.
@@ -108,8 +108,7 @@ classdef srsSRSEstimatorUnittest < srsTest.srsBlockUnittest
 
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, Numerology, NumSRSPorts, NumSRSSymbols, NumRxPorts, KTC)
-        %testvectorGenerationCases Generates a test vector for the given
-        %configuration
+        %testvectorGenerationCases Generates a test vector for the given configuration.
         %   NCellID, NSlot and PRB occupation are randomly generated.
 
             import srsTest.helpers.cellarray2str
@@ -207,11 +206,16 @@ classdef srsSRSEstimatorUnittest < srsTest.srsBlockUnittest
             % Create receive resource grid.
             rxGrid = nrResourceGrid(carrier, NumRxPorts);
 
+            nOverlappingSignals = NumSRSPorts;
+            if ((NumSRSPorts == 4) && (cyclicShift >= KTC + 2))
+                nOverlappingSignals = 2;
+            end
+
             % Create propagation channel matrix.
             H = complex(nan(NumRxPorts, NumSRSPorts));
             for Nr = 1:NumRxPorts
                 for Nt = 1:NumSRSPorts
-                    H(Nr, Nt) = exp(2i * pi * rand());
+                    H(Nr, Nt) = exp(2i * pi * rand()) / sqrt(nOverlappingSignals);
                     rxGrid(:, :, Nr) = rxGrid(:, :, Nr) + H(Nr, Nt) * txGrid(:, :, Nt);
                 end
             end
@@ -244,8 +248,11 @@ classdef srsSRSEstimatorUnittest < srsTest.srsBlockUnittest
             rxSymbolIndices = sub2ind([numSubcarriers, numOfdmSymbols, NumRxPorts],...
                 rxSymbolSubscripts(:, 1) + 1, rxSymbolSubscripts(:, 2) + 1, rxSymbolSubscripts(:, 3) + 1);
 
-            % Extract RE used for SRS from the resoyrce grid.
+            % Extract RE used for SRS from the resource grid.
             rxSymbols = rxGrid(rxSymbolIndices);
+
+            epre = mean(abs(rxSymbols).^2);
+            assert(abs(epre - 1) < 0.001, "The EPRE should be one, actual %f.", epre);
 
             % Write the generated SRS sequence into a binary file.
             testCase.saveDataFile('_test_input', testID,...
@@ -301,9 +308,10 @@ classdef srsSRSEstimatorUnittest < srsTest.srsBlockUnittest
                 };
 
             resultCell = { ...
-                channelCell,... % channel_matrix
-                0,...           % noise_variance
-                tAlignStr,...   % time_align
+                channelCell, ...               % channel_matrix
+                round(10*log10(epre), 5), ...  % epre_dB
+                0, ...                         % noise_variance
+                tAlignStr, ...                 % time_align
                 };
 
             testContext = {...

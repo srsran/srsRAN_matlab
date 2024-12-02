@@ -1,5 +1,5 @@
-%srsPUCCHdmrsUnittest Unit tests for PUCCH DMRS processor functions.
-%   This class implements unit tests for the PUCCH DMRS processor functions using the
+%srsPUCCHdmrsUnittest Unit tests for PUCCH DM-RS estimator functions.
+%   This class implements unit tests for the PUCCH DM-RS estimator functions using the
 %   matlab.unittest framework. The simplest use consists in creating an object with
 %       testCase = srsPUCCHdmrsUnittest
 %   and then running all the tests with
@@ -7,7 +7,7 @@
 %
 %   srsPUCCHdmrsUnittest Properties (Constant):
 %
-%   srsBlock      - The tested block (i.e., 'dmrs_pucch_processor').
+%   srsBlock      - The tested block (i.e., 'dmrs_pucch_estimator').
 %   srsBlockType  - The type of the tested block, including layer
 %                   (i.e., 'phy/upper/signal_processors').
 %
@@ -18,7 +18,7 @@
 %   srsPUCCHdmrsUnittest Properties (TestParameter):
 %
 %   numerology           - Defines the subcarrier spacing (0, 1).
-%   format               - PUCCH format (1, 2).
+%   format               - PUCCH format (1, 2, 3, 4).
 %   intraSlotFreqHopping - Intra-slot frequency hopping (false - enabled, true - enabled)
 %
 %   srsPUCCHdmrsUnittest Methods (TestTags = {'testvector'}):
@@ -52,14 +52,14 @@
 classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
     properties (Constant)
         %Name of the tested block.
-        srsBlock = 'dmrs_pucch_processor'
+        srsBlock = 'dmrs_pucch_estimator'
 
         %Type of the tested block.
         srsBlockType = 'phy/upper/signal_processors'
     end
 
     properties (ClassSetupParameter)
-        %Path to results folder (old 'dmrs_pucch_processor' tests will be erased).
+        %Path to results folder (old 'dmrs_pucch_estimator' tests will be erased).
         outputPath = {['testPUCCHdmrs', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
     end
 
@@ -67,14 +67,14 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
         %Defines the subcarrier spacing (0, 1).
         numerology = {0, 1}
 
-        %PUCCH format indexes (for now only formats 1 and 2 are supported).
-        format = {1, 2}
+        %PUCCH format indexes.
+        format = {1, 2, 3, 4}
 
         %Intra-slot frequency hopping usage (inter-slot hopping is not tested).
         intraSlotFreqHopping = {false, true}
 
         %Two test vectors with randomized parameters (e.g. cell ID, slot number etc.)
-        %are generated for each set of unittest parameters
+        %are generated for each set of unittest parameters.
         testCaseTrial = {1, 2}
 
     end % of properties (TestParameter)
@@ -104,12 +104,20 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
         function addTestIncludesToHeaderFile(obj, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
             addTestIncludesToHeaderFilePHYsigproc(obj, fileID);
+            fprintf(fileID, '#include <variant>\n');
         end
 
-        function addTestDefinitionToHeaderFile(obj, fileID)
+        function addTestDefinitionToHeaderFile(~, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
+            fprintf(fileID, 'using estimator_config = std::variant<\n');
+            fprintf(fileID, 'dmrs_pucch_estimator::format1_configuration,\n');
+            fprintf(fileID, 'dmrs_pucch_estimator::format2_configuration,\n');
+            fprintf(fileID, 'dmrs_pucch_estimator::format3_configuration,\n');
+            fprintf(fileID, 'dmrs_pucch_estimator::format4_configuration\n');
+            fprintf(fileID, '>;\n\n');
+
             fprintf(fileID, 'struct test_case_t {\n');
-            fprintf(fileID, '%s::config_t config;\n', obj.srsBlock);
+            fprintf(fileID, 'estimator_config config;\n');
             fprintf(fileID, ...
                 'file_vector<resource_grid_reader_spy::expected_entry_t> symbols;\n');
             fprintf(fileID, '};\n');
@@ -180,7 +188,7 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
                 nSlot = randi([0, 19]);
             end
             % Format name following srsran naming.
-            formatString = [testCase.srsFormatName, num2str(format)];
+            formatString = ['dmrs_pucch_estimator::format', num2str(format), '_configuration'];
 
             % Fixed parameter values.
             nSizeGrid  = 52;
@@ -225,9 +233,9 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
 
             symbolAllocation = [startSymbolIndex symbolLength];
 
-            % Orhtogonal Cover Code Index.
+            % Orthogonal Cover Code Index.
             OCCI = 0;
-            if (format == 1) || (format == 4)
+            if (format == 1)
                 % When intraslot frequency hopping is disabled, the OCCI value must be less
                 % than the floor of half of the number of OFDM symbols allocated for the PUCCH.
                 if ~intraSlotFreqHopping
@@ -242,6 +250,15 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
                         OCCI = randi([0, maxOCCindex]);
                     end
                 end
+            elseif (format == 4)
+                spreadingFactor = 2^randi([1 2]);
+                OCCI = randi([0 spreadingFactor-1]);
+            end
+
+            % Additional DM-RS.
+            additionalDMRS = false;
+            if (format == 3) || (format == 4)
+                additionalDMRS = randi([0 1]) == 1;
             end
 
             % Randomly select secondHopStartPRB if intra-slot frequency
@@ -280,6 +297,14 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
                 pucch.InitialCyclicShift = initialCyclicShift;
             end % of if (format == 1)
 
+            if (format == 3) || (format == 4)
+                pucch.AdditionalDMRS = additionalDMRS;
+            end % of if (format == 3) || (format == 4)
+
+            if (format == 4)
+                pucch.SpreadingFactor = spreadingFactor;
+            end % of if (format == 4)
+
             % Call the PUCCH DM-RS symbol processor MATLAB functions.
             [DMRSsymbols, DMRSindices] = srsPUCCHdmrs(carrier, pucch);
 
@@ -296,14 +321,61 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
             % Group hopping string following srsran naming.
             GroupHoppingStr = ['pucch_group_hopping::', upper(groupHopping)];
             % Write as true/false.
-            intraSlotFreqHoppingStr = logical2str(intraSlotFreqHopping);
+
+            if intraSlotFreqHopping
+                secondHopStartPRBStr = cellarray2str({secondHopStartPRB}, true);
+            else
+                secondHopStartPRBStr = '{}';
+            end
+
+            commonConfig = {...
+                slotPointConfig, ...                            % slot
+                ['cyclic_prefix::', upper(cyclicPrefix)], ...   % cp
+                GroupHoppingStr, ...                            % group_hopping
+                startSymbolIndex, ...                           % start_symbol_index
+                symbolLength, ...                               % nof_symbols
+                PRBSet(1), ...                                  % starting_prb
+                secondHopStartPRBStr, ...                       % second_hop_prb
+                portsStr, ...                                   % ports
+                };
 
             % Generate the test case entry.
+            if format == 1
+                config = {...
+                    commonConfig, ...
+                    nid, ...                % n_id
+                    initialCyclicShift, ... % initial_cyclic_shift
+                    OCCI, ...               % time_domain_occ
+                    };
+            elseif format == 2
+                config = {...
+                    commonConfig, ...
+                    nofPRBs, ... % nof_prb
+                    nid0, ...    % n_id_0
+                    };
+            elseif format == 3
+                config = {...
+                    commonConfig, ...
+                    nid, ...            % n_id
+                    nofPRBs, ...        % nof_prb
+                    additionalDMRS, ... % additional_dmrs
+                    };
+            elseif format == 4
+                config = {...
+                    commonConfig, ...
+                    nid, ...            % n_id
+                    additionalDMRS, ... % additional_dmrs
+                    OCCI, ...           % occ_index
+                    };
+            end
+
+            % Insert the name of the config type in the test case string.
+            configStr = ['dmrs_pucch_estimator::format', ...
+                char(string(format)), '_configuration', ...
+                cellarray2str(config, true)];
+
             testCaseString = testCase.testCaseToString(testID, ...
-                {formatString, slotPointConfig, ['cyclic_prefix::', upper(cyclicPrefix)], ...
-                GroupHoppingStr, startSymbolIndex, symbolLength, PRBSet(1), ...
-                intraSlotFreqHoppingStr, secondHopStartPRB, nofPRBs, initialCyclicShift, ...
-                 OCCI, 'false', nid, nid0, portsStr}, true, '_test_output');
+                    {configStr}, false, '_test_output');
 
             % Add the test to the file header.
             testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);

@@ -58,7 +58,7 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
         srsBlock = 'pucch_processor_format2'
 
         %Type of the tested block.
-        srsBlockType = 'phy/upper/channel_processors'
+        srsBlockType = 'phy/upper/channel_processors/pucch'
     end
 
     properties (ClassSetupParameter)
@@ -80,7 +80,7 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
 
     properties (TestParameter)
 
-        %Symbols allocated to the PUCCH transmission as a strcture with two fields:
+        %Symbols allocated to the PUCCH transmission as a structure with two fields:
         %   - an array containing the start symbol index and the number of symbols, and
         %   - a frequency-hopping flag (true for intra-slot f.h., false for no f.h.).
         SymbolAllocation = {...
@@ -100,7 +100,7 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
         %Number of bits of the CSI Part 2 payload.
         nofCSIPart2 = {0};
 
-        %Maximum code rate, from TS38.311 Section 6.3.2, PUCCH-config
+        %Maximum code rate, from TS38.331 Section 6.3.2, PUCCH-config
         %   information element (0.08, 0.15, 0.25, 0.35, 0.45, 0.6, 0.8).
         maxCodeRate = {0.08, 0.15, 0.25, 0.35, 0.45, 0.6};
     end
@@ -109,8 +109,8 @@ classdef srsPUCCHProcessorFormat2Unittest < srsTest.srsBlockUnittest
         function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
 
-            fprintf(fileID, '#include "../../support/resource_grid_test_doubles.h"\n');
-            fprintf(fileID, '#include "srsran/phy/upper/channel_processors/pucch_processor.h"\n');
+            fprintf(fileID, '#include "../../../support/resource_grid_test_doubles.h"\n');
+            fprintf(fileID, '#include "srsran/phy/upper/channel_processors/pucch/pucch_processor.h"\n');
             fprintf(fileID, '#include "srsran/support/file_vector.h"\n');
         end
 
