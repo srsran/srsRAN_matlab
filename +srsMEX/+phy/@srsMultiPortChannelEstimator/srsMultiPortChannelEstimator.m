@@ -86,8 +86,8 @@ classdef srsMultiPortChannelEstimator < matlab.System
             end
         end % of function setupImpl(obj)
 
-        function [channelEst, noiseEst, extra] ...
-                = stepImpl(obj, rxGrid, symbolAllocation, refInd, refSym, config)
+        function [channelEst, noiseEst, extra] = stepImpl(obj, rxGrid, ...
+            symbolAllocation, refInd, refSym, config)
             arguments
                 obj                      (1, 1)     srsMEX.phy.srsMultiPortChannelEstimator
                 rxGrid                   (:, 14, :) double {srsTest.helpers.mustBeResourceGrid}
@@ -126,13 +126,19 @@ classdef srsMultiPortChannelEstimator < matlab.System
     end
 
     methods (Access = private)
-        function [channelEst, noiseEst, extra] ...
-                = stepMEX(obj, rxGrid, symbolAllocation, refInd, refSym, config)
+        function [channelEst, noiseEst, extra] = stepMEX(obj, rxGrid, ...
+            symbolAllocation, refInd, refSym, config)
         % Implementation of the step method that uses the MEX.
+
+            if size(refInd, 2) == 2
+                assert(all(refInd(:, 2) - refInd(:, 1) == 1), 'srsran_matlab:srsMultiPortChannelEstimator', ...
+                    ['Only DM-RS configuration type 1 is supported, layers {0, 1} and {2, 3} should have\n', ...
+                     'complementary RE patterns.']);
+            end
 
             sz = size(rxGrid);
             pilotMask = false(sz(1:2));
-            pilotMask(refInd) = true;
+            pilotMask(refInd(:, 1)) = true;
 
             % OFDM symbols carrying DM-RS.
             config.Symbols = any(pilotMask, 1);
@@ -153,12 +159,18 @@ classdef srsMultiPortChannelEstimator < matlab.System
                     config.RBMask2(iRB) = any(pilotMask((iRB-1)*12+(1:12), firstDMRSSymbol2));
                 end
             else
-                config.RBMask2 = [];
+                config.RBMask2 = logical([]);
             end
 
             % Find one RB carrying DM-RS.
             RBindex = find(config.RBMask, 1);
-            config.REPattern = pilotMask((RBindex-1)*12+(1:12), firstDMRSSymbol);
+            REpattern = pilotMask((RBindex-1)*12+(1:12), firstDMRSSymbol);
+            config.REPatternCDM0 = REpattern;
+            if size(refInd, 2) == 2
+                config.REPatternCDM1 = ~REpattern;
+            else
+                config.REPatternCDM1 = logical([]);
+            end
 
             % Call the actual channel estimator.
             [channelEstS, info] = obj.multiport_channel_estimator_mex('step', single(rxGrid), ...
