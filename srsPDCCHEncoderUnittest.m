@@ -9,7 +9,7 @@
 %
 %   srsBlock      - The tested block (i.e., 'pdcch_encoder').
 %   srsBlockType  - The type of the tested block, including layer
-%                   (i.e., 'phy/upper/channel_processors').
+%                   (i.e., 'phy/upper/channel_processors/pdcch').
 %
 %   srsPDCCHEncoderUnittest Properties (ClassSetupParameter):
 %
@@ -55,7 +55,7 @@ classdef srsPDCCHEncoderUnittest < srsTest.srsBlockUnittest
         srsBlock = 'pdcch_encoder'
 
         %Type of the tested block, including layer.
-        srsBlockType = 'phy/upper/channel_processors'
+        srsBlockType = 'phy/upper/channel_processors/pdcch'
 
         %Number of resource elements per CCE (6 PRBs per CCE, 9 REs per PRB)
         nofREsPerCCE = (12 - 3) * 6;

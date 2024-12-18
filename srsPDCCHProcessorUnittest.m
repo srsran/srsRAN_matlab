@@ -9,7 +9,7 @@
 %
 %   srsBlock      - The tested block (i.e., 'pddch_modulator').
 %   srsBlockType  - The type of the tested block, including layer
-%                   (i.e., 'phy/upper/channel_processors').
+%                   (i.e., 'phy/upper/channel_processors/pdcch').
 %
 %   nofNCellID       - Number of possible PHY cell identifiers.
 %   REGBundleSizes   - Possible REGBundle sizes  for each CORESET Duration.
@@ -59,7 +59,7 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
         srsBlock = 'pdcch_processor'
 
         %Type of the tested block.
-        srsBlockType = 'phy/upper/channel_processors'
+        srsBlockType = 'phy/upper/channel_processors/pdcch'
 
         %Possible REGBundle sizes  for each CORESET Duration.
         REGBundleSizes = [[2, 6]; [2, 6]; [3, 6]]
@@ -87,10 +87,14 @@ classdef srsPDCCHProcessorUnittest < srsTest.srsBlockUnittest
     end
 
     methods (Access = protected)
-        function addTestIncludesToHeaderFile(obj, fileID)
+        function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
-            addTestIncludesToHeaderFilePHYchproc(obj, fileID);
-            fprintf(fileID, '#include "srsran/ran/precoding/precoding_codebooks.h"\n');
+            fprintf(fileID, [...
+                '#include "../../../support/resource_grid_test_doubles.h"\n'...
+                '#include "srsran/phy/upper/channel_processors/pdcch/pdcch_processor.h"\n'...
+                '#include "srsran/ran/precoding/precoding_codebooks.h"\n'...
+                '#include "srsran/support/file_vector.h"\n'...
+                ]);
         end
 
         function addTestDefinitionToHeaderFile(~, fileID)
