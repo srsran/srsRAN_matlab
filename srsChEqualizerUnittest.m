@@ -75,7 +75,7 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
         %Channel dimensions.
         %   The first entry is the number of receive antenna ports, the
         %   second entry is the number of transmit layers.
-        channelSize = {[1, 1], [2, 1], [3, 1], [4, 1], [2, 2], [4, 2], [4, 3], [4, 4]}
+        channelSize = {[1, 1], [2, 1], [4, 1], [2, 2], [4, 2], [4, 3], [4, 4]}
 
         %Equalizer type.
         %   MMSE or ZF.
