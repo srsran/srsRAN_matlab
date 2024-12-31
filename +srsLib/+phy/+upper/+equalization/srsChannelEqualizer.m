@@ -42,11 +42,7 @@
 function [eqSymbols, eqNoiseVars] = srsChannelEqualizer(rxSymbols, chEsts, eqType, noiseVar, txScaling)
 
 % Extract the number of RE and Rx ports from the channel estimates.
-[nRE, nRx, ~] = size(chEsts);
-
-% Scale the channel estimates to prevent carrying the scaling factor
-% around.
-chEsts = txScaling * chEsts;
+[nRE, nRx, nLayers] = size(chEsts);
 
 % Check that the sizes match.
 if (size(rxSymbols, 1) ~= nRE)
@@ -59,21 +55,60 @@ if (size(rxSymbols, 2) ~= nRx)
         nRx, size(rxSymbols, 2));
 end
 
+% Scale the channel estimates to prevent carrying the scaling factor
+% around.
+chEsts = txScaling * chEsts;
+
+% Permute channel estimate dimensions for easier access - now we have one page
+% per RE, and each page has nRx rows and nLayers columns.
+chEstsPerm = permute(chEsts, [2, 3, 1]);
+
+% Gram matrix of the channel estimates.
+chGram = pagemtimes(pagectranspose(chEstsPerm), chEstsPerm);
+
 if strcmp(eqType, 'MMSE')
 
     % CSI contains the MMSE estimated channel gain for each
     % transmit layer.
-    [eqSymbols, csi] = nrEqualizeMMSE(rxSymbols, chEsts, noiseVar);
+    eqSymbols = nrEqualizeMMSE(rxSymbols, chEsts, noiseVar);
+
+    % Calculate scaling correction term for better LLRs.
+    V = eye(nLayers) + chGram / noiseVar;
+    correctionTerms = real(pagediag(pagemldivide(V, chGram)))';
+    scaledNoiseVars = noiseVar ./ correctionTerms;
+
+    % Correct the equalized symbols.
+    eqSymbols = eqSymbols ./ correctionTerms * noiseVar;
+
+    % Calculate the equivalent, post-equalization noise variance.
+    eqNoiseVars = scaledNoiseVars - 1;
+    assert(all(eqNoiseVars > 0, 'all'), 'srsran_matlab:srsChannelEqualizer', ...
+        'Equivalent noise variances should be positive valued.');
 
 elseif strcmp(eqType, 'ZF')
-    
+
     % Zero Forcing equalization is equivalent to MMSE when the noise
     % variance is 0, that is, in the absense of additive noise.
     [eqSymbols, csi] = nrEqualizeMMSE(rxSymbols, chEsts, 0);
 
+    % Calculate the equivalent, post-equalization noise variance.
+    eqNoiseVars = noiseVar .* real(pagediag(pageinv(chGram)))';
+
+    assert(all(abs(eqNoiseVars - noiseVar ./ csi) ./ eqNoiseVars < 1e-6, 'all'), ...
+        'srsran_matlab::srsChannelEqualizer', ...
+        'ZF equivalent noise computation has failed.');
+
 else
     error('Unknown equalizer %s.', eqType);
 end
+end
 
-% Calculate the equivalent, post-equalization noise variance.
-eqNoiseVars = noiseVar ./ csi;  
+% For each page of A, it returns an array with the diagonal elements.
+function d = pagediag(A)
+    [nr, nc, np] = size(A);
+    assert(nr == nc, 'The pages of A should be square matrices.');
+    Q = reshape(A, nr^2, np);
+    ix = 1:nr;
+    ix = ix + (0:nr:nr*(nr-1));
+    d = Q(ix, :);
+end
