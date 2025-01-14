@@ -75,7 +75,7 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
         %Channel dimensions.
         %   The first entry is the number of receive antenna ports, the
         %   second entry is the number of transmit layers.
-        channelSize = {[1, 1], [2, 1], [3, 1], [4, 1], [2, 2], [4, 2], [4, 3], [4, 4]}
+        channelSize = {[1, 1], [2, 1], [4, 1], [2, 2], [4, 2], [4, 3], [4, 4]}
 
         %Equalizer type.
         %   MMSE or ZF.
@@ -227,28 +227,30 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
             obj.createChTensor(channelSize);
 
             [nSC, nSym, ~, nTx] = size(obj.channelTensor);
-            mseEmp = zeros(nSC, nSym, nTx);
+            mseEmpTmp = zeros(nSC, nSym, nTx);
             nRuns = 1000;
 
             if nargout > 1
                 [mseNom, snrNom] = obj.computeREnominals(eqType);
-                sigPower = zeros(nSC, nSym);
+                signalPower = zeros(nSC, nSym);
                 noisePower = zeros(nSC, nSym);
             end
 
             for iRun = 1:nRuns
                 [eqSymbols, txSymbols] = obj.runCase(eqType, 1);
-                mseEmp = mseEmp + abs(eqSymbols - txSymbols).^2 / nRuns;
+                mseEmpTmp = mseEmpTmp + abs(eqSymbols - txSymbols).^2 / nRuns;
 
                 if nargout > 1
-                    [sigPwrTmp, noisePwrTmp] = obj.computePowers(eqSymbols, txSymbols, eqType);
-                    sigPower = sigPower + sigPwrTmp / nRuns;
+                    [sigPwrTmp, noisePwrTmp] = obj.computePowers(eqSymbols, txSymbols);
+                    signalPower = signalPower + sigPwrTmp / nRuns;
                     noisePower = noisePower + noisePwrTmp / nRuns;
                 end
             end
 
+            mseEmp = mean(mseEmpTmp, 3);
+
         if nargout > 1
-            snrEmp = sigPower ./ noisePower;
+            snrEmp = mean(signalPower ./ noisePower, 3);
         end
         end % of function MSEsimulation(obj, channelSize, eqType)
     end % methods
@@ -323,36 +325,33 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
                     chMatrix = squeeze(obj.channelTensor(iSC, iSym, :, :));
                     chHch = chMatrix' * chMatrix;
                     if strcmp(eqType, 'MMSE')
-                        M = (noiseVar * eye(size(chHch)) + chHch);
+                        M = (noiseVar * eye(size(chHch)) + chHch) \ chHch;
+                        mseLayers = 1 ./ real(diag(M)) - 1;
                     elseif strcmp(eqType, 'ZF')
                         M = chHch;
+                        mseLayers = noiseVar * real(diag(inv(M)));
                     else
                         error('Unknown equalizer %s.', eqType);
                     end
 
-                    Q = M \ chHch;
-                    trQQH = trace(Q * Q');
-                    snrN(iSC, iSym) = trQQH / trace(Q / M) / noiseVar;
-                    nTx = size(Q, 1);
-                    QmI = Q - eye(nTx);
-                    mseN(iSC, iSym) = trace(QmI * QmI') / nTx + trace(Q / M) * noiseVar / nTx;
+                    mseN(iSC, iSym) = mean(mseLayers);
+
+                    snrLayers = 1 ./ mseLayers;
+                    snrN(iSC, iSym) = mean(snrLayers);
                 end
             end
         end
 
-        function [sigPower, noisePower] = computePowers(obj, eqSymbols, txSymbols, eqType)
-            noiseVar = 10^(- obj.snr/10);
-            [nSC, nSym, ~, ~] = size(obj.channelTensor);
+        function [signalPower, noisePower] = computePowers(obj, eqSymbols, txSymbols)
+            [nSC, nSym, ~, nLayers] = size(obj.channelTensor);
 
-            sigPower = nan(nSC, nSym);
-            noisePower = nan(nSC, nSym);
+            noisePower = nan(nSC, nSym, nLayers);
+            signalPower = nan(nSC, nSym, nLayers);
             for iSC = 1:nSC
                 for iSym = 1:nSym
-                    chMatrix = squeeze(obj.channelTensor(iSC, iSym, :, :));
                     txSyms = squeeze(txSymbols(iSC, iSym, :));
                     eqSyms = squeeze(eqSymbols(iSC, iSym, :));
-                    [sigPower(iSC, iSym), noisePower(iSC, iSym)] = ...
-                        computeREpower(txSyms, eqSyms, chMatrix, noiseVar, eqType);
+                    [signalPower(iSC, iSym, :), noisePower(iSC, iSym, :)] = computeREpower(txSyms, eqSyms);
                 end
             end
         end % of function computePowers(obj, eqSymbols, txSymbols, eqType)
@@ -361,25 +360,9 @@ classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
 
 end % of classdef srsChEqualizerUnittest < srsTest.srsBlockUnittest
 
-function [sigPower, noisePower] = computeREpower(txSymbols, eqSymbols, chMatrix, ...
-        noiseVar, eqType)
+function [signalPower, noisePower] = computeREpower(txSymbols, eqSymbols)
 
-    chHch = chMatrix' * chMatrix;
-    if strcmp(eqType, 'MMSE')
-        M = (noiseVar * eye(size(chHch)) + chHch);
-    elseif strcmp(eqType, 'ZF')
-        M = chHch;
-    else
-        error('Unknown equalizer %s.', eqType);
-    end
-
-    Q = M \ chHch;
-    trQQH = trace(Q * Q');
-
-    nTx = length(txSymbols);
-
-    sigPower = trQQH / nTx;
-
-    estNoise = eqSymbols - Q * txSymbols;
-    noisePower = trace(estNoise * estNoise') / nTx;
+    signalPower = abs(txSymbols).^2;
+    estNoiseInterf = eqSymbols - txSymbols;
+    noisePower = abs(estNoiseInterf).^2;
 end

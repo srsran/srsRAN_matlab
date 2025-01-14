@@ -93,8 +93,8 @@ void MexFunction::check_step_outputs_inputs(ArgumentList outputs, ArgumentList i
   if (in3dims.size() > 2) {
     mex_abort("Input 'refSym' can have at most 2 dimensions provided size {}.", in3dims.size());
   }
-  if ((in3dims.size() != 1) && (in3dims[1] > 2)) {
-    mex_abort("Input 'refSym' can have at most 2 columns (i.e., 2 Tx layers) - provided size {}.", in3dims[1]);
+  if ((in3dims.size() != 1) && (in3dims[1] > 4)) {
+    mex_abort("Input 'refSym' can have at most 4 columns (i.e., 4 Tx layers) - provided size {}.", in3dims[1]);
   }
 
   if ((inputs[4].getType() != ArrayType::STRUCT) || (inputs[4].getNumberOfElements() > 1)) {
@@ -134,26 +134,34 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
 
   cfg.dmrs_pattern.resize(nof_layers);
 
+  const TypedArray<bool>   in_symbols         = in_cfg["Symbols"];
+  const TypedArray<bool>   in_rb_mask         = in_cfg["RBMask"];
+  const TypedArray<bool>   in_rb_mask2        = in_cfg["RBMask2"];
+  const TypedArray<double> in_hop             = in_cfg["HoppingIndex"];
+  const TypedArray<bool>   in_re_pattern_cdm0 = in_cfg["REPatternCDM0"];
+  const TypedArray<bool>   in_re_pattern_cdm1 = in_cfg["REPatternCDM1"];
+
+  if ((nof_layers > 2) && in_re_pattern_cdm1.isEmpty()) {
+    mex_abort("Configuration with {} layers but only one RE pattern.", nof_layers);
+  }
+
   for (unsigned i_layer = 0; i_layer != nof_layers; ++i_layer) {
     // Since we consider at most the first two layers (0 and 1), the corresponding DM-RS occupy the same resources.
     port_channel_estimator::layer_dmrs_pattern& dmrs_pattern = cfg.dmrs_pattern[i_layer];
 
-    const TypedArray<bool> in_symbols = in_cfg["Symbols"];
-    dmrs_pattern.symbols              = bounded_bitset<MAX_NSYMB_PER_SLOT>(in_symbols.cbegin(), in_symbols.cend());
+    dmrs_pattern.symbols = bounded_bitset<MAX_NSYMB_PER_SLOT>(in_symbols.cbegin(), in_symbols.cend());
+    dmrs_pattern.rb_mask = bounded_bitset<MAX_RB>(in_rb_mask.cbegin(), in_rb_mask.cend());
 
-    const TypedArray<bool> in_rb_mask = in_cfg["RBMask"];
-    dmrs_pattern.rb_mask              = bounded_bitset<MAX_RB>(in_rb_mask.cbegin(), in_rb_mask.cend());
-
-    const TypedArray<double> in_hop = in_cfg["HoppingIndex"];
     if (!in_hop.isEmpty()) {
       dmrs_pattern.hopping_symbol_index = static_cast<unsigned>(in_hop[0]);
-
-      const TypedArray<bool> in_rb_mask2 = in_cfg["RBMask2"];
-      dmrs_pattern.rb_mask2              = bounded_bitset<MAX_RB>(in_rb_mask2.cbegin(), in_rb_mask2.cend());
+      dmrs_pattern.rb_mask2             = bounded_bitset<MAX_RB>(in_rb_mask2.cbegin(), in_rb_mask2.cend());
     }
 
-    const TypedArray<bool> in_re_pattern = in_cfg["REPattern"];
-    dmrs_pattern.re_pattern              = bounded_bitset<NRE>(in_re_pattern.cbegin(), in_re_pattern.cend());
+    if (i_layer < 2) {
+      dmrs_pattern.re_pattern = bounded_bitset<NRE>(in_re_pattern_cdm0.cbegin(), in_re_pattern_cdm0.cend());
+    } else {
+      dmrs_pattern.re_pattern = bounded_bitset<NRE>(in_re_pattern_cdm1.cbegin(), in_re_pattern_cdm1.cend());
+    }
   }
 
   cfg.scaling = static_cast<float>(in_cfg["BetaScaling"][0]);

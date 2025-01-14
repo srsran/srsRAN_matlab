@@ -86,13 +86,13 @@ classdef srsMultiPortChannelEstimator < matlab.System
             end
         end % of function setupImpl(obj)
 
-        function [channelEst, noiseEst, extra] ...
-                = stepImpl(obj, rxGrid, symbolAllocation, refInd, refSym, config)
+        function [channelEst, noiseEst, extra] = stepImpl(obj, rxGrid, ...
+            symbolAllocation, refInd, refSym, config)
             arguments
                 obj                      (1, 1)     srsMEX.phy.srsMultiPortChannelEstimator
                 rxGrid                   (:, 14, :) double {srsTest.helpers.mustBeResourceGrid}
                 symbolAllocation         (1, 2)     double {mustBeInteger, mustBeNonnegative}
-                refInd                   (:, 1)     double {mustBeInteger, mustBePositive}
+                refInd                   (:, :)     double {mustBeInteger, mustBePositive}
                 refSym                   (:, :)     double {mustBeNumeric}
                 config.PortIndices       (:, 1)     double {mustBeInteger, mustBeNonnegative} = 0
                 config.CyclicPrefix      (1, :)     char   {mustBeMember(config.CyclicPrefix, {'normal', 'extended'})} = 'normal'
@@ -106,9 +106,14 @@ classdef srsMultiPortChannelEstimator < matlab.System
             assert(lastSymbol < 14, 'Last allocated symbol out of range.');
 
             [nPilots, nLayers] = size(refSym);
-            assert(nLayers <= 2, 'Currently, max 2 layers supported, provided %d.', nLayers);
-            assert(nPilots == numel(refInd), ...
+            assert(nLayers <= 4, 'Currently, max 4 layers supported, provided %d.', nLayers);
+            assert(nPilots == numel(refInd(:, 1)), ...
                 ['The number of pilots per layer %d and the number of pilot resources %d ', ...
+                 'do not match.'], nPilots, numel(refInd));
+            nCDM = ceil(nLayers / 2);
+            assert(nCDM == numel(refInd(1, :)), ...
+                ['The number of CDM groups inferred from the pilots %d and the number of ', ...
+                 'CDM groups inferred from the pilot index list %d ', ...
                  'do not match.'], nPilots, numel(refInd));
 
             if ~isempty(config.HoppingIndex)
@@ -121,13 +126,19 @@ classdef srsMultiPortChannelEstimator < matlab.System
     end
 
     methods (Access = private)
-        function [channelEst, noiseEst, extra] ...
-                = stepMEX(obj, rxGrid, symbolAllocation, refInd, refSym, config)
+        function [channelEst, noiseEst, extra] = stepMEX(obj, rxGrid, ...
+            symbolAllocation, refInd, refSym, config)
         % Implementation of the step method that uses the MEX.
+
+            if size(refInd, 2) == 2
+                assert(all(refInd(:, 2) - refInd(:, 1) == 1), 'srsran_matlab:srsMultiPortChannelEstimator', ...
+                    ['Only DM-RS configuration type 1 is supported, layers {0, 1} and {2, 3} should have\n', ...
+                     'complementary RE patterns.']);
+            end
 
             sz = size(rxGrid);
             pilotMask = false(sz(1:2));
-            pilotMask(refInd) = true;
+            pilotMask(refInd(:, 1)) = true;
 
             % OFDM symbols carrying DM-RS.
             config.Symbols = any(pilotMask, 1);
@@ -148,12 +159,18 @@ classdef srsMultiPortChannelEstimator < matlab.System
                     config.RBMask2(iRB) = any(pilotMask((iRB-1)*12+(1:12), firstDMRSSymbol2));
                 end
             else
-                config.RBMask2 = [];
+                config.RBMask2 = logical([]);
             end
 
             % Find one RB carrying DM-RS.
             RBindex = find(config.RBMask, 1);
-            config.REPattern = pilotMask((RBindex-1)*12+(1:12), firstDMRSSymbol);
+            REpattern = pilotMask((RBindex-1)*12+(1:12), firstDMRSSymbol);
+            config.REPatternCDM0 = REpattern;
+            if size(refInd, 2) == 2
+                config.REPatternCDM1 = ~REpattern;
+            else
+                config.REPatternCDM1 = logical([]);
+            end
 
             % Call the actual channel estimator.
             [channelEstS, info] = obj.multiport_channel_estimator_mex('step', single(rxGrid), ...
@@ -188,7 +205,7 @@ classdef srsMultiPortChannelEstimator < matlab.System
             % Build hop configuration structures.
             gridsize = size(rxGrid);
             totalRBs = gridsize(1) / 12;
-            [pSCS, pSyms] = ind2sub(gridsize(1:2), refInd);
+            [pSCS, pSyms] = ind2sub(gridsize(1:2), refInd(:));
 
             DMRSsymbols = false(14, 1);
             DMRSsymbols(unique(pSyms)) = true;
@@ -197,56 +214,58 @@ classdef srsMultiPortChannelEstimator < matlab.System
             nLayers = size(refSym, 2);
             pilots = reshape(refSym, [], nDMRSsymbols, nLayers);
 
-            pSCS = reshape(pSCS, [], nDMRSsymbols);
-            nPRBs = ceil((pSCS(end, 1) - pSCS(1, 1)) / 12);
+            nCDM = ceil(nLayers / 2);
+            pSCS = reshape(pSCS, [], nDMRSsymbols, nCDM);
+            nPRBs = ceil((pSCS(end, 1, 1) - pSCS(1, 1, 1)) / 12);
 
-            nRBpilots = length(pSCS(:, 1)) / nPRBs;
-            DMRSREmask = false(12, 1);
-            DMRSREmask(mod(pSCS(1:nRBpilots, 1) - 1, 12) + 1) = true;
+            nRBpilots = length(pSCS(:, 1, 1)) / nPRBs;
+            DMRSREmask = false(12, nCDM);
+            DMRSREmask(mod(pSCS(1:nRBpilots, 1, 1) - 1, 12) + 1, 1) = true;
+            if nCDM == 2
+                DMRSREmask(mod(pSCS(1:nRBpilots, 1, 2) - 1, 12) + 1, 2) = true;
+            end
 
             maskPRBs = false(totalRBs, 1);
-            maskPRBs(unique(ceil(pSCS(:, 1) / 12))) = true;
+            maskPRBs(unique(ceil(pSCS(:, 1, 1) / 12))) = true;
 
             hop1 = struct(...
                 'DMRSsymbols', DMRSsymbols, ...
                 'DMRSREmask', DMRSREmask, ...
-                'PRBstart', ceil(pSCS(1, 1) / 12) - 1, ...
+                'PRBstart', ceil(pSCS(1, 1, 1) / 12) - 1, ...
                 'nPRBs', nPRBs, ...
                 'maskPRBs', maskPRBs, ...
                 'startSymbol', symbolAllocation(1), ...
                 'nAllocatedSymbols', symbolAllocation(2));
 
-            hop2 = struct(...
-                'DMRSsymbols', [], ...
-                'DMRSREmask', [], ...
-                'PRBstart', [], ...
-                'nPRBs', [], ...
-                'maskPRBs', [], ...
-                'startSymbol', [], ...
-                'nAllocatedSymbols', []);
-
-            configNew = struct(...
-                'DMRSREmask', DMRSREmask, ...
-                'DMRSSymbolMask', DMRSsymbols, ...
-                'scs', config.SubcarrierSpacing * 1000, ...
-                'CyclicPrefixDurations', scs2cps(config.SubcarrierSpacing), ...
-                'Smoothing', obj.Smoothing, ...
-                'CFOCompensate', obj.CompensateCFO);
-
             hopIndex = config.HoppingIndex;
-            if ~isempty(hopIndex)
+            if isempty(hopIndex)
+                hop2 = struct(...
+                    'DMRSsymbols', [], ...
+                    'DMRSREmask', [], ...
+                    'PRBstart', [], ...
+                    'nPRBs', [], ...
+                    'maskPRBs', [], ...
+                    'startSymbol', [], ...
+                    'nAllocatedSymbols', []);
+            else
                 hop2 = hop1;
 
                 hop1.DMRSsymbols(hopIndex+1:end) = false;
                 hop1.nAllocatedSymbols = hopIndex - hop1.startSymbol;
 
                 hop2.DMRSsymbols(1:hopIndex) = false;
-                hop2.PRBstart = ceil(pSCS(1, end) / 12) - 1;
+                hop2.PRBstart = ceil(pSCS(1, end, 1) / 12) - 1;
                 hop2.maskPRBs(:) = false;
-                hop2.maskPRBs(unique(ceil(pSCS(:, end) / 12))) = true;
+                hop2.maskPRBs(unique(ceil(pSCS(:, end, 1) / 12))) = true;
                 hop2.startSymbol = hopIndex;
                 hop2.nAllocatedSymbols = hop2.nAllocatedSymbols - hop1.nAllocatedSymbols;
             end
+
+            configNew = struct(...
+                'scs', config.SubcarrierSpacing * 1000, ...
+                'CyclicPrefixDurations', scs2cps(config.SubcarrierSpacing), ...
+                'Smoothing', obj.Smoothing, ...
+                'CFOCompensate', obj.CompensateCFO);
 
             % Check the number of Rx antenna ports.
             nPorts = 1;

@@ -218,8 +218,10 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
       // Advance buffer.
       ce_port_view = ce_port_view.last(ce_port_view.size() - nof_ch_re_port);
 
-      // Set noise variance.
-      chan_estimates.set_noise_variance(noise_var, i_rx_port, i_tx_layer);
+      if (i_tx_layer == 0) {
+        // Set noise variance.
+        chan_estimates.set_noise_variance(noise_var, i_rx_port);
+      }
     }
   }
 

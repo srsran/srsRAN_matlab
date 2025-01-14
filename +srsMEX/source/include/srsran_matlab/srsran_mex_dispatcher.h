@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include <iterator>
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsuggest-override"
 #include "mex.hpp"
@@ -99,7 +100,7 @@ protected:
   void mex_abort(const char* fmtstr, Args&&... args)
   {
     fmt::memory_buffer buffer;
-    fmt::format_to(buffer, fmtstr, std::forward<Args>(args)...);
+    fmt::format_to(std::back_inserter(buffer), fmtstr, std::forward<Args>(args)...);
     mex_abort(to_string(buffer));
   }
 

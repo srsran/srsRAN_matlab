@@ -338,7 +338,7 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
             fprintf(fileID, '\n');
             fprintf(fileID, ...
                 'static const std::vector<test_case_t> %s_test_data = {\n', obj.srsBlock);
-            fprintf(fileID, '// clang-format off\n');
+            fprintf(fileID, '    // clang-format off\n');
         end
 
         function closeHeaderFile(~, fileID)
@@ -346,10 +346,10 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
         %   test header file with MATLAB identifier FILEID before closing it.
 
             % write the closing header file contents
-            fprintf(fileID, '// clang-format on\n');
+            fprintf(fileID, '    // clang-format on\n');
             fprintf(fileID, '};\n');
             fprintf(fileID, '\n');
-            fprintf(fileID, '} // srsran\n');
+            fprintf(fileID, '} // namespace srsran\n');
             fprintf(fileID, '\n');
 
             fclose(fileID);

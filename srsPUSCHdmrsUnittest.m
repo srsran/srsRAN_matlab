@@ -247,6 +247,13 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
             % associated indices into a binary file, and an empty channel
             % coefficients file.
             if strcmp(testLabel, 'dmrs_creation')
+                if NumLayers == 4
+                    % In creation tests, we assume layer n is received by port n only. Therefore we need to add
+                    % zeros in the REs where DM-RS from other layers would be. Note that this is not needed when
+                    % NumLayers == 2 since the first two layers share DM-RS resources.
+                    DMRSsymbols = [DMRSsymbols zeros(size(DMRSsymbols))];
+                    symbolIndices = [symbolIndices; [symbolIndices(:, 1:2) symbolIndices([(end/2 + 1):end, 1:end/2], 3)]];
+                end
                 testCase.saveDataFile('_test_output', testID, ...
                     @writeResourceGridEntryFile, DMRSsymbols * amplitude, symbolIndices);
                 testCase.saveDataFile('_ch_estimates', testID, ...
@@ -279,8 +286,6 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
                 hop2.DMRSsymbols = [];
                 nOFDMSymbols = sum(hop.DMRSsymbols);
                 pilots = reshape(DMRSsymbols, [], nOFDMSymbols, NumLayers);
-                cfg.DMRSSymbolMask = hop.DMRSsymbols;
-                cfg.DMRSREmask = hop.DMRSREmask;
                 cfg.scs = subcarrierSpacing * 1000;
                 cfg.CyclicPrefixDurations = scs2cps(subcarrierSpacing);
                 receivedRG = approxbf16(receivedRG);

@@ -2,7 +2,7 @@
 %   [CHANNELESTRG, NOISEEST, RSRP, EPRE, TIMEALIGNMENT, CFO] = srsChannelEstimator(RECEIVEDRG, PILOTS, BETADMRS, HOP1, HOP2, CONFIG)
 %   estimates the channel coefficients for the REs resulting from the provided
 %   configuration (see below) from the observations in the resource grid RECEIVEDRG.
-%   The transmission is assumed to be either single-layer or two-layer.
+%   The estimator supports up to four transmission layers.
 %
 %   Inputs:
 %   RECEIVEDRG - Observed signal samples organized in a resource grid
@@ -11,16 +11,14 @@
 %   BETADMRS   - DM-RS-to-information linear amplitude gain
 %   HOP1       - Configuration of the first intraSlot frequency hop (see below)
 %   HOP2       - Configuration of the second intraSlot frequency hop (see below)
-%   CONFIG     - General configuration (struct with fields DMRSREmask, pattern
-%                of REs carrying DM-RS inside a DM-RS dedicated PRB, DMRSSymbolMask,
-%                pattern of OFDM symbols carrying DM-RS across both hops, scs,
-%                subcarrier spacing in hertz, CyclicPrefixDurations, the duration of
-%                of the CPs in milliseconds, Smoothing, the smoothing strategy, and
-%                CFOCompensate, a boolean flag to activate or not the CFO compensation).
+%   CONFIG     - General configuration (struct with fields scs, subcarrier spacing
+%                in hertz, CyclicPrefixDurations, the duration of the CPs in milliseconds,
+%                Smoothing, the smoothing strategy, and CFOCompensate, a boolean flag
+%                to activate or not the CFO compensation).
 %
 %   Each hop is configured by a struct with fields
 %   DMRSsymbols       - OFDM symbols carrying DM-RS in the first hop (logical mask)
-%   DMRSREmask        - REs carrying DM-RS in a dedicated PRB (logical mask)
+%   DMRSREmask        - REs carrying DM-RS in a dedicated PRB (one logical mask for CDM group)
 %   PRBstart          - First PRB dedicated to DM-RS (0-based indexing)
 %   nPRBs             - Number of PRBs dedicated to DM-RS
 %   maskPRBs          - PRBs dedicated to DM-RS (logical mask)
@@ -56,9 +54,8 @@
 function [channelEstRG, noiseEst, rsrp, epre, timeAlignment, cfo] = ...
     srsChannelEstimator(receivedRG, pilots, betaDMRS, hop1, hop2, config)
 
-    % If pilots is a three-dimensional array, then the number of layers is 2.
-    % Otherwise, single layer.
-    nLayers = 1 + (numel(size(pilots)) == 3);
+    % Pilots has as many slices (third dimension) as the number of layers.
+    nLayers = size(pilots, 3);
 
     cfoCompensate = true;
     if (isfield(config, 'CFOCompensate'))
@@ -91,17 +88,24 @@ function [channelEstRG, noiseEst, rsrp, epre, timeAlignment, cfo] = ...
 
     processHop(hop1, pilots(:, 1:nPilotSymbolsHop1, :), smoothing);
 
+    allDMRSsymbols = hop1.DMRSsymbols;
     if ~isempty(hop2.DMRSsymbols)
+        assert(~any(hop1.DMRSsymbols & hop2.DMRSsymbols), "Hops should not overlap.");
+        allDMRSsymbols = allDMRSsymbols | hop2.DMRSsymbols;
+
+        assert(all(hop1.DMRSREmask == hop2.DMRSREmask, 'all'), ...
+            "The DM-RS mask should be the same for the two hops.");
+
         processHop(hop2, pilots(:, (nPilotSymbolsHop1 + 1):end, :), smoothing);
     end
 
-    nDMRSsymbols = sum(config.DMRSSymbolMask);
-    nPilots = hop1.nPRBs * sum(config.DMRSREmask) * nDMRSsymbols;
+    nDMRSsymbols = sum(allDMRSsymbols);
+    nPilots = hop1.nPRBs * sum(hop1.DMRSREmask(:, 1)) * nDMRSsymbols;
 
     rsrp = rsrp / nPilots / nLayers;
     epre = epre / nPilots;
 
-    noiseEst = noiseEst / (nPilots - 1);
+    noiseEst = noiseEst / (ceil(nLayers / 2) * nPilots - 1);
 
     if ~isempty(hop2.DMRSsymbols)
         timeAlignment = timeAlignment / 2;
@@ -122,19 +126,30 @@ function [channelEstRG, noiseEst, rsrp, epre, timeAlignment, cfo] = ...
     function processHop(hop_, pilots_, smoothing_)
     %Processes the DM-RS corresponding to a single hop.
 
-        % Create a mask for all subcarriers carrying DM-RS.
-        maskPRBs_ = hop_.maskPRBs;
-        maskREs_ = (kron(maskPRBs_, config.DMRSREmask) > 0);
+        % Number of layers and number of CDM groups (2 layers per group).
+        nLayers_ = size(pilots_, 3);
+        nCDM_ = ceil(nLayers_ / 2);
 
-        % Pick the REs corresponding to the pilots.
-        receivedPilots_ = receivedRG(maskREs_, hop_.DMRSsymbols);
+        receivedPilots_ = complex(nan([size(pilots_, [1 2]), nCDM_]));
+        recXpilots_ = complex(nan(size(pilots_)));
 
-        % Compute receive side DM-RS EPRE.
-        epre = epre + norm(receivedPilots_, 'fro')^2;
+        for iCDM_ = 1:nCDM_
+            % Create a mask for all subcarriers carrying DM-RS.
+            maskPRBs_ = hop_.maskPRBs;
+            maskREs_ = (kron(maskPRBs_, hop_.DMRSREmask(:, iCDM_)) > 0);
 
-        % LSE-estimate the channel coefficients of the subcarriers carrying DM-RS.
-        nDMRSsymbols_ = sum(hop_.DMRSsymbols);
-        recXpilots_ = receivedPilots_ .* conj(pilots_);
+            % Pick the REs corresponding to the pilots.
+            receivedPilots_(:, :, iCDM_) = receivedRG(maskREs_, hop_.DMRSsymbols);
+
+            % Compute receive side DM-RS EPRE.
+            epre = epre + norm(receivedPilots_(:, :, iCDM_), 'fro')^2;
+
+            % LSE-estimate the channel coefficients of the subcarriers carrying DM-RS.
+            nDMRSsymbols_ = sum(hop_.DMRSsymbols);
+            firstLayer_ = (iCDM_ - 1) * 2 + 1;
+            lastLayer_ = min(nLayers_, iCDM_ * 2);
+            recXpilots_(:, :, firstLayer_:lastLayer_) = receivedPilots_(:, :, iCDM_) .* conj(pilots_(:, :, firstLayer_:lastLayer_));
+        end
 
         [recXpilotsNOCFO_, cfoHop_] = compensateCFO(recXpilots_, ...
             hop_.DMRSsymbols, scs / 1000, config.CyclicPrefixDurations, cfoCompensate);
@@ -150,11 +165,11 @@ function [channelEstRG, noiseEst, rsrp, epre, timeAlignment, cfo] = ...
         % TODO: at this point, we should compute a metric for signal detection.
         % detectMetricNum = detectMetricNum + norm(recXpilots_, 'fro')^2;
 
-        nLayers_ = 1 + (numel(size(pilots_)) == 3);
-        if nLayers_ == 2
-            % For two layers, we assume DM-RS Type 1, Mapping Type A, ports {0, 1} - that is,
-            % pilots for the two layers are transmitted on the same REs. Also, the pilots for
-            % layer 2 are the same as those of layer 1, but for a sign flip every other pilot.
+        if nLayers_ >= 2
+            % For multiple layers, we assume DM-RS Type 1, Mapping Type A. Pilots for layers {0, 1}
+            % are transmitted over the same REs. Also, the pilots for layer 1 are the same as those
+            % of layer 0, but for a sign flip every other pilot. Same for layers {2, 3}, but on a
+            % different set of REs.
             % The estimator assumes the channel constant over two consecutive DM-RS REs, and
             % the contribution of the "other" layer can be removed by averaging after
             % multiplication by the conjugate of the DM-RS sequences.
@@ -162,17 +177,18 @@ function [channelEstRG, noiseEst, rsrp, epre, timeAlignment, cfo] = ...
             estimatedChannelP_(2:2:end, :) = estimatedChannelP_(1:2:end, :);
         end
 
+        DMRSREmask_ = hop_.DMRSREmask;
         switch smoothing_
             case 'mean'
-                estimatedChannelP_ = ones(size(estimatedChannelP_)) .* mean(estimatedChannelP_);
+                estimatedChannelP_ = ones(size(estimatedChannelP_)) .* mean(estimatedChannelP_, 1);
             case 'filter'
                 % Denoising with RC filter.
-                rcFilter_ = getRCfilter(12/sum(config.DMRSREmask), min(3, sum(maskPRBs_)));
+                rcFilter_ = getRCfilter(12/sum(DMRSREmask_(:, 1)), min(3, sum(maskPRBs_)));
 
                 if sum(maskPRBs_) > 1
                     nPils_ = min(12, floor(length(rcFilter_) / 2));
                 else
-                    nPils_ = sum(config.DMRSREmask);
+                    nPils_ = sum(DMRSREmask_(:, 1));
                 end
 
                 for iLayer_ = 1:nLayers_
@@ -205,40 +221,47 @@ function [channelEstRG, noiseEst, rsrp, epre, timeAlignment, cfo] = ...
         timeAlignment = timeAlignment + iMax_ / fftSize_ / scs;
 
         estimatedRx_ = complex(zeros(size(receivedPilots_)));
-        if (cfoCompensate && ~isempty(cfoHop_))
-            PHcorrection = 2 * pi * symbolStartTime * cfoHop_;
-            for iLayer_ = 1:nLayers_
-                estimatedRx_ = estimatedRx_ + betaDMRS * pilots_(:, :, iLayer_) ...
-                .* (estimatedChannelP_(:, iLayer_) * reshape(exp(1j * PHcorrection(hop_.DMRSsymbols)), 1, []));
-            end
-        else
-            for iLayer_ = 1:nLayers_
-                estimatedRx_ = estimatedRx_ + betaDMRS * pilots_(:, :, iLayer_) ...
-                .* repmat(estimatedChannelP_(:, iLayer_), 1, nDMRSsymbols_);
-            end
-        end
-        noiseEst = noiseEst + norm(receivedPilots_ - estimatedRx_,'fro')^2;
-        rsrp = rsrp + betaDMRS^2 * norm(estimatedChannelP_, 'fro')^2 * nDMRSsymbols_;
+        for iCDM_ = 1:nCDM_
+            minLayer_ = (iCDM_ - 1) * 2 + 1;
+            maxLayer_ = min(iCDM_ * 2, nLayers_);
 
-        % The other subcarriers are linearly interpolated.
-        channelEstRG = fillChEst(channelEstRG, estimatedChannelP_, hop_);
+            if (cfoCompensate && ~isempty(cfoHop_))
+                PHcorrection = 2 * pi * symbolStartTime * cfoHop_;
+                for iLayer_ = minLayer_:maxLayer_
+                    estimatedRx_(:, :, iCDM_) = estimatedRx_(:, :, iCDM_) + betaDMRS * pilots_(:, :, iLayer_) ...
+                        .* (estimatedChannelP_(:, iLayer_) * reshape(exp(1j * PHcorrection(hop_.DMRSsymbols)), 1, []));
+                end
+            else
+                for iLayer_ = minLayer_:maxLayer_
+                    estimatedRx_(:, :, iCDM_) = estimatedRx_(:, :, iCDM_) + betaDMRS * pilots_(:, :, iLayer_) ...
+                        .* repmat(estimatedChannelP_(:, iLayer_), 1, nDMRSsymbols_);
+                end
+            end
+
+            estimatedChannelPCDM_ = estimatedChannelP_(:, minLayer_:maxLayer_);
+            % The other subcarriers are linearly interpolated.
+            channelEstRG = fillChEstCDM(channelEstRG, estimatedChannelPCDM_, hop_, iCDM_);
+        end
+
+        noiseEst = noiseEst + norm(receivedPilots_ - estimatedRx_, 'fro')^2;
+        rsrp = rsrp + betaDMRS^2 * norm(estimatedChannelP_, 'fro')^2 * nDMRSsymbols_;
     end
 end % of function srsChannelEstimator
 
-function channelOut = fillChEst(channelIn, estimated, hop)
+function channelOut = fillChEstCDM(channelIn, estimated, hop, iCDM)
 %Linearly interpolates the missing subcarriers and organizes the estimates on
 %   a resource grid.
     NRE = 12;
-    nLayers = 1 + (numel(size(channelIn)) == 3);
+    nLayers = size(estimated, 2);
     channelOut = channelIn;
     estimatedAll = complex(nan(hop.nPRBs * NRE, nLayers));
-    maskAll = repmat(hop.DMRSREmask, hop.nPRBs, 1);
+    maskAll = repmat(hop.DMRSREmask(:, iCDM), hop.nPRBs, 1);
     estimatedAll(maskAll, :) = estimated;
     filledIndices = find(maskAll);
     nFilledIndices = length(filledIndices);
     for i = 1:nFilledIndices-1
         start = filledIndices(i) + 1;
-        stop = filledIndices(i+1) - 1;
+        stop = filledIndices(i + 1) - 1;
         stride = stop - start + 1;
         span = estimatedAll(stop + 1, :) - estimatedAll(start - 1, :);
         estimatedAll(start:stop, :) = estimatedAll(start - 1, :) + span * (1:stride) / (stride + 1);
@@ -250,7 +273,10 @@ function channelOut = fillChEst(channelIn, estimated, hop)
     for iLayer = 1:nLayers
         estimatedAll(filledIndices(end):end, iLayer) = estimatedAll(filledIndices(end), iLayer);
         estimatedAll(1:filledIndices(1), iLayer) = estimatedAll(filledIndices(1), iLayer);
-        channelOut(1 + occupiedSCs, 1 + occupiedSymbols, iLayer) = repmat(estimatedAll(:, iLayer), 1, hop.nAllocatedSymbols);
+        % iLayer is the layer index within the current CDM, we need the actual one
+        % to write the channel.
+        iLayerTrue = iLayer + (iCDM - 1) * 2;
+        channelOut(1 + occupiedSCs, 1 + occupiedSymbols, iLayerTrue) = repmat(estimatedAll(:, iLayer), 1, hop.nAllocatedSymbols);
     end
 end
 
@@ -302,18 +328,24 @@ function [recXpilotsOut, cfoOut] = compensateCFO(recXpilots, DMRSsymbols, ...
         return
     end
 
-    nLayers = 1 + (numel(size(recXpilots)) == 3);
+    nLayers = size(recXpilots, 3);
 
     CPDs = CyclicPrefixDurations * SCS;
 
     dmrsIx = find(DMRSsymbols);
     nSyms = dmrsIx(2) - dmrsIx(1);
-    cfoOut = complex(0);
-    for iLayer = 1:nLayers
-        cfoOut = cfoOut + recXpilots(:, 1, iLayer)' * recXpilots(:, 2, iLayer);
+    cfoOut = 0;
+    for iLayer = 1:2:nLayers-1
+        cfoCDM = recXpilots(:, 1, iLayer)' * recXpilots(:, 2, iLayer);
+        cfoCDM = cfoCDM + recXpilots(:, 1, iLayer + 1)' * recXpilots(:, 2, iLayer + 1);
+        cfoOut = cfoOut + angle(cfoCDM);
+    end
+    if mod(nLayers, 2) == 1
+        cfoCDM = recXpilots(:, 1, nLayers)' * recXpilots(:, 2, nLayers);
+        cfoOut = cfoOut + angle(cfoCDM);
     end
     nSamples = nSyms + sum(CPDs((dmrsIx(1) + 1):dmrsIx(2)));
-    cfoOut = angle(cfoOut) / (2 * pi * nSamples);
+    cfoOut = cfoOut / (2 * pi * nSamples) / ceil(nLayers / 2);
 
     if cfoCompensate
         symbolStartTime = cumsum([CPDs(1) CPDs(2:14) + 1]);

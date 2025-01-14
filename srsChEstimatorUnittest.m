@@ -201,7 +201,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
         SubcarrierSpacing = {15, 30}
 
         %Number of transmission layers.
-        NumLayers = {1, 2}
+        NumLayers = {1, 2, 3, 4}
 
         %Frequency hopping type ('neither', 'intraSlot').
         %   Note: Interslot frequency hopping is currently not considered.
@@ -294,7 +294,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             betaDMRS = fullConfig.BetaDMRS;
             fftSize = fullConfig.FFTSize;
 
-            snrEst = rsrp / betaDMRS^2 / noiseEst;
+            snrEst = rsrp * NumLayers / betaDMRS^2 / noiseEst;
 
             % A few very loose checks, just to ensure we are not completely out of place.
             if (configuration.nPRBs > 2)
@@ -334,9 +334,19 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                 obj.DMRSREmask,  ...    % re_pattern
                 };
 
-            if (NumLayers == 2)
-                % When transmitting two layers, we assume layers 0 and 1, which share DM-RS resources.
+            if (NumLayers >= 2)
+                % Layer 1 shares the same resources as layer 0.
                 dmrsPattern = {dmrsPattern dmrsPattern};
+            end
+            if (NumLayers >= 3)
+                % Layer 2 shares the same time resources as layers 0 and 1,
+                % but the RE mask is negated.
+                dmrsPattern = [dmrsPattern dmrsPattern(end)];
+                dmrsPattern{end}{end} = ~dmrsPattern{end}{end};
+            end
+            if (NumLayers == 4)
+                % Layer 3 shares the same resources as layer 2.
+                dmrsPattern = [dmrsPattern dmrsPattern(end)];
             end
 
             startSymbol = configuration.symbolAllocation(1);
@@ -414,8 +424,16 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             if (~isempty(hop2.maskPRBs) && ~isempty(hop2.DMRSsymbols))
                 pilotRBMask = pilotRBMask + hop2.maskPRBs * hop2.DMRSsymbols';
             end
-            pilotMask = kron(pilotRBMask, hop1.DMRSREmask);
-            pilotIndices = find(pilotMask);
+            nPRB = size(hop1.maskPRBs, 1);
+            nSymbols = size(hop1.DMRSsymbols, 1);
+            [nRE, nCDM] = size(hop1.DMRSREmask);
+            pilotMask = nan(nPRB * nRE, nSymbols, nCDM);
+            nPilots = sum(pilotRBMask, 'all') * sum(hop1.DMRSREmask(:, 1));
+            pilotIndices = nan(nPilots, nCDM);
+            for iCDM = 1:nCDM
+                pilotMask(:, :, iCDM) = kron(pilotRBMask, hop1.DMRSREmask(:, iCDM));
+                pilotIndices(:, iCDM) = find(pilotMask(:, :, iCDM));
+            end
 
             mexEstimator = srsMultiPortChannelEstimator(...
                 Smoothing=configuration.smoothing, ...
@@ -426,7 +444,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                     SubcarrierSpacing=SubcarrierSpacing, ...
                     HoppingIndex=hop2.startSymbol, ...
                     BetaScaling=betaDMRS ...
-                    ); %#ok<FNDSB>
+                    );
 
             % The tolerance for the time alignment is one timing-advance step size
             % (32 samples with a 4096-point DFT).
@@ -436,7 +454,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             obj.assertEqual(noiseEstMEX, noiseEst, 'Wrong noise variance estimate.', AbsTol = 5e-4);
             obj.assertEqual(extra.RSRP, rsrp, 'Wrong RSRP estimate.', AbsTol = 5e-4);
             obj.assertEqual(extra.EPRE, epre, 'Wrong EPRE estimate.', AbsTol = 5e-4);
-            obj.assertEqual(extra.SINR, rsrp / betaDMRS^2 / noiseEst, 'Wrong SINR estimate.', RelTol = 0.004);
+            obj.assertEqual(extra.SINR, rsrp * NumLayers / betaDMRS^2 / noiseEst, 'Wrong SINR estimate.', RelTol = 0.004);
             obj.assertEqual(extra.TimeAlignment, timeAlignment, 'Wrong time alignment estimate.', AbsTol = toleranceTA);
             obj.assertEqual(extra.CFO, cfoEst, 'Wrong CFO.', RelTol = 0.04);
         end % of function compareMex(...)
@@ -473,7 +491,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                 configuration    (1, 1) struct {mustBeConfiguration}
                 FrequencyHopping (1, :) char   {mustBeMember(FrequencyHopping, {'neither', 'intraSlot'})}
                 scs              (1, 1) double {mustBeMember(scs, [15, 30])}
-                nLayers          (1, 1) double {mustBeMember(nLayers, [1, 2])}
+                nLayers          (1, 1) double {mustBeMember(nLayers, 1:4)}
                 channelType      (1, :) char   {mustBeMember(channelType, {'pure-delay', ...
                     'TDL-A', 'TDL-B', 'TDL-C', 'TDL-D', 'TDL-E', ...
                     'TDLA30', 'TDLB100', 'TDLC300', 'TDLC60'})}
@@ -535,8 +553,6 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             CPDurations = CPDurations / sum(CPDurations) / scs;
 
             % Configure estimator.
-            EstimatorConfig.DMRSSymbolMask = obj.DMRSsymbols;
-            EstimatorConfig.DMRSREmask = obj.DMRSREmask;
             EstimatorConfig.nPilotsNoiseAvg = sum(obj.DMRSREmask);
             EstimatorConfig.scs = scs * 1000; % SCS in hertz
             EstimatorConfig.CyclicPrefixDurations = CPDurations;
@@ -634,12 +650,12 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             end
 
             crlb = repmat(10.^(-snrValues(:)/10), 1, 2) / betaDMRS^2 / sum(hop1.DMRSsymbols);
-            crlb = (crlb' .* computeCRLB(hop1.maskPRBs, hop1.DMRSREmask))';
+            crlb = (crlb' .* computeCRLB(hop1.maskPRBs, hop1.DMRSREmask(:, 1)))';
         end % of function characterize(...)
     end % of methods % public
 
     methods (Access = private)
-        function [hop1, hop2] = configureHops(obj, configuration, FrequencyHopping)
+        function [hop1, hop2] = configureHops(obj, configuration, NumLayers, FrequencyHopping)
         %Creates a description of the resources allocated in each hop.
 
             startSymbol = configuration.symbolAllocation(1);
@@ -665,7 +681,11 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                 hopMask = [true(obj.secondHop, 1); false(obj.nSymbolsSlot - obj.secondHop, 1)];
 
                 hop1.DMRSsymbols = (obj.DMRSsymbols & hopMask);
-                hop1.DMRSREmask = obj.DMRSREmask;
+                if NumLayers <= 2
+                    hop1.DMRSREmask = obj.DMRSREmask;
+                else
+                    hop1.DMRSREmask = [obj.DMRSREmask ~obj.DMRSREmask];
+                end
                 hop1.PRBstart = PRBstart(1);
                 hop1.nPRBs = nPRBs;
                 hop1.maskPRBs = false(obj.NSizeGrid, 1);
@@ -676,7 +696,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                 hop1.CHsymbols(hop1.startSymbol + (1:hop1.nAllocatedSymbols)) = true;
 
                 hop2.DMRSsymbols = (obj.DMRSsymbols & (~hopMask));
-                hop2.DMRSREmask = obj.DMRSREmask;
+                hop2.DMRSREmask = hop1.DMRSREmask;
                 hop2.PRBstart = PRBstart(2);
                 hop2.nPRBs = nPRBs;
                 hop2.maskPRBs = false(obj.NSizeGrid, 1);
@@ -690,7 +710,11 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                 obj.secondHop = 'std::nullopt';
 
                 hop1.DMRSsymbols = obj.DMRSsymbols;
-                hop1.DMRSREmask = obj.DMRSREmask;
+                if NumLayers <= 2
+                    hop1.DMRSREmask = obj.DMRSREmask;
+                else
+                    hop1.DMRSREmask = [obj.DMRSREmask ~obj.DMRSREmask];
+                end
                 hop1.PRBstart = PRBstart;
                 hop1.nPRBs = nPRBs;
                 hop1.maskPRBs = false(obj.NSizeGrid, 1);
@@ -708,7 +732,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
 
         function transmittedRG = transmitPilots(obj, pilots, betaDMRS, hop1, hop2)
         %Places the pilots on the correct REs and with the correct power on the resource grid.
-            nLayers = 1 + (numel(size(pilots)) == 3);
+            nLayers = size(pilots, 3);
             transmittedRG = complex(zeros(obj.NSizeGrid * obj.NRE, obj.nSymbolsSlot, nLayers));
 
             nPilotSymbolsHop1 = sum(hop1.DMRSsymbols);
@@ -728,7 +752,14 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                 maskPRBs_ = hop_.maskPRBs;
                 maskREs_ = (kron(maskPRBs_, obj.DMRSREmask) > 0);
 
-                transmittedRG(maskREs_, hop_.DMRSsymbols, :) = betaDMRS * pilots_;
+                nLayersCDM0_ = min(2, nLayers);
+                transmittedRG(maskREs_, hop_.DMRSsymbols, 1:nLayersCDM0_) = betaDMRS * pilots_(:, :, 1:nLayersCDM0_);
+
+                if nLayers > 2
+                    % DM-RS for layers 3 and 4 are sent on the complementary set of REs.
+                    maskREs_ = (kron(maskPRBs_, ~obj.DMRSREmask) > 0);
+                    transmittedRG(maskREs_, hop_.DMRSsymbols, 3:nLayers) = betaDMRS * pilots_(:, :, 3:nLayers);
+                end
             end % of function processHop(hop_, pilots_)
         end % of function transmittedRG = transmitPilots(pilots, hop1, hop2)
 
@@ -745,14 +776,14 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                 && strcmp(FrequencyHopping, 'intraSlot'), ...
                 'Cannot do frequency hopping if the entire BWP is allocated or if using a single OFDM symbol.');
 
-            obj.assumeFalse(~configuration.supportMultiLayer && (NumLayers == 2), ...
-                'Two transmission layers not supported for this configuration.');
+            obj.assumeFalse(~configuration.supportMultiLayer && (NumLayers > 1), ...
+                'Multiple transmission layers not supported for this configuration.');
 
             assert((sum(configuration.symbolAllocation) <= obj.nSymbolsSlot), ...
                 'srsran_matlab:srsChEstimatorUnittest', 'Time allocation exceeds slot length.');
 
             % Configure each hop.
-            [hop1, hop2] = obj.configureHops(configuration, FrequencyHopping);
+            [hop1, hop2] = obj.configureHops(configuration, NumLayers, FrequencyHopping);
 
             % Build DM-RS-like pilots.
             nDMRSsymbols = sum(obj.DMRSsymbols);
@@ -760,13 +791,25 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             pilots = complex(nan(nPilots * NumLayers, 1), nan(nPilots * NumLayers, 1));
             pilots(1:nPilots) = (2 * randi([0 1], nPilots, 2) - 1) * [1; 1j] / sqrt(2);
             pilots = reshape(pilots, [], nDMRSsymbols, NumLayers);
-            if NumLayers == 2
-                % We only simulate the case corresponding to DM-RS configuration type 1,
-                % CDM group 0 on ports {0, 1}, that is DM-RS for the two ports are sent
-                % over the same REs. Also, the pilots for the two ports are the same but
-                % for a sign change in every other pilot of the second port.
+            if NumLayers >= 2
+                % We only simulate the case corresponding to DM-RS configuration type 1.
+                % For CDM group 0, i.e. ports {0, 1}, the DM-RS are sent over the same REs
+                % and the pilots for port 1 are the same as those of port 0 but for a sign
+                % change in every other pilot.
                 pilots(:, :, 2) = pilots(:, :, 1);
                 pilots(2:2:end, :, 2) = -pilots(2:2:end, :, 2);
+            end
+            if NumLayers >= 3
+                % We only simulate the case corresponding to DM-RS configuration type 1.
+                % The DM-RS for port 2 are the same as those of port 0, just sent on
+                % a disjoint set of REs.
+                pilots(:, :, 3) = pilots(:, :, 1);
+            end
+            if NumLayers == 4
+                % We only simulate the case corresponding to DM-RS configuration type 1.
+                % The DM-RS for port 3 are the same as those of port 1, just sent on
+                % a disjoint set of REs.
+                pilots(:, :, 4) = pilots(:, :, 2);
             end
 
             betaDMRS = 10^(-configuration.betaDMRS / 20);
@@ -819,8 +862,6 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
                 noise = noise * sqrt(noiseVar / 2);
                 receivedRG = receivedRG + noise;
 
-                EstimatorConfig.DMRSSymbolMask = obj.DMRSsymbols;
-                EstimatorConfig.DMRSREmask = obj.DMRSREmask;
                 EstimatorConfig.scs = SubcarrierSpacing * 1000;
                 EstimatorConfig.CyclicPrefixDurations = CPDurations;
                 EstimatorConfig.Smoothing = configuration.smoothing;
@@ -951,12 +992,7 @@ function crlb = computeCRLB(prbMask, reMask)
 %   avoid a singular Fisher matrix.
 
     Nprb = length(prbMask);
-    Nre = Nprb * 12;
-    assert(length(reMask) == 12);
-    E = diag(kron(ones(Nprb, 1), reMask));
-    Jbig = ifft(fft(E, Nre, 2), Nre, 1);
-    cp = floor(Nre / 10);
-    J = Jbig(1:cp, 1:cp);
+    Nre = Nprb * 12; assert(length(reMask) == 12); E = diag(kron(ones(Nprb, 1), reMask)); Jbig = ifft(fft(E, Nre, 2), Nre, 1); cp = floor(Nre / 10); J = Jbig(1:cp, 1:cp);
     s = warning('error', 'MATLAB:nearlySingularMatrix');
     crlb = nan(2, 1);
     chMask = (kron(prbMask, ones(12, 1)) == 1);
