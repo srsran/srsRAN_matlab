@@ -3,7 +3,7 @@
 %    containing a set of complex symbols, formatted to match the 'file_vector<cf_t>'
 %    object used by the SRS gNB.
 
-%   Copyright 2021-2024 Software Radio Systems Limited
+%   Copyright 2021-2025 Software Radio Systems Limited
 %
 %   This file is part of srsRAN-matlab.
 %

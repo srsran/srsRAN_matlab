@@ -10,7 +10,7 @@
 %   copySRStestvectors(ORIGIN, DESTINATION, BLOCK, SRSDIR) specifies SRSDIR as
 %   the srsran_matlab root directory (defaults to current directory).
 
-%   Copyright 2021-2024 Software Radio Systems Limited
+%   Copyright 2021-2025 Software Radio Systems Limited
 %
 %   This file is part of srsRAN-matlab.
 %

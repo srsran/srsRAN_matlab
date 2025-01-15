@@ -2,7 +2,7 @@
 %   B = integer2srsBits(I) converts the nonnegative integer I to an initialization
 %   string of a "srsran::units::bits" variable containing I bits.
 
-%   Copyright 2021-2024 Software Radio Systems Limited
+%   Copyright 2021-2025 Software Radio Systems Limited
 %
 %   This file is part of srsRAN-matlab.
 %

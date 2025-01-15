@@ -109,7 +109,7 @@
 %
 %   Remark: The simulation loop is heavily based on the <a href="https://www.mathworks.com/help/5g/ug/nr-pusch-throughput.html">NR PUSCH Throughput</a> MATLAB example by MathWorks.
 
-%   Copyright 2021-2024 Software Radio Systems Limited
+%   Copyright 2021-2025 Software Radio Systems Limited
 %
 %   This file is part of srsRAN-matlab.
 %

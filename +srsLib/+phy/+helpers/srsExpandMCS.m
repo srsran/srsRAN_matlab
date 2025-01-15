@@ -5,7 +5,7 @@
 %   scheme index MCS (0-28) and associated table MCSTABLE ('qam64', 'qam256',
 %   'qam64LowSE'), as defined in TS 38.214 Section 5.1.3.1.
 
-%   Copyright 2021-2024 Software Radio Systems Limited
+%   Copyright 2021-2025 Software Radio Systems Limited
 %
 %   This file is part of srsRAN-matlab.
 %

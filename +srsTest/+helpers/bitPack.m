@@ -3,7 +3,7 @@
 %   DATA (i.e., only the LSB of each uint8 carries useful data) into a set of
 %   packed uint8 values PACKEDDATA (i.e., all 8 bits carry useful data).
 
-%   Copyright 2021-2024 Software Radio Systems Limited
+%   Copyright 2021-2025 Software Radio Systems Limited
 %
 %   This file is part of srsRAN-matlab.
 %

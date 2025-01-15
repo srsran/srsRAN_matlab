@@ -2,7 +2,7 @@
 %   OUTPUTSTRING = array2str(INPUTARRAY) converts the numeric array INPUTARRAY
 %   into its character representation OUTPUTSTRING.
 
-%   Copyright 2021-2024 Software Radio Systems Limited
+%   Copyright 2021-2025 Software Radio Systems Limited
 %
 %   This file is part of srsRAN-matlab.
 %
