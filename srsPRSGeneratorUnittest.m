@@ -31,9 +31,9 @@
 %   addTestDefinitionToHeaderFile   - Adds details (e.g., type/variable declarations)
 %                                     to the test header file.
 %
-%   See also matlab.unittest.
+%   See also matlab.unittest, nrPRS, nrPRSIndices, nrPRSConfig.
 
-%   Copyright 2021-2024 Software Radio Systems Limited
+%   Copyright 2021-2025 Software Radio Systems Limited
 %
 %   This file is part of srsRAN-matlab.
 %
@@ -81,7 +81,7 @@ classdef srsPRSGeneratorUnittest < srsTest.srsBlockUnittest
         Numerology = {0, 1}
 
         %Valid combinations of comb size and duration. Valid combinations
-        %are given in TS38.211 Section 7.4.1.7.3.
+        %   are given in TS38.211 Section 7.4.1.7.3.
         DurationAndCombSize = {[2, 2], [4, 2], [6, 2], [12, 2], [4, 4], [12, 4], [6, 6], [12, 6], [12, 12]}
     end
 
@@ -111,13 +111,12 @@ classdef srsPRSGeneratorUnittest < srsTest.srsBlockUnittest
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, Numerology, DurationAndCombSize)
         %testvectorGenerationCases Generates a test vector for the given Numerology,
-        %   NumLayers, FrequencyDensity, TimeDensity, and
-        %   REOffset. Other parameters are selected randomly.
+        %   NumLayers, FrequencyDensity, TimeDensity, and REOffset. Other parameters
+        %   are selected randomly.
+
 
         import srsTest.helpers.cellarray2str
         import srsTest.helpers.writeResourceGridEntryFile
-        import srsTest.helpers.symbolAllocationMask2string
-        import srsTest.helpers.RBallocationMask2string
 
         % Derive test parameters.
         subcarrierSpacing = 15 * pow2(Numerology);
@@ -132,14 +131,14 @@ classdef srsPRSGeneratorUnittest < srsTest.srsBlockUnittest
 
         % Select random parameters.
         NCellID = randi([0, 504]);
-        REOffset = randi([0 combSize - 1]);
+        REOffset = randi([0, combSize - 1]);
         numRB = randi([testCase.MinNumRB / testCase.ResNumRB, ...
             testCase.MaxNumRB / testCase.ResNumRB]) * testCase.ResNumRB;
         symbolStart = randi([0, 14 - numPRSSymbols]);
         RBOffset = randi([0, nSizeGrid - numRB]);
-        NPRSID = randi([0 4095]);
-        nSlot = randi([0 (10 * pow2(Numerology) - 1)]);
-        nFrame = randi([0 1023]);
+        NPRSID = randi([0, 4095]);
+        nSlot = randi([0, (10 * pow2(Numerology) - 1)]);
+        nFrame = randi([0, 1023]);
         amplitude = 10 * (rand() + 1);
         nStartGrid = randi([0, 2176 - numRB - RBOffset]);
         
