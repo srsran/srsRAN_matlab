@@ -26,7 +26,7 @@
 %   Example
 %      runtests('CheckPUCCHF2Conformance')
 %
-%   See also matlab.unittest, PUCCHBLER.
+%   See also matlab.unittest, PUCCHPERF.
 
 %   Copyright 2021-2025 Software Radio Systems Limited
 %
@@ -65,7 +65,7 @@ classdef CheckPUCCHF2Conformance < matlab.unittest.TestCase
 
             import matlab.unittest.fixtures.CurrentFolderFixture
 
-            obj.applyFixture(CurrentFolderFixture('../apps/simulators/PUCCHBLER'));
+            obj.applyFixture(CurrentFolderFixture('../apps/simulators/PUCCHPERF'));
 
             pp = obj.preparePUCCHshort(TestConfig);
 
@@ -76,10 +76,10 @@ classdef CheckPUCCHF2Conformance < matlab.unittest.TestCase
             try
                 pp(TestConfig.SNRshort, nFrames);
             catch ME
-                obj.assertFail(['PUCCHBLER simulation failed with error: ', ME.message]);
+                obj.assertFail(['PUCCHPERF simulation failed with error: ', ME.message]);
             end
 
-            detectionRate = 1 - pp.BlockErrorRateSRS;
+            detectionRate = 1 - pp.Statistics.BlockErrorRateSRS;
             obj.verifyGreaterThanOrEqual(detectionRate, 0.99, ...
                 'WARNING: The PUCCH F2 ACK detection rate should be higher than 99%.');
             obj.assertGreaterThanOrEqual(detectionRate, 0.95, ...
@@ -97,7 +97,7 @@ classdef CheckPUCCHF2Conformance < matlab.unittest.TestCase
 
             import matlab.unittest.fixtures.CurrentFolderFixture
 
-            obj.applyFixture(CurrentFolderFixture('../apps/simulators/PUCCHBLER'));
+            obj.applyFixture(CurrentFolderFixture('../apps/simulators/PUCCHPERF'));
 
             pp = obj.preparePUCCHshort(TestConfig);
 
@@ -108,12 +108,12 @@ classdef CheckPUCCHF2Conformance < matlab.unittest.TestCase
             try
                 pp(TestConfig.SNRshort, nFrames);
             catch ME
-                obj.assertFail(['PUCCHBLER simulation failed with error: ', ME.message]);
+                obj.assertFail(['PUCCHPERF simulation failed with error: ', ME.message]);
             end
 
-            obj.verifyLessThanOrEqual(pp.FalseDetectionRateSRS, 0.01, ...
+            obj.verifyLessThanOrEqual(pp.Statistics.FalseDetectionRateSRS, 0.01, ...
                 'WARNING: The PUCCH F2 ACK detection rate should be lower than 1%.');
-            obj.assertLessThanOrEqual(pp.FalseDetectionRateSRS, 0.05, ...
+            obj.assertLessThanOrEqual(pp.Statistics.FalseDetectionRateSRS, 0.05, ...
                 'ERROR: The PUCCH F2 ACK detection rate is above the hard acceptance threshold of 5%.');
 
             % TODO: export False Detection Rate (and possibly other metrics) to grafana.
@@ -127,7 +127,7 @@ classdef CheckPUCCHF2Conformance < matlab.unittest.TestCase
 
             import matlab.unittest.fixtures.CurrentFolderFixture
 
-            obj.applyFixture(CurrentFolderFixture('../apps/simulators/PUCCHBLER'));
+            obj.applyFixture(CurrentFolderFixture('../apps/simulators/PUCCHPERF'));
 
             pp = obj.preparePUCCHlong(TestConfig);
 
@@ -138,12 +138,12 @@ classdef CheckPUCCHF2Conformance < matlab.unittest.TestCase
             try
                 pp(TestConfig.SNRlong, nFrames);
             catch ME
-                obj.assertFail(['PUCCHBLER simulation failed with error: ', ME.message]);
+                obj.assertFail(['PUCCHPERF simulation failed with error: ', ME.message]);
             end
 
-            obj.verifyLessThanOrEqual(pp.BlockErrorRateSRS, 0.01, ...
+            obj.verifyLessThanOrEqual(pp.Statistics.BlockErrorRateSRS, 0.01, ...
                 'WARNING: The PUCCH F2 UCI BLER should not be higher than 1%.');
-            obj.assertLessThanOrEqual(pp.BlockErrorRateSRS, 0.05, ...
+            obj.assertLessThanOrEqual(pp.Statistics.BlockErrorRateSRS, 0.05, ...
                 'ERROR: The PUCCH F2 UCI BLER is above the hard acceptance threshold of 5%.');
 
             % TODO: export Detection Rate (and possibly other metrics) to grafana.
@@ -154,18 +154,18 @@ classdef CheckPUCCHF2Conformance < matlab.unittest.TestCase
 
     methods (Access = private)
         function pp = preparePUCCHshort(obj, TestConfig)
-        %Configures a PUCCHBLER object for a UCI of 4 bits.
+        %Configures a PUCCHPERF object for a UCI of 4 bits.
 
             import matlab.unittest.constraints.IsFile
 
             try
-                pp = PUCCHBLER;
+                pp = PUCCHPERF;
             catch ME
-                obj.assertFail(['Could not create a PUCCHBLER object because of exception: ', ...
+                obj.assertFail(['Could not create a PUCCHPERF object because of exception: ', ...
                     ME.message]);
             end
 
-            obj.assertClass(pp, 'PUCCHBLER', 'The created object is not a PUCCHBLER object.');
+            obj.assertClass(pp, 'PUCCHPERF', 'The created object is not a PUCCHPERF object.');
 
             obj.assertThat('../../../+srsMEX/+phy/@srsPUCCHProcessor/pucch_processor_mex.mexa64', IsFile, ...
                 'Could not find PUCCH processor mex executable.');
@@ -186,18 +186,18 @@ classdef CheckPUCCHF2Conformance < matlab.unittest.TestCase
         end % of function pp = preparePUCCHshort(obj, TestConfig)
 
         function pp = preparePUCCHlong(obj, TestConfig)
-        %Configures a PUCCHBLER object for a UCI of 22 bits.
+        %Configures a PUCCHPERF object for a UCI of 22 bits.
 
             import matlab.unittest.constraints.IsFile
 
             try
-                pp = PUCCHBLER;
+                pp = PUCCHPERF;
             catch ME
-                obj.assertFail(['Could not create a PUCCHBLER object because of exception: ', ...
+                obj.assertFail(['Could not create a PUCCHPERF object because of exception: ', ...
                     ME.message]);
             end
 
-            obj.assertClass(pp, 'PUCCHBLER', 'The created object is not a PUCCHBLER object.');
+            obj.assertClass(pp, 'PUCCHPERF', 'The created object is not a PUCCHPERF object.');
 
             obj.assertThat('../../../+srsMEX/+phy/@srsPUCCHProcessor/pucch_processor_mex.mexa64', IsFile, ...
                 'Could not find PUCCH processor mex executable.');
@@ -208,7 +208,7 @@ classdef CheckPUCCHF2Conformance < matlab.unittest.TestCase
             pp.PRBSet = 0:8;
             pp.SymbolAllocation = [12 2];
             pp.FrequencyHopping = 'intraSlot';
-            % The PUCCHBLER object takes care of picking the last PRBs in the second hop.
+            % The PUCCHPERF object takes care of picking the last PRBs in the second hop.
             pp.NumACKBits = 22;
             pp.NRxAnts = TestConfig.NRxAnts;
             pp.DelayProfile = 'TDLC300';

@@ -170,14 +170,14 @@ Function `combinePUSCHSims` can be used to obtain a summary of several simulatio
 ```
 See `help combinePUSCHSims` for more details.
 
-### apps/simulators/PUCCHBLER
-An instance of the *PUCCHBLER* class provides a simulator object for the evaluation of the performance (in terms of BLER, detection and false detection probability, depending on the case) of the PUCCH processors, for PUCCH Formats 0, 1 and 2. The following example shows how to evaluate the PUCCH Format 2 BLER at `SNR = -10:0` dB for the default configuration. For more information, enter `help PUCCHBLER` at the MATLAB command line.
+### apps/simulators/PUCCHPERF
+An instance of the *PUCCHPERF* class provides a simulator object for the evaluation of the performance (in terms of BLER, detection and false detection probability, depending on the case) of the PUCCH processors, for PUCCH Formats 0, 1 and 2. The following example shows how to evaluate the PUCCH Format 2 BLER at `SNR = -10:0` dB for the default configuration. For more information, enter `help PUCCHPERF` at the MATLAB command line.
 ```matlab
-sim = PUCCHBLER           % Create a PUCCHBLER object.
+sim = PUCCHPERF           % Create a PUCCHPERF object.
 sim(-10:10)               % Run the simulation.
 sim.BlockErrorRateMATLAB  % Display the evaluated BLER.
 sim.plot                  % Plot the evaluated BLER.
-save my_sim.mat sim       % Save the PUCCHBLER object, including the simulation results,
+save my_sim.mat sim       % Save the PUCCHPERF object, including the simulation results,
                           % to file my_sim.mat.
 ```
 
