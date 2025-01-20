@@ -103,7 +103,9 @@ private:
 };
 
 std::unique_ptr<srsran::port_channel_estimator>
-create_port_channel_estimator(srsran::port_channel_estimator_fd_smoothing_strategy smoothing, bool compensate_cfo)
+create_port_channel_estimator(srsran::port_channel_estimator_fd_smoothing_strategy     fd_smoothing,
+                              srsran::port_channel_estimator_td_interpolation_strategy td_interpolation,
+                              bool                                                     compensate_cfo)
 {
   using namespace srsran;
   std::shared_ptr<dft_processor_factory>            dft_factory = create_dft_processor_factory_fftw_slow();
@@ -111,5 +113,5 @@ create_port_channel_estimator(srsran::port_channel_estimator_fd_smoothing_strate
       create_time_alignment_estimator_dft_factory(dft_factory);
   std::shared_ptr<port_channel_estimator_factory> estimator_factory =
       create_port_channel_estimator_factory_sw(ta_est_factory);
-  return estimator_factory->create(smoothing, compensate_cfo);
+  return estimator_factory->create(fd_smoothing, td_interpolation, compensate_cfo);
 }

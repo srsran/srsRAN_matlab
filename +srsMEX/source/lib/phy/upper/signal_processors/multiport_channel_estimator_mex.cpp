@@ -34,7 +34,7 @@ using namespace srsran_matlab;
 
 void MexFunction::method_new(ArgumentList outputs, ArgumentList inputs)
 {
-  constexpr unsigned NOF_INPUTS = 3;
+  constexpr unsigned NOF_INPUTS = 4;
   if (inputs.size() != NOF_INPUTS) {
     mex_abort("Wrong number of inputs: expected {}, provided {}.", NOF_INPUTS, inputs.size());
   }
@@ -42,26 +42,35 @@ void MexFunction::method_new(ArgumentList outputs, ArgumentList inputs)
   if (inputs[1].getType() != ArrayType::CHAR) {
     mex_abort("Input 'smoothing' must be a string.");
   }
-  std::string                                  smoothing_string = static_cast<CharArray>(inputs[1]).toAscii();
-  port_channel_estimator_fd_smoothing_strategy smoothing        = port_channel_estimator_fd_smoothing_strategy::none;
-  if (smoothing_string == "filter") {
-    smoothing = port_channel_estimator_fd_smoothing_strategy::filter;
-  } else if (smoothing_string == "mean") {
-    smoothing = port_channel_estimator_fd_smoothing_strategy::mean;
-  } else if (smoothing_string != "none") {
-    mex_abort("Unknown smoothing strategy {}", smoothing_string);
+  std::string                                  fd_smoothing_string = static_cast<CharArray>(inputs[1]).toAscii();
+  port_channel_estimator_fd_smoothing_strategy fd_smoothing        = port_channel_estimator_fd_smoothing_strategy::none;
+  if (fd_smoothing_string == "filter") {
+    fd_smoothing = port_channel_estimator_fd_smoothing_strategy::filter;
+  } else if (fd_smoothing_string == "mean") {
+    fd_smoothing = port_channel_estimator_fd_smoothing_strategy::mean;
+  } else if (fd_smoothing_string != "none") {
+    mex_abort("Unknown FD smoothing strategy {}", fd_smoothing_string);
   }
 
-  if ((inputs[2].getType() != ArrayType::LOGICAL) && (inputs[2].getNumberOfElements() > 1)) {
+  std::string td_interpolation_string = static_cast<CharArray>(inputs[2]).toAscii();
+  port_channel_estimator_td_interpolation_strategy td_interpolation =
+      port_channel_estimator_td_interpolation_strategy::average;
+  if (td_interpolation_string == "interpolate") {
+    td_interpolation = port_channel_estimator_td_interpolation_strategy::interpolate;
+  } else if (td_interpolation_string != "average") {
+    mex_abort("Unknown TD interpolation strategy {}", td_interpolation_string);
+  }
+
+  if ((inputs[3].getType() != ArrayType::LOGICAL) && (inputs[3].getNumberOfElements() > 1)) {
     mex_abort("Input 'compensateCFO' should be a scalar logical.");
   }
-  bool compensate_cfo = static_cast<TypedArray<bool>>(inputs[2])[0];
+  bool compensate_cfo = static_cast<TypedArray<bool>>(inputs[3])[0];
 
   if (!outputs.empty()) {
     mex_abort("Wrong number of outputs: expected 0, provided {}.", outputs.size());
   }
 
-  estimator = create_port_channel_estimator(smoothing, compensate_cfo);
+  estimator = create_port_channel_estimator(fd_smoothing, td_interpolation, compensate_cfo);
 
   // Ensure the estimator was created properly.
   if (!estimator) {
