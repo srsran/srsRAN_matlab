@@ -109,11 +109,11 @@ function [carrier, phych, extra] = srsParseLogs
     chPattern = ("PUSCH"|"PUCCH");
     chType = extract(allLines{1}, chPattern);
 
-    isPUSH = true;
+    isPUSCH = true;
     if strcmp(chType{1}, 'PUSCH')
         phych = nrPUSCHConfig;
     elseif strcmp(chType{1}, 'PUCCH')
-        isPUSH = false;
+        isPUSCH = false;
         % If a PUCCH entry, we need the PUCCH format.
         fPattern = "format=" + digitsPattern;
         fType = extract(allLines{1}, fPattern);
@@ -122,6 +122,10 @@ function [carrier, phych, extra] = srsParseLogs
             phych = nrPUCCH1Config;
         elseif (format == 2)
             phych = nrPUCCH2Config;
+        elseif (format == 3)
+            phych = nrPUCCH3Config;
+        elseif (format == 4)
+            phych = nrPUCCH4Config;
         else
             error('PUCCH Format %d is not supported.', format);
         end
@@ -135,8 +139,20 @@ function [carrier, phych, extra] = srsParseLogs
         switch parameter{1}
             case 'rnti'
                 rnti = sscanf(parameter{2}, '%x');
-                if (isPUSH || (format == 2))
+                if (isPUSCH || (format == 2) || (format == 3) || (format == 4))
                     phych.RNTI = rnti;
+                end
+            case 'betas'
+                % This only applies to PUSCH.
+                betas = sscanf(parameter{2}, '[%f, %f, %f]');
+                if betas(1) ~= 0
+                    phych.BetaOffsetACK = betas(1);
+                end
+                if betas(2) ~= 0
+                    phych.BetaOffsetCSI1 = betas(2);
+                end
+                if betas(3) ~= 0
+                    phych.BetaOffsetCSI2 = betas(3);
                 end
             case 'bwp'
                 bwp = sscanf(parameter{2}, '[%d, %d)');
@@ -154,7 +170,7 @@ function [carrier, phych, extra] = srsParseLogs
                 rv = sscanf(parameter{2}, '%d');
             case 'n_id'
                 nid = sscanf(parameter{2}, '%d');
-                if (~isPUSH && (format == 1))
+                if (~isPUSCH && (format == 1))
                     phych.HoppingID = nid;
                 else
                     phych.NID = nid;
@@ -171,6 +187,14 @@ function [carrier, phych, extra] = srsParseLogs
             case 'dmrs_type'
                 dmrsType = sscanf(parameter{2}, '%d');
                 phych.DMRS.DMRSConfigurationType = dmrsType;
+            case "n_id_hop"
+                % This applies to PUCCH F3 and F4 only.
+                n_id_hop = sscanf(parameter{2}, '%d');
+                phych.HoppingID = n_id_hop;
+            case "n_id_scr"
+                % This applies to PUCCH F3 and F4 only.
+                n_id_scr = sscanf(parameter{2}, '%d');
+                phych.NID = n_id_scr;
             case 'n_scr_id'
                 scramblingID = sscanf(parameter{2}, '%d');
                 phych.DMRS.NIDNSCID = scramblingID;
@@ -189,6 +213,20 @@ function [carrier, phych, extra] = srsParseLogs
                 phych.PRBSet = prb(1):(prb(2)-1);
             case 'dc_position'
                 dcPosition = sscanf(parameter{2}, '%d');
+            case 'pi2_bpsk'
+                % This applies to PUCCH F3 and F4 only.
+                if strcmp(parameter{2}, 'false')
+                    phych.Modulation = 'QPSK';
+                else
+                    phych.Modulation = 'pi/2-BPSK';
+                end
+            case 'add_dmrs'
+                % This applies to PUCCH F3 and F4 only.
+                if strcmp(parameter{2}, 'false')
+                    phych.AdditionalDMRS = 0;
+                else
+                    phych.AdditionalDMRS = 1;
+                end
             case 'prb1'
                 % This applies to PUCCH Format 1 only.
                 prb = sscanf(parameter{2}, '%d');
@@ -210,13 +248,18 @@ function [carrier, phych, extra] = srsParseLogs
                 cs = sscanf(parameter{2}, '%d');
                 phych.InitialCyclicShift = cs;
             case 'occ'
+                % This applies to PUCCH F1 and F4 only.
                 occ = sscanf(parameter{2}, '%d');
                 phych.OCCI = occ;
+            case 'occ_len'
+                % This applies to PUCCH Format 4 only.
+                sf = sscanf(parameter{2}, '%d');
+                phych.SpreadingFactor = sf;
             otherwise
         end
     end
 
-    if isPUSH
+    if isPUSCH
         % If a PUSCH entry, read the TBS (recall that srsGNB logs it in bytes,
         % MATLAB uses bits) and populate the extra struct.
         tStart = strfind(allLines{1}, 'tbs');
