@@ -10,12 +10,16 @@
 %   TransmittedACKsCtr            - Counter of tranmsitted ACK bits.
 %   TransmittedNACKsCtr           - Counter of transmitted NACKs.
 %   ACKOccasionsCtr               - Counter of ACK occasions.
+%   MissedOccasionsMATLABCtr      - Counter of missed occasions (MATLAB case).
+%   MissedOccasionsSRSCtr         - Counter of missed occasions (SRS case).
 %   MissedACKsMATLABCtr           - Counter of missed ACK bits (MATLAB case).
 %   MissedACKsSRSCtr              - Counter of missed ACK bits (SRS case).
 %   NACK2ACKsMATLABCtr            - Counter of NACK bits received as ACK bits (MATLAB case).
 %   NACK2ACKsSRSCtr               - Counter of NACK bits received as ACK bits (SRS case).
 %   FalseACKsMATLABCtr            - Counter of false ACK bits (MATLAB case).
 %   FalseACKsSRSCtr               - Counter of false ACK bits (SRS case).
+%   PUCCHDetectionRateMATLAB      - Detection rate of PUCCH F1 transmissions (MATLAB case).
+%   PUCCHDetectionRateSRS         - Detection rate of PUCCH F1 transmissions (SRS case).
 %   FalseACKDetectionRateMATLAB   - False ACK detection rate (MATLAB case).
 %   FalseACKDetectionRateSRS      - False ACK detection rate (SRS case).
 %   NACK2ACKDetectionRateMATLAB   - NACK-to-ACK detection rate (MATLAB case).
@@ -50,6 +54,10 @@ classdef FormatDetailsF1 < handle
         TransmittedNACKsCtr = []
         %Counter of ACK occasions.
         ACKOccasionsCtr = []
+        %Counter of missed occasions (MATLAB case).
+        MissedOccasionsMATLABCtr = []
+        %Counter of missed occasions (SRS case).
+        MissedOccasionsSRSCtr = []
         %Counter of missed ACK bits (MATLAB case).
         MissedACKsMATLABCtr = []
         %Counter of missed ACK bits (SRS case).
@@ -83,6 +91,12 @@ classdef FormatDetailsF1 < handle
         %ACK Detection rate (SRS case).
         %   Probability of detecting an ACK when the ACK is transmitted.
         ACKDetectionRateSRS
+        %Transmission detection rate (MATLAB case).
+        %   Probability of detecting a PUCCH F1 when the PUCCH F1 is transmitted.
+        PUCCHDetectionRateMATLAB
+        %Transmission detection rate (SRS case).
+        %   Probability of detecting a PUCCH F1 when the PUCCH F1 is transmitted.
+        PUCCHDetectionRateSRS
     end % of properties (Dependable)
 
     properties (Hidden)
@@ -108,6 +122,8 @@ classdef FormatDetailsF1 < handle
             obj.TransmittedACKsCtr = [];
             obj.TransmittedNACKsCtr = [];
             obj.ACKOccasionsCtr = [];
+            obj.MissedOccasionsMATLABCtr = [];
+            obj.MissedOccasionsSRSCtr = [];
             obj.MissedACKsMATLABCtr = [];
             obj.MissedACKsSRSCtr = [];
             obj.FalseACKsMATLABCtr = [];
@@ -119,6 +135,8 @@ classdef FormatDetailsF1 < handle
             obj.SNRrange(repeatedIdx) = [];
             [obj.SNRrange, sortedIdx] = sort([obj.SNRrange; SNRIn(:)]);
 
+            obj.ACKOccasionsCtr = joinArrays(obj.ACKOccasionsCtr, stats.nOccasions, repeatedIdx, sortedIdx);
+
             if obj.isDetectionTest
                 obj.TransmittedACKsCtr = joinArrays(obj.TransmittedACKsCtr, stats.nACKs, repeatedIdx, sortedIdx);
                 obj.TransmittedNACKsCtr = joinArrays(obj.TransmittedNACKsCtr, stats.nNACKs, repeatedIdx, sortedIdx);
@@ -126,8 +144,9 @@ classdef FormatDetailsF1 < handle
                 obj.MissedACKsSRSCtr = joinArrays(obj.MissedACKsSRSCtr, stats.missedACKSRS, repeatedIdx, sortedIdx);
                 obj.NACK2ACKsMATLABCtr = joinArrays(obj.NACK2ACKsMATLABCtr, stats.NACK2ACK, repeatedIdx, sortedIdx);
                 obj.NACK2ACKsSRSCtr = joinArrays(obj.NACK2ACKsSRSCtr, stats.NACK2ACKSRS, repeatedIdx, sortedIdx);
+                obj.MissedOccasionsMATLABCtr = joinArrays(obj.MissedOccasionsMATLABCtr, stats.missedPUCCH, repeatedIdx, sortedIdx);
+                obj.MissedOccasionsSRSCtr = joinArrays(obj.MissedOccasionsSRSCtr, stats.missedPUCCHSRS, repeatedIdx, sortedIdx);
             else
-                obj.ACKOccasionsCtr = joinArrays(obj.ACKOccasionsCtr, stats.nOccasions, repeatedIdx, sortedIdx);
                 obj.FalseACKsMATLABCtr = joinArrays(obj.FalseACKsMATLABCtr, stats.falseACK, repeatedIdx, sortedIdx);
                 obj.FalseACKsSRSCtr = joinArrays(obj.FalseACKsSRSCtr, stats.falseACKSRS, repeatedIdx, sortedIdx);
             end
@@ -163,15 +182,17 @@ classdef FormatDetailsF1 < handle
         % Creates a temporary structure of metrics to collect data for the current simulation.
         function stats = setupTmpStats(nPoints)
             stats = struct(...
-                'missedACK', zeros(nPoints, 1), ...    % number of MATLAB missed ACKs
-                'NACK2ACK', zeros(nPoints, 1), ...     % number of MATLAB NACKs received as ACKs
-                'falseACK', zeros(nPoints, 1), ...     % number of MATLAB false ACKs
-                'missedACKSRS', zeros(nPoints, 1), ... % number of SRS missed ACKs
-                'NACK2ACKSRS', zeros(nPoints, 1), ...  % number of SRS NACKs received as ACKs
-                'falseACKSRS', zeros(nPoints, 1), ...  % number of SRS false ACKs
-                'nACKs', zeros(nPoints, 1), ...        % number of transmitted ACKs
-                'nNACKs', zeros(nPoints, 1), ...       % number of transmitted NACKs
-                'nOccasions', zeros(nPoints, 1) ...    % number of ACK occasions (false alarm tests)
+                'missedPUCCH', zeros(nPoints, 1), ...     % number of MATLAB non-detected PUCCH transmissions
+                'missedACK', zeros(nPoints, 1), ...       % number of MATLAB missed ACKs
+                'NACK2ACK', zeros(nPoints, 1), ...        % number of MATLAB NACKs received as ACKs
+                'falseACK', zeros(nPoints, 1), ...        % number of MATLAB false ACKs
+                'missedPUCCHSRS', zeros(nPoints, 1), ...  % number of SRS non-detected PUCCH transmissions
+                'missedACKSRS', zeros(nPoints, 1), ...    % number of SRS missed ACKs
+                'NACK2ACKSRS', zeros(nPoints, 1), ...     % number of SRS NACKs received as ACKs
+                'falseACKSRS', zeros(nPoints, 1), ...     % number of SRS false ACKs
+                'nACKs', zeros(nPoints, 1), ...           % number of transmitted ACKs
+                'nNACKs', zeros(nPoints, 1), ...          % number of transmitted NACKs
+                'nOccasions', zeros(nPoints, 1) ...       % number of ACK occasions
                 );
         end
 
@@ -185,6 +206,8 @@ classdef FormatDetailsF1 < handle
                     % Missed ACK.
                     stats.missedACK(snrIdx) = stats.missedACK(snrIdx) + sum(uci & ~uciRx{1});
                 else
+                    % Record a non-detected PUCCH F1 transmission.
+                    stats.missedPUCCH(snrIdx) = stats.missedPUCCH(snrIdx) + 1;
                     % Missed ACK. Here, uciRx is empty (MATLAB's PUCCH decoder failed
                     % to detect) and all ACKs are lost.
                     stats.missedACK(snrIdx) = stats.missedACK(snrIdx) + sum(uci);
@@ -205,6 +228,8 @@ classdef FormatDetailsF1 < handle
                     % Missed ACK.
                     stats.missedACKSRS(snrIdx) = stats.missedACKSRS(snrIdx) + sum(uci & ~uciRxSRS);
                 else
+                    % Record a non-detected PUCCH F1 transmission.
+                    stats.missedPUCCHSRS(snrIdx) = stats.missedPUCCHSRS(snrIdx) + 1;
                     % Missed ACK. Here, SRS's PUCCH decoder failed
                     % to detect and all ACKs are lost.
                     stats.missedACKSRS(snrIdx) = stats.missedACKSRS(snrIdx) + sum(uci);
@@ -219,10 +244,12 @@ classdef FormatDetailsF1 < handle
 
         function printMessagesMATLAB(stats, usedFrames, ~, SNRIn, isDetectTest, snrIdx)
             if isDetectTest
+                fprintf(['PUCCH Format 1 - Missed transmission rate for %d frame(s) at ', ...
+                    'SNR %.1f dB: %g\n'], usedFrames, SNRIn(snrIdx), stats.missedPUCCH(snrIdx)/stats.nOccasions(snrIdx));
                 fprintf(['PUCCH Format 1 - NACK to ACK rate for %d frame(s) at ', ...
-                'SNR %.1f dB: %g\n'], usedFrames, SNRIn(snrIdx), stats.NACK2ACK(snrIdx)/stats.nNACKs(snrIdx));
+                    'SNR %.1f dB: %g\n'], usedFrames, SNRIn(snrIdx), stats.NACK2ACK(snrIdx)/stats.nNACKs(snrIdx));
                 fprintf(['PUCCH Format 1 - ACK missed detection rate for %d frame(s) at ', ...
-                'SNR %.1f dB: %g\n'], usedFrames, SNRIn(snrIdx), stats.missedACK(snrIdx)/stats.nACKs(snrIdx));
+                    'SNR %.1f dB: %g\n'], usedFrames, SNRIn(snrIdx), stats.missedACK(snrIdx)/stats.nACKs(snrIdx));
             else
                 fprintf(['PUCCH Format 1 - false ACK detection rate for %d frame(s) at ', ...
                 'SNR %.1f dB: %g\n'], usedFrames, SNRIn(snrIdx), stats.falseACK(snrIdx)/stats.nOccasions(snrIdx));
@@ -231,6 +258,8 @@ classdef FormatDetailsF1 < handle
 
         function printMessagesSRS(stats, usedFrames, ~, SNRIn, isDetectTest, snrIdx)
             if isDetectTest
+                fprintf(['SRS - PUCCH Format 1 - Missed transmission rate for %d frame(s) at ', ...
+                    'SNR %.1f dB: %g\n'], usedFrames, SNRIn(snrIdx), stats.missedPUCCHSRS(snrIdx)/stats.nOccasions(snrIdx));
                 fprintf(['SRS - PUCCH Format 1 - NACK to ACK rate for %d frame(s) at ', ...
                     'SNR %.1f dB: %g\n'], usedFrames, SNRIn(snrIdx), stats.NACK2ACKSRS(snrIdx)/stats.nNACKs(snrIdx));
                 fprintf(['SRS - PUCCH Format 1 - ACK missed detection rate for %d frame(s) at ', ...
@@ -309,6 +338,28 @@ classdef FormatDetailsF1 < handle
             ackd = 1 - obj.MissedACKsSRSCtr ./ obj.TransmittedACKsCtr;
         end
 
+        function pucchd = get.PUCCHDetectionRateMATLAB(obj)
+            if ~obj.isDetectionTest
+                warning('off', 'backtrace');
+                warning('The PUCCHDetectionRateMATLAB property is inactive when TestType == ''False Alarm''.');
+                warning('on', 'backtrace');
+                pucchd = [];
+                return
+            end
+            pucchd = 1 - obj.MissedOccasionsMATLABCtr ./ obj.ACKOccasionsCtr;
+        end
+
+        function pucchd = get.PUCCHDetectionRateSRS(obj)
+            if ~obj.isDetectionTest
+                warning('off', 'backtrace');
+                warning('The PUCCHDetectionRateSRS property is inactive when TestType == ''False Alarm''.');
+                warning('on', 'backtrace');
+                pucchd = [];
+                return
+            end
+            pucchd = 1 - obj.MissedOccasionsSRSCtr ./ obj.ACKOccasionsCtr;
+        end
+
         function flag = hasresults(obj)
             flag = ~isempty(obj.SNRrange);
         end
@@ -316,17 +367,19 @@ classdef FormatDetailsF1 < handle
         function [codedUCI, stats] = UCIEncode(obj, uci, ouci, ~, stats, snrIdx)
             % For Format1, no encoding.
             codedUCI = uci;
+
+            stats.nOccasions(snrIdx) = stats.nOccasions(snrIdx) + ouci;
+
             if obj.isDetectionTest
                 stats.nACKs(snrIdx) = stats.nACKs(snrIdx) + sum(uci);
                 stats.nNACKs(snrIdx) = stats.nNACKs(snrIdx) + sum(~uci);
-            else
-                stats.nOccasions(snrIdx) = stats.nOccasions(snrIdx) + ouci;
             end
         end % of function UCIEncode()
 
         function counts = getCounters(obj, implementationType)
             counts = struct();
             counts.SNRrange = obj.SNRrange;
+            counts.ACKOccasionsCtr = obj.ACKOccasionsCtr;
 
             getMatlab = ~strcmp(implementationType, 'srs');
             getSRS = ~strcmp(implementationType, 'matlab');
@@ -334,15 +387,16 @@ classdef FormatDetailsF1 < handle
                 counts.TransmittedACKsCtr = obj.TransmittedACKsCtr;
                 counts.TransmittedNACKsCtr = obj.TransmittedNACKsCtr;
                 if getSRS
+                    counts.MissedOccasionsSRSCtr = obj.MissedOccasionsSRSCtr;
                     counts.MissedACKsSRSCtr = obj.MissedACKsSRSCtr;
                     counts.NACK2ACKsSRSCtr = obj.NACK2ACKsSRSCtr;
                 end
                 if getMatlab
+                    counts.MissedOccasionsMATLABCtr = obj.MissedOccasionsMATLABCtr;
                     counts.MissedACKsMATLABCtr = obj.MissedACKsMATLABCtr;
                     counts.NACK2ACKsMATLABCtr = obj.NACK2ACKsMATLABCtr;
                 end
             else
-                counts.ACKOccasionsCtr = obj.ACKOccasionsCtr;
                 if getSRS
                     counts.FalseACKsSRSCtr = obj.FalseACKsSRSCtr;
                 end
@@ -361,10 +415,12 @@ classdef FormatDetailsF1 < handle
                 if getSRS
                     statistics.ACKDetectionRateSRS = obj.ACKDetectionRateSRS;
                     statistics.NACK2ACKDetectionRateSRS = obj.NACK2ACKDetectionRateSRS;
+                    statistics.PUCCHDetectionRateSRS = obj.PUCCHDetectionRateSRS;
                 end
                 if getMatlab
                     statistics.ACKDetectionRateMATLAB = obj.ACKDetectionRateMATLAB;
                     statistics.NACK2ACKDetectionRateMATLAB = obj.NACK2ACKDetectionRateMATLAB;
+                    statistics.PUCCHDetectionRateMATLAB = obj.PUCCHDetectionRateMATLAB;
                 end
             else
                 if getSRS
