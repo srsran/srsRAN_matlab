@@ -118,7 +118,9 @@ function [carrier, phych, extra] = srsParseLogs
         fPattern = "format=" + digitsPattern;
         fType = extract(allLines{1}, fPattern);
         format = str2double(fType{1}(end));
-        if (format == 1)
+        if (format == 0)
+            phych = nrPUCCH0Config;
+        elseif (format == 1)
             phych = nrPUCCH1Config;
         elseif (format == 2)
             phych = nrPUCCH2Config;
@@ -170,7 +172,7 @@ function [carrier, phych, extra] = srsParseLogs
                 rv = sscanf(parameter{2}, '%d');
             case 'n_id'
                 nid = sscanf(parameter{2}, '%d');
-                if (~isPUSCH && (format == 1))
+                if (~isPUSCH && (format == 0 || format == 1))
                     phych.HoppingID = nid;
                 else
                     phych.NID = nid;

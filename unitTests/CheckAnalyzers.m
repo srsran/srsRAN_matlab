@@ -13,8 +13,11 @@
 %   CheckAnalyzers Methods (Test, TestTags = {'matlab code'}):
 %
 %   checkParserPUSCH    - Checks that the parser for PUSCH logs.
+%   checkParserPUCCHF0  - Checks that the parser for PUCCH Format 0 logs.
 %   checkParserPUCCHF1  - Checks that the parser for PUCCH Format 1 logs.
 %   checkParserPUCCHF2  - Checks that the parser for PUCCH Format 2 logs.
+%   checkParserPUCCHF3  - Checks that the parser for PUCCH Format 3 logs.
+%   checkParserPUCCHF4  - Checks that the parser for PUCCH Format 4 logs.
 %
 %   Example
 %      runtests('CheckAnalyzers')
@@ -164,6 +167,70 @@ classdef CheckAnalyzers < matlab.unittest.TestCase
             obj.assertEmpty(extra.dcPosition, 'Wrong transport block size.');
         end % of function checkParser(obj)
 
+        function checkParserPUCCHF0(obj)
+            % Create a log and feed it to the stub pause function.
+            logs = ['2025-02-10T09:51:20.776423 [PHY     ] [D] [  214.17] PUCCH: rnti=0x4601 format=0 prb1=0 prb2=na symb=[0, 2) cs=0 ack=1 sinr=15.4dB t=7.4us', newline, ...
+                'rnti=0x4601', newline, ...
+                'format=0', newline, ...
+                'bwp=[0, 133)', newline, ...
+                'slot=214.17', newline, ...
+                'prb1=0', newline, ...
+                'prb2=na', newline, ...
+                'symb=[0, 2)', newline, ...
+                'cs=4', newline, ...
+                'n_id=1', newline, ...
+                'sr_opportunity=false', newline, ...
+                'ports=0', newline, ...
+                'status=valid', newline, ...
+                'ack=1', newline, ...
+                'sinr_eq[sel]=15.4dB', newline ...
+                'epre=-11.8dB', newline, ...
+                'rsrp=+1.8dB', newline, ...
+                'sinr=+15.4dB', newline, ...
+                't_align=na', newline, ...
+                'cfo=na'];
+            obj.injectClipboardStub(logs);
+
+            % Prepare answers and feed them to the stub input function.
+            answers = {'y', 30, 133};
+            obj.injectInputStub(answers);
+
+            % Run the parser.
+            [carrier, pucch, extra] = srsParseLogs;
+
+            % Check the carrier output.
+            obj.assertClass(carrier, 'nrCarrierConfig', 'Output "carrier" is not an nrCarrierConfig object.');
+            obj.assertEqual(carrier.NCellID, 1, 'Wrong NCellID.');
+            obj.assertEqual(carrier.SubcarrierSpacing, 30, 'Wrong subcarrier spacing.');
+            obj.assertEqual(carrier.CyclicPrefix, 'normal', 'Wrong cyclic prefix.');
+            obj.assertEqual(carrier.NSizeGrid, 133, 'Wrong resource grid size.');
+            obj.assertEqual(carrier.NStartGrid, 0, 'Wrong start of resource grid.');
+            obj.assertEqual(carrier.NSlot, 17, 'Wrong slot number.');
+            obj.assertEqual(carrier.NFrame, 214, 'Wrong frame number.');
+            obj.assertEqual(carrier.SymbolsPerSlot, 14, 'Wrong number of OFDM symbols per slot.');
+            obj.assertEqual(carrier.SlotsPerSubframe, 2, 'Wrong number of slots per subframe.');
+            obj.assertEqual(carrier.SlotsPerFrame, 20, 'Wrong number of slots per frame.');
+
+            % Check the pucch output.
+            obj.assertClass(pucch, 'nrPUCCH0Config', 'Output "pucch" is not an nrPUCCH0Config object.');
+            obj.assertEqual(pucch.NSizeBWP, 133, 'Wrong BWP size.');
+            obj.assertEqual(pucch.NStartBWP, 0, 'Wrong BWP start.');
+            obj.assertEqual(pucch.SymbolAllocation, [0 2], 'Wrong OFDM symbol allocation.');
+            obj.assertEqual(pucch.PRBSet, 0, 'Wrong PRB set.');
+            obj.assertEqual(pucch.FrequencyHopping, 'neither', 'Wrong frequency hopping.');
+            obj.assertEqual(pucch.SecondHopStartPRB, 1, 'Wrong starting PRB index of second hop.');
+            obj.assertEqual(pucch.Interlacing, false, 'Wrong interlacing.');
+            obj.assertEqual(pucch.RBSetIndex, 0, 'Wrong RB set index.');
+            obj.assertEqual(pucch.InterlaceIndex, 0, 'Wrong interlace index.');
+            obj.assertEqual(pucch.GroupHopping, 'neither', 'Wrong group hopping.');
+            obj.assertEqual(pucch.HoppingID, 1, 'Wrong hopping ID.');
+            obj.assertEqual(pucch.InitialCyclicShift, 4, 'Wrong initial cyclic shift.');
+
+            % Check the extra output.
+            obj.assertClass(extra, 'struct', 'Output "extra" is not a struct.');
+            obj.assertEmpty(extra, 'Output "extra" is not empty.');
+        end % of function checkParserPUCCHF0(obj)
+
         function checkParserPUCCHF1(obj)
             % Create a log and feed it to the stub pause function.
             logs = ['2023-08-05T16:59:49.046269 [PHY     ] [D] [   768.9] PUCCH: rnti=0x4601 format=1 prb1=0 prb2=na symb=[0, 14) cs=0 occ=0 sr=yes t=60.2us', newline, ...
@@ -288,6 +355,144 @@ classdef CheckAnalyzers < matlab.unittest.TestCase
             obj.assertClass(extra, 'struct', 'Output "extra" is not a struct.');
             obj.assertEmpty(extra, 'Output "extra" is not empty.');
         end % of function checkParserPUCCHF2(obj)
+
+        function checkParserPUCCHF3(obj)
+            % Create a log and feed it to the stub pause function.
+            logs = ['2025-01-16T14:46:53.620414 [PHY     ] [D] [    20.8] PUCCH: rnti=0x4601 format=3 prb=[124, 125) prb2=na symb=[4, 8) csi1=0001 sinr=27.0dB t=92.3us', newline, ...
+                'rnti=0x4601', newline, ...
+                'format=3', newline, ...
+                'bwp=[0, 133)', newline, ...
+                'prb=[124, 125)', newline, ...
+                'prb2=na', newline, ...
+                'symb=[4, 8)', newline, ...
+                'n_id_scr=1', newline, ...
+                'n_id_hop=1', newline, ...
+                'slot=20.8', newline, ...
+                'cp=normal', newline, ...
+                'ports=0', newline, ...
+                'pi2_bpsk=false', newline, ...
+                'add_dmrs=false', newline, ...
+                'status=valid', newline, ...
+                'csi1=0001', newline, ...
+                'sinr_ch_est[sel]=27.0dB', newline ...
+                'epre=-11.8dB', newline, ...
+                'rsrp=-11.8dB', newline, ...
+                'sinr=+27.0dB', newline, ...
+                't_align=0.00us', newline, ...
+                'cfo=na'];
+            obj.injectClipboardStub(logs);
+
+            % Prepare answers and feed them to the stub input function.
+            answers = {'y', 30, 133};
+            obj.injectInputStub(answers);
+
+            % Run the parser.
+            [carrier, pucch, extra] = srsParseLogs;
+
+            % Check the carrier output.
+            obj.assertClass(carrier, 'nrCarrierConfig', 'Output "carrier" is not an nrCarrierConfig object.');
+            obj.assertEqual(carrier.NCellID, 1, 'Wrong NCellID.');
+            obj.assertEqual(carrier.SubcarrierSpacing, 30, 'Wrong subcarrier spacing.');
+            obj.assertEqual(carrier.CyclicPrefix, 'normal', 'Wrong cyclic prefix.');
+            obj.assertEqual(carrier.NSizeGrid, 133, 'Wrong resource grid size.');
+            obj.assertEqual(carrier.NStartGrid, 0, 'Wrong start of resource grid.');
+            obj.assertEqual(carrier.NSlot, 8, 'Wrong slot number.');
+            obj.assertEqual(carrier.NFrame, 20, 'Wrong frame number.');
+            obj.assertEqual(carrier.SymbolsPerSlot, 14, 'Wrong number of OFDM symbols per slot.');
+            obj.assertEqual(carrier.SlotsPerSubframe, 2, 'Wrong number of slots per subframe.');
+            obj.assertEqual(carrier.SlotsPerFrame, 20, 'Wrong number of slots per frame.');
+
+            % Check the pucch output.
+            obj.assertClass(pucch, 'nrPUCCH3Config', 'Output "pucch" is not an nrPUCCH3Config object.');
+            obj.assertEqual(pucch.NSizeBWP, 133, 'Wrong BWP size.');
+            obj.assertEqual(pucch.NStartBWP, 0, 'Wrong BWP start.');
+            obj.assertEqual(pucch.Modulation, 'QPSK', 'Wrong modulation.');
+            obj.assertEqual(pucch.SymbolAllocation, [4 4], 'Wrong OFDM symbol allocation.');
+            obj.assertEqual(pucch.PRBSet, 124, 'Wrong PRB set.');
+            obj.assertEqual(pucch.FrequencyHopping, 'neither', 'Wrong frequency hopping.');
+            obj.assertEqual(pucch.SecondHopStartPRB, 1, 'Wrong starting PRB index of second hop.');
+            obj.assertEqual(pucch.GroupHopping, 'neither', 'Wrong group hopping.');
+            obj.assertEqual(pucch.HoppingID, 1, 'Wrong hopping identity.');
+            obj.assertEqual(pucch.NID, 1, 'Wrong PUCCH scrambling identity.');
+            obj.assertEqual(pucch.RNTI, 17921, 'Wrong radio network temporary identifier.');
+            obj.assertEqual(pucch.NID0, [], 'Wrong DM-RS scrambling identity.');
+            obj.assertEqual(pucch.AdditionalDMRS, false, 'Wrong additional DM-RS.');
+
+            % Check the extra output.
+            obj.assertClass(extra, 'struct', 'Output "extra" is not a struct.');
+            obj.assertEmpty(extra, 'Output "extra" is not empty.');
+        end % of function checkParserPUCCHF3(obj)
+
+        function checkParserPUCCHF4(obj)
+            % Create a log and feed it to the stub pause function.
+            logs = ['2025-01-16T14:50:28.741569 [PHY     ] [D] [    20.8] PUCCH: rnti=0x4601 format=4 prb=[10, 11) prb2=na symb=[0, 14) csi1=0001 sinr=27.2dB t=131.1us', newline, ...
+                'rnti=0x4601', newline, ...
+                'format=4', newline, ...
+                'bwp=[0, 133)', newline, ...
+                'prb=[10, 11)', newline, ...
+                'prb2=na', newline, ...
+                'symb=[0, 14)', newline, ...
+                'n_id_scr=1', newline, ...
+                'n_id_hop=1', newline, ...
+                'slot=20.8', newline, ...
+                'cp=normal', newline, ...
+                'ports=0', newline, ...
+                'pi2_bpsk=false', newline, ...
+                'add_dmrs=false', newline, ...
+                'occ=0', newline, ...
+                'occ_len=2', newline, ...
+                'status=valid', newline, ...
+                'csi1=0001', newline, ...
+                'sinr_ch_est[sel]=27.2dB', newline ...
+                'epre=-11.8dB', newline, ...
+                'rsrp=-11.8dB', newline, ...
+                'sinr=+27.2dB', newline, ...
+                't_align=0.00us', newline, ...
+                'cfo=-5.5Hz'];
+            obj.injectClipboardStub(logs);
+
+            % Prepare answers and feed them to the stub input function.
+            answers = {'y', 30, 133};
+            obj.injectInputStub(answers);
+
+            % Run the parser.
+            [carrier, pucch, extra] = srsParseLogs;
+
+            % Check the carrier output.
+            obj.assertClass(carrier, 'nrCarrierConfig', 'Output "carrier" is not an nrCarrierConfig object.');
+            obj.assertEqual(carrier.NCellID, 1, 'Wrong NCellID.');
+            obj.assertEqual(carrier.SubcarrierSpacing, 30, 'Wrong subcarrier spacing.');
+            obj.assertEqual(carrier.CyclicPrefix, 'normal', 'Wrong cyclic prefix.');
+            obj.assertEqual(carrier.NSizeGrid, 133, 'Wrong resource grid size.');
+            obj.assertEqual(carrier.NStartGrid, 0, 'Wrong start of resource grid.');
+            obj.assertEqual(carrier.NSlot, 8, 'Wrong slot number.');
+            obj.assertEqual(carrier.NFrame, 20, 'Wrong frame number.');
+            obj.assertEqual(carrier.SymbolsPerSlot, 14, 'Wrong number of OFDM symbols per slot.');
+            obj.assertEqual(carrier.SlotsPerSubframe, 2, 'Wrong number of slots per subframe.');
+            obj.assertEqual(carrier.SlotsPerFrame, 20, 'Wrong number of slots per frame.');
+
+            % Check the pucch output.
+            obj.assertClass(pucch, 'nrPUCCH4Config', 'Output "pucch" is not an nrPUCCH4Config object.');
+            obj.assertEqual(pucch.NSizeBWP, 133, 'Wrong BWP size.');
+            obj.assertEqual(pucch.NStartBWP, 0, 'Wrong BWP start.');
+            obj.assertEqual(pucch.Modulation, 'QPSK', 'Wrong modulation.');
+            obj.assertEqual(pucch.SymbolAllocation, [0 14], 'Wrong OFDM symbol allocation.');
+            obj.assertEqual(pucch.PRBSet, 10, 'Wrong PRB set.');
+            obj.assertEqual(pucch.FrequencyHopping, 'neither', 'Wrong frequency hopping.');
+            obj.assertEqual(pucch.SecondHopStartPRB, 1, 'Wrong starting PRB index of second hop.');
+            obj.assertEqual(pucch.GroupHopping, 'neither', 'Wrong group hopping.');
+            obj.assertEqual(pucch.HoppingID, 1, 'Wrong hopping identity.');
+            obj.assertEqual(pucch.SpreadingFactor, 2, 'Wrong spreading factor.');
+            obj.assertEqual(pucch.OCCI, 0, 'Wrong OCC index.');
+            obj.assertEqual(pucch.NID, 1, 'Wrong PUCCH scrambling identity.');
+            obj.assertEqual(pucch.RNTI, 17921, 'Wrong radio network temporary identifier.');
+            obj.assertEqual(pucch.NID0, [], 'Wrong DM-RS scrambling identity.');
+            obj.assertEqual(pucch.AdditionalDMRS, false, 'Wrong additional DM-RS.');
+
+            % Check the extra output.
+            obj.assertClass(extra, 'struct', 'Output "extra" is not a struct.');
+            obj.assertEmpty(extra, 'Output "extra" is not empty.');
+        end % of function checkParserPUCCHF4(obj)
     end % of methods (Test, TestTags = {'matlab code'})
 
     methods (Access=private)
