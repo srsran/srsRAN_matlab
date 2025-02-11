@@ -22,9 +22,9 @@
 %   Example
 %      runtests('CheckPUCCHF1Conformance')
 %
-%   See also matlab.unittest, PUCCHBLER.
+%   See also matlab.unittest, PUCCHPERF.
 
-%   Copyright 2021-2024 Software Radio Systems Limited
+%   Copyright 2021-2025 Software Radio Systems Limited
 %
 %   This file is part of srsRAN-matlab.
 %
@@ -56,7 +56,7 @@ classdef CheckPUCCHF1Conformance < matlab.unittest.TestCase
 
             import matlab.unittest.fixtures.CurrentFolderFixture
 
-            obj.applyFixture(CurrentFolderFixture('../apps/simulators/PUCCHBLER'));
+            obj.applyFixture(CurrentFolderFixture('../apps/simulators/PUCCHPERF'));
 
             pp = obj.preparePUCCH(TestConfig);
 
@@ -67,12 +67,12 @@ classdef CheckPUCCHF1Conformance < matlab.unittest.TestCase
             try
                 pp(TestConfig.SNRnack2ack, nFrames);
             catch ME
-                obj.assertFail(['PUCCHBLER simulation failed with error: ', ME.message]);
+                obj.assertFail(['PUCCHPERF simulation failed with error: ', ME.message]);
             end
 
-            obj.verifyLessThanOrEqual(pp.NACK2ACKDetectionRateSRS, 0.001, ...
+            obj.verifyLessThanOrEqual(pp.Statistics.NACK2ACKDetectionRateSRS, 0.001, ...
                 'WARNING: The PUCCH F1 NACK-to-ACK detection rate should not be larger than 0.1%.');
-            obj.assertLessThanOrEqual(pp.NACK2ACKDetectionRateSRS, 0.005, ...
+            obj.assertLessThanOrEqual(pp.Statistics.NACK2ACKDetectionRateSRS, 0.005, ...
                 'ERROR: The PUCCH F1 NACK-to-ACK detection rate is above the hard acceptance threshold of 0.5%.');
 
             % TODO: export Detection Rate (and possibly other metrics) to grafana.
@@ -86,7 +86,7 @@ classdef CheckPUCCHF1Conformance < matlab.unittest.TestCase
 
             import matlab.unittest.fixtures.CurrentFolderFixture
 
-            obj.applyFixture(CurrentFolderFixture('../apps/simulators/PUCCHBLER'));
+            obj.applyFixture(CurrentFolderFixture('../apps/simulators/PUCCHPERF'));
 
             pp = obj.preparePUCCH(TestConfig);
 
@@ -97,12 +97,12 @@ classdef CheckPUCCHF1Conformance < matlab.unittest.TestCase
             try
                 pp(TestConfig.SNRmissedack, nFrames);
             catch ME
-                obj.assertFail(['PUCCHBLER simulation failed with error: ', ME.message]);
+                obj.assertFail(['PUCCHPERF simulation failed with error: ', ME.message]);
             end
 
-            obj.verifyGreaterThanOrEqual(pp.ACKDetectionRateSRS, 0.99, ...
+            obj.verifyGreaterThanOrEqual(pp.Statistics.ACKDetectionRateSRS, 0.99, ...
                 'WARNING: The PUCCH F1 ACK detection rate should not be lower than 99%.');
-            obj.assertGreaterThanOrEqual(pp.ACKDetectionRateSRS, 0.95, ...
+            obj.assertGreaterThanOrEqual(pp.Statistics.ACKDetectionRateSRS, 0.95, ...
                 'ERROR: The PUCCH F1 ACK detection rate is below the hard acceptance threshold of 99%.');
 
             % TODO: export Detection Rate (and possibly other metrics) to grafana.
@@ -116,7 +116,7 @@ classdef CheckPUCCHF1Conformance < matlab.unittest.TestCase
 
             import matlab.unittest.fixtures.CurrentFolderFixture
 
-            obj.applyFixture(CurrentFolderFixture('../apps/simulators/PUCCHBLER'));
+            obj.applyFixture(CurrentFolderFixture('../apps/simulators/PUCCHPERF'));
 
             pp = obj.preparePUCCH(TestConfig);
 
@@ -127,12 +127,12 @@ classdef CheckPUCCHF1Conformance < matlab.unittest.TestCase
             try
                 pp([TestConfig.SNRmissedack TestConfig.SNRnack2ack], nFrames);
             catch ME
-                obj.assertFail(['PUCCHBLER simulation failed with error: ', ME.message]);
+                obj.assertFail(['PUCCHPERF simulation failed with error: ', ME.message]);
             end
 
-            obj.verifyLessThanOrEqual(pp.FalseACKDetectionRateSRS, 0.01, ...
+            obj.verifyLessThanOrEqual(pp.Statistics.FalseACKDetectionRateSRS, 0.01, ...
                 'WARNING: The PUCCH F1 false ACK detection rate should not be higher than 1%.');
-            obj.assertLessThanOrEqual(pp.FalseACKDetectionRateSRS, 0.05, ...
+            obj.assertLessThanOrEqual(pp.Statistics.FalseACKDetectionRateSRS, 0.05, ...
                 'ERROR: The PUCCH F1 false ACK detection rate is above the hard acceptance threshold of 5%.');
 
             % TODO: export Detection Rate (and possibly other metrics) to grafana.
@@ -141,18 +141,18 @@ classdef CheckPUCCHF1Conformance < matlab.unittest.TestCase
 
     methods (Access = private)
         function pp = preparePUCCH(obj, TestConfig)
-        %Configures a PUCCHBLER object.
+        %Configures a PUCCHPERF object.
 
             import matlab.unittest.constraints.IsFile
 
             try
-                pp = PUCCHBLER;
+                pp = PUCCHPERF;
             catch ME
-                obj.assertFail(['Could not create a PUCCHBLER object because of exception: ', ...
+                obj.assertFail(['Could not create a PUCCHPERF object because of exception: ', ...
                     ME.message]);
             end
 
-            obj.assertClass(pp, 'PUCCHBLER', 'The created object is not a PUCCHBLER object.');
+            obj.assertClass(pp, 'PUCCHPERF', 'The created object is not a PUCCHPERF object.');
 
             obj.assertThat('../../../+srsMEX/+phy/@srsPUCCHProcessor/pucch_processor_mex.mexa64', IsFile, ...
                 'Could not find PUCCH processor mex executable.');
@@ -171,7 +171,7 @@ classdef CheckPUCCHF1Conformance < matlab.unittest.TestCase
             pp.QuickSimulation = false;
             pp.DisplaySimulationInformation = true;
             pp.FrequencyHopping = 'intraSlot';
-            % The PUCCHBLER object takes care of picking the last PRB in the
+            % The PUCCHPERF object takes care of picking the last PRB in the
             % band for the second hop.
 
         end % of function pp = preparePUCCH(obj, TestConfig)
@@ -186,7 +186,7 @@ function TestConfig = generateTestConfig()
             'SubcarrierSpacing', 15, ...
             'NSizeGrid',         25, ... 5 MHz ...
             'SNRnack2ack',       -3.8, ... NACK to ACK test ...
-            'SNRmissedack',       -5.0 ... missed ACK test ...
+            'SNRmissedack',      -5.0 ... missed ACK test ...
         ), ...
         struct( ...
             'Table',             'TS38.104 V15.19.0 Table 8.3.3.x.2-1', ...

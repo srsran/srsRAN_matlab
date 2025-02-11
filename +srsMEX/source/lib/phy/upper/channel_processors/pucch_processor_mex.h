@@ -1,6 +1,6 @@
 /*
  *
- * Copyright 2021-2024 Software Radio Systems Limited
+ * Copyright 2021-2025 Software Radio Systems Limited
  *
  * This file is part of srsRAN-matlab.
  *
@@ -157,9 +157,9 @@ create_pucch_processor()
   std::shared_ptr<pucch_detector_factory> detector_factory =
       create_pucch_detector_factory_sw(lpapr_collection_factory, prg_factory, equalizer_factory);
 
-  std::shared_ptr<channel_modulation_factory> modulation_factory = create_channel_modulation_sw_factory();
-  std::shared_ptr<pucch_demodulator_factory>  demodulator_factory =
-      create_pucch_demodulator_factory_sw(equalizer_factory, modulation_factory, prg_factory, precoding_factory);
+  std::shared_ptr<demodulation_mapper_factory> demodulation_factory = create_demodulation_mapper_factory();
+  std::shared_ptr<pucch_demodulator_factory>   demodulator_factory =
+      create_pucch_demodulator_factory_sw(equalizer_factory, demodulation_factory, prg_factory, precoding_factory);
 
   std::shared_ptr<short_block_detector_factory> short_block_dec_factory = create_short_block_detector_factory_sw();
   std::shared_ptr<polar_factory>                polar_dec_factory       = create_polar_factory_sw();

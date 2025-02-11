@@ -14,7 +14,7 @@
 %   the resource grid subcarriers and NSYMB is the nymber of symbols in the
 %   slot. 
 
-%   Copyright 2021-2024 Software Radio Systems Limited
+%   Copyright 2021-2025 Software Radio Systems Limited
 %
 %   This file is part of srsRAN-matlab.
 %

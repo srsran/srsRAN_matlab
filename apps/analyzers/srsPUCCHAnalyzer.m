@@ -22,7 +22,7 @@
 %
 %   See also srsParseLogs.
 
-%   Copyright 2021-2024 Software Radio Systems Limited
+%   Copyright 2021-2025 Software Radio Systems Limited
 %
 %   This file is part of srsRAN-matlab.
 %
@@ -40,7 +40,7 @@
 function srsPUCCHAnalyzer(carrier, pucch, rgFilename, rgOffset, rgSize)
     arguments
         carrier    (1, 1) nrCarrierConfig
-        pucch      (1, 1) {mustBeA(pucch, ["nrPUCCH1Config", "nrPUCCH2Config"])}
+        pucch      (1, 1) {mustBeA(pucch, ["nrPUCCH0Config", "nrPUCCH1Config", "nrPUCCH2Config", "nrPUCCH3Config", "nrPUCCH4Config"])}
         rgFilename (1, :) char {mustBeFile}
         rgOffset   (1, 1) double {mustBeInteger, mustBePositive}
         rgSize     (1, 1) double {mustBeInteger, mustBePositive}
@@ -108,7 +108,7 @@ function srsPUCCHAnalyzer(carrier, pucch, rgFilename, rgOffset, rgSize)
         end
         axis([0, nSymbols - 1, 0, nSubcarriers - 1, zmin, zmax]);
 
-        % Plot estimated channel magnitude.
+        % Plot estimated channel phase.
         nexttile
         surf(symbolIndices, subcIndices, angle(estChannel(:, :, iPort)), 'LineStyle','none', 'FaceColor','flat');
         shading flat;

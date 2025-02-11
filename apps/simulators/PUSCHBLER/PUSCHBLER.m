@@ -109,7 +109,7 @@
 %
 %   Remark: The simulation loop is heavily based on the <a href="https://www.mathworks.com/help/5g/ug/nr-pusch-throughput.html">NR PUSCH Throughput</a> MATLAB example by MathWorks.
 
-%   Copyright 2021-2024 Software Radio Systems Limited
+%   Copyright 2021-2025 Software Radio Systems Limited
 %
 %   This file is part of srsRAN-matlab.
 %
@@ -201,6 +201,9 @@ classdef PUSCHBLER < matlab.System
         %Bit-width of the compressed IQ samples.
         %   Only applies if ApplyOFHCompression is set to true.
         CompIQwidth (1, 1) double {mustBeInteger, mustBeInRange(CompIQwidth, 1, 16)} = 9
+        %Time-domain interpolation strategy ('average', 'interpolate').
+        %   Valid only for SRS estimator.
+        Interpolation (1, :) char {mustBeMember(Interpolation, {'average', 'interpolate'})} = 'average'
     end % of properties (Nontunable)
 
     properties % Tunable
@@ -638,7 +641,7 @@ classdef PUSCHBLER < matlab.System
             if useSRSDecoder
                 srsDemodulatePUSCH = srsMEX.phy.srsPUSCHDemodulator;
                 srsChannelEstimate = srsMEX.phy.srsMultiPortChannelEstimator(ImplementationType = obj.SRSEstimatorType, ...
-                    Smoothing = 'filter', CompensateCFO = true);
+                    Smoothing = 'filter', Interpolation = obj.Interpolation, CompensateCFO = true);
             end
 
             % %%% Simulation loop.

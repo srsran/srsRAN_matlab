@@ -9,7 +9,7 @@
 %
 %   If the allocation is not contiguous, it constructs a custom allocation.
 
-%   Copyright 2021-2024 Software Radio Systems Limited
+%   Copyright 2021-2025 Software Radio Systems Limited
 %
 %   This file is part of srsRAN-matlab.
 %

@@ -4,7 +4,7 @@
 %   making sure that no repeated entries are present. The input arguments are a cell structure
 %   comprising several sets of symbols and indices.
 
-%   Copyright 2021-2024 Software Radio Systems Limited
+%   Copyright 2021-2025 Software Radio Systems Limited
 %
 %   This file is part of srsRAN-matlab.
 %

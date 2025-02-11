@@ -1,6 +1,6 @@
 %stepImpl System object step method implementation.
 
-%   Copyright 2021-2024 Software Radio Systems Limited
+%   Copyright 2021-2025 Software Radio Systems Limited
 %
 %   This file is part of srsRAN-matlab.
 %
@@ -17,7 +17,7 @@
 
 function stepImpl(obj, SNRIn, nFrames)
     arguments
-        obj (1, 1) PUCCHBLER
+        obj (1, 1) PUCCHPERF
         %SNR range in dB.
         SNRIn double {mustBeReal, mustBeFinite, mustBeVector}
         %Number of 10-ms frames.
@@ -62,35 +62,10 @@ function stepImpl(obj, SNRIn, nFrames)
 
     quickSim = obj.QuickSimulation;
 
-    totalBlocks = zeros(length(SNRIn), 1);
-    if (obj.PUCCHFormat == 0)
-        stats = struct(...
-            'errorACK', zeros(numel(SNRIn), 1), ...     % number of MATLAB erroneous ACKs
-            'falseACK', zeros(numel(SNRIn), 1), ...     % number of MATLAB false ACKs
-            'errorSR', zeros(numel(SNRIn), 1), ...      % number of MATLAB erroneous SR bits
-            'falseSR', zeros(numel(SNRIn), 1), ...      % number of MATLAB false SR bits
-            'errorACKSRS', zeros(numel(SNRIn), 1), ...  % number of SRS erroneous ACKs
-            'falseACKSRS', zeros(numel(SNRIn), 1), ...  % number of SRS false ACKs
-            'errorSRSRS', zeros(numel(SNRIn), 1), ...   % number of SRS erroneous SR bits
-            'falseSRSRS', zeros(numel(SNRIn), 1), ...   % number of SRS false SR bits
-            'nACKs', zeros(numel(SNRIn), 1), ...        % number of ACK occasions
-            'nSRs', zeros(numel(SNRIn), 1) ...          % number of SR occasions
-            );
-    elseif  (obj.PUCCHFormat == 1)
-        stats = struct(...
-            'missedACK', zeros(numel(SNRIn), 1), ...    % number of MATLAB missed ACKs
-            'falseACK', zeros(numel(SNRIn), 1), ...     % number of MATLAB false ACKs
-            'missedACKSRS', zeros(numel(SNRIn), 1), ... % number of SRS missed ACKs
-            'falseACKSRS', zeros(numel(SNRIn), 1), ...  % number of SRS false ACKs
-            'nACKs', zeros(numel(SNRIn), 1), ...        % number of transmitted ACKs
-            'nNACKs', zeros(numel(SNRIn), 1) ...        % number of transmitted NACKs (or "emtpy" bits in false alarm tests)
-            );
-    else
-        stats = struct(...
-            'blerUCI', zeros(numel(SNRIn), 1), ...
-            'blerUCISRS', zeros(numel(SNRIn), 1) ...
-            );
-    end
+    nSNRIn = numel(SNRIn);
+    totalBlocks = zeros(nSNRIn, 1);
+    stats = obj.FormatDetails.setupTmpStats(nSNRIn);
+
 
     for snrIdx = 1:numel(SNRIn)
 
@@ -145,24 +120,7 @@ function stepImpl(obj, SNRIn, nFrames)
                 end
             end
 
-            if (obj.PUCCHFormat == 0)
-                % For Format0, no encoding.
-                codedUCI = uci;
-                stats.nACKs(snrIdx) = stats.nACKs(snrIdx) + ouci(1);
-                stats.nSRs(snrIdx) = stats.nSRs(snrIdx) + ouci(2);
-            elseif (obj.PUCCHFormat == 1)
-                % For Format1, no encoding.
-                codedUCI = uci;
-                if isDetectTest
-                    stats.nACKs(snrIdx) = stats.nACKs(snrIdx) + sum(uci);
-                    stats.nNACKs(snrIdx) = stats.nNACKs(snrIdx) + sum(~uci);
-                else
-                    stats.nNACKs(snrIdx) = stats.nNACKs(snrIdx) + ouci;
-                end
-            else
-                % Perform UCI encoding.
-                codedUCI = nrUCIEncode(uci, pucchIndicesInfo.G);
-            end
+            [codedUCI, stats] = obj.FormatDetails.UCIEncode(uci, ouci, pucchIndicesInfo.G, stats, snrIdx);
 
             % Perform PUCCH modulation.
             pucchSymbols = nrPUCCH(carrier, pucch, codedUCI);
@@ -232,8 +190,6 @@ function stepImpl(obj, SNRIn, nFrames)
 
                     % Decode PUCCH symbols. uciRx are hard bits for PUCCH F1 and soft bits for PUCCH F2.
                     uciRx = nrPUCCHDecode(carrier, pucch, ouci, pucchRx);
-
-                    stats = obj.updateStats(stats, uci, uciRx, ouci, isDetectTest, snrIdx);
                 else
                     % Perform channel estimation.
                     if perfectChannelEstimator
@@ -262,11 +218,12 @@ function stepImpl(obj, SNRIn, nFrames)
                     % Perform equalization.
                     pucchEq = nrEqualizeMMSE(pucchRx, pucchHest, noiseEst);
 
-                    % Decode PUCCH symbols. uciRx are hard bits for PUCCH F1 and soft bits for PUCCH F2.
+                    % Decode PUCCH symbols. uciRx are hard bits for PUCCH F0 and F1 and soft bits for PUCCH F2.
                     uciRx = nrPUCCHDecode(carrier, pucch, ouci, pucchEq, noiseEst);
 
-                    stats = obj.updateStats(stats, uci, uciRx, ouci, isDetectTest, snrIdx);
                 end % if (obj.PUCCHFormat == 0)
+
+                stats = obj.FormatDetails.updateStatsMATLAB(stats, uci, uciRx, ouci, isDetectTest, snrIdx);
             end % if useMATLABpucch
 
             if useSRSpucch
@@ -276,27 +233,13 @@ function stepImpl(obj, SNRIn, nFrames)
                 NumCSIPart1=obj.NumCSI1Bits, ...
                 NumCSIPart2=obj.NumCSI2Bits);
 
-                stats = obj.updateStatsSRS(stats, uci, msg, isDetectTest, snrIdx);
+                stats = obj.FormatDetails.updateStatsSRS(stats, uci, msg, isDetectTest, snrIdx);
             end % if useSRSpucch
 
             totalBlocks(snrIdx) = totalBlocks(snrIdx) + 1;
 
-            if (obj.PUCCHFormat == 0)
-                isSimOverMATLAB = (stats.falseACK(snrIdx) >= 100) && (~isDetectTest || (isDetectTest && (stats.errorACK(snrIdx) >= 100)));
-                isSimOverMATLAB = isSimOverMATLAB || (isDetectTest && (obj.NumSRBits > 0) && (stats.errorSR(snrIdx) >= 100));
-                isSimOverSRS = (stats.falseACKSRS(snrIdx) >= 100) && (~isDetectTest || (isDetectTest && (stats.errorACKSRS(snrIdx) >= 100)));
-                isSimOverSRS = isSimOverSRS || (isDetectTest && (obj.NumSRBits > 0) && (stats.errorSRSRS(snrIdx) >= 100));
-                isSimOver = isSimOverMATLAB && isSimOverSRS;
-            elseif (obj.PUCCHFormat == 1)
-                isSimOverMATLAB = (stats.falseACK(snrIdx) >= 100) && (~isDetectTest || (isDetectTest && (stats.missedACK(snrIdx) >= 100)));
-                isSimOverSRS = (stats.falseACKSRS(snrIdx) >= 100) && (~isDetectTest || (isDetectTest && (stats.missedACKSRS(snrIdx) >= 100)));
-                isSimOver = isSimOverMATLAB && isSimOverSRS;
-            else
-                isSimOver = (~useMATLABpucch || (stats.blerUCI(snrIdx) >= 100)) && (~useSRSpucch || (stats.blerUCISRS(snrIdx) >= 100));
-            end
-
             % To speed the simulation up, we stop after 100 missed transport blocks.
-            if quickSim && isSimOver
+            if quickSim && obj.FormatDetails.isSimOver(stats, snrIdx, obj.ImplementationType)
                 break;
             end
         end
@@ -305,60 +248,18 @@ function stepImpl(obj, SNRIn, nFrames)
         usedFrames = round((nslot + 1) / carrier.SlotsPerFrame);
         if displaySimulationInformation == 1
             if useMATLABpucch
-                obj.printMessages(stats, usedFrames, totalBlocks, SNRIn, isDetectTest, snrIdx);
+                obj.FormatDetails.printMessagesMATLAB(stats, usedFrames, totalBlocks, SNRIn, isDetectTest, snrIdx);
             end
             if useSRSpucch
-                obj.printMessagesSRS(stats, usedFrames, totalBlocks, SNRIn, isDetectTest, snrIdx);
+                obj.FormatDetails.printMessagesSRS(stats, usedFrames, totalBlocks, SNRIn, isDetectTest, snrIdx);
             end
         end % of if displaySimulationInformation == 1
     end % of for snrIdx = 1:numel(snrIn)
 
     % Export results.
-    [~, repeatedIdx] = intersect(obj.SNRrange, SNRIn);
-    obj.SNRrange(repeatedIdx) = [];
-    [obj.SNRrange, sortedIdx] = sort([obj.SNRrange SNRIn]);
+    obj.FormatDetails.updateCounters(stats, SNRIn, totalBlocks);
 
-    if (obj.PUCCHFormat == 0)
-        obj.TotalBlocksCtr = joinArrays(obj.TotalBlocksCtr, totalBlocks, repeatedIdx, sortedIdx);
-        if isDetectTest
-            obj.TransmittedACKsCtr = joinArrays(obj.TransmittedACKsCtr, stats.nACKs, repeatedIdx, sortedIdx);
-            obj.MissedACKsMATLABCtr = joinArrays(obj.MissedACKsMATLABCtr, stats.errorACK, repeatedIdx, sortedIdx);
-            obj.MissedACKsSRSCtr = joinArrays(obj.MissedACKsSRSCtr, stats.errorACKSRS, repeatedIdx, sortedIdx);
-            obj.MissedSRsMATLABCtr = joinArrays(obj.MissedSRsMATLABCtr, stats.errorSR, repeatedIdx, sortedIdx);
-            obj.MissedSRsSRSCtr = joinArrays(obj.MissedSRsSRSCtr, stats.errorSRSRS, repeatedIdx, sortedIdx);
-        else
-            obj.FalseACKsMATLABCtr = joinArrays(obj.FalseACKsMATLABCtr, stats.falseACK, repeatedIdx, sortedIdx);
-            obj.FalseACKsSRSCtr = joinArrays(obj.FalseACKsSRSCtr, stats.falseACKSRS, repeatedIdx, sortedIdx);
-            obj.FalseSRsMATLABCtr = joinArrays(obj.FalseSRsMATLABCtr, stats.falseACK, repeatedIdx, sortedIdx);
-            obj.FalseSRsSRSCtr = joinArrays(obj.FalseSRsSRSCtr, stats.falseACKSRS, repeatedIdx, sortedIdx);
-        end
-    elseif (obj.PUCCHFormat == 1)
-        obj.TransmittedNACKsCtr = joinArrays(obj.TransmittedNACKsCtr, stats.nNACKs, repeatedIdx, sortedIdx);
-        obj.FalseACKsMATLABCtr = joinArrays(obj.FalseACKsMATLABCtr, stats.falseACK, repeatedIdx, sortedIdx);
-        obj.FalseACKsSRSCtr = joinArrays(obj.FalseACKsSRSCtr, stats.falseACKSRS, repeatedIdx, sortedIdx);
-
-        if isDetectTest
-            obj.TransmittedACKsCtr = joinArrays(obj.TransmittedACKsCtr, stats.nACKs, repeatedIdx, sortedIdx);
-            obj.MissedACKsMATLABCtr = joinArrays(obj.MissedACKsMATLABCtr, stats.missedACK, repeatedIdx, sortedIdx);
-            obj.MissedACKsSRSCtr = joinArrays(obj.MissedACKsSRSCtr, stats.missedACKSRS, repeatedIdx, sortedIdx);
-        end
-    else
-        obj.TotalBlocksCtr = joinArrays(obj.TotalBlocksCtr, totalBlocks, repeatedIdx, sortedIdx);
-        if isDetectTest
-            obj.MissedBlocksMATLABCtr = joinArrays(obj.MissedBlocksMATLABCtr, stats.blerUCI, repeatedIdx, sortedIdx);
-            obj.MissedBlocksSRSCtr = joinArrays(obj.MissedBlocksSRSCtr, stats.blerUCISRS, repeatedIdx, sortedIdx);
-        else
-            obj.FalseBlocksMATLABCtr = joinArrays(obj.FalseBlocksMATLABCtr, stats.blerUCI, repeatedIdx, sortedIdx);
-            obj.FalseBlocksSRSCtr = joinArrays(obj.FalseBlocksSRSCtr, stats.blerUCISRS, repeatedIdx, sortedIdx);
-        end
-    end
+    fprintf('\n');
 
 end % of function stepImpl(obj, SNRIn, nFrames)
-
-% %% Local Functions
-function mixedArray = joinArrays(arrayA, arrayB, removeFromA, outputOrder)
-    arrayA(removeFromA) = [];
-    mixedArray = [arrayA; arrayB];
-    mixedArray = mixedArray(outputOrder);
-end
 

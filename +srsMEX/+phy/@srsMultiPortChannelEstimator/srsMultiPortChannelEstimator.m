@@ -38,7 +38,7 @@
 %   Smoothing          - Frequency domain smoothing strategy ('filter', 'mean', 'none').
 %   CompensateCFO      - Boolean flat: compensate CFO if true.
 
-%   Copyright 2021-2024 Software Radio Systems Limited
+%   Copyright 2021-2025 Software Radio Systems Limited
 %
 %   This file is part of srsRAN-matlab.
 %
@@ -63,6 +63,8 @@ classdef srsMultiPortChannelEstimator < matlab.System
         ImplementationType (1, :) char     {mustBeMember(ImplementationType, {'MEX', 'noMEX'})} = 'MEX'
         %Frequency domain smoothing strategy ('filter', 'mean', 'none').
         Smoothing          (1, :) char     {mustBeMember(Smoothing, {'filter', 'mean', 'none'})} = 'filter'
+        %Time domain interpolation strategy ('average', 'interpolate').
+        Interpolation      (1, :) char     {mustBeMember(Interpolation, {'average', 'interpolate'})} = 'average'
         %Boolean flat: compensate CFO if true.
         CompensateCFO      (1, 1) logical      = true
     end % properties (Nontunable)
@@ -80,7 +82,7 @@ classdef srsMultiPortChannelEstimator < matlab.System
         %   constructs the channel estimator object inside the MEX function.
             if strcmp(obj.ImplementationType, 'MEX')
                 obj.stepMethod = @stepMEX;
-                obj.multiport_channel_estimator_mex('new', obj.Smoothing, obj.CompensateCFO);
+                obj.multiport_channel_estimator_mex('new', obj.Smoothing, obj.Interpolation, obj.CompensateCFO);
             else
                 obj.stepMethod = @stepPLAIN;
             end

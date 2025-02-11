@@ -23,7 +23,6 @@
 %   DMRSAdditionalPosition  - Maximum number of DMRS additional positions (0, 1, 2, 3).
 %   DMRSLength              - Number of consecutive front-loaded DMRS OFDM symbols (1, 2).
 %   DMRSConfigurationType   - DMRS configuration type (1, 2).
-%   testLabel               - Test label ('dmrs_creation' or 'ch_estimation').
 %
 %   srsPUSCHdmrsUnittest Methods (TestTags = {'testvector'}):
 %
@@ -38,7 +37,7 @@
 %
 %   See also matlab.unittest.
 
-%   Copyright 2021-2024 Software Radio Systems Limited
+%   Copyright 2021-2025 Software Radio Systems Limited
 %
 %   This file is part of srsRAN-matlab.
 %
@@ -97,12 +96,6 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
 
         %DMRS configuration type (1, 2).
         DMRSConfigurationType = {1, 2}
-
-        %Test label ('dmrs_creation' or 'ch_estimation').
-        %   'dmrs_creation' tests only check that the DM-RS pilots are generated correctly
-        %   and placed in the correct location in the resource grid.
-        %   'ch_estimation' also check that the channel is estimated correctly.
-        testLabel = {'dmrs_creation', 'ch_estimation'}
     end
 
     methods (Access = protected)
@@ -117,14 +110,9 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
 
         function addTestDefinitionToHeaderFile(~, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
-            fprintf(fileID, 'enum class test_label {dmrs_creation, ch_estimation};\n\n');
             fprintf(fileID, 'struct test_case_t {\n');
-            fprintf(fileID, '  test_label                                              label;\n');
             fprintf(fileID, '  dmrs_pusch_estimator::configuration                     config;\n');
-            fprintf(fileID, '  float                                                   est_noise_var;\n');
-            fprintf(fileID, '  float                                                   est_rsrp;\n');
             fprintf(fileID, '  file_vector<resource_grid_reader_spy::expected_entry_t> rx_symbols;\n');
-            fprintf(fileID, '  file_vector<resource_grid_reader_spy::expected_entry_t> ch_estimates;\n');
             fprintf(fileID, '};\n');
         end
 
@@ -136,26 +124,21 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
     methods (Test, TestTags = {'testvector'})
         function testvectorGenerationCases(testCase, numerology, NumLayers, ...
                 DMRSTypeAPosition, DMRSAdditionalPosition, DMRSLength, ...
-                DMRSConfigurationType, testLabel)
-        %testvectorGenerationCases Generates a test vector for the given numerology,
-        %   NumLayers, DMRSTypeAPosition, DMRSAdditionalPosition, DMRSLength,
-        %   DMRSConfigurationType and testLabel. NCellID, NSlot and PRB are randomly generated.
+                DMRSConfigurationType)
+        %testvectorGenerationCases Generates a test vector for the given
+        %   numerology, NumLayers, DMRSTypeAPosition,
+        %   DMRSAdditionalPosition, DMRSLength and DMRSConfigurationType.
+        %   NCellID, NSlot and PRB are randomly generated. 
 
             import srsTest.helpers.cellarray2str
             import srsLib.phy.upper.signal_processors.srsPUSCHdmrs
-            import srsLib.phy.upper.signal_processors.srsChannelEstimator
-            import srsLib.ran.utils.scs2cps
-            import srsTest.helpers.approxbf16
-            import srsTest.helpers.cellarray2str
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.symbolAllocationMask2string
             import srsTest.helpers.RBallocationMask2string
 
             % Skip those invalid configuration cases.
             isDMRSLengthOK = (DMRSLength == 1 || DMRSAdditionalPosition < 2);
-            isChEstimationOK = strcmp(testLabel, 'dmrs_creation') || (NumLayers == 1) ...
-                || ((NumLayers == 2) && (DMRSConfigurationType == 1) && (DMRSLength == 1));
-            if ~(isDMRSLengthOK && isChEstimationOK)
+            if ~isDMRSLengthOK
                 return;
             end
 
@@ -246,60 +229,19 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
             % If 'dmrs-creation' test, write each complex symbol and their
             % associated indices into a binary file, and an empty channel
             % coefficients file.
-            if strcmp(testLabel, 'dmrs_creation')
-                if NumLayers == 4
-                    % In creation tests, we assume layer n is received by port n only. Therefore we need to add
-                    % zeros in the REs where DM-RS from other layers would be. Note that this is not needed when
-                    % NumLayers == 2 since the first two layers share DM-RS resources.
-                    DMRSsymbols = [DMRSsymbols zeros(size(DMRSsymbols))];
-                    symbolIndices = [symbolIndices; [symbolIndices(:, 1:2) symbolIndices([(end/2 + 1):end, 1:end/2], 3)]];
-                end
-                testCase.saveDataFile('_test_output', testID, ...
-                    @writeResourceGridEntryFile, DMRSsymbols * amplitude, symbolIndices);
-                testCase.saveDataFile('_ch_estimates', testID, ...
-                    @writeResourceGridEntryFile, [], uint32.empty(0,3));
-                estRSRP = 0;
-                estNoiseVar = 0;
-                PUSCHports = 0:(NumLayers-1);
-            else
-                PUSCHports = 0;
-
-                channel = createChannel(carrier, NumLayers);
-
-                sizeRG = [nSizeGrid * 12, 14];
-                symbolIndicesLinear = sub2ind([sizeRG, NumLayers], symbolIndices(:, 1) + 1, ...
-                    symbolIndices(:, 2) + 1, symbolIndices(:, 3) + 1);
-                symbolIndicesLinear = reshape(symbolIndicesLinear, [], NumLayers);
-                receivedRG = channel(:, :, 1);
-                receivedRG(symbolIndicesLinear(:, 1)) = receivedRG(symbolIndicesLinear(:, 1)) ...
-                    .* DMRSsymbols(:, 1) * amplitude;
-                for iLayer = 2:NumLayers
-                    receivedRG(symbolIndicesLinear(:, 1)) = receivedRG(symbolIndicesLinear(:, 1)) ...
-                        + channel(symbolIndicesLinear(:, iLayer)) .* DMRSsymbols(:, iLayer) * amplitude;
-                end
-                noiseVar = 0.1; % 10 dB
-                noiseRG = (randn(sizeRG) + 1j * randn(sizeRG)) * sqrt(noiseVar / 2);
-                receivedRG = receivedRG + noiseRG;
-
-                hop = configureHop();
-                % Empty second hop.
-                hop2.DMRSsymbols = [];
-                nOFDMSymbols = sum(hop.DMRSsymbols);
-                pilots = reshape(DMRSsymbols, [], nOFDMSymbols, NumLayers);
-                cfg.scs = subcarrierSpacing * 1000;
-                cfg.CyclicPrefixDurations = scs2cps(subcarrierSpacing);
-                receivedRG = approxbf16(receivedRG);
-                [estChannel, estNoiseVar, estRSRP] = srsChannelEstimator(receivedRG, ...
-                    pilots, amplitude, hop, hop2, cfg);
-
-                % Write simulation data.
-                symbolIndicesMask = (symbolIndices(:, 3) == 0);
-                testCase.saveDataFile('_test_output', testID, ...
-                    @writeResourceGridEntryFile, receivedRG(symbolIndicesLinear(symbolIndicesMask)), symbolIndices(symbolIndicesMask, :));
-                [subcarriers, syms, vals] = find(estChannel);
-                testCase.saveDataFile('_ch_estimates', testID, ...
-                    @writeResourceGridEntryFile, approxbf16(vals), [subcarriers - 1, mod(syms - 1, 14), floor((syms - 1) / 14)]);
+            if NumLayers == 4
+                % We assume layer n is received by port n only. Therefore
+                % we need to add zeros in the REs where DM-RS from other
+                % layers would be. Note that this is not needed when
+                % NumLayers == 2 since the first two layers share DM-RS
+                % resources.
+                DMRSsymbols = [DMRSsymbols zeros(size(DMRSsymbols))];
+                symbolIndices = [symbolIndices; [symbolIndices(:, 1:2) ...
+                    symbolIndices([(end/2 + 1):end, 1:end/2], 3)]];
             end
+            testCase.saveDataFile('_test_input', testID, ...
+                @writeResourceGridEntryFile, DMRSsymbols * amplitude, symbolIndices);
+            PUSCHports = 0:(NumLayers-1);
 
             % Generate a 'slot_point' configuration string.
             slotPointConfig = cellarray2str({numerology, nFrame, ...
@@ -337,7 +279,6 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
                     ')'];
             end
 
-
             % Prepare DMRS configuration cell
             dmrsConfigCell = { ...
                 slotPointConfig, ...             % slot
@@ -351,54 +292,12 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
                 {PUSCHports}, ...                % rx_ports
                 };
 
-            testCell = {['test_label::' testLabel], dmrsConfigCell, estNoiseVar, estRSRP};
-
             % generate the test case entry
-            testCaseString = testCase.testCaseToString(testID, testCell, ...
-                false, '_test_output', '_ch_estimates');
+            testCaseString = testCase.testCaseToString(testID, dmrsConfigCell, ...
+                true, '_test_input');
 
             % add the test to the file header
             testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);
-
-            %   Nested functions
-            %%%%%%%%%%%%%%%%%%%%%%%%%%%
-            function hop_ = configureHop
-                ofdmSymIndices = unique(symbolIndices(:, 2) + 1);
-                hop_.DMRSsymbols = false(14, 1);
-                hop_.DMRSsymbols(ofdmSymIndices) = true;
-                hop_.DMRSREmask = false(12, 1);
-                if DMRSConfigurationType == 1
-                    hop_.DMRSREmask(1:2:end) = true;
-                else
-                    hop_.DMRSREmask([1, 2, 7, 8]) = true;
-                end
-                hop_.PRBstart = PRBstart;
-                hop_.nPRBs = length(PRBSet);
-                hop_.maskPRBs = false(nSizeGrid, 1);
-                hop_.maskPRBs(PRBSet + 1) = true;
-                hop_.startSymbol = symbolAllocation(1);
-                hop_.nAllocatedSymbols = symbolAllocation(2);
-                hop_.CHsymbols = false(14, 1);
-                hop_.CHsymbols((1:symbolAllocation(2)) + symbolAllocation(1)) = true;
-            end
         end % of function testvectorGenerationCases
     end % of methods (Test, TestTags = {'testvector'})
 end % of classdef srsPUSCHdmrsUnittest
-
-function channel = createChannel(carrier, nLayers)
-%Generates the frequency-response of single-tap channel that is consistent with
-%   the simulation setup.
-    nSubcarriers = carrier.NSizeGrid * 12;
-    nOFDMSymbols = 14;
-    % Compute maximum delay (1/4 CP length) in number of samples.
-    maxDelay = floor(0.7 * 0.25 * nSubcarriers);
-
-    channel = complex(nan(nSubcarriers, nOFDMSymbols, nLayers), nan(nSubcarriers, nOFDMSymbols, nLayers));
-    for iLayer = 1:nLayers
-        % Random delay and random gain.
-        delay = randi(maxDelay);
-        gain = randn(1, 2) * [1; 1j] / sqrt(2 * nLayers);
-        channel(:, :, iLayer) = repmat(gain * exp(-2j * pi / nSubcarriers * delay ...
-            * (-nSubcarriers/2:nSubcarriers/2-1).'), 1, nOFDMSymbols);
-    end
-end

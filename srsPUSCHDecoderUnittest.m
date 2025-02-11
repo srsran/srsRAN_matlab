@@ -38,7 +38,7 @@
 %
 %   See also matlab.unittest, nrPUSCHDecode.
 
-%   Copyright 2021-2024 Software Radio Systems Limited
+%   Copyright 2021-2025 Software Radio Systems Limited
 %
 %   This file is part of srsRAN-matlab.
 %

@@ -3,7 +3,7 @@
 %   returns an OFDM symbol index in a half-frame SSBFIRSTSYMBOLINDEX, given an SSB pattern
 %   case SSBPATTERN, an SSB index SSBINDEX and a carrier frequency CARRIERFREQ.
 
-%   Copyright 2021-2024 Software Radio Systems Limited
+%   Copyright 2021-2025 Software Radio Systems Limited
 %
 %   This file is part of srsRAN-matlab.
 %

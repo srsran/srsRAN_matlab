@@ -1,6 +1,6 @@
 /*
  *
- * Copyright 2021-2024 Software Radio Systems Limited
+ * Copyright 2021-2025 Software Radio Systems Limited
  *
  * This file is part of srsRAN-matlab.
  *
@@ -101,12 +101,12 @@ std::unique_ptr<srsran::pusch_demodulator> create_pusch_demodulator()
   std::shared_ptr<channel_equalizer_factory> equalizer_factory =
       create_channel_equalizer_generic_factory(channel_equalizer_algorithm_type::zf);
 
-  std::shared_ptr<channel_modulation_factory> demod_factory = create_channel_modulation_sw_factory();
+  std::shared_ptr<demodulation_mapper_factory> demod_factory = create_demodulation_mapper_factory();
 
   std::shared_ptr<pseudo_random_generator_factory> prg_factory = create_pseudo_random_generator_sw_factory();
 
   std::shared_ptr<pusch_demodulator_factory> pusch_demod_factory = create_pusch_demodulator_factory_sw(
-      equalizer_factory, transform_precod_factory, demod_factory, prg_factory, MAX_RB);
+      equalizer_factory, transform_precod_factory, demod_factory, nullptr, prg_factory, MAX_RB);
 
   return pusch_demod_factory->create();
 }

@@ -5,7 +5,7 @@
 %   'pi/2-BPSK', 'QPSK', '16QAM', '64QAM' or '256QAM') or SRS convention (i.e.,
 %   'BPSK','PI_2_BPSK', 'QPSK', 'QAM16', 'QAM64' or 'QAM256').
 
-%   Copyright 2021-2024 Software Radio Systems Limited
+%   Copyright 2021-2025 Software Radio Systems Limited
 %
 %   This file is part of srsRAN-matlab.
 %

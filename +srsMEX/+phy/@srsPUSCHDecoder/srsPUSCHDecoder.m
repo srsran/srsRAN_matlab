@@ -56,7 +56,7 @@
 %   TBK = step(..., FORMAT) allows specifing the format of the output transport
 %   block: 'packed' bytes (default) or 'unpacked' bits.
 
-%   Copyright 2021-2024 Software Radio Systems Limited
+%   Copyright 2021-2025 Software Radio Systems Limited
 %
 %   This file is part of srsRAN-matlab.
 %
