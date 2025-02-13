@@ -429,10 +429,14 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
             [nRE, nCDM] = size(hop1.DMRSREmask);
             pilotMask = nan(nPRB * nRE, nSymbols, nCDM);
             nPilots = sum(pilotRBMask, 'all') * sum(hop1.DMRSREmask(:, 1));
-            pilotIndices = nan(nPilots, nCDM);
-            for iCDM = 1:nCDM
+            pilotIndices = nan(nPilots, NumLayers);
+            for iLayer = 1:2:NumLayers
+                iCDM = floor(iLayer / 2) + 1;
                 pilotMask(:, :, iCDM) = kron(pilotRBMask, hop1.DMRSREmask(:, iCDM));
-                pilotIndices(:, iCDM) = find(pilotMask(:, :, iCDM));
+                pilotIndices(:, iLayer) = find(pilotMask(:, :, iCDM)) + prod(size(receivedRG, [1, 2])) * (iLayer - 1);
+                if (iLayer + 1 <= NumLayers)
+                    pilotIndices(:, iLayer + 1) = pilotIndices(:, iLayer) + prod(size(receivedRG, [1, 2]));
+                end
             end
 
             mexEstimator = srsMultiPortChannelEstimator(...

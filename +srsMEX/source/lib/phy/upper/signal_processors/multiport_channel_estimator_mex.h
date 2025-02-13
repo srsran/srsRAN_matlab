@@ -52,10 +52,12 @@ private:
   /// This method creates the srsRAN channel estimator object used by the multiport estimator. The channel estimator is
   /// set to use a specific frequency-domain smoothing strategy and to compensate (or not) the CFO.
   ///
-  /// The method accepts only three inputs.
+  /// The method accepts only four inputs.
   ///   - The string <tt>"new"</tt>.
   ///   - A string identifying the frequency-domain smoothing strategy method (one of <tt>"filter"</tt>, <tt>"mean"</tt>
   ///     or <tt>"none"</tt>).
+  ///   - A string identifying the time-domain interpolation strategy (one of <tt>"interpolate"</tt> for
+  ///     linear-regression interpolation, or <tt>"average"</tt> for constant time-averaging across OFDM symbols).
   ///   - A boolean flag for CFO compensation, \c true to activate.
   ///
   /// The method has no output.
@@ -102,7 +104,7 @@ private:
   std::unique_ptr<srsran::port_channel_estimator> estimator = nullptr;
 };
 
-std::unique_ptr<srsran::port_channel_estimator>
+inline std::unique_ptr<srsran::port_channel_estimator>
 create_port_channel_estimator(srsran::port_channel_estimator_fd_smoothing_strategy     fd_smoothing,
                               srsran::port_channel_estimator_td_interpolation_strategy td_interpolation,
                               bool                                                     compensate_cfo)
