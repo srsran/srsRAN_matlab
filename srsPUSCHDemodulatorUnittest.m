@@ -82,7 +82,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
         %Channel dimensions.
         %   The first entry is the number of receive antenna ports, the
         %   second entry is the number of transmit layers.
-        ChannelSize = {[1, 1], [2, 1], [2, 2], [4, 1], [4, 2]}
+        ChannelSize = {[1, 1], [2, 1], [2, 2], [4, 1], [4, 2], [4, 3], [4, 4]}
     end
 
     properties (Hidden)
@@ -221,19 +221,21 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             obj.pusch.DMRS.DMRSConfigurationType = DMRSConfigurationType;
             obj.pusch.DMRS.DMRSAdditionalPosition = randi([0, 3]);
             obj.pusch.DMRS.NumCDMGroupsWithoutData = randi([1, obj.pusch.DMRS.DMRSConfigurationType + 1]);
+            if (NumLayers > 2)
+                obj.pusch.DMRS.NumCDMGroupsWithoutData = 2;
+            end
             obj.pusch.TransformPrecoding = TransformPrecoding;
 
             % Generate PUSCH data grid indices.
             [obj.puschTxIndices, puschInfo] = nrPUSCHIndices(obj.carrier, obj.pusch);
 
+            % Number of RE per port (Rx side) or layer (Tx side).
+            nofREPort = size(obj.puschTxIndices, 1);
+
             % Generate PUSCH indices for a single Rx port in subscript
             % form.
-            pusch2 = obj.pusch;
-            pusch2.NumLayers = 1;
-            puschPortIndices = nrPUSCHIndices(obj.carrier, pusch2, 'IndexStyle', 'subscript', 'IndexBase', '0based');
-
-            % Number of RE per port.
-            nofREPort = size(puschPortIndices, 1);
+            indicesTmp = nrPUSCHIndices(obj.carrier, obj.pusch, 'IndexStyle', 'subscript', 'IndexBase', '0based');
+            puschPortIndices = indicesTmp(1:nofREPort, :);
 
             % Set the receive port indices.
             obj.rxPorts = 0 : (nofRxPorts - 1);
@@ -369,7 +371,7 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             % Revert transform precoding if it is present.
             if obj.pusch.TransformPrecoding
                 numPRB = length(obj.pusch.PRBSet);
-                [eqSymbols eqNoise] = srsTransformDeprecode(eqSymbols, eqNoise, numPRB, NumLayers);
+                [eqSymbols, eqNoise] = srsTransformDeprecode(eqSymbols, eqNoise, numPRB, NumLayers);
             end
 
             % Layer demapping.
@@ -472,10 +474,15 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
         %   recovered soft bits are coinciding with those originally transmitted.
 
             import srsMEX.phy.srsPUSCHDemodulator
+            import srsMEX.phy.srsPUSCHCapabilitiesMEX
             import srsLib.phy.generic_functions.transform_precoding.srsTransformDeprecode
             import srsLib.phy.upper.channel_modulation.srsDemodulator
             import srsLib.phy.upper.equalization.srsChannelEqualizer
             import srsTest.helpers.approxbf16
+
+            mexLayers = srsPUSCHCapabilitiesMEX().NumLayers;
+            obj.assumeGreaterThanOrEqual(mexLayers, ChannelSize(2), ...
+                sprintf('The current MEX version only works with max. %d layers, requested %d.', mexLayers, ChannelSize(2)));
 
             NumRxPorts = ChannelSize(1);
             NumLayers = ChannelSize(2);
@@ -535,13 +542,11 @@ classdef srsPUSCHDemodulatorUnittest < srsTest.srsBlockUnittest
             PUSCHDemodulator = srsPUSCHDemodulator;
 
             gridSize = size(rxGrid);
-            singlePortPUSCH = (obj.puschRxIndices(:, 3) == obj.puschRxIndices(1, 3));
-            puschIx = sub2ind(gridSize(1:2), obj.puschRxIndices(singlePortPUSCH, 1) + 1, obj.puschRxIndices(singlePortPUSCH, 2) + 1);
-            singlePortDMRS = (obj.puschDmrsIndices(:, 3) == obj.puschDmrsIndices(1, 3));
-            dmrsIx = sub2ind(gridSize(1:2), obj.puschDmrsIndices(singlePortDMRS, 1) + 1, obj.puschDmrsIndices(singlePortDMRS, 2) + 1);
+            dmrsIx = reshape(sub2ind([gridSize(1:2), NumLayers], obj.puschDmrsIndices(:, 1) + 1, ...
+                obj.puschDmrsIndices(:, 2) + 1, obj.puschDmrsIndices(:, 3) + 1), [], NumLayers);
 
             % Run the PUSCH demodulator.
-            schSoftBits = PUSCHDemodulator(rxGrid, obj.ce, noiseVar, obj.pusch, puschIx, ...
+            schSoftBits = PUSCHDemodulator(rxGrid, obj.ce, noiseVar, obj.pusch, obj.puschTxIndices, ...
                 dmrsIx, obj.rxPorts);
 
             % Verify the correct demodulation (expected, since the SNR is very high).

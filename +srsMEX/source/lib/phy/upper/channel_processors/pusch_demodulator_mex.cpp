@@ -18,14 +18,11 @@
  */
 
 #include "pusch_demodulator_mex.h"
-#include "srsran_matlab/support/factory_functions.h"
 #include "srsran_matlab/support/matlab_to_srs.h"
 #include "srsran_matlab/support/resource_grid.h"
 #include "srsran_matlab/support/to_span.h"
-#include "srsran/phy/support/resource_grid_writer.h"
 #include "srsran/phy/upper/channel_processors/pusch/pusch_codeword_buffer.h"
 #include "srsran/phy/upper/channel_processors/pusch/pusch_demodulator_notifier.h"
-#include "srsran/ran/sch/modulation_scheme.h"
 #include <optional>
 
 using matlab::mex::ArgumentList;
@@ -103,6 +100,36 @@ private:
 };
 
 } // namespace
+
+void MexFunction::method_new(ArgumentList outputs, ArgumentList inputs)
+{
+  constexpr unsigned NOF_INPUTS = 2;
+  if (inputs.size() != NOF_INPUTS) {
+    mex_abort("Wrong number of inputs: expected {}, provided {}.", NOF_INPUTS, inputs.size());
+  }
+
+  if (inputs[1].getType() != ArrayType::CHAR) {
+    mex_abort("Input 'equalizerType' must be a string.");
+  }
+  std::string                      eq_type_string = static_cast<CharArray>(inputs[1]).toAscii();
+  channel_equalizer_algorithm_type eq_type        = channel_equalizer_algorithm_type::zf;
+  if (eq_type_string == "MMSE") {
+    eq_type = channel_equalizer_algorithm_type::mmse;
+  } else if (eq_type_string != "ZF") {
+    mex_abort("Unknown equalizer type {}.", eq_type_string);
+  }
+
+  if (!outputs.empty()) {
+    mex_abort("Wrong number of outputs: expected 0, provided {}.", outputs.size());
+  }
+
+  demodulator = create_pusch_demodulator(eq_type);
+
+  // Ensure the demodulator was created properly.
+  if (!demodulator) {
+    mex_abort("Cannot create srsRAN PUSCH demodulator.");
+  }
+}
 
 void MexFunction::check_step_outputs_inputs(ArgumentList outputs, ArgumentList inputs)
 {
