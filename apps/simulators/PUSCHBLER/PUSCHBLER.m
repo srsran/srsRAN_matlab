@@ -125,14 +125,11 @@
 %   file in the top-level directory of this distribution.
 
 classdef PUSCHBLER < matlab.System
-    properties (Constant)
-        %Number of transmit antennas.
-        NTxAnts = 1
-    end % of constant properties
-
     properties (Nontunable)
         %Perfect channel estimation flag.
         PerfectChannelEstimator (1, 1) logical = true
+        %Number of transmit antennas.
+        NTxAnts = 1
         %Number of receive antennas.
         NRxAnts = 1
         %Bandwidth in number of resource blocks.
@@ -197,13 +194,14 @@ classdef PUSCHBLER < matlab.System
         %   is set to false.
         SRSEstimatorType (1, :) char {mustBeMember(SRSEstimatorType, {'MEX', 'noMEX'})} = 'MEX'
         %Flag for emulating O-FH compression.
+        SRSEqualizerType (1, :) char {mustBeMember(SRSEqualizerType, {'ZF', 'MMSE'})} = 'ZF'
         ApplyOFHCompression (1, 1) logical = false
         %Bit-width of the compressed IQ samples.
         %   Only applies if ApplyOFHCompression is set to true.
         CompIQwidth (1, 1) double {mustBeInteger, mustBeInRange(CompIQwidth, 1, 16)} = 9
         %Time-domain interpolation strategy ('average', 'interpolate').
         %   Valid only for SRS estimator.
-        Interpolation (1, :) char {mustBeMember(Interpolation, {'average', 'interpolate'})} = 'average'
+        SRSInterpolation (1, :) char {mustBeMember(SRSInterpolation, {'average', 'interpolate'})} = 'average'
     end % of properties (Nontunable)
 
     properties % Tunable
@@ -639,9 +637,9 @@ classdef PUSCHBLER < matlab.System
             betaDMRS = sqrt(2);
 
             if useSRSDecoder
-                srsDemodulatePUSCH = srsMEX.phy.srsPUSCHDemodulator;
+                srsDemodulatePUSCH = srsMEX.phy.srsPUSCHDemodulator(EqualizerStrategy = obj.SRSEqualizerType);
                 srsChannelEstimate = srsMEX.phy.srsMultiPortChannelEstimator(ImplementationType = obj.SRSEstimatorType, ...
-                    Smoothing = 'filter', Interpolation = obj.Interpolation, CompensateCFO = true);
+                    Smoothing = 'filter', Interpolation = obj.SRSInterpolation, CompensateCFO = true);
             end
 
             % %%% Simulation loop.
@@ -683,6 +681,10 @@ classdef PUSCHBLER < matlab.System
                 % Timing offset, updated in every slot for perfect synchronization and
                 % when the correlation is strong for practical synchronization.
                 offset = 0;
+
+                % Long-term RSRP and noise power estimation.
+                rsrpLT = 0;
+                noiseEstLT = 0;
 
                 % Loop over the entire waveform length.
                 for nslot = 0:NSlots-1
@@ -896,12 +898,16 @@ classdef PUSCHBLER < matlab.System
 
                     if useSRSDecoder
                         if (~perfectChannelEstimator)
-                            [estChannelGrid, noiseEst] = srsChannelEstimate(rxGrid, pusch.SymbolAllocation, ...
+                            [estChannelGrid, noiseEst, extra] = srsChannelEstimate(rxGrid, pusch.SymbolAllocation, ...
                                 dmrsLayerIndices, dmrsLayerSymbols, ...
                                 'CyclicPrefix', carrier.CyclicPrefix, ...
                                 'SubcarrierSpacing', carrier.SubcarrierSpacing, ...
                                 'PortIndices', (0:nRxAnts-1)', ...
                                 'BetaScaling', betaDMRS);
+
+                            % Update long-term RSRP and noise power estimation.
+                            rsrpLT = rsrpLT + extra.RSRP;
+                            noiseEstLT = noiseEstLT + noiseEst;
                         end
 
                         ulschLLRsInt8 = int8(srsDemodulatePUSCH(rxGrid, estChannelGrid, noiseEst, pusch, ...
@@ -959,6 +965,11 @@ classdef PUSCHBLER < matlab.System
                         1e-6*[simThroughputSRS(snrIdx) maxThroughput(snrIdx)]/(usedFrames*10e-3));
                     fprintf('Throughput(%%) after %.0f frame(s) = %.4f\n', usedFrames, simThroughputSRS(snrIdx)*100/maxThroughput(snrIdx));
                     fprintf('BLER after %.0f frame(s) = %.4f\n', usedFrames, simBLERSRS(snrIdx)/totalBlocks(snrIdx));
+
+                    rsrpLT = rsrpLT / (nslot + 1);
+                    noiseEstLT = noiseEstLT / (nslot + 1);
+                    fprintf('Measured SNR = %.1f dB.\n', 10*log10(rsrpLT * pusch.NumLayers / noiseEstLT / betaDMRS^2));
+
                 end
 
             end
@@ -994,6 +1005,9 @@ classdef PUSCHBLER < matlab.System
         end
 
         function releaseImpl(obj)
+            % Reset simulation results.
+            obj.resetImpl();
+
             % Release internal system objects.
             release(obj.Channel);
             release(obj.EncodeULSCH);
@@ -1026,8 +1040,10 @@ classdef PUSCHBLER < matlab.System
                     flag = isempty(obj.ThroughputMATLABCtr) || strcmp(obj.ImplementationType, 'srs');
                 case {'ThroughputSRS', 'BlockErrorRateSRS'}
                     flag = isempty(obj.ThroughputSRSCtr) || strcmp(obj.ImplementationType, 'matlab');
-                case 'SRSEstimatorType'
+                case {'SRSEstimatorType', 'SRSInterpolation'}
                     flag = strcmp(obj.ImplementationType, 'matlab') || obj.PerfectChannelEstimator;
+                case 'SRSEqualizerType'
+                    flag = strcmp(obj.ImplementationType, 'matlab');
                 case 'CompIQwidth'
                     flag = ~obj.ApplyOFHCompression;
                 otherwise
@@ -1062,7 +1078,7 @@ classdef PUSCHBLER < matlab.System
                 ... Compression.
                 'ApplyOFHCompression', 'CompIQwidth', ...
                 ... Other simulation details.
-                'ImplementationType', 'SRSEstimatorType', ...
+                'ImplementationType', 'SRSEqualizerType', 'SRSEstimatorType', 'SRSInterpolation', ...
                 'QuickSimulation', 'DisplaySimulationInformation', 'DisplayDiagnostics'};
             groups = matlab.mixin.util.PropertyGroup(confProps, 'Configuration');
 
