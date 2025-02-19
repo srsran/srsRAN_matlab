@@ -37,6 +37,13 @@
 %   file in the top-level directory of this distribution.
 
 classdef CheckPRACHConformance < matlab.unittest.TestCase
+    properties (Constant, Hidden)
+        %Folder for storing the test results in csv format.
+        OutputFolder = 'conformanceResults'
+        %File for storing the results in csv format.
+        OutputFile = fullfile(pwd, CheckPRACHConformance.OutputFolder, ['conformancePRACH', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss')), '.csv'])
+    end % of properties (Constant, Hidden)
+
     properties (TestParameter)
         TestConfig = createTestConfig()
     end % of properties (TestParameter)
@@ -49,6 +56,22 @@ classdef CheckPRACHConformance < matlab.unittest.TestCase
 
             obj.addTeardown(@warning, warn.state, 'srsran_matlab:srsPRACHdetector');
         end
+
+        function preparecsv(obj)
+        %Creates a csv file for storing the results of all tests.
+
+            if ~exist(obj.OutputFolder, 'dir')
+                mkdir(obj.OutputFolder);
+            end
+            fff = fopen(obj.OutputFile, 'w');
+
+            % Write file header.
+            fprintf(fff, '#datatype measurement,tag,tag,double,dateTime:RFC3339\n');
+            fprintf(fff, '#default,,,\n');
+            fprintf(fff, 'm,suite,test,value,time\n');
+
+            fclose(fff);
+        end % of function preparecsv(obj)
     end % of methods (TestClassSetup)
 
     methods (Test, TestTags = {'conformance'})
@@ -71,12 +94,14 @@ classdef CheckPRACHConformance < matlab.unittest.TestCase
                 obj.assertFail(['PRACHPER simulation failed with error: ', ME.message]);
             end
 
+            % Export detection probability in csv format to be imported in grafana.
+            writecsv(obj, TestConfig.Name, TestConfig.Format, 'detection', pp.ProbabilityDetectionPerfect);
+
             obj.verifyGreaterThanOrEqual(pp.ProbabilityDetectionPerfect, 0.99, ...
                 'WARNING: The PRACH detection rate should not be lower than 99%.');
             obj.assertGreaterThanOrEqual(pp.ProbabilityDetectionPerfect, 0.95, ...
                 'WARNING: The PRACH detection rate is below the hard acceptance threshold of 95%.');
 
-            % TODO: export Detection Rate (and possibly other metrics) to grafana.
         end % of function checkPRACHdetection(obj, TestConfig)
 
         function checkPRACHfalsealarm(obj, TestConfig)
@@ -98,12 +123,14 @@ classdef CheckPRACHConformance < matlab.unittest.TestCase
                 obj.assertFail(['PRACHPER simulation failed with error: ', ME.message]);
             end
 
+            % Export false-alarm probability in csv format to be imported in grafana.
+            writecsv(obj, TestConfig.Name, TestConfig.Format, 'false alarm', pp.ProbabilityFalseAlarm);
+
             obj.verifyLessThanOrEqual(pp.ProbabilityFalseAlarm, 0.001, ...
                 'WARNING: The PRACH false detection rate should not be higher than 0.1%.');
             obj.assertLessThanOrEqual(pp.ProbabilityFalseAlarm, 0.005, ...
                 'WARNING: The PRACH false detection rate is above the hard acceptance threshold of 0.5%.');
 
-            % TODO: export False Detection Rate (and possibly other metrics) to grafana.
         end % of function checkPRACHfalsealarm(obj, TestConfig)
 
     end % of methods (Test, TestTags = {'conformance'})
@@ -162,6 +189,15 @@ classdef CheckPRACHConformance < matlab.unittest.TestCase
 
         end % of function preparePRACH(obj, TestConfig)
 
+        function writecsv(obj, casename, prachFormat, metric, prob)
+        %Writes the test entry in the csv file.
+
+            fff = fopen(obj.OutputFile, 'a');
+            currTime = char(datetime('now', 'Format', 'yyyy-MM-dd''T''HH:mm:ss.SSS''Z'''));
+            fprintf(fff, '%s,matlab/PRACH conformance,%s / Format %s,%.3f,%s\n', metric, casename, prachFormat, prob, currTime);
+
+            fclose(fff);
+        end % of function writecsv(obj)
     end % of methods (Access = private)
 end % of classdef CheckPRACHConformance
 
@@ -204,24 +240,28 @@ function TestConfig = createTestConfig()
             'Name', 'TS38.104 V15.19.0 Table 8.4.2.2-1 Row 1', ...
             'DelayProfile', 'AWGN', ...
             'NRxAnts', 2, ...
+            'Format', '0', ...
             'SNR', -14.5 ...
         ), ...
         struct( ...
             'Name', 'TS38.104 V15.19.0 Table 8.4.2.2-1 Row 2', ...
             'DelayProfile', 'TDLC300', ...
             'NRxAnts', 2, ...
+            'Format', '0', ...
             'SNR', -6.6 ...
         ), ...
         struct( ...
             'Name', 'TS38.104 V15.19.0 Table 8.4.2.2-1 Row 3', ...
             'DelayProfile', 'AWGN', ...
             'NRxAnts', 4, ...
+            'Format', '0', ...
             'SNR', -16.7 ...
         ), ...
         struct( ...
             'Name', 'TS38.104 V15.19.0 Table 8.4.2.2-1 Row 4', ...
             'DelayProfile', 'TDLC300', ...
             'NRxAnts', 4, ...
+            'Format', '0', ...
             'SNR', -11.9 ...
         ), ...
         ... Short PRACH 15 kHz
