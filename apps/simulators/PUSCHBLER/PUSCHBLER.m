@@ -199,9 +199,16 @@ classdef PUSCHBLER < matlab.System
         %Bit-width of the compressed IQ samples.
         %   Only applies if ApplyOFHCompression is set to true.
         CompIQwidth (1, 1) double {mustBeInteger, mustBeInRange(CompIQwidth, 1, 16)} = 9
+        %Channel estimator frequency-domain smoothing strategy ('none', 'mean', 'filter').
+        %   Valid only for SRS estimator.
+        SRSSmoothing (1, :) char {mustBeMember(SRSSmoothing, {'none', 'mean', 'filter'})} = 'filter'
         %Time-domain interpolation strategy ('average', 'interpolate').
         %   Valid only for SRS estimator.
         SRSInterpolation (1, :) char {mustBeMember(SRSInterpolation, {'average', 'interpolate'})} = 'average'
+        %Channel estimator CFO compensation.
+        %   Valid only for SRS estimator.
+        SRSCompensateCFO (1, 1) logical = true
+
     end % of properties (Nontunable)
 
     properties % Tunable
@@ -638,8 +645,11 @@ classdef PUSCHBLER < matlab.System
 
             if useSRSDecoder
                 srsDemodulatePUSCH = srsMEX.phy.srsPUSCHDemodulator(EqualizerStrategy = obj.SRSEqualizerType);
-                srsChannelEstimate = srsMEX.phy.srsMultiPortChannelEstimator(ImplementationType = obj.SRSEstimatorType, ...
-                    Smoothing = 'filter', Interpolation = obj.SRSInterpolation, CompensateCFO = true);
+                srsChannelEstimate = srsMEX.phy.srsMultiPortChannelEstimator(...
+                    ImplementationType = obj.SRSEstimatorType, ...
+                    Smoothing = obj.SRSSmoothing, ...
+                    Interpolation = obj.SRSInterpolation, ...
+                    CompensateCFO = obj.SRSCompensateCFO);
             end
 
             % %%% Simulation loop.
@@ -1040,7 +1050,7 @@ classdef PUSCHBLER < matlab.System
                     flag = isempty(obj.ThroughputMATLABCtr) || strcmp(obj.ImplementationType, 'srs');
                 case {'ThroughputSRS', 'BlockErrorRateSRS'}
                     flag = isempty(obj.ThroughputSRSCtr) || strcmp(obj.ImplementationType, 'matlab');
-                case {'SRSEstimatorType', 'SRSInterpolation'}
+                case {'SRSEstimatorType', 'SRSSmoothing', 'SRSInterpolation', 'SRSCompensateCFO'}
                     flag = strcmp(obj.ImplementationType, 'matlab') || obj.PerfectChannelEstimator;
                 case 'SRSEqualizerType'
                     flag = strcmp(obj.ImplementationType, 'matlab');
@@ -1078,8 +1088,8 @@ classdef PUSCHBLER < matlab.System
                 ... Compression.
                 'ApplyOFHCompression', 'CompIQwidth', ...
                 ... Other simulation details.
-                'ImplementationType', 'SRSEqualizerType', 'SRSEstimatorType', 'SRSInterpolation', ...
-                'QuickSimulation', 'DisplaySimulationInformation', 'DisplayDiagnostics'};
+                'ImplementationType', 'SRSEqualizerType', 'SRSEstimatorType', 'SRSSmoothing', 'SRSInterpolation', ...
+                'SRSCompensateCFO', 'QuickSimulation', 'DisplaySimulationInformation', 'DisplayDiagnostics'};
             groups = matlab.mixin.util.PropertyGroup(confProps, 'Configuration');
 
             resProps = {};
