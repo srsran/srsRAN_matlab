@@ -4,6 +4,9 @@
 %
 %   PUSCHDEM = srsPUSCHDemodulator creates a PHY PUSCH demodulator object.
 %
+%   PUSCHDEM = srsPUSCHDemodulator(NAME, VALUE, ...) creates a PHY PUSCH demodulator object
+%   with properties (see below) set accorgin to the NAME-VALUE pairs.
+%
 %   srsPUSCHDemodulator Methods:
 %
 %   step               - Demodulates a PUSCH transmission.
@@ -33,6 +36,10 @@
 %   DM-RS symbols in RXSYMBOLS.
 %
 %   RXPORTS is an array of 0-based indices of the Rx-side antenna ports.
+%
+%   srsPUSCHDemodulator properties (nontunable):
+%
+%   EqualizerStrategy  - Equalizer strategy ('ZF', 'MMSE').
 
 %   Copyright 2021-2025 Software Radio Systems Limited
 %
@@ -50,7 +57,22 @@
 %   file in the top-level directory of this distribution.
 
 classdef srsPUSCHDemodulator < matlab.System
+    properties (Nontunable)
+        EqualizerStrategy (1, :) char {mustBeMember(EqualizerStrategy, {'ZF', 'MMSE'})} = 'ZF'
+    end
+
+    methods
+        function obj = srsPUSCHDemodulator(varargin)
+            setProperties(obj, nargin, varargin{:});
+        end
+    end
+
     methods (Access = protected)
+        function setupImpl(obj)
+            % Construct the PUSCH demodulator object inside the MEX function.
+            obj.pusch_demodulator_mex('new', obj.EqualizerStrategy);
+        end
+
         function schSoftBits = stepImpl(obj, rxSymbols, cest, noiseVar, pusch, puschIndices, puschDMRSIndices, rxPorts)
             arguments
                 obj               (1, 1)        srsMEX.phy.srsPUSCHDemodulator
@@ -58,8 +80,8 @@ classdef srsPUSCHDemodulator < matlab.System
                 cest              (:, 14, :, :) double {srsTest.helpers.mustBeResourceGrid(cest, MultiLayer=1)}
                 noiseVar          (1, 1)        double {mustBePositive}
                 pusch             (1, 1)        nrPUSCHConfig
-                puschIndices      (:, 1)        double {mustBeInteger, mustBePositive}
-                puschDMRSIndices  (:, 1)        double {mustBeInteger, mustBePositive}
+                puschIndices                    double {mustBeInteger, mustBePositive}
+                puschDMRSIndices                double {mustBeInteger, mustBePositive}
                 rxPorts           (:, 1)        double {mustBeInteger, mustBeNonnegative}
             end
 
@@ -83,7 +105,29 @@ classdef srsPUSCHDemodulator < matlab.System
                     numel(rxPorts));
             end
 
-            [~, puschDMRSIndicesSyms, ~] = ind2sub(gridSize, puschDMRSIndices);
+            assert(size(puschIndices, 2) == pusch.NumLayers, 'srsran_matlab:srsPUSCHDemodulator', ...
+                'The number of columns of puschIndices should be equal to the number of layers.');
+            assert(size(puschDMRSIndices, 2) == pusch.NumLayers, 'srsran_matlab:srsPUSCHDemodulator', ...
+                'The number of columns of puschDMRSIndices should be equal to the number of layers.');
+
+            for iLayer = 2:pusch.NumLayers
+                assert(all(puschIndices(:, 1) == puschIndices(:, iLayer) - gridSize(1) * gridSize(2) * (iLayer - 1)), ...
+                    'srsran_matlab:srsPUSCHDemodulator', ...
+                    'All layers are assumed to send data on the same resources.');
+            end
+
+            if pusch.NumLayers > 1
+                assert(all(puschDMRSIndices(:, 1) == puschDMRSIndices(:, 2) - gridSize(1) * gridSize(2)), ...
+                    'srsran_matlab:srsPUSCHDemodulator', ...
+                    'Layer 0 and layer 1 are assumed to send DM-RS on the same resources.');
+            end
+            if pusch.NumLayers == 4
+                assert(all(puschDMRSIndices(:, 3) == puschDMRSIndices(:, 4) - gridSize(1) * gridSize(2)), ...
+                    'srsran_matlab:srsPUSCHDemodulator', ...
+                    'Layer 2 and layer 3 are assumed to send DM-RS on the same resources.');
+            end
+
+            [~, puschDMRSIndicesSyms, ~] = ind2sub(gridSize(1:2), puschDMRSIndices(:, 1));
 
             % Generate a PUSCH RB allocation mask string.
             rbAllocationMask = false(gridSize(1) / 12, 1);
@@ -107,8 +151,7 @@ classdef srsPUSCHDemodulator < matlab.System
                 'NumLayers', pusch.NumLayers, ...
                 'TransformPrecoding', pusch.TransformPrecoding, ...
                 'RxPorts', rxPorts, ...
-                'NumOutputLLR', numel(puschIndices) * pusch.NumLayers ...
-                    * srsLib.phy.helpers.srsGetBitsSymbol(pusch.Modulation));
+                'NumOutputLLR', numel(puschIndices) * srsLib.phy.helpers.srsGetBitsSymbol(pusch.Modulation));
 
             schSoftBits = obj.pusch_demodulator_mex('step', single(rxSymbols), cest, noiseVar, ...
                 PUSCHDemConfig);

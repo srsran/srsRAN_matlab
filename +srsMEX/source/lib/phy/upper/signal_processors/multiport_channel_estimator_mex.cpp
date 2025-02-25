@@ -49,16 +49,19 @@ void MexFunction::method_new(ArgumentList outputs, ArgumentList inputs)
   } else if (fd_smoothing_string == "mean") {
     fd_smoothing = port_channel_estimator_fd_smoothing_strategy::mean;
   } else if (fd_smoothing_string != "none") {
-    mex_abort("Unknown FD smoothing strategy {}", fd_smoothing_string);
+    mex_abort("Unknown FD smoothing strategy {}.", fd_smoothing_string);
   }
 
+  if (inputs[2].getType() != ArrayType::CHAR) {
+    mex_abort("Input 'interpolation' must be a string.");
+  }
   std::string td_interpolation_string = static_cast<CharArray>(inputs[2]).toAscii();
   port_channel_estimator_td_interpolation_strategy td_interpolation =
       port_channel_estimator_td_interpolation_strategy::average;
   if (td_interpolation_string == "interpolate") {
     td_interpolation = port_channel_estimator_td_interpolation_strategy::interpolate;
   } else if (td_interpolation_string != "average") {
-    mex_abort("Unknown TD interpolation strategy {}", td_interpolation_string);
+    mex_abort("Unknown TD interpolation strategy {}.", td_interpolation_string);
   }
 
   if ((inputs[3].getType() != ArrayType::LOGICAL) && (inputs[3].getNumberOfElements() > 1)) {
@@ -225,13 +228,15 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
   ch_est_dims.nof_tx_layers = nof_layers;
   channel_estimate ch_estimate(ch_est_dims);
 
+  for (unsigned i_port = 0; i_port != nof_rx_ports; ++i_port) {
+    estimator->compute(ch_estimate, grid->get_reader(), i_port, pilots, cfg);
+  }
+
   TypedArray<cf_t> ch_est_out = factory.createArray<cf_t>(
       {static_cast<size_t>(ch_est_dims.nof_prb * NRE), ch_est_dims.nof_symbols, nof_rx_ports, nof_layers});
   span<cf_t> ch_est_out_view = to_span(ch_est_out);
-  for (unsigned i_port = 0; i_port != nof_rx_ports; ++i_port) {
-    estimator->compute(ch_estimate, grid->get_reader(), i_port, pilots, cfg);
-
-    for (unsigned i_layer = 0; i_layer != nof_layers; ++i_layer) {
+  for (unsigned i_layer = 0; i_layer != nof_layers; ++i_layer) {
+    for (unsigned i_port = 0; i_port != nof_rx_ports; ++i_port) {
       span<const cbf16_t> ch_estimate_view = ch_estimate.get_path_ch_estimate(i_port, i_layer);
 
       srsvec::convert(ch_est_out_view.first(ch_estimate_view.size()), ch_estimate_view);

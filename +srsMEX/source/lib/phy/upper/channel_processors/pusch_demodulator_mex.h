@@ -23,13 +23,10 @@
 #pragma once
 
 #include "srsran_matlab/srsran_mex_dispatcher.h"
-#include "srsran/phy/support/resource_grid_writer.h"
-#include "srsran/phy/support/support_factories.h"
 #include "srsran/phy/upper/channel_processors/pusch/factories.h"
 #include "srsran/phy/upper/channel_processors/pusch/pusch_demodulator.h"
 #include "srsran/phy/upper/equalization/channel_equalizer_algorithm_type.h"
 #include "srsran/phy/upper/equalization/equalization_factories.h"
-#include "srsran/ran/frame_types.h"
 
 /// \brief Factory method for a PUSCH demodulator.
 ///
@@ -47,17 +44,25 @@ public:
   /// object.
   MexFunction()
   {
-    // Ensure srsRAN PUSCH demodulator was created successfully.
-    if (!demodulator) {
-      mex_abort("Cannot create srsRAN PUSCH demodulator.");
-    }
-
+    create_callback("new", [this](ArgumentList out, ArgumentList in) { return this->method_new(out, in); });
     create_callback("step", [this](ArgumentList out, ArgumentList in) { return this->method_step(out, in); });
   }
 
 private:
   /// Checks that outputs/inputs arguments match the requirements of method_step().
   void check_step_outputs_inputs(matlab::mex::ArgumentList outputs, matlab::mex::ArgumentList inputs);
+
+  /// \brief Creates a new PUSCH demodulator MEX object.
+  ///
+  /// This method creates the srsRAN PUSCH demodulator object used by MEX wrapper, with the given equalization strategy.
+  ///
+  /// The methods accepts only two inputs.
+  ///   - The string <tt>"new"</tt>.
+  ///   - A string identifying the equalizer strategy (one of <tt>"ZF"</tt> for zero-forcing or <tt>"MMSE"</tt> for
+  ///     linear minimum mean-squared error).
+  ///
+  /// The method has no output.
+  void method_new(ArgumentList outputs, ArgumentList inputs);
 
   /// \brief Demodulates a PUSCH transmission according to the given configuration.
   ///
@@ -86,10 +91,11 @@ private:
   void method_step(ArgumentList outputs, ArgumentList inputs);
 
   /// A pointer to the actual PUSCH decoder.
-  std::unique_ptr<srsran::pusch_demodulator> demodulator = create_pusch_demodulator();
+  std::unique_ptr<srsran::pusch_demodulator> demodulator = nullptr;
 };
 
-std::unique_ptr<srsran::pusch_demodulator> create_pusch_demodulator()
+inline std::unique_ptr<srsran::pusch_demodulator>
+create_pusch_demodulator(srsran::channel_equalizer_algorithm_type eq_type)
 {
   using namespace srsran;
 
@@ -98,8 +104,7 @@ std::unique_ptr<srsran::pusch_demodulator> create_pusch_demodulator()
   std::shared_ptr<transform_precoder_factory> transform_precod_factory =
       create_dft_transform_precoder_factory(dft_proc_factory, MAX_RB);
 
-  std::shared_ptr<channel_equalizer_factory> equalizer_factory =
-      create_channel_equalizer_generic_factory(channel_equalizer_algorithm_type::zf);
+  std::shared_ptr<channel_equalizer_factory> equalizer_factory = create_channel_equalizer_generic_factory(eq_type);
 
   std::shared_ptr<demodulation_mapper_factory> demod_factory = create_demodulation_mapper_factory();
 

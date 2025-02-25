@@ -81,9 +81,9 @@ function mustBeResourceGrid(a, options)
 
         if (options.MultiLayer && (numel(dims) == 4))
             % Check the number of layers is at most 2.
-            if (dims(4) > 2)
+            if (dims(4) > 4)
                 eidType = 'mustBeResourceGrid:wrongNumberTxLayers';
-                msgType = sprintf('The maximum supported number of Tx layers is 2, given %d.', dims(4));
+                msgType = sprintf('The maximum supported number of Tx layers is 4, given %d.', dims(4));
                 throwAsCaller(MException(eidType, msgType));
             end
 

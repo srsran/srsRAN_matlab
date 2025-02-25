@@ -6,8 +6,8 @@
 %   CHESTIMATOR = srsMultiPortChannelEstimator creates the SIMO channel estimator
 %   object CHESTIMATOR.
 %
-%   CHESTIMATOR = srsMultiPortChannelEstimator('noMEX') creates a SIMO channel estimator
-%   that is implemented in MATLAB exclusively, without recurring to the MEX.
+%   CHESTIMATOR = srsMultiPortChannelEstimator(NAME, VALUE, ...) creates a SIMO channel estimator
+%   with properties (see below) set according to the NAME-VALUE pairs.
 %
 %   srsMultiPortChannelEstimator Methods:
 %
@@ -35,7 +35,8 @@
 %   srsMultiPortChannelEstimator propertires (nontunable):
 %
 %   ImplementationType - Channel estimator implementation ('MEX', 'noMEX').
-%   Smoothing          - Frequency domain smoothing strategy ('filter', 'mean', 'none').
+%   Smoothing          - Frequency-domain smoothing strategy ('filter', 'mean', 'none').
+%   Interpolation      - Time-domain interpolation ('average', 'interpolate').
 %   CompensateCFO      - Boolean flat: compensate CFO if true.
 
 %   Copyright 2021-2025 Software Radio Systems Limited
@@ -103,27 +104,44 @@ classdef srsMultiPortChannelEstimator < matlab.System
                 config.BetaScaling       (1, 1)     double {mustBePositive} = 1
             end
 
-            assert(symbolAllocation(1) < 14, 'First allocated symbol out of range.');
+            assert(symbolAllocation(1) < 14, 'srsran_matlab:srsMultiPortChannelEstimator', 'First allocated symbol out of range.');
             lastSymbol = sum(symbolAllocation) - 1;
-            assert(lastSymbol < 14, 'Last allocated symbol out of range.');
+            assert(lastSymbol < 14, 'srsran_matlab:srsMultiPortChannelEstimator', 'Last allocated symbol out of range.');
 
             [nPilots, nLayers] = size(refSym);
-            assert(nLayers <= 4, 'Currently, max 4 layers supported, provided %d.', nLayers);
-            assert(nPilots == numel(refInd(:, 1)), ...
+            assert(nLayers <= 4, 'srsran_matlab:srsMultiPortChannelEstimator', ...
+                'Currently, max 4 layers supported, provided %d.', nLayers);
+            assert(nPilots == numel(refInd(:, 1)), 'srsran_matlab:srsMultiPortChannelEstimator', ...
                 ['The number of pilots per layer %d and the number of pilot resources %d ', ...
                  'do not match.'], nPilots, numel(refInd));
-            nCDM = ceil(nLayers / 2);
-            assert(nCDM == numel(refInd(1, :)), ...
-                ['The number of CDM groups inferred from the pilots %d and the number of ', ...
-                 'CDM groups inferred from the pilot index list %d ', ...
-                 'do not match.'], nPilots, numel(refInd));
+            assert(nLayers == size(refInd, 2), 'srsran_matlab:srsMultiPortChannelEstimator', ...
+                ['The number of layers inferred from the pilots %d and the number of layers inferred ', ...
+                 'from the pilot index list %d do not match.'], nPilots, numel(refInd));
+
+            gridSize = size(rxGrid);
+            nREs = gridSize(1) * gridSize(2);
+            if nLayers > 1
+                assert(all(refInd(:, 1) == refInd(:, 2) - nREs), ...
+                    'srsran_matlab:srsMultiPortChannelEstimator', ...
+                    'Layer 0 and layer 1 are assumed to send DM-RS on the same resources (only DM-RS type 1 supported).');
+            end
+            if nLayers == 4
+                assert(all(refInd(:, 3) == refInd(:, 4) - nREs), ...
+                    'srsran_matlab:srsMultiPortChannelEstimator', ...
+                    'Layer 2 and layer 3 are assumed to send DM-RS on the same resources (only DM-RS type 1 supported).');
+            end
 
             if ~isempty(config.HoppingIndex)
                 validateattributes(config.HoppingIndex, {'double'}, ...
                     {'scalar', 'integer', '>', symbolAllocation(1), '<=', lastSymbol}, mfilename('class'));
             end
 
-            [channelEst, noiseEst, extra] = obj.stepMethod(obj, rxGrid, symbolAllocation, refInd, refSym, config);
+            refIndNorm = refInd(:, 1:2:end);
+            for iCol = 2:size(refIndNorm, 2)
+                refIndNorm(:, iCol) = refIndNorm(:, iCol) - iCol * nREs;
+            end
+
+            [channelEst, noiseEst, extra] = obj.stepMethod(obj, rxGrid, symbolAllocation, refIndNorm, refSym, config);
         end
     end
 
@@ -137,6 +155,12 @@ classdef srsMultiPortChannelEstimator < matlab.System
                     ['Only DM-RS configuration type 1 is supported, layers {0, 1} and {2, 3} should have\n', ...
                      'complementary RE patterns.']);
             end
+
+            nLayers = size(refSym, 2);
+            nLayersMEX = srsMEX.phy.srsPUSCHCapabilitiesMEX().NumLayers;
+            assert(nLayers <= nLayersMEX, 'srsran_matlab:srsMultiPortChannelEstimator', ...
+                'The current MEX version does not support more than %d layers, required %d.', ...
+                nLayersMEX, nLayers);
 
             sz = size(rxGrid);
             pilotMask = false(sz(1:2));
@@ -275,7 +299,7 @@ classdef srsMultiPortChannelEstimator < matlab.System
                 nPorts = gridsize(3);
             end
 
-            channelEst = nan([gridsize(1:2), nLayers, nPorts]);
+            channelEst = nan([gridsize(1:2), nPorts, nLayers]);
             if nPorts == 1
                 extra = struct('RSRP', 0, 'EPRE', 0, 'SINR', 0, 'TimeAlignment', 0, 'CFO', []);
             else
@@ -290,7 +314,7 @@ classdef srsMultiPortChannelEstimator < matlab.System
             cfo = [];
 
             for iPort = 1:nPorts
-                [channelEst(:, :, :, iPort), noiseEstTmp, rsrpTmp, epreTmp, taTmp, cfoTmp] = ...
+                [channelEst(:, :, iPort, :), noiseEstTmp, rsrpTmp, epreTmp, taTmp, cfoTmp] = ...
                     srsChannelEstimator(approxbf16(rxGrid(:, :, iPort)), pilots, config.BetaScaling, hop1, hop2, configNew);
 
                 noiseEst = noiseEst + noiseEstTmp / nPorts;
@@ -301,7 +325,7 @@ classdef srsMultiPortChannelEstimator < matlab.System
 
                 extra(iPort).RSRP = rsrpTmp;
                 extra(iPort).EPRE = epreTmp;
-                extra(iPort).SINR = rsrpTmp / config.BetaScaling^2 / noiseEstTmp;
+                extra(iPort).SINR = rsrpTmp * nLayers / config.BetaScaling^2 / noiseEstTmp;
                 extra(iPort).TimeAlignment = taTmp;
                 extra(iPort).CFO = cfoTmp;
             end

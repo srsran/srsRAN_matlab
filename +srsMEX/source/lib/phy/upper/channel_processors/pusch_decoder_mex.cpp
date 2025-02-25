@@ -159,6 +159,7 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
   cfg.rv                                       = in_seg_cfg["RV"][0];
   cfg.Nref                                     = in_seg_cfg["LimitedBufferSize"][0];
   cfg.new_data                                 = static_cast<TypedArray<bool>>(inputs[3])[0];
+  cfg.use_early_stop                           = true;
 
   units::bits tbs(static_cast<unsigned>(in_seg_cfg["TransportBlockLength"][0]));
   if (!tbs.is_byte_exact()) {
