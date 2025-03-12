@@ -80,11 +80,10 @@ public:
       mex_abort("Cannot create srsRAN PUSCH decoder.");
     }
 
-    create_callback("new", [this](ArgumentList out, ArgumentList in) { return this->method_new(out, in); });
-    create_callback("step", [this](ArgumentList out, ArgumentList in) { return this->method_step(out, in); });
-    create_callback("reset_crcs",
-                    [this](ArgumentList out, ArgumentList in) { return this->method_reset_crcs(out, in); });
-    create_callback("release", [this](ArgumentList out, ArgumentList in) { return this->method_release(out, in); });
+    create_callback("new", [this](ArgumentList out, ArgumentList in) { this->method_new(out, in); });
+    create_callback("step", [this](ArgumentList out, ArgumentList in) { this->method_step(out, in); });
+    create_callback("reset_crcs", [this](ArgumentList out, ArgumentList in) { this->method_reset_crcs(out, in); });
+    create_callback("release", [this](ArgumentList out, ArgumentList in) { this->method_release(out, in); });
   }
 
 private:
@@ -170,7 +169,7 @@ private:
   std::unique_ptr<srsran::pusch_decoder> decoder = create_pusch_decoder();
 
   /// A container for pusch_memento objects.
-  memento_storage storage = {};
+  memento_storage storage;
 };
 
 std::unique_ptr<srsran::pusch_decoder> create_pusch_decoder()

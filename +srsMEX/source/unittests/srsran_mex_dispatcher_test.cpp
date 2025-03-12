@@ -39,8 +39,8 @@ public:
   /// "two"&ndash;method_two.
   MexFunction()
   {
-    create_callback("one", [this](ArgumentList out, ArgumentList in) { return this->method_one(out, in); });
-    create_callback("two", [this](ArgumentList out, ArgumentList in) { return this->method_two(out, in); });
+    create_callback("one", [this](ArgumentList out, ArgumentList in) { this->method_one(out, in); });
+    create_callback("two", [this](ArgumentList out, ArgumentList in) { this->method_two(out, in); });
   }
 
 private:

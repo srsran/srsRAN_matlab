@@ -45,7 +45,7 @@ public:
       mex_abort("Cannot create srsRAN PUCCH detector.");
     }
 
-    create_callback("step", [this](ArgumentList out, ArgumentList in) { return this->method_step(out, in); });
+    create_callback("step", [this](ArgumentList out, ArgumentList in) { this->method_step(out, in); });
   }
 
 private:
@@ -98,7 +98,7 @@ private:
   matlab::data::TypedArray<uint8_t> fill_message_fields(srsran::span<const uint8_t> field);
 
   /// Container for channel estimates.
-  srsran::channel_estimate ch_est = {};
+  srsran::channel_estimate ch_est;
 
   /// A pointer to the actual PUCCH detector.
   std::unique_ptr<srsran::pucch_detector> detector = create_pucch_detector();
