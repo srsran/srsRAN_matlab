@@ -29,7 +29,6 @@
 #include "srsran/phy/upper/rx_buffer.h"
 #include "srsran/phy/upper/rx_buffer_pool.h"
 #include "srsran/phy/upper/unique_rx_buffer.h"
-
 #include <memory>
 
 /// \brief Factory method for a PUSCH decoder.

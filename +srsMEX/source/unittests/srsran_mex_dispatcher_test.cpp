@@ -24,7 +24,6 @@
 /// the user should check its behavior from the MATLAB shell.
 
 #include "srsran_matlab/srsran_mex_dispatcher.h"
-
 #include <map>
 
 using namespace matlab::data;

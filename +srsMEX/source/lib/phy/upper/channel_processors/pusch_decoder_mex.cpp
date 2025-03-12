@@ -29,7 +29,6 @@
 #include "srsran/ran/sch/modulation_scheme.h"
 #include "srsran/support/units.h"
 #include "fmt/format.h"
-
 #include <memory>
 #include <optional>
 

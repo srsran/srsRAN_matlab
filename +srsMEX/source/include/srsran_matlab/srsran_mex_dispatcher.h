@@ -30,7 +30,6 @@
 
 #include "mexAdapter.hpp"
 #include <fmt/format.h>
-
 #include <map>
 
 /// \brief MexFunction template.
