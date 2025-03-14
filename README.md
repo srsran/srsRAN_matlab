@@ -17,7 +17,7 @@ For license details, see the [LICENSE](LICENSE) file.
 
 ### Requirements
 
-*srsRAN-matlab* runs on MATLAB and builds upon the [5G Toolbox](https://www.mathworks.com/products/5g.html) (tested on MATLAB R2022a, R2022b and R2023a under Linux, but other recent releases should also work).
+*srsRAN-matlab* runs on MATLAB and builds upon the [5G Toolbox](https://www.mathworks.com/products/5g.html) (tested on MATLAB R2023b, R2024a and R2024b under Linux, but other recent releases should also work).
 
 The srsRAN Project is required to build the MEX wrappers and to run the applications that include them (see the [MEX](#mex) section for further details).
 
@@ -134,7 +134,7 @@ The following steps are needed to compile MEX binaries.
     ```
     Similarly, you can use the CMake option `Matlab_ROOT_DIR` if you have multiple versions of MATLAB on your machine or if MATLAB is not in your system path.
     ```bash
-    cmake -DMatlab_ROOT_DIR="/usr/local/MATLAB/R2023a" ..
+    cmake -DMatlab_ROOT_DIR="/usr/local/MATLAB/R2024b" ..
     ```
 4. **Build the MEX:** Simply run `make` to build the MEX binaries, which will be automatically placed in the proper folder to be accessed from the `srsMEX` library.
 
@@ -142,10 +142,10 @@ The following steps are needed to compile MEX binaries.
 
     Depending on your setup, you may need to instruct MATLAB to use the system libraries instead of the internal ones: do the following and (re)start MATLAB.
     ```bash
-    cd /usr/local/MATLAB/R2023a/sys/os/glnxa64
+    cd /usr/local/MATLAB/R2024b/sys/os/glnxa64
     sudo mv libstdc++.so.6 libstdc++.so.6.bak
     ```
-> The examples in this section assume you have MATLAB R2023a installed in the typical path `/usr/local/MATLAB/R2023a/`. For other MATLAB releases or paths, adapt the examples accordingly.
+> The examples in this section assume you have MATLAB R2024b installed in the typical path `/usr/local/MATLAB/R2024b/`. For other MATLAB releases or paths, adapt the examples accordingly.
 
 ### Testing the MEX
 
@@ -253,7 +253,7 @@ runtests("unitTests/CheckAnalyzers.m")
 ```
 
 ### Conformance Tests
-The classes *CheckPUSCHConformance*, *CheckPUCCHF0Conformance*, *CheckPUCCHF1Conformance* and *CheckPUCCHF2Conformace* run a set of conformance tests (as defined in *TS38.104* and *TS38.141*) of the corresponding PHY channel receivers.
+The classes *CheckPUSCHConformance*, *CheckPUCCHF0Conformance*, *CheckPUCCHF1Conformance*, *CheckPUCCHF2Conformace* and *CheckPRACHConformace* run a set of conformance tests (as defined in *TS38.104* and *TS38.141*) of the corresponding PHY channel receivers.
 
 These checks have been designed mainly for automatic CI/CD procedures. Nevertheless, they can be executed locally by running the following commands from the *srsRAN-matlab* root folder (be aware that these tests may run for several hours).
 ```matlab
@@ -262,4 +262,5 @@ runtests("unitTests/CheckPUSCHConformance.m")
 runtests("unitTests/CheckPUCCHF0Conformance.m")
 runtests("unitTests/CheckPUCCHF1Conformance.m")
 runtests("unitTests/CheckPUCCHF2Conformance.m")
+runtests("unitTests/CheckPRACHConformance.m")
 ```
