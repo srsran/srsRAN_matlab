@@ -54,7 +54,7 @@ public:
       mex_abort("Cannot create srsran PRACH detector.");
     }
 
-    create_callback("step", [this](ArgumentList out, ArgumentList in) { return this->method_step(out, in); });
+    create_callback("step", [this](ArgumentList out, ArgumentList in) { this->method_step(out, in); });
   }
 
 private:

@@ -39,8 +39,8 @@ public:
   /// Constructor: creates the \c port_channel_estimator object and the callback methods.
   MexFunction()
   {
-    create_callback("new", [this](ArgumentList out, ArgumentList in) { return this->method_new(out, in); });
-    create_callback("step", [this](ArgumentList out, ArgumentList in) { return this->method_step(out, in); });
+    create_callback("new", [this](ArgumentList out, ArgumentList in) { this->method_new(out, in); });
+    create_callback("step", [this](ArgumentList out, ArgumentList in) { this->method_step(out, in); });
   }
 
 private:

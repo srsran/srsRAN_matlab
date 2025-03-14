@@ -41,7 +41,7 @@ BreakBeforeBinaryOperators: None
 BreakBeforeBraces: Custom #Changed
 BreakBeforeInheritanceComma: false
 BreakBeforeTernaryOperators: true
-BreakConstructorInitializersBeforeComma: false 
+BreakConstructorInitializersBeforeComma: false
 BreakConstructorInitializers: AfterColon      #Changed
 BreakAfterJavaFieldAnnotations: false
 BreakStringLiterals: true
@@ -60,7 +60,7 @@ ForEachMacros:
   - foreach
   - Q_FOREACH
   - BOOST_FOREACH
-IncludeBlocks:   Preserve
+IncludeBlocks:   Merge #Changed
 IncludeCategories: #Changed
   - Regex:           '^"srsran_matlab/'
     Priority:        2
@@ -75,6 +75,7 @@ IndentCaseLabels: true #Changed
 IndentPPDirectives: None
 IndentWidth:     2
 IndentWrappedFunctionNames: false
+InsertNewlineAtEOF: true #Changed
 JavaScriptQuotes: Leave
 JavaScriptWrapImports: true
 KeepEmptyLinesAtTheStartOfBlocks: false
@@ -107,7 +108,7 @@ SpacesInContainerLiterals: true
 SpacesInCStyleCastParentheses: false
 SpacesInParentheses: false
 SpacesInSquareBrackets: false
-Standard:        c++14 #Changed
+Standard:        c++17 #Changed
 TabWidth:        8
 UseTab:          Never
 ...

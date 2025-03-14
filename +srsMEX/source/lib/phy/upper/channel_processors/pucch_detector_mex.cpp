@@ -78,7 +78,7 @@ void MexFunction::check_step_outputs_inputs(ArgumentList outputs, ArgumentList i
 /// \param[out] ch_est     The channel estimate as an object from the srsRAN data API.
 /// \param[in]  in_ch_est  The channel estimates as a multidimensional (2D or 3D) array of complex floats, as passed by
 ///                        MATLAB to the MEX.
-void read_channel_estimate(channel_estimate& ch_est, const TypedArray<cf_t>& in_ch_est)
+static void read_channel_estimate(channel_estimate& ch_est, const TypedArray<cf_t>& in_ch_est)
 {
   ArrayDimensions in_dims = in_ch_est.getDimensions();
 
