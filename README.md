@@ -23,40 +23,7 @@ The srsRAN Project is required to build the MEX wrappers and to run the applicat
 
 ### Compatibility Table
 
-The development of *srsRAN-matlab* closely follows all new features of the srsRAN Project. For this reason, it is important that you always use the latest version of both software: this is the only way to ensure that test vectors agree with the srsRAN API and that MEX binaries compile. The following compatibility table provides a list of reference commits on both repositories that are guaranteed to work together.
-
-| *srsRAN-matlab* | srsRAN Project |
-|      ------     |     ------     |
-|     0a235460    |     56a771df   |
-|     3c050654    |     0112729f   |
-|     73f47e3e    |     bcb449d7   |
-|     f38c2c32    |     583c92b1   |
-|     80f4a105    |     5e6f50a2   |
-|     068e472a    |     e38e418b   |
-|     62c459a2    |     55c984b5   |
-|     62c459a2    |     dcd905cc   |
-|     040c50b5    |     0b2702cc   |
-|     842e0293    |     32dae89e   |
-|     b37e6ee5    |     50fe9623   |
-|     b93615b7    |     bcf941b3   |
-|     85bb333e    |     4d9f2232   |
-|     6a268a15    |     2f90c8b6   |
-|     fe585a5a    |     1483bda3   |
-|     1a81404d    |     78238fd1   |
-|     2a6f71b2    |     f3ed07a5   |
-|     0841ab86    |     c33cacba   |
-|     52c07fbb    |     40b17b42   |
-|     f6a11714    |     4cf7513e   |
-|     a3bd2f8a    |     4ac5300d   |
-|     d952d014    |     51e44a64   |
-|     36fa859f    |     ee1d86cd   |
-|     36fa859f    |     e73b4618   |
-|     e5155ae9    |     9d5dd742   |
-|     f0cda79f    |     cda0033b   |
-|     8a762cac    |     cc2869f9   |
-|     692e9134    |     a041e316   |
-|     bc2248fa    |     8120ffbc   |
-|     latest      |     2be82d8e   |
+The development of *srsRAN-matlab* closely follows all new features of the srsRAN Project. For this reason, it is important that you always use the latest version of both software: this is the only way to ensure that test vectors agree with the srsRAN API and that MEX binaries compile. The [compatibility table](CompatibilityTable.md) provides a list of reference commits on both repositories that are guaranteed to work together.
 
 ### Contents
 
