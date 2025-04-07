@@ -32,14 +32,9 @@
 #include <map>
 #include <memory>
 
-/// A placeholder for a memento object.
-class memento
-{
-public:
-  virtual ~memento() = default;
-};
-
 /// Takes care of memento objects.
+/// \tparam memento A memento class.
+template <class memento>
 class memento_storage
 {
 public:

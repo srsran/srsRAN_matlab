@@ -68,7 +68,7 @@ unique_rx_buffer MexFunction::retrieve_softbuffer(uint64_t                     k
                                                   unsigned                     nof_codeblocks,
                                                   bool                         is_new_data)
 {
-  std::shared_ptr<memento> mem = storage.get_memento(key);
+  std::shared_ptr<pusch_memento> mem = storage.get_memento(key);
   if (!mem) {
     mex_abort("Cannot retrieve rx_softbuffer_pool with key {}.", key);
   }
@@ -132,7 +132,7 @@ void MexFunction::method_new(ArgumentList outputs, ArgumentList inputs)
   pool_config.nof_codeblocks       = softbuffer_conf["MaxCodeblocks"][0];
   pool_config.expire_timeout_slots = softbuffer_conf["ExpireTimeoutSlots"][0];
 
-  std::shared_ptr<memento> mem = std::make_shared<pusch_memento>(create_rx_buffer_pool(pool_config));
+  std::shared_ptr<pusch_memento> mem = std::make_shared<pusch_memento>(create_rx_buffer_pool(pool_config));
   if (!mem) {
     mex_abort("Cannot create PUSCH memento.");
   }

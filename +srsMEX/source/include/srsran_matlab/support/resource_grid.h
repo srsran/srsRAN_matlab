@@ -22,9 +22,9 @@
 
 #pragma once
 
-#include "MatlabDataArray.hpp"
 #include "srsran/adt/complex.h"
 #include "srsran/phy/support/resource_grid.h"
+#include "MatlabDataArray/TypedArray.hpp"
 
 namespace srsran_matlab {
 
