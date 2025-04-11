@@ -9,7 +9,7 @@
 %
 %   srsBlock      - The tested block (i.e., 'ssb_processor').
 %   srsBlockType  - The type of the tested block, including layer
-%                   (i.e., 'phy/upper/channel_processors').
+%                   (i.e., 'phy/upper/channel_processors/ssb').
 %
 %   srsSSBProcessorUnittest Properties (ClassSetupParameter):
 %
@@ -59,7 +59,7 @@ classdef srsSSBProcessorUnittest < srsTest.srsBlockUnittest
         srsBlock = 'ssb_processor'
 
         %Type of the tested block, including layer.
-        srsBlockType = 'phy/upper/channel_processors'
+        srsBlockType = 'phy/upper/channel_processors/ssb'
     end
 
     properties (ClassSetupParameter)
@@ -96,9 +96,13 @@ classdef srsSSBProcessorUnittest < srsTest.srsBlockUnittest
     end
 
     methods (Access = protected)
-        function addTestIncludesToHeaderFile(obj, fileID)
+        function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
-            addTestIncludesToHeaderFilePHYchproc(obj, fileID);
+            fprintf(fileID, [...
+                    '#include "../../../support/resource_grid_test_doubles.h"\n'...
+                    '#include "srsran/phy/upper/channel_processors/ssb/ssb_processor.h"\n'...
+                    '#include "srsran/support/file_vector.h"\n'...
+                    ]);
         end
 
         function addTestDefinitionToHeaderFile(~, fileID)
@@ -131,8 +135,8 @@ classdef srsSSBProcessorUnittest < srsTest.srsBlockUnittest
             import srsLib.phy.upper.signal_processors.srsPSS
             import srsLib.phy.upper.signal_processors.srsSSS
             import srsLib.phy.upper.signal_processors.srsPBCHdmrs
-            import srsLib.phy.upper.channel_processors.srsPBCHencoder
-            import srsLib.phy.upper.channel_processors.srsPBCHmodulator
+            import srsLib.phy.upper.channel_processors.ssb.srsPBCHencoder
+            import srsLib.phy.upper.channel_processors.ssb.srsPBCHmodulator
             import srsTest.helpers.writeResourceGridEntryFile
 
             % generate a unique test ID by looking at the number of files generated so far

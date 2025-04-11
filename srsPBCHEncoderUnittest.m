@@ -9,7 +9,7 @@
 %
 %   srsBlock      - The tested block (i.e., 'pbch_encoder').
 %   srsBlockType  - The type of the tested block, including layer
-%                   (i.e., 'phy/upper/channel_processors').
+%                   (i.e., 'phy/upper/channel_processors/ssb').
 %
 %   srsPBCHEncoderUnittest Properties (ClassSetupParameter):
 %
@@ -56,7 +56,7 @@ classdef srsPBCHEncoderUnittest < srsTest.srsBlockUnittest
         srsBlock = 'pbch_encoder'
 
         %Type of the tested block, including layer.
-        srsBlockType = 'phy/upper/channel_processors'
+        srsBlockType = 'phy/upper/channel_processors/ssb'
     end
 
     properties (ClassSetupParameter)
@@ -97,7 +97,7 @@ classdef srsPBCHEncoderUnittest < srsTest.srsBlockUnittest
         %   HRF using a random NCellID, a random SFN, a random KSSB and a random payload.
 
             import srsTest.helpers.writeUint8File
-            import srsLib.phy.upper.channel_processors.srsPBCHencoder
+            import srsLib.phy.upper.channel_processors.ssb.srsPBCHencoder
 
             % generate a unique test ID by looking at the number of files generated so far
             testID = testCase.generateTestID;
