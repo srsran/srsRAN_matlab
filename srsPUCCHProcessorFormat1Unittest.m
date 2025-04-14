@@ -175,21 +175,21 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
                     nFalseAlarms = nFalseAlarms + actualPUCCH.isValid;
                 else
                     switch TxMode
-                    case 'ACK'
-                        % Assert validity.
-                        verifyTrue(testCase, actualPUCCH.isValid, ['PUCCH #', indexstr, ' is invalid in ACK mode.']);
-                        % Assert the number of ACK bits.
-                        assertLength(testCase, actualPUCCH.Bits, length(expectedPUCCH.Payload), ...
-                        ['PUCCH #', indexstr, ' has the wrong number of bits.']);
-                        % Check the ACK content.
-                        verifyEqual(testCase, actualPUCCH.Bits, expectedPUCCH.Payload, ...
-                        ['Detection error in PUCCH #', indexstr, '.']);
-                    case 'SR'
-                        % Assert validity.
-                        verifyTrue(testCase, actualPUCCH.isValid, ['PUCCH #', indexstr, ' is invalid in SR mode.']);
-                        % Assert the number of ACK bits.
-                        assertLength(testCase, actualPUCCH.Bits, 0, ...
-                        ['PUCCH #', indexstr, ' has the wrong number of bits.']);
+                        case 'ACK'
+                            % Assert validity.
+                            verifyTrue(testCase, actualPUCCH.isValid, ['PUCCH #', indexstr, ' is invalid in ACK mode.']);
+                            % Assert the number of ACK bits.
+                            assertLength(testCase, actualPUCCH.Bits, length(expectedPUCCH.Payload), ...
+                            ['PUCCH #', indexstr, ' has the wrong number of bits.']);
+                            % Check the ACK content.
+                            verifyEqual(testCase, actualPUCCH.Bits, expectedPUCCH.Payload, ...
+                            ['Detection error in PUCCH #', indexstr, '.']);
+                        case 'SR'
+                            % Assert validity.
+                            verifyTrue(testCase, actualPUCCH.isValid, ['PUCCH #', indexstr, ' is invalid in SR mode.']);
+                            % Assert the number of ACK bits.
+                            assertLength(testCase, actualPUCCH.Bits, 0, ...
+                            ['PUCCH #', indexstr, ' has the wrong number of bits.']);
                     end
                 end
             end
@@ -292,37 +292,63 @@ classdef srsPUCCHProcessorFormat1Unittest < srsTest.srsBlockUnittest
         %   The remaining parameters are set randomly.
 
             import srsMEX.phy.srsPUCCHProcessor
+            import srsTest.helpers.approxbf16
 
             % Generate simulation data: two multiplexed PUCCHs with different cyclic shifts.
-            [rxGrid, ackList, configuration] = generateSimData(numerology, SymbolAllocation, ...
+            [rxGrid, pucchListIn, pucchListOut, configuration] = generateSimData(Numerology, SymbolAllocation, ...
                 FrequencyHopping, NumRxPorts, TxMode, UEDensity);
 
             srspucch = srsPUCCHProcessor;
 
-            uci1 = srspucch(configuration.carrier, configuration.pucchList(1), rxGrid, NumHARQAck=ackSize);
-            uci2 = srspucch(configuration.carrier, configuration.pucchList(2), rxGrid, NumHARQAck=ackSize);
+            carrier = configuration.Carrier;
+            pucchCommon = configuration.PUCCH;
+            uci = srspucch(carrier, pucchCommon, approxbf16(rxGrid), MuxFormat1=pucchListIn);
 
-            % Messages should be valid.
-            assertTrue(testCase, uci1.isValid, 'The first PUCCH is invalid.');
-            assertTrue(testCase, uci2.isValid, 'The second PUCCH is invalid.');
+            % Check the results are as expected.
+            assertLength(testCase, uci, length(pucchListIn), 'The lengths number of configured and processed PUCCH transmissions do not match.');
 
-            % SR fields should be empty.
-            assertEmpty(testCase, uci1.SRPayload, 'The first PUCCH has a nonempty SR field.');
-            assertEmpty(testCase, uci2.SRPayload, 'The second PUCCH has a nonempty SR field.');
+            nMuxPUCCHs = length(pucchListOut);
+            nFalseAlarms = 0;
+            for iPUCCH = 1:nMuxPUCCHs
+                expectedPUCCH = pucchListOut(iPUCCH);
+                actualPUCCH = uci(iPUCCH);
 
-            % CSI Part1 and Part2 should be empty.
-            assertEmpty(testCase, uci1.CSI1Payload, 'The first PUCCH has a nonempty CSI Part 1 field.');
-            assertEmpty(testCase, uci2.CSI1Payload, 'The second PUCCH has a nonempty CSI Part 1 field.');
-            assertEmpty(testCase, uci1.CSI2Payload, 'The first PUCCH has a nonempty CSI Part 2 field.');
-            assertEmpty(testCase, uci2.CSI2Payload, 'The second PUCCH has a nonempty CSI Part 2 field.');
+                indexstr = [num2str(iPUCCH) ' of ' num2str(nMuxPUCCHs)];
 
-            % ACKs should be of the given size.
-            assertLength(testCase, uci1.HARQAckPayload, ackSize, 'The first PUCCH has the wrong number of ACK bits.');
-            assertLength(testCase, uci2.HARQAckPayload, ackSize, 'The second PUCCH has the wrong number of ACK bits.');
+                % ICS and OCCI between multiplexList and result list should coincide.
+                assertEqual(testCase, actualPUCCH.InitialCyclicShift, expectedPUCCH.InitialCyclicShift, 'Results out of order');
+                assertEqual(testCase, actualPUCCH.OCCI, expectedPUCCH.OCCI, 'Results out of order');
 
-            % ACKs should be correct.
-            assertEqual(testCase, uci1.HARQAckPayload, int8(ackList(:, 1)), 'The ACK bits of the first PUCCH are corrupted.');
-            assertEqual(testCase, uci2.HARQAckPayload, int8(ackList(:, 2)), 'The ACK bits of the second PUCCH are corrupted.');
+                if isempty(expectedPUCCH.Payload)
+                    % UE is DTX-ing, PUCCH should be invalid.
+                    nFalseAlarms = nFalseAlarms + actualPUCCH.isValid;
+                else
+                    switch TxMode
+                        case 'ACK'
+                            % Assert validity.
+                            verifyTrue(testCase, actualPUCCH.isValid, ['PUCCH #', indexstr, ' is invalid in ACK mode.']);
+                            % Assert the number of ACK bits.
+                            assertLength(testCase, actualPUCCH.HARQAckPayload, length(expectedPUCCH.Payload), ...
+                                ['PUCCH #', indexstr, ' has the wrong number of bits.']);
+                            % Check the ACK content.
+                            verifyEqual(testCase, actualPUCCH.HARQAckPayload, int8(expectedPUCCH.Payload), ...
+                                ['Detection error in PUCCH #', indexstr, '.']);
+                            assertEmpty(testCase, actualPUCCH.SRPayload, ['PUCCH #', indexstr, 'should have no SR bits.']);
+                            assertEmpty(testCase, actualPUCCH.CSI1Payload, ['PUCCH #', indexstr, 'should have no CSI1 bits.']);
+                            assertEmpty(testCase, actualPUCCH.CSI2Payload, ['PUCCH #', indexstr, 'should have no CSI2 bits.']);
+                        case 'SR'
+                            % Assert validity.
+                            verifyTrue(testCase, actualPUCCH.isValid, ['PUCCH #', indexstr, ' is invalid in SR mode.']);
+                            % Assert the number of SR bits.
+                            assertEmpty(testCase, actualPUCCH.SRPayload, ['PUCCH #', indexstr, ' should have no SR bits..']);
+                            assertEmpty(testCase, actualPUCCH.HARQAckPayload, ['PUCCH #', indexstr, 'should have no HARQ-ACK bits.']);
+                            assertEmpty(testCase, actualPUCCH.CSI1Payload, ['PUCCH #', indexstr, 'should have no CSI1 bits.']);
+                            assertEmpty(testCase, actualPUCCH.CSI2Payload, ['PUCCH #', indexstr, 'should have no CSI2 bits.']);
+                    end
+                end
+            end
+
+            assertLessThanOrEqual(testCase, nFalseAlarms, 1, "Too may false alarms.");
         end
     end % of methods (Test, TestTags = {'testmex'})
 

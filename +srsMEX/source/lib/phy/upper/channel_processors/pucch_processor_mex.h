@@ -71,7 +71,7 @@ private:
   /// (specifically, HARQ ACK bits, SR bits, CSI Part 1 and Part 2 bits, when applicable). Intermediate steps consist in
   /// channel estimation and equalization, detection or demodulation and decoding.
   ///
-  /// The method takes three inputs.
+  /// The method takes four inputs.
   ///   - The string <tt>"step"</tt>.
   ///   - A resource grid, that is a two- or three-dimensional array of complex floats with the received samples
   ///     (subcarriers, OFDM symbols, antenna ports).
@@ -88,8 +88,7 @@ private:
   ///      - \c SecondHopStartPRB, starting PRB index, relative to the BWP, of the second hop \f$\{0,\dots,274\}\f$ or
   ///        set to [] if frequency offset is not used;
   ///      - \c NumPRBs, number of contiguous PRB allocated to the PUCCH transmission \f$\{1,\dots,16\}\f$ (Format 2 and
-  ///      3
-  ///        only);
+  ///        3 only);
   ///      - \c StartSymbolIndex, first OFDM symbol index in allocated to the PUCCH transmission in the slot
   ///        \f$\{0,\dots, 12\}\f$;
   ///      - \c NumOFDMSymbols, number of OFDM symbols allocated to the PUCCH transmission in the slot
@@ -102,28 +101,39 @@ private:
   ///      - \c NumHARQAck, number of HARQ ACK bits \f$\{0, \dots, 1706\}\f$;
   ///      - \c NumSR, number of SR bits \f$\{0, \dots, 4\}\f$ (Formats 0, 2, 3 and 4 only);
   ///      - \c NumCSIPart1, number of CSI Part 1 bits \f$\{0, \dots, 1706\}\f$ (Formats 2, 3 and 4 only);
-  ///      - \c NumCSIPart2, number of CSI Part 2 bits \f$\{0, \dots, 1706\}\f$ (Formats 2, 3 and 4 only).
+  ///      - \c NumCSIPart2, number of CSI Part 2 bits \f$\{0, \dots, 1706\}\f$ (Formats 2, 3 and 4 only);
   ///      - \c NIDHopping, hopping identity \f$\{0, \dots, 1023\}\f$ (Formats 3 and 4 only);
   ///      - \c NIDScrambling, PUCCH scrambling identity \f$\{0, \dots, 1023\}\f$ (Formats 3 and 4 only);
-  ///      - \c AdditionalDMRS, additional DM-RS flag (bool) (Formats 3 and 4 only).
-  ///      - \c Pi2BPSK, flag that indicates if the modulation is pi/2-bpsk (bool) (Formats 3 and 4 only).
-  ///      - \c SpreadingFactor, spreading factor \f$\{2, 4\}\f$ (Format 4 only).
+  ///      - \c AdditionalDMRS, additional DM-RS flag (bool) (Formats 3 and 4 only);
+  ///      - \c Pi2BPSK, flag that indicates if the modulation is pi/2-bpsk (bool) (Formats 3 and 4 only);
+  ///      - \c SpreadingFactor, spreading factor \f$\{2, 4\}\f$ (Format 4 only);
+  ///   - A structure array with the list of multiplexed PUCCH transmissions (only for PUCCH Format 1, empty otherwise).
+  ///     The fields are
+  ///      - \c InitialCyclicShift, initial cyclic shift \f$\{0, \dots, 11\}\f$;
+  ///      - \c OCCI, Orthogonal cover code index \f$\{0, \dots, 6\}\f$;
+  ///      - \c NumBits, number of HARQ ACK bits \f$\{0, 1, 2\}\f$.
   ///
-  /// The method has five outputs.
-  ///   - A string reporting the status of the message {'valid', 'invalid', 'unknown'}.
-  ///   - An array of binary values corresponding to the HARQ ACK bits.
-  ///   - An array of binary values corresponding to the SR bits.
-  ///   - An array of binary values corresponding to the CSI Part 1 bits.
-  ///   - An array of binary values corresponding to the CSI Part 2 bits.
-  ///
-  /// \remark Any of the bit arrays can be replaced with the scalar value 9 to denote an empty array.
+  /// The method has one output. If the last input is empty, the output is a structure with fields
+  ///   - \c isValid, a logical flag specifying whether the PUCCH transmission has been detected/decoded correctly.
+  ///   - \c HARQAckPayload, an \c int8 array of binary values corresponding to the HARQ ACK bits.
+  ///   - \c SRPayload, an \c int8 array of binary values corresponding to the SR bits.
+  ///   - \c CSI1Payload, an \c int8 array of binary values corresponding to the CSI Part 1 bits.
+  ///   - \c CSI2Payload, an \c int8 array of binary values corresponding to the CSI Part 2 bits.
+  /// If the last input is not empty (PUCCH Format 1 with multiplexed transmissions), the output is a structure
+  /// array with as many elements as multiplexed transmissions. Each entry has the same fields as above (with empty
+  /// fields \c SRPayload, \c CSI1Payload and \c CSI2Payload) plus the following extra fields that identify the
+  /// PUCCH transmission:
+  ///   - \c InitialCyclicShift, initial cyclic shift \f$\{0, \dots, 11\}\f$;
+  ///   - \c OCCI, Orthogonal cover code index \f$\{0, \dots, 6\}\f$.
   void method_step(ArgumentList outputs, ArgumentList inputs);
   /// Checks that outputs/inputs arguments match the requirements of method_step().
   void check_step_outputs_inputs(ArgumentList outputs, ArgumentList inputs);
   /// \brief Fills a TypedArray with the bits in the \c field span.
-  ///
-  /// \remark If \c field is empty, the function returns the \f$1 \times 1\f$ array \f$[9]\f$.
-  matlab::data::TypedArray<uint8_t> fill_message_fields(srsran::span<const uint8_t> field);
+  matlab::data::TypedArray<int8_t> fill_message_fields(srsran::span<const uint8_t> field);
+  /// \brief Calls the PUCCH processor and fills the output structure array with the results.
+  matlab::data::StructArray call_processor(const srsran::resource_grid_reader& grid_reader,
+                                           const matlab::data::Struct&         in_cfg,
+                                           const matlab::data::StructArray&    mux_f1);
 
   /// A pointer to the actual PUCCH processor.
   std::unique_ptr<srsran::pucch_processor> processor;

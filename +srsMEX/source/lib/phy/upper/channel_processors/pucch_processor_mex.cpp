@@ -20,7 +20,6 @@
 #include "pucch_processor_mex.h"
 #include "srsran_matlab/support/matlab_to_srs.h"
 #include "srsran_matlab/support/resource_grid.h"
-#include "srsran/phy/support/resource_grid_writer.h"
 #include <optional>
 
 using namespace matlab::data;
@@ -29,7 +28,7 @@ using namespace srsran_matlab;
 
 void MexFunction::check_step_outputs_inputs(ArgumentList outputs, ArgumentList inputs)
 {
-  constexpr unsigned NOF_INPUTS = 3;
+  constexpr unsigned NOF_INPUTS = 4;
   if (inputs.size() != NOF_INPUTS) {
     mex_abort("Wrong number of inputs: expected {}, provided {}.", NOF_INPUTS, inputs.size());
   }
@@ -43,22 +42,30 @@ void MexFunction::check_step_outputs_inputs(ArgumentList outputs, ArgumentList i
     mex_abort("Input 'config' should be a scalar structure.");
   }
 
-  constexpr unsigned NOF_OUTPUTS = 5;
+  if (!inputs[3].isEmpty() && (inputs[3].getType() != ArrayType::STRUCT)) {
+    mex_abort("Input 'MuxFormat1' should be a structure array.");
+  }
+
+  constexpr unsigned NOF_OUTPUTS = 1;
   if (outputs.size() != NOF_OUTPUTS) {
     mex_abort("Wrong number of outputs: expected {}, provided {}.", NOF_OUTPUTS, outputs.size());
   }
 }
 
-TypedArray<uint8_t> MexFunction::fill_message_fields(span<const uint8_t> field)
+TypedArray<int8_t> MexFunction::fill_message_fields(span<const uint8_t> field)
 {
   if (field.empty()) {
     // The MEX API seems to have some issue when returning an empty array. Since this is a binary array, we use 9 as a
     // tag.
-    return factory.createArray<uint8_t>({1, 1}, {9});
+    return factory.createArray<int8_t>({0, 1});
   }
 
-  unsigned nof_bits = field.size();
-  return factory.createArray({nof_bits, 1}, field.begin(), field.end());
+  unsigned           nof_bits = field.size();
+  TypedArray<int8_t> out      = factory.createArray<int8_t>({nof_bits, 1});
+  for (unsigned i_bit = 0; i_bit != nof_bits; ++i_bit) {
+    out[i_bit] = static_cast<int8_t>(field[i_bit]);
+  }
+  return out;
 }
 
 static pucch_processor::format0_configuration populate_f0_configuration(const Struct& in_cfg)
@@ -346,24 +353,72 @@ static pucch_processor::format4_configuration populate_f4_configuration(const St
   return cfg;
 }
 
-void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
+StructArray
+MexFunction::call_processor(const resource_grid_reader& grid_reader, const Struct& in_cfg, const StructArray& mux_f1)
 {
-  check_step_outputs_inputs(outputs, inputs);
+  unsigned pucch_format = in_cfg["Format"][0];
+  if ((pucch_format == 1) && !mux_f1.isEmpty()) {
+    pucch_processor::format1_configuration       cfg = populate_f1_configuration(in_cfg);
+    pucch_processor::format1_batch_configuration batch_config(cfg);
+    batch_config.entries.clear();
 
-  // Read the resource grid from inputs[1].
-  std::unique_ptr<resource_grid> grid = read_resource_grid(inputs[1]);
-  if (!grid) {
-    mex_abort("Cannot create resource grid.");
+    for (const auto& this_f1 : mux_f1) {
+      unsigned ics               = this_f1["InitialCyclicShift"][0];
+      unsigned occi              = this_f1["OCCI"][0];
+      uint16_t nof_harq_ack_bits = this_f1["NumBits"][0];
+
+      cfg.initial_cyclic_shift = ics;
+      cfg.time_domain_occ      = occi;
+      cfg.nof_harq_ack         = nof_harq_ack_bits;
+
+      // Ensure the provided configuration is valid.
+      error_type<std::string> validation = validator->is_valid(cfg);
+      if (!validation.has_value()) {
+        mex_abort("The provided PUCCH Format 1 configuration is invalid: {}", validation.error());
+      }
+
+      if (batch_config.entries.contains(ics, occi)) {
+        mex_abort("The F1 multiplexed list contains duplicated entries for ICS {} and OCCI {}.", ics, occi);
+      }
+      batch_config.entries.insert(ics, occi, {.context = {}, .nof_harq_ack = nof_harq_ack_bits});
+    }
+
+    // Run the PUCCH processor.
+    const auto& batch_results = processor->process(grid_reader, batch_config);
+
+    unsigned nof_pucchs = batch_results.size();
+    if (nof_pucchs != mux_f1.getNumberOfElements()) {
+      mex_abort("The number of processed PUCCH F1 transmsissions {} does not match the configured ones {}.",
+                nof_pucchs,
+                mux_f1.getNumberOfElements());
+    }
+
+    StructArray out = factory.createStructArray(
+        {nof_pucchs, 1},
+        {"InitialCyclicShift", "OCCI", "isValid", "HARQAckPayload", "SRPayload", "CSI1Payload", "CSI2Payload"});
+    unsigned i_pucch = 0;
+    for (const auto& this_f1 : mux_f1) {
+      unsigned ics  = this_f1["InitialCyclicShift"][0];
+      unsigned occi = this_f1["OCCI"][0];
+
+      if (!batch_results.contains(ics, occi)) {
+        mex_abort("PUCCH ({}, {}) is configured but not processed.", ics, occi);
+      }
+      const pucch_processor_result& result = batch_results.get(ics, occi);
+      out[i_pucch]["InitialCyclicShift"]   = factory.createScalar<double>(ics);
+      out[i_pucch]["OCCI"]                 = factory.createScalar<double>(occi);
+      out[i_pucch]["isValid"]              = factory.createScalar(result.message.get_status() == uci_status::valid);
+      out[i_pucch]["HARQAckPayload"]       = fill_message_fields(result.message.get_harq_ack_bits());
+      out[i_pucch]["SRPayload"]            = fill_message_fields(result.message.get_sr_bits());
+      out[i_pucch]["CSI1Payload"]          = fill_message_fields(result.message.get_csi_part1_bits());
+      out[i_pucch++]["CSI2Payload"]        = fill_message_fields(result.message.get_csi_part2_bits());
+    }
+
+    return out;
   }
-
-  // Read the configuration structure.
-  StructArray  in_cfg_array = inputs[2];
-  const Struct in_cfg       = in_cfg_array[0];
 
   // Prepare result container.
   pucch_processor_result result;
-
-  unsigned pucch_format = in_cfg["Format"][0];
 
   switch (pucch_format) {
     case 0: {
@@ -377,21 +432,11 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
       // Ensure the provided configuration is valid.
       error_type<std::string> validation = validator->is_valid(cfg);
       if (!validation.has_value()) {
-        mex_abort(fmt::format("The provided PUCCH Format 0 configuration is invalid: {}\n", validation.error()));
-      }
-
-      unsigned nof_conf_grid_ports = cfg.ports.size();
-      unsigned nof_grid_ports      = grid->get_writer().get_nof_ports();
-      if (nof_conf_grid_ports != nof_grid_ports) {
-        mex_abort(
-            "Field NRxPorts in the configuration structure and the number of resource grid ports do not match: {} "
-            "vs. {}.",
-            nof_conf_grid_ports,
-            nof_grid_ports);
+        mex_abort("The provided PUCCH Format 0 configuration is invalid: {}.", validation.error());
       }
 
       // Run the PUCCH processor.
-      result = processor->process(grid->get_reader(), cfg);
+      result = processor->process(grid_reader, cfg);
       break;
     }
     case 1: {
@@ -400,22 +445,12 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
       // Ensure the provided configuration is valid.
       error_type<std::string> validation = validator->is_valid(cfg);
       if (!validation.has_value()) {
-        mex_abort(fmt::format("The provided PUCCH Format 1 configuration is invalid: {}\n", validation.error()));
-      }
-
-      unsigned nof_conf_grid_ports = cfg.ports.size();
-      unsigned nof_grid_ports      = grid->get_writer().get_nof_ports();
-      if (nof_conf_grid_ports != nof_grid_ports) {
-        mex_abort(
-            "Field NRxPorts in the configuration structure and the number of resource grid ports do not match: {} "
-            "vs. {}.",
-            nof_conf_grid_ports,
-            nof_grid_ports);
+        mex_abort("The provided PUCCH Format 1 configuration is invalid: {}.", validation.error());
       }
 
       // Run the PUCCH processor.
       pucch_processor::format1_batch_configuration batch_config(cfg);
-      const auto&                                  batch_results = processor->process(grid->get_reader(), batch_config);
+      const auto&                                  batch_results = processor->process(grid_reader, batch_config);
       result = batch_results.get(cfg.initial_cyclic_shift, cfg.time_domain_occ);
       break;
     }
@@ -425,21 +460,11 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
       // Ensure the provided configuration is valid.
       error_type<std::string> validation = validator->is_valid(cfg);
       if (!validation.has_value()) {
-        mex_abort(fmt::format("The provided PUCCH Format 2 configuration is invalid: {}\n", validation.error()));
-      }
-
-      unsigned nof_conf_grid_ports = cfg.ports.size();
-      unsigned nof_grid_ports      = grid->get_writer().get_nof_ports();
-      if (nof_conf_grid_ports != nof_grid_ports) {
-        mex_abort(
-            "Field NRxPorts in the configuration structure and the number of resource grid ports do not match: {} "
-            "vs. {}.",
-            nof_conf_grid_ports,
-            nof_grid_ports);
+        mex_abort("The provided PUCCH Format 2 configuration is invalid: {}.", validation.error());
       }
 
       // Run the PUCCH processor.
-      result = processor->process(grid->get_reader(), cfg);
+      result = processor->process(grid_reader, cfg);
       break;
     }
     case 3: {
@@ -448,21 +473,11 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
       // Ensure the provided configuration is valid.
       error_type<std::string> validation = validator->is_valid(cfg);
       if (!validation.has_value()) {
-        mex_abort(fmt::format("The provided PUCCH Format 3 configuration is invalid: {}\n", validation.error()));
-      }
-
-      unsigned nof_conf_grid_ports = cfg.ports.size();
-      unsigned nof_grid_ports      = grid->get_writer().get_nof_ports();
-      if (nof_conf_grid_ports != nof_grid_ports) {
-        mex_abort(
-            "Field NRxPorts in the configuration structure and the number of resource grid ports do not match: {} "
-            "vs. {}.",
-            nof_conf_grid_ports,
-            nof_grid_ports);
+        mex_abort("The provided PUCCH Format 3 configuration is invalid: {}.", validation.error());
       }
 
       // Run the PUCCH processor.
-      result = processor->process(grid->get_reader(), cfg);
+      result = processor->process(grid_reader, cfg);
       break;
     }
     case 4: {
@@ -471,21 +486,11 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
       // Ensure the provided configuration is valid.
       error_type<std::string> validation = validator->is_valid(cfg);
       if (!validation.has_value()) {
-        mex_abort(fmt::format("The provided PUCCH Format 4 configuration is invalid: {}\n", validation.error()));
-      }
-
-      unsigned nof_conf_grid_ports = cfg.ports.size();
-      unsigned nof_grid_ports      = grid->get_writer().get_nof_ports();
-      if (nof_conf_grid_ports != nof_grid_ports) {
-        mex_abort(
-            "Field NRxPorts in the configuration structure and the number of resource grid ports do not match: {} "
-            "vs. {}.",
-            nof_conf_grid_ports,
-            nof_grid_ports);
+        mex_abort("The provided PUCCH Format 4 configuration is invalid: {}.", validation.error());
       }
 
       // Run the PUCCH processor.
-      result = processor->process(grid->get_reader(), cfg);
+      result = processor->process(grid_reader, cfg);
       break;
     }
     default:
@@ -493,15 +498,47 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
       break;
   }
 
-  CharArray           status        = factory.createCharArray(srsran::to_string(result.message.get_status()));
-  TypedArray<uint8_t> harq_ack_bits = fill_message_fields(result.message.get_harq_ack_bits());
-  TypedArray<uint8_t> sr_bits       = fill_message_fields(result.message.get_sr_bits());
-  TypedArray<uint8_t> csi1_bits     = fill_message_fields(result.message.get_csi_part1_bits());
-  TypedArray<uint8_t> csi2_bits     = fill_message_fields(result.message.get_csi_part2_bits());
+  StructArray out =
+      factory.createStructArray({1, 1}, {"isValid", "HARQAckPayload", "SRPayload", "CSI1Payload", "CSI2Payload"});
+  out[0]["isValid"]        = factory.createScalar(result.message.get_status() == uci_status::valid);
+  out[0]["HARQAckPayload"] = fill_message_fields(result.message.get_harq_ack_bits());
+  out[0]["SRPayload"]      = fill_message_fields(result.message.get_sr_bits());
+  out[0]["CSI1Payload"]    = fill_message_fields(result.message.get_csi_part1_bits());
+  out[0]["CSI2Payload"]    = fill_message_fields(result.message.get_csi_part2_bits());
 
-  outputs[0] = status;
-  outputs[1] = harq_ack_bits;
-  outputs[2] = sr_bits;
-  outputs[3] = csi1_bits;
-  outputs[4] = csi2_bits;
+  return out;
+}
+
+void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
+{
+  check_step_outputs_inputs(outputs, inputs);
+
+  // Read the resource grid from inputs[1].
+  std::unique_ptr<resource_grid> grid = read_resource_grid(inputs[1]);
+  if (!grid) {
+    mex_abort("Cannot create resource grid.");
+  }
+
+  // Read the configuration structure.
+  StructArray             in_cfg_array = inputs[2];
+  const Reference<Struct> in_cfg       = in_cfg_array[0];
+
+  unsigned    pucch_format = in_cfg["Format"][0];
+  StructArray mux_f1 =
+      (inputs[3].isEmpty() ? factory.createStructArray({0, 0}, {"InitialCyclicShift", "OCCI", "NumBits"}) : inputs[3]);
+  if ((pucch_format != 1) && (!mux_f1.isEmpty())) {
+    mex_abort("For PUCCH Format {}, input 'MuxFormat1' should be empty.", pucch_format);
+  }
+
+  unsigned nof_conf_grid_ports = in_cfg["NRxPorts"][0];
+  unsigned nof_grid_ports      = grid->get_writer().get_nof_ports();
+  if (nof_conf_grid_ports != nof_grid_ports) {
+    mex_abort("Field NRxPorts in the configuration structure and the number of resource grid ports do not match: {} "
+              "vs. {}.",
+              nof_conf_grid_ports,
+              nof_grid_ports);
+  }
+
+  StructArray out = call_processor(grid->get_reader(), in_cfg, mux_f1);
+  outputs[0]      = out;
 }
