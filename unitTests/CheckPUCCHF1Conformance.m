@@ -160,7 +160,7 @@ classdef CheckPUCCHF1Conformance < matlab.unittest.TestCase
             end
 
             % Export false-ack probability in csv format to be imported in grafana.
-            writecsv(obj, TestConfig, 'ACK detection', max(pp.Statistics.FalseACKDetectionRateSRS));
+            writecsv(obj, TestConfig, 'false ACK', max(pp.Statistics.FalseACKDetectionRateSRS));
 
             obj.verifyLessThanOrEqual(pp.Statistics.FalseACKDetectionRateSRS, 0.01, ...
                 'WARNING: The PUCCH F1 false ACK detection rate should not be higher than 1%.');
