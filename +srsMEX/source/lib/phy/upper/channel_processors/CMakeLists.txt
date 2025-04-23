@@ -64,12 +64,6 @@ set_target_properties(pusch_demodulator_mex
 )
 
 matlab_add_mex(
-    NAME pucch_detector_mex
-    SRC  pucch_detector_mex.cpp
-    R2018a
-)
-
-matlab_add_mex(
     NAME srsPUSCHCapabilitiesMEX
     SRC  pusch_processor_capabilities_mex.cpp
     R2018a
@@ -82,18 +76,6 @@ target_link_libraries(srsPUSCHCapabilitiesMEX
 set_target_properties(srsPUSCHCapabilitiesMEX
     PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/../+phy"
-)
-
-target_link_libraries(pucch_detector_mex
-    srsran_matlab::resource_grid
-    srsran::srsran_channel_processors
-    srsran::srsran_channel_equalizer
-    srsran::srsran_phy_support
-)
-
-set_target_properties(pucch_detector_mex
-    PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/../+phy/@srsPUCCHDetector"
 )
 
 matlab_add_mex(

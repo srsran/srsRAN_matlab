@@ -141,8 +141,6 @@ function unittestClass = name2Class(name)
             unittestClass = ?srsPUCCHDemodulatorFormat3Unittest;
         case 'pucch_demodulator_format4'
             unittestClass = ?srsPUCCHDemodulatorFormat4Unittest;
-        case 'pucch_detector'
-            unittestClass = ?srsPUCCHDetectorFormat1Unittest;
         case 'pucch_processor_format0'
             unittestClass = ?srsPUCCHProcessorFormat0Unittest;
         case 'pucch_processor_format1'
