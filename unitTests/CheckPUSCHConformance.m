@@ -155,7 +155,12 @@ classdef CheckPUSCHConformance < matlab.unittest.TestCase
             tp = pp.ThroughputSRS / pp.MaxThroughput;
 
             % Export throughput in csv format to be imported in grafana.
-            writecsv(obj, TestConfig.Name, tp * 100);
+            if (maxLayers == 1)
+                fullName = [TestConfig.Name, ' - project'];
+            else
+                fullName = [TestConfig.Name, ' - enterprise'];
+            end
+            writecsv(obj, fullName, tp * 100);
 
             if contains(TestConfig.Name, 'Custom')
                 obj.verifyEqual(tp, 1.0, 'WARNING: Throughput should be maximum for ''Custom'' cases.', AbsTol=1e-8);

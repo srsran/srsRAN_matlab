@@ -116,8 +116,9 @@ std::unique_ptr<srsran::pucch_detector> create_pucch_detector()
 
   std::shared_ptr<channel_equalizer_factory> equalizer_factory =
       create_channel_equalizer_generic_factory(channel_equalizer_algorithm_type::zf);
+  std::shared_ptr<dft_processor_factory>  dft_factory = create_dft_processor_factory_fftw_slow();
   std::shared_ptr<pucch_detector_factory> detector_factory =
-      create_pucch_detector_factory_sw(lpapr_collection_factory, prg_factory, equalizer_factory);
+      create_pucch_detector_factory_sw(lpapr_collection_factory, prg_factory, equalizer_factory, dft_factory);
 
   return detector_factory->create();
 }

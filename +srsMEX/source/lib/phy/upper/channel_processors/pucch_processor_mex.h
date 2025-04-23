@@ -154,7 +154,7 @@ create_pucch_processor()
   std::shared_ptr<channel_equalizer_factory> equalizer_factory =
       create_channel_equalizer_generic_factory(channel_equalizer_algorithm_type::zf);
   std::shared_ptr<pucch_detector_factory> detector_factory =
-      create_pucch_detector_factory_sw(lpapr_collection_factory, prg_factory, equalizer_factory);
+      create_pucch_detector_factory_sw(lpapr_collection_factory, prg_factory, equalizer_factory, dft_factory);
 
   std::shared_ptr<demodulation_mapper_factory> demodulation_factory = create_demodulation_mapper_factory();
   std::shared_ptr<pucch_demodulator_factory>   demodulator_factory =

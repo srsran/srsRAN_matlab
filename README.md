@@ -17,46 +17,13 @@ For license details, see the [LICENSE](LICENSE) file.
 
 ### Requirements
 
-*srsRAN-matlab* runs on MATLAB and builds upon the [5G Toolbox](https://www.mathworks.com/products/5g.html) (tested on MATLAB R2022a, R2022b and R2023a under Linux, but other recent releases should also work).
+*srsRAN-matlab* runs on MATLAB and builds upon the [5G Toolbox](https://www.mathworks.com/products/5g.html) (tested on MATLAB R2023b, R2024a and R2024b under Linux, but other recent releases should also work).
 
 The srsRAN Project is required to build the MEX wrappers and to run the applications that include them (see the [MEX](#mex) section for further details).
 
 ### Compatibility Table
 
-The development of *srsRAN-matlab* closely follows all new features of the srsRAN Project. For this reason, it is important that you always use the latest version of both software: this is the only way to ensure that test vectors agree with the srsRAN API and that MEX binaries compile. The following compatibility table provides a list of reference commits on both repositories that are guaranteed to work together.
-
-| *srsRAN-matlab* | srsRAN Project |
-|      ------     |     ------     |
-|     0a235460    |     56a771df   |
-|     3c050654    |     0112729f   |
-|     73f47e3e    |     bcb449d7   |
-|     f38c2c32    |     583c92b1   |
-|     80f4a105    |     5e6f50a2   |
-|     068e472a    |     e38e418b   |
-|     62c459a2    |     55c984b5   |
-|     62c459a2    |     dcd905cc   |
-|     040c50b5    |     0b2702cc   |
-|     842e0293    |     32dae89e   |
-|     b37e6ee5    |     50fe9623   |
-|     b93615b7    |     bcf941b3   |
-|     85bb333e    |     4d9f2232   |
-|     6a268a15    |     2f90c8b6   |
-|     fe585a5a    |     1483bda3   |
-|     1a81404d    |     78238fd1   |
-|     2a6f71b2    |     f3ed07a5   |
-|     0841ab86    |     c33cacba   |
-|     52c07fbb    |     40b17b42   |
-|     f6a11714    |     4cf7513e   |
-|     a3bd2f8a    |     4ac5300d   |
-|     d952d014    |     51e44a64   |
-|     36fa859f    |     ee1d86cd   |
-|     36fa859f    |     e73b4618   |
-|     e5155ae9    |     9d5dd742   |
-|     f0cda79f    |     cda0033b   |
-|     8a762cac    |     cc2869f9   |
-|     692e9134    |     a041e316   |
-|     bc2248fa    |     8120ffbc   |
-|     latest      |     2be82d8e   |
+The development of *srsRAN-matlab* closely follows all new features of the srsRAN Project. For this reason, it is important that you always use the latest version of both software: this is the only way to ensure that test vectors agree with the srsRAN API and that MEX binaries compile. The [compatibility table](CompatibilityTable.md) provides a list of reference commits on both repositories that are guaranteed to work together.
 
 ### Contents
 
@@ -134,7 +101,7 @@ The following steps are needed to compile MEX binaries.
     ```
     Similarly, you can use the CMake option `Matlab_ROOT_DIR` if you have multiple versions of MATLAB on your machine or if MATLAB is not in your system path.
     ```bash
-    cmake -DMatlab_ROOT_DIR="/usr/local/MATLAB/R2023a" ..
+    cmake -DMatlab_ROOT_DIR="/usr/local/MATLAB/R2024b" ..
     ```
 4. **Build the MEX:** Simply run `make` to build the MEX binaries, which will be automatically placed in the proper folder to be accessed from the `srsMEX` library.
 
@@ -142,10 +109,10 @@ The following steps are needed to compile MEX binaries.
 
     Depending on your setup, you may need to instruct MATLAB to use the system libraries instead of the internal ones: do the following and (re)start MATLAB.
     ```bash
-    cd /usr/local/MATLAB/R2023a/sys/os/glnxa64
+    cd /usr/local/MATLAB/R2024b/sys/os/glnxa64
     sudo mv libstdc++.so.6 libstdc++.so.6.bak
     ```
-> The examples in this section assume you have MATLAB R2023a installed in the typical path `/usr/local/MATLAB/R2023a/`. For other MATLAB releases or paths, adapt the examples accordingly.
+> The examples in this section assume you have MATLAB R2024b installed in the typical path `/usr/local/MATLAB/R2024b/`. For other MATLAB releases or paths, adapt the examples accordingly.
 
 ### Testing the MEX
 
@@ -253,7 +220,7 @@ runtests("unitTests/CheckAnalyzers.m")
 ```
 
 ### Conformance Tests
-The classes *CheckPUSCHConformance*, *CheckPUCCHF0Conformance*, *CheckPUCCHF1Conformance* and *CheckPUCCHF2Conformace* run a set of conformance tests (as defined in *TS38.104* and *TS38.141*) of the corresponding PHY channel receivers.
+The classes *CheckPUSCHConformance*, *CheckPUCCHF0Conformance*, *CheckPUCCHF1Conformance*, *CheckPUCCHF2Conformace* and *CheckPRACHConformace* run a set of conformance tests (as defined in *TS38.104* and *TS38.141*) of the corresponding PHY channel receivers.
 
 These checks have been designed mainly for automatic CI/CD procedures. Nevertheless, they can be executed locally by running the following commands from the *srsRAN-matlab* root folder (be aware that these tests may run for several hours).
 ```matlab
@@ -262,4 +229,5 @@ runtests("unitTests/CheckPUSCHConformance.m")
 runtests("unitTests/CheckPUCCHF0Conformance.m")
 runtests("unitTests/CheckPUCCHF1Conformance.m")
 runtests("unitTests/CheckPUCCHF2Conformance.m")
+runtests("unitTests/CheckPRACHConformance.m")
 ```

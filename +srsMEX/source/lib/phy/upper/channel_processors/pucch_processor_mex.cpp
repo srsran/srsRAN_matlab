@@ -414,7 +414,9 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
       }
 
       // Run the PUCCH processor.
-      result = processor->process(grid->get_reader(), cfg);
+      pucch_processor::format1_batch_configuration batch_config(cfg);
+      const auto&                                  batch_results = processor->process(grid->get_reader(), batch_config);
+      result = batch_results.get(cfg.initial_cyclic_shift, cfg.time_domain_occ);
       break;
     }
     case 2: {

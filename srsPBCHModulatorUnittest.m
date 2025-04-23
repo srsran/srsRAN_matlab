@@ -9,7 +9,7 @@
 %
 %   srsBlock      - The tested block (i.e., 'pbch_modulator').
 %   srsBlockType  - The type of the tested block, including layer
-%                   (i.e., 'phy/upper/channel_processors').
+%                   (i.e., 'phy/upper/channel_processors/ssb').
 %
 %   srsPBCHModulatorUnittest Properties (ClassSetupParameter):
 %
@@ -55,7 +55,7 @@ classdef srsPBCHModulatorUnittest < srsTest.srsBlockUnittest
         srsBlock = 'pbch_modulator'
 
         %Type of the tested block, including layer.
-        srsBlockType = 'phy/upper/channel_processors'
+        srsBlockType = 'phy/upper/channel_processors/ssb'
     end
 
     properties (ClassSetupParameter)
@@ -81,9 +81,13 @@ classdef srsPBCHModulatorUnittest < srsTest.srsBlockUnittest
     end
 
     methods (Access = protected)
-        function addTestIncludesToHeaderFile(obj, fileID)
+        function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
-            addTestIncludesToHeaderFilePHYchproc(obj, fileID);
+            fprintf(fileID, [...
+                '#include "../../../support/resource_grid_test_doubles.h"\n'...
+                '#include "srsran/phy/upper/channel_processors/ssb/pbch_modulator.h"\n'...
+                '#include "srsran/support/file_vector.h"\n'...
+                ]);
         end
 
         function addTestDefinitionToHeaderFile(obj, fileID)
@@ -105,7 +109,7 @@ classdef srsPBCHModulatorUnittest < srsTest.srsBlockUnittest
 
             import srsTest.helpers.cellarray2str
             import srsTest.helpers.writeUint8File
-            import srsLib.phy.upper.channel_processors.srsPBCHmodulator
+            import srsLib.phy.upper.channel_processors.ssb.srsPBCHmodulator
             import srsTest.helpers.writeResourceGridEntryFile
 
             % generate a unique test ID by looking at the number of files generated so far
