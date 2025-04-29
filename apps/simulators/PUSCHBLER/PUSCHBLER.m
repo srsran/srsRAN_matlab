@@ -78,6 +78,7 @@
 %                                  set to false).
 %   EnableHARQ                   - HARQ flag: true for enabling retransmission with
 %                                  RV sequence [0, 2, 3, 1], false for no retransmissions.
+%   MaximumLDPCIterationCount    - Maximum LDPC decoding iterations.
 %   ImplementationType           - PUSCH implementation type ('matlab', 'srs' (requires mex), 'both')
 %   SRSEstimatorType             - Implementation of the SRS channel estimator ('MEX', 'noMEX')
 %   SRSSmoothing                 - Frequency-domain smoothing strategy of the SRS channel estimator
@@ -194,6 +195,8 @@ classdef PUSCHBLER < matlab.System
         CarrierFrequencyOffset (1, 1) double {mustBeReal} = 0
         %HARQ flag: true for enabling retransmission with RV sequence [0, 2, 3, 1], false for no retransmissions.
         EnableHARQ (1, 1) logical = false
+        %Maximum LDPC decoding iterations.
+        MaximumLDPCIterationCount (1, 1) double {mustBeInteger, mustBePositive} = 6
         %PUSCH implementation type ('matlab', 'srs' (requires mex), 'both').
         ImplementationType (1, :) char {mustBeMember(ImplementationType, {'matlab', 'srs', 'both'})} = 'matlab'
         %Implementation of the SRS channel estimator ('MEX', 'noMEX').
@@ -505,7 +508,7 @@ classdef PUSCHBLER < matlab.System
             % LDPC decoder parameters.
             % Available algorithms: 'Belief propagation', 'Layered belief propagation', 'Normalized min-sum', 'Offset min-sum'.
             obj.PUSCHExtension.LDPCDecodingAlgorithm = 'Normalized min-sum';
-            obj.PUSCHExtension.MaximumLDPCIterationCount = 6;
+            obj.PUSCHExtension.MaximumLDPCIterationCount = obj.MaximumLDPCIterationCount;
 
             % The simulation relies on various pieces of information about the baseband
             % waveform, such as sample rate.
@@ -567,6 +570,7 @@ classdef PUSCHBLER < matlab.System
 
             [obj.SegmentCfg, configSRS] = srsMEX.phy.srsPUSCHDecoder.configureSegment(obj.Carrier, ...
                 obj.PUSCH, obj.TargetCodeRate, obj.PUSCHExtension.NHARQProcesses, obj.PUSCHExtension.XOverhead);
+            obj.SegmentCfg.MaximumLDPCIterationCount = obj.MaximumLDPCIterationCount;
             obj.DecodeULSCHsrs = srsMEX.phy.srsPUSCHDecoder('MaxCodeblockSize', configSRS.MaxCodeblockSize, ...
                 'MaxSoftbuffers', configSRS.MaxSoftbuffers, 'MaxCodeblocks', configSRS.MaxCodeblocks);
 
@@ -1127,6 +1131,7 @@ classdef PUSCHBLER < matlab.System
                 ... Compression.
                 'ApplyOFHCompression', 'CompIQwidth', ...
                 ... Other simulation details.
+                'MaximumLDPCIterationCount', ...
                 'ImplementationType', 'SRSEqualizerType', 'SRSEstimatorType', 'SRSSmoothing', 'SRSInterpolation', ...
                 'SRSCompensateCFO', 'QuickSimulation', 'DisplaySimulationInformation', 'DisplayDiagnostics'};
             groups = matlab.mixin.util.PropertyGroup(confProps, 'Configuration');

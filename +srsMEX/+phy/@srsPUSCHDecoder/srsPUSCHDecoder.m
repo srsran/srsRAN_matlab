@@ -175,15 +175,17 @@ classdef srsPUSCHDecoder < matlab.System
             fcnName = [class(obj) '/step'];
 
             validateattributes(segConfig.NumLayers, {'double'}, {'scalar', 'integer', 'positive'}, ...
-                fcnName, 'NOF_LAYERS');
+                fcnName, 'NumLayers');
             validateattributes(segConfig.RV, {'double'}, {'scalar', 'integer', 'nonnegative'}, ...
                 fcnName, 'RV');
             validateattributes(segConfig.LimitedBufferSize, {'double'}, {'scalar', 'integer', 'nonnegative'}, ...
-                fcnName, 'NREF');
+                fcnName, 'LimitedBufferSize');
             validateattributes(segConfig.NumChSymbols, {'double'}, {'scalar', 'integer', 'positive'}, ...
-                fcnName, 'NOF_CH_SYMBOLS');
+                fcnName, 'NumChSymbols');
             modList = {'pi/2-BPSK', 'BPSK', 'QPSK', '16QAM', '64QAM', '256QAM'};
             validatestring(segConfig.Modulation, modList, fcnName, 'MODULATION');
+            validateattributes(segConfig.MaximumLDPCIterationCount, {'double'}, {'scalar', 'integer', 'positive'}, ...
+                fcnName, 'MaximumLDPCIterationCount');
 
             validateattributes(harqBufID.HARQProcessID, {'double'}, {'scalar', 'integer', 'nonnegative'}, ...
                 fcnName, 'HARQ_ACK_ID');
@@ -291,6 +293,7 @@ classdef srsPUSCHDecoder < matlab.System
             segmentCfg.NumLayers = pusch.NumLayers;
             segmentCfg.RV = 0;
             segmentCfg.LimitedBufferSize = 0;
+            segmentCfg.MaximumLDPCIterationCount = 6;
             segmentCfg.NumChSymbols = puschIndicesInfo.Gd;
             segmentCfg.Modulation = pusch.Modulation;
             segmentCfg.BGN = segmentInfo.BGN;

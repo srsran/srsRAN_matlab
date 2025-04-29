@@ -129,6 +129,7 @@ private:
   ///     in a HARQ process (\c false).
   ///   - A one-dimensional structure that describes the segmentation of the transport block. The fields are
   ///      - \c BGN, the LDPC base graph;
+  ///      - \c MaximumLDPCIterationCount, the maximum number of LDPC decoding iterations;
   ///      - \c Modulation, modulation identifier;
   ///      - \c NumLayers, the number of transmission layers;
   ///      - \c RV, the redundancy version;
