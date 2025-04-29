@@ -79,7 +79,7 @@ classdef CheckSimulators < matlab.unittest.TestCase
                     ME.message]);
             end
 
-            obj.assertEqual(pp.SNRrange, snrs, 'Wrong SNR range.');
+            obj.assertEqual(pp.SNRrange, snrs', 'Wrong SNR range.');
             obj.assertEqual(pp.TBS, 1800, 'Wrong transport block size.');
             obj.assertEqual(pp.MaxThroughput, 1.8, 'Wrong maximum throughput.');
             obj.assertEqual(pp.ThroughputMATLAB, [0; 0; 0.0178; 0.1636; 0.5755], "Wrong througuput curve.", RelTol=0.02);
@@ -294,7 +294,7 @@ classdef CheckSimulators < matlab.unittest.TestCase
                     ME.message]);
             end
 
-            obj.assertEqual(pp.SNRrange, snrs, 'Wrong SNR range.');
+            obj.assertEqual(pp.SNRrange, snrs', 'Wrong SNR range.');
             obj.assertEqual(pp.TBS, 1800, 'Wrong transport block size.');
             obj.assertEqual(pp.MaxThroughput, 1.8, 'Wrong maximum throughput.');
             obj.assertGreaterThanOrEqual(pp.ThroughputSRS, [0; 0; 0.041; 0.30; 0.97], "Wrong throughput curve.");

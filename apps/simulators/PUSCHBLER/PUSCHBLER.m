@@ -45,12 +45,9 @@
 %
 %   PUSCHBLER properties (all nontunable, unless otherwise specified):
 %
-%   NTxAnts                      - Number of transmit antennas (temporarily
-%                                  constant and fixed to 1).
+%   NTxAnts                      - Number of transmit antennas.
 %   NRxAnts                      - Number of receive antennas.
 %   PerfectChannelEstimator      - Perfect channel estimation flag.
-%   DisplaySimulationInformation - Flag for displaying simulation information.
-%   DisplayDiagnostics           - Flag for displaying simulation diagnostics.
 %   NSizeGrid                    - Bandwidth as a number of resource blocks.
 %   SubcarrierSpacing            - Subcarrier spacing in kHz.
 %   CyclicPrefix                 - Cyclic prefix: 'Normal' or 'Extended'
@@ -77,15 +74,25 @@
 %                                  'TDL-C', 'TDLC300').
 %   DelaySpread                  - Delay spread in seconds (single-tap and TDL-{A,B,C} delay profiles only).
 %   MaximumDopplerShift          - Maximum Doppler shift in hertz (TDL delay profiles only).
+%   CarrierFrequencyOffset       - Carrier frequency offset in hertz (requires PerfectChannelEstimator
+%                                  set to false).
 %   EnableHARQ                   - HARQ flag: true for enabling retransmission with
 %                                  RV sequence [0, 2, 3, 1], false for no retransmissions.
 %   ImplementationType           - PUSCH implementation type ('matlab', 'srs' (requires mex), 'both')
 %   SRSEstimatorType             - Implementation of the SRS channel estimator ('MEX', 'noMEX')
+%   SRSSmoothing                 - Frequency-domain smoothing strategy of the SRS channel estimator
+%                                  ('none', 'mean', 'filter').
+%   SRSInterpolation             - Time-domain interpolation strategy of the SRS channel estimator
+%                                  ('average', 'interpolation').
+%   SRSCompensateCFO             - CFO compensation flag for the SRS channel estimator: true to enable.
+%   SRSEqualizerType             - Equalization algorithm of the SRS equalizer ('ZF', 'MMSE').
+%   ApplyOFHCompression          - O-FH compression flag: set to true to emulate the effect of O-FH
+%                                  compression on the received grid (tunable).
+%   CompIQwidth                  - Bit-width of the compressed IQ samples (1...16). Used only if
+%   DisplaySimulationInformation - Flag for displaying simulation information.
+%   DisplayDiagnostics           - Flag for displaying simulation diagnostics.
 %   QuickSimulation              - Quick-simulation flag: set to true to stop
 %                                  each point after 100 failed transport blocks (tunable).
-%   ApplyOFHCompression          - Emulate the effect of O-FH compression on the received grid: set to true 
-%                                  to enable (tunable).
-%   CompIQwidth                  - Bit-width of the compressed IQ samples (1...16). Used only if 
 %                                  'ApplyOFHCOmpression' is set to true.
 %
 %   When the simulation is over, the object allows access to the following
@@ -193,12 +200,6 @@ classdef PUSCHBLER < matlab.System
         %   Only applies if ImplementationType is set to 'srs' or 'both' and PerfectChannelEstimator
         %   is set to false.
         SRSEstimatorType (1, :) char {mustBeMember(SRSEstimatorType, {'MEX', 'noMEX'})} = 'MEX'
-        %Flag for emulating O-FH compression.
-        SRSEqualizerType (1, :) char {mustBeMember(SRSEqualizerType, {'ZF', 'MMSE'})} = 'ZF'
-        ApplyOFHCompression (1, 1) logical = false
-        %Bit-width of the compressed IQ samples.
-        %   Only applies if ApplyOFHCompression is set to true.
-        CompIQwidth (1, 1) double {mustBeInteger, mustBeInRange(CompIQwidth, 1, 16)} = 9
         %Channel estimator frequency-domain smoothing strategy ('none', 'mean', 'filter').
         %   Valid only for SRS estimator.
         SRSSmoothing (1, :) char {mustBeMember(SRSSmoothing, {'none', 'mean', 'filter'})} = 'filter'
@@ -208,6 +209,16 @@ classdef PUSCHBLER < matlab.System
         %Channel estimator CFO compensation.
         %   Valid only for SRS estimator.
         SRSCompensateCFO (1, 1) logical = true
+        %Channel equalizer type ('ZF', 'MMSE').
+        %   Valid only for SRS equalizer.
+        SRSEqualizerType (1, :) char {mustBeMember(SRSEqualizerType, {'ZF', 'MMSE'})} = 'ZF'
+        %Flag for emulating O-FH compression.
+        %   Emulates the effect of O-FH compression on the received grid: set to true
+        %   to enable (tunable).
+        ApplyOFHCompression (1, 1) logical = false
+        %Bit-width of the compressed IQ samples.
+        %   Only applies if ApplyOFHCompression is set to true.
+        CompIQwidth (1, 1) double {mustBeInteger, mustBeInRange(CompIQwidth, 1, 16)} = 9
 
     end % of properties (Nontunable)
 
@@ -976,18 +987,16 @@ classdef PUSCHBLER < matlab.System
                     fprintf('Throughput(%%) after %.0f frame(s) = %.4f\n', usedFrames, simThroughputSRS(snrIdx)*100/maxThroughput(snrIdx));
                     fprintf('BLER after %.0f frame(s) = %.4f\n', usedFrames, simBLERSRS(snrIdx)/totalBlocks(snrIdx));
 
-                    rsrpLT = rsrpLT / (nslot + 1);
-                    noiseEstLT = noiseEstLT / (nslot + 1);
-                    fprintf('Measured SNR = %.1f dB.\n', 10*log10(rsrpLT * pusch.NumLayers / noiseEstLT / betaDMRS^2));
-
+                    if (~perfectChannelEstimator)
+                        fprintf('Measured SNR = %.1f dB.\n', 10*log10(rsrpLT * pusch.NumLayers / noiseEstLT / betaDMRS^2));
+                    end
                 end
-
             end
 
             % Export results.
             [~, repeatedIdx] = intersect(obj.SNRrange, SNRIn);
             obj.SNRrange(repeatedIdx) = [];
-            [obj.SNRrange, sortedIdx] = sort([obj.SNRrange SNRIn]);
+            [obj.SNRrange, sortedIdx] = sort([obj.SNRrange; SNRIn(:)]);
 
             obj.MaxThroughputCtr = joinArrays(obj.MaxThroughputCtr, maxThroughput, repeatedIdx, sortedIdx);
             obj.ThroughputMATLABCtr = joinArrays(obj.ThroughputMATLABCtr, simThroughput, repeatedIdx, sortedIdx);
