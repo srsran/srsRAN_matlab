@@ -198,10 +198,11 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
   }
   const pusch_decoder_result& dec_result = notifier_spy.get_result();
 
-  StructArray S          = factory.createStructArray({1, 1}, {"CRCOK", "LDPCIterations"});
-  S[0]["CRCOK"]          = factory.createScalar(dec_result.tb_crc_ok);
-  S[0]["LDPCIterations"] = factory.createScalar(dec_result.ldpc_decoder_stats.get_max());
-  outputs[1]             = S;
+  StructArray S              = factory.createStructArray({1, 1}, {"CRCOK", "LDPCIterationsMax", "LDPCIterationsMean"});
+  S[0]["CRCOK"]              = factory.createScalar(dec_result.tb_crc_ok);
+  S[0]["LDPCIterationsMax"]  = factory.createScalar(dec_result.ldpc_decoder_stats.get_max());
+  S[0]["LDPCIterationsMean"] = factory.createScalar(dec_result.ldpc_decoder_stats.get_mean());
+  outputs[1]                 = S;
 }
 
 void MexFunction::method_reset_crcs(ArgumentList outputs, ArgumentList inputs)

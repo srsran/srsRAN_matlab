@@ -55,6 +55,14 @@
 %
 %   TBK = step(..., FORMAT) allows specifing the format of the output transport
 %   block: 'packed' bytes (default) or 'unpacked' bits.
+%
+%   [TBK, STATS] = step(...) also returns some statistics about the decoder. The
+%   structure STATS has the following fields:
+%      CRCOK               - equal to true if the CRC of the transport block is valid;
+%      LDPCIterationsMax   - maximum number of LDPC iterations across all codeblocks
+%                            of the transport block;
+%      LDPCIterationsMean  - average number of LDPC iterations across all codeblocks
+%                            of the transport block.
 
 %   Copyright 2021-2025 Software Radio Systems Limited
 %
@@ -120,7 +128,7 @@ classdef srsPUSCHDecoder < matlab.System
                 fcnName, 'NumCodeblocks');
 
             obj.pusch_decoder_mex('reset_crcs', obj.SoftbufferPoolID, harqBufID);
-        end % of function transportBlock = step
+        end % of function resetCRCS
 
         function configure(obj, carrier, pusch, TargetCodeRate, NHARQProcesses, XOverhead)
             arguments
@@ -199,7 +207,7 @@ classdef srsPUSCHDecoder < matlab.System
            if strcmp(dataType, 'unpacked')
                transportBlock = srsTest.helpers.bitUnpack(transportBlock);
            end
-        end % function step(...)
+        end % function stepImpl(...)
 
         function resetImpl(obj)
         % Releases the softbuffer pool and creates a new one.
@@ -256,7 +264,7 @@ classdef srsPUSCHDecoder < matlab.System
     methods (Access = private, Static)
         %MEX function doing the actual work. See the Doxygen documentation.
         varargout = pusch_decoder_mex(varargin)
-    end % of methods (Access = private)
+    end % of methods (Access = private, Static)
 
     methods (Static)
         function [segmentCfg, decoderCfg] = configureSegment(carrier, pusch, TargetCodeRate, NHARQProcesses, XOverhead)

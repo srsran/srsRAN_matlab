@@ -246,6 +246,10 @@ classdef PUSCHBLER < matlab.System
         MissedBlocksMATLABCtr = []
         %Counter of missed transport blocks, after all allowed retransmissions (SRS case).
         MissedBlocksSRSCtr = []
+        %Counter of decoder iterations (SRS case).
+        DecIterationsSRSCtr = []
+        %Counter of decoder iterations, given CRC OK (SRS case).
+        DecIterationsCRCOKSRSCtr = []
         %Transport block size in bits.
         TBS = []
     end % of properties (SetAccess = private)
@@ -261,6 +265,10 @@ classdef PUSCHBLER < matlab.System
         BlockErrorRateMATLAB
         %Block error rate (SRS case).
         BlockErrorRateSRS
+        %Average number of decoder iterations (SRS case).
+        AverageDecIterationsSRS
+        %Average number of decoder iterations, given CRC OK (SRS case).
+        AverageDecIterationsCRCOKSRS
     end % of properties (Dependable)
 
     properties (Access = private, Hidden)
@@ -368,6 +376,14 @@ classdef PUSCHBLER < matlab.System
 
         function maxTP = get.MaxThroughput(obj)
             maxTP = obj.TBS * 1e-3 * obj.SubcarrierSpacing / 15;
+        end
+
+        function avgIter = get.AverageDecIterationsSRS(obj)
+            avgIter = obj.DecIterationsSRSCtr ./ obj.TotalBlocksCtr;
+        end
+
+        function avgIter = get.AverageDecIterationsCRCOKSRS(obj)
+            avgIter = obj.DecIterationsCRCOKSRSCtr ./ (obj.TotalBlocksCtr - obj.MissedBlocksSRSCtr);
         end
 
         function plot(obj)
@@ -641,6 +657,8 @@ classdef PUSCHBLER < matlab.System
             % Array to store the simulation throughput and BLER for all SNR points.
             simThroughputSRS = zeros(length(SNRIn), 1);
             simBLERSRS = zeros(length(SNRIn), 1);
+            simIterSRS = zeros(length(SNRIn), 1);
+            simIterCRCOKSRS = zeros(length(SNRIn), 1);
 
             quickSim = obj.QuickSimulation;
 
@@ -945,6 +963,12 @@ classdef PUSCHBLER < matlab.System
                         simBLERSRS(snrIdx) = simBLERSRS(snrIdx) + (isCountBLER && any(decbitsSRS ~= srsTest.helpers.bitPack(trBlk)));
 
                         blkerrBoth = blkerrBoth || (~statsSRS.CRCOK);
+
+                        % Store decoder iteration stats.
+                        simIterSRS(snrIdx) = simIterSRS(snrIdx) + statsSRS.LDPCIterationsMean;
+                        if (statsSRS.CRCOK)
+                            simIterCRCOKSRS(snrIdx) = simIterCRCOKSRS(snrIdx) + statsSRS.LDPCIterationsMean;
+                        end
                     end
 
                     % Increase total number of transmitted information bits.
@@ -1004,6 +1028,9 @@ classdef PUSCHBLER < matlab.System
             obj.TotalBlocksCtr = joinArrays(obj.TotalBlocksCtr, totalBlocks, repeatedIdx, sortedIdx);
             obj.MissedBlocksMATLABCtr = joinArrays(obj.MissedBlocksMATLABCtr, simBLER, repeatedIdx, sortedIdx);
             obj.MissedBlocksSRSCtr = joinArrays(obj.MissedBlocksSRSCtr, simBLERSRS, repeatedIdx, sortedIdx);
+            obj.DecIterationsSRSCtr = joinArrays(obj.DecIterationsSRSCtr, simIterSRS, repeatedIdx, sortedIdx);
+            obj.DecIterationsCRCOKSRSCtr = joinArrays(obj.DecIterationsCRCOKSRSCtr, simIterCRCOKSRS, ...
+                repeatedIdx, sortedIdx);
         end % of function stepImpl()
 
         function resetImpl(obj)
@@ -1021,6 +1048,8 @@ classdef PUSCHBLER < matlab.System
             obj.TotalBlocksCtr = [];
             obj.MissedBlocksMATLABCtr = [];
             obj.MissedBlocksSRSCtr = [];
+            obj.DecIterationsSRSCtr = [];
+            obj.DecIterationsCRCOKSRSCtr = [];
         end
 
         function releaseImpl(obj)
@@ -1045,7 +1074,7 @@ classdef PUSCHBLER < matlab.System
                     flag = strcmp(obj.DelayProfile, 'AWGN');
                 case {'ThroughputMATLABCtr', 'MissedBlocksMATLABCtr'}
                     flag = isempty(obj.SNRrange) || strcmp(obj.ImplementationType, 'srs');
-                case {'ThroughputSRSCtr', 'MissedBlocksSRSCtr'}
+                case {'ThroughputSRSCtr', 'MissedBlocksSRSCtr', 'DecIterationsSRSCtr', 'DecIterationsCRCOKSRSCtr'}
                     flag = isempty(obj.SNRrange) || strcmp(obj.ImplementationType, 'matlab');
                 case {'SNRrange', 'MaxThroughputCtr', 'TotalBlocksCtr'}
                     flag = isempty(obj.SNRrange);
@@ -1057,7 +1086,7 @@ classdef PUSCHBLER < matlab.System
                     flag = isempty(obj.TBS) || ~obj.isLocked;
                 case {'ThroughputMATLAB', 'BlockErrorRateMATLAB'}
                     flag = isempty(obj.ThroughputMATLABCtr) || strcmp(obj.ImplementationType, 'srs');
-                case {'ThroughputSRS', 'BlockErrorRateSRS'}
+                case {'ThroughputSRS', 'BlockErrorRateSRS', 'AverageDecIterationsSRS', 'AverageDecIterationsCRCOKSRS'}
                     flag = isempty(obj.ThroughputSRSCtr) || strcmp(obj.ImplementationType, 'matlab');
                 case {'SRSEstimatorType', 'SRSSmoothing', 'SRSInterpolation', 'SRSCompensateCFO'}
                     flag = strcmp(obj.ImplementationType, 'matlab') || obj.PerfectChannelEstimator;
@@ -1073,9 +1102,10 @@ classdef PUSCHBLER < matlab.System
         function groups = getPropertyGroups(obj)
 
             results = {'SNRrange', 'MaxThroughputCtr', 'ThroughputMATLABCtr', 'ThroughputSRSCtr', ...
-                'TotalBlocksCtr', 'MissedBlocksMATLABCtr', 'MissedBlocksSRSCtr', 'TBS', ...
+                'TotalBlocksCtr', 'MissedBlocksMATLABCtr', 'MissedBlocksSRSCtr', ...
+                'DecIterationsSRSCtr', 'DecIterationsCRCOKSRSCtr', 'TBS', ...
                 'MaxThroughput', 'ThroughputMATLAB', 'ThroughputSRS', 'BlockErrorRateMATLAB', ...
-                'BlockErrorRateSRS'};
+                'BlockErrorRateSRS', 'AverageDecIterationsSRS', 'AverageDecIterationsCRCOKSRS'};
 
             confProps = {...
                 ... Generic.
@@ -1141,6 +1171,8 @@ classdef PUSCHBLER < matlab.System
                 s.TotalBlocksCtr = obj.TotalBlocksCtr;
                 s.MissedBlocksMATLABCtr = obj.MissedBlocksMATLABCtr;
                 s.MissedBlocksSRSCtr = obj.MissedBlocksSRSCtr;
+                s.DecIterationsSRSCtr = obj.DecIterationsSRSCtr;
+                s.DecIterationsCRCOKSRSCtr = obj.DecIterationsCRCOKSRSCtr;
                 s.TBS = obj.TBS;
             end
         end % of function s = saveObjectImpl(obj)
@@ -1170,6 +1202,8 @@ classdef PUSCHBLER < matlab.System
                 obj.TotalBlocksCtr = s.TotalBlocksCtr;
                 obj.MissedBlocksMATLABCtr = s.MissedBlocksMATLABCtr;
                 obj.MissedBlocksSRSCtr = s.MissedBlocksSRSCtr;
+                obj.DecIterationsSRSCtr = s.DecIterationsSRSCtr;
+                obj.DecIterationsCRCOKSRSCtr = s.DecIterationsCRCOKSRSCtr;
                 obj.TBS = s.TBS;
             end
 

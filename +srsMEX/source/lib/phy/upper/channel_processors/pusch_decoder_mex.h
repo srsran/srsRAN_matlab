@@ -143,7 +143,8 @@ private:
   ///   - The decoded transport block (in packed format).
   ///   - A one-dimensional structure with decoding statistics. The fields are
   ///      - \c CRCOK, equal to \c true if the codeword CRC is valid, \c false if invalid;
-  ///      - \c LDPCIterations, the maximum number of LDPC iterations across all codeblocks forming the codeword.
+  ///      - \c LDPCIterationsMax, the maximum number of LDPC iterations across all codeblocks forming the codeword.
+  ///      - \c LDPCIterationsMean, the average number of LDPC iterations across all codeblocks forming the codeword.
   void method_step(ArgumentList outputs, ArgumentList inputs);
 
   /// \brief Resets the CRC status of a softbuffer.
