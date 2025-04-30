@@ -63,6 +63,24 @@ classdef CheckPUCCHF2Conformance < matlab.unittest.TestCase
         TestConfig = generateTestConfig()
     end % of properties (TestParameter)
 
+    methods (TestClassSetup)
+        function preparecsv(obj)
+        %Creates a csv file for storing the results of all tests.
+
+            if ~exist(obj.OutputFolder, 'dir')
+                mkdir(obj.OutputFolder);
+            end
+            fff = fopen(obj.OutputFile, 'w');
+
+            % Write file header.
+            fprintf(fff, '#datatype measurement,tag,tag,double,dateTime:RFC3339\n');
+            fprintf(fff, '#default,,,\n');
+            fprintf(fff, 'm,suite,test,value,time\n');
+
+            fclose(fff);
+        end % of function preparecsv(obj)
+    end % of methods (TestClassSetup)
+
     methods (Test, TestTags = {'conformance'})
         function checkPUCCHF2shortDetect(obj, TestConfig)
         %Estimates the ACK detection rate for the given PUCCH Format 2 configuration.
