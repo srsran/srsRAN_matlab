@@ -93,7 +93,7 @@ public:
   const demodulation_stats& get_stats() const { return stats.value(); }
 
 private:
-  void on_provisional_stats(const demodulation_stats& stats_) override { stats = stats_; }
+  void on_provisional_stats(unsigned i_symbol, const demodulation_stats& stats_) override { stats = stats_; }
   void on_end_stats(const demodulation_stats& stats_) override { stats = stats_; }
 
   std::optional<demodulation_stats> stats;
