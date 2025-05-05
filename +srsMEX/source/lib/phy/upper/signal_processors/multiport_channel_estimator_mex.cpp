@@ -162,11 +162,11 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
     port_channel_estimator::layer_dmrs_pattern& dmrs_pattern = cfg.dmrs_pattern[i_layer];
 
     dmrs_pattern.symbols = bounded_bitset<MAX_NSYMB_PER_SLOT>(in_symbols.cbegin(), in_symbols.cend());
-    dmrs_pattern.rb_mask = bounded_bitset<MAX_RB>(in_rb_mask.cbegin(), in_rb_mask.cend());
+    dmrs_pattern.rb_mask = prb_bitmap(in_rb_mask.cbegin(), in_rb_mask.cend());
 
     if (!in_hop.isEmpty()) {
       dmrs_pattern.hopping_symbol_index = static_cast<unsigned>(in_hop[0]);
-      dmrs_pattern.rb_mask2             = bounded_bitset<MAX_RB>(in_rb_mask2.cbegin(), in_rb_mask2.cend());
+      dmrs_pattern.rb_mask2             = prb_bitmap(in_rb_mask2.cbegin(), in_rb_mask2.cend());
     }
 
     if (i_layer < 2) {
