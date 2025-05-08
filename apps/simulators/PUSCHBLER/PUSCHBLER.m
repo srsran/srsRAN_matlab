@@ -58,6 +58,7 @@
 %   MappingType                  - PUSCH mapping type ('A'(slot-wise), 'B'(non slot-wise)).
 %   RNTI                         - Radio network temporary identifier (0...65535).
 %   NumLayers                    - Number of PUSCH transmission layers (1...4).
+%   TransformPrecoding           - Transform precoding flag: true for enabled.
 %   MCSTable                     - Modulation Coding Scheme table.
 %   MCSIndex                     - Modulation Coding Scheme index
 %                                  (inactive if "MCSTable == 'custom'").
@@ -161,6 +162,8 @@ classdef PUSCHBLER < matlab.System
         RNTI (1, 1) double {mustBeReal, mustBeInteger, mustBeInRange(RNTI, 0, 65535)} = 1
         %Number of PUSCH transmission layers.
         NumLayers (1, 1) double {mustBeReal, mustBeInteger, mustBeInRange(NumLayers, 1, 4)} = 1
+        %Transform precoding flag: true for enabled.
+        TransformPrecoding (1, 1) logical = false
         %Modulation Coding Scheme table.
         %   Choose between 'qam64', 'qam256', 'qam64LowSE' and 'custom'.
         MCSTable (1, :) char {mustBeMember(MCSTable, {'qam64', 'qam256', 'qam64LowSE', 'custom'})} = 'qam64'
@@ -323,6 +326,12 @@ classdef PUSCHBLER < matlab.System
                 error('Cannot set a non-null carrier frequency offset with perfect channel estimation.');
             end
         end
+
+        function checkTrPrecandLayers(obj)
+            if (obj.TransformPrecoding && (obj.NumLayers > 1))
+                error('Transform precoding and more than one layer are incompatible.');
+            end
+        end
     end % of methods (Access = private)
 
     methods % public
@@ -474,11 +483,11 @@ classdef PUSCHBLER < matlab.System
             obj.PUSCH.RNTI = obj.RNTI;
 
             % Define the transform precoding enabling, layering and transmission scheme.
-            obj.PUSCH.TransformPrecoding = false;         % Enable/disable transform precoding.
-            obj.PUSCH.NumLayers = obj.NumLayers;
-            obj.PUSCH.TransmissionScheme = 'nonCodebook'; % Transmission scheme ('nonCodebook', 'codebook').
-            obj.PUSCH.NumAntennaPorts = 1;                % Number of antenna ports for codebook based precoding.
-            obj.PUSCH.TPMI = 0;                           % Precoding matrix indicator for codebook based precoding.
+            obj.PUSCH.TransformPrecoding = obj.TransformPrecoding;    % Enable/disable transform precoding.
+            obj.PUSCH.NumLayers = obj.NumLayers;                      % Number of transmission layers.
+            obj.PUSCH.TransmissionScheme = 'nonCodebook';             % Transmission scheme ('nonCodebook', 'codebook').
+            obj.PUSCH.NumAntennaPorts = 1;                            % Number of antenna ports for codebook based precoding.
+            obj.PUSCH.TPMI = 0;                                       % Precoding matrix indicator for codebook based precoding.
 
             % Define codeword modulation.
             obj.PUSCH.Modulation = obj.Modulation;
@@ -599,6 +608,9 @@ classdef PUSCHBLER < matlab.System
 
             % Cross-check that we are not using perfect channel estimation with CFO.
             obj.checkCFOandEstimator();
+
+            % Cross-check that we aren't enabling transform precoding with multiple layers.
+            obj.checkTrPrecandLayers();
         end
 
         function stepImpl(obj, SNRIn, nFrames)
@@ -916,6 +928,7 @@ classdef PUSCHBLER < matlab.System
                         % Apply channel state information (CSI) produced by the equalizer,
                         % including the effect of transform precoding if enabled.
                         if (pusch.TransformPrecoding)
+                            MRB = numel(obj.PUSCH.PRBSet);
                             MSC = MRB * 12;
                             csi = nrTransformDeprecode(csi, MRB) / sqrt(MSC);
                             csi = repmat(csi((1:MSC:end).'), 1, MSC).';
@@ -1121,7 +1134,7 @@ classdef PUSCHBLER < matlab.System
                 ... DM-RS.
                 'DMRSConfigurationType', 'DMRSLength', 'DMRSAdditionalPosition', 'DMRSTypeAPosition', ...
                 ... Modulation and coding.
-                'MCSTable', 'MCSIndex', 'Modulation', 'TargetCodeRate', ...
+                'MCSTable', 'MCSIndex', 'Modulation', 'TargetCodeRate', 'TransformPrecoding', ...
                 ... Antennas and layers.
                 'NRxAnts', 'NTxAnts', 'NumLayers', ...
                 ... Channel model.
