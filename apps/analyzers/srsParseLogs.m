@@ -184,8 +184,8 @@ function [carrier, phych, extra] = srsParseLogs
                 nLayers = sscanf(parameter{2}, '%d');
                 phych.NumLayers = nLayers;
             case 'dmrs_mask'
-                dmrspos = strfind(parameter{2}, '1');
-                phych.DMRS.CustomSymbolSet = dmrspos - 1;
+                dmrspos = str2double(split(parameter{2}(2:end-1), ','));
+                phych.DMRS.CustomSymbolSet = dmrspos;
             case 'dmrs_type'
                 dmrsType = sscanf(parameter{2}, '%d');
                 phych.DMRS.DMRSConfigurationType = dmrsType;
