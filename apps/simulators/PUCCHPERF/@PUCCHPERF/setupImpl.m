@@ -48,9 +48,9 @@ function setupImpl(obj)
     else % if PUCCH Format3
         obj.PUCCH = nrPUCCH3Config;
         obj.PUCCH.Modulation = obj.Modulation;
+        obj.PUCCH.AdditionalDMRS = obj.AdditionalDMRS;
         obj.PUCCH.GroupHopping = "neither";
         obj.PUCCH.HoppingID = 0;
-        obj.PUCCH.AdditionalDMRS = 0;
         obj.PUCCH.NID = [];
         obj.PUCCH.RNTI = obj.RNTI;
         % BLER tests work the same as detection tests.

@@ -48,5 +48,13 @@ classdef FormatDetailsF3 < FormatDetailsF2
             end
         end
     end % of methods (Static)
+
+    methods
+        function checkPRBs(obj, nPRBs)
+            if ~ismember(nPRBs, [1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 15, 16])
+                error ('PUCCH Format3 requires the number of allocated PRBs to be one of {1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 15, 16}, given %d.', nPRBs);
+            end
+        end
+    end % of methods
 end % of classdef FormatDetailsF3 < FormatDetailsF2
 
