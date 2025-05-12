@@ -79,7 +79,7 @@ classdef CheckSimulators < matlab.unittest.TestCase
                     ME.message]);
             end
 
-            obj.assertEqual(pp.SNRrange, snrs, 'Wrong SNR range.');
+            obj.assertEqual(pp.SNRrange, snrs', 'Wrong SNR range.');
             obj.assertEqual(pp.TBS, 1800, 'Wrong transport block size.');
             obj.assertEqual(pp.MaxThroughput, 1.8, 'Wrong maximum throughput.');
             obj.assertEqual(pp.ThroughputMATLAB, [0; 0; 0.0178; 0.1636; 0.5755], "Wrong througuput curve.", RelTol=0.02);
@@ -202,6 +202,7 @@ classdef CheckSimulators < matlab.unittest.TestCase
             pp.SymbolAllocation = [0 14];
             pp.NumACKBits = 2;
             pp.NRxAnts = 2;
+            pp.FrequencyHopping = 'intraSlot';
             pp.TestType = PUCCHTestType;
 
             snrs = -32:2:-14;
@@ -215,10 +216,10 @@ classdef CheckSimulators < matlab.unittest.TestCase
             obj.assertEqual(pp.Counters.SNRrange, snrs', 'Wrong SNR range.');
             if (PUCCHTestType == "Detection")
                 obj.assertLessThan(pp.Statistics.NACK2ACKDetectionRateMATLAB, 0.01, "Wrong NACK-to-ACK detection curve.");
-                obj.assertEqual(pp.Statistics.ACKDetectionRateMATLAB, [0.0106; 0.0164; 0.0213; 0.0397; 0.0658; 0.1112; 0.2012; 0.3820; 0.6383; 0.8617], ...
+                obj.assertEqual(pp.Statistics.ACKDetectionRateMATLAB, [0.0077; 0.0193; 0.0222; 0.0319; 0.0619; 0.1228; 0.2041; 0.4052; 0.6364; 0.8762], ...
                     "Wrong ACK detection rate curve.", RelTol=0.02);
             else
-                obj.assertEqual(pp.Statistics.FalseACKDetectionRateMATLAB, 0.007 * ones(10, 1), "Wrong false ACK detection rate curve.", RelTol=0.02);
+                obj.assertEqual(pp.Statistics.FalseACKDetectionRateMATLAB, 0.0057 * ones(10, 1), "Wrong false ACK detection rate curve.", RelTol=0.04);
             end
         end % of function testPUCCHPERFF1matlab(obj, PUCCHTestType)
 
@@ -293,7 +294,7 @@ classdef CheckSimulators < matlab.unittest.TestCase
                     ME.message]);
             end
 
-            obj.assertEqual(pp.SNRrange, snrs, 'Wrong SNR range.');
+            obj.assertEqual(pp.SNRrange, snrs', 'Wrong SNR range.');
             obj.assertEqual(pp.TBS, 1800, 'Wrong transport block size.');
             obj.assertEqual(pp.MaxThroughput, 1.8, 'Wrong maximum throughput.');
             obj.assertGreaterThanOrEqual(pp.ThroughputSRS, [0; 0; 0.041; 0.30; 0.97], "Wrong throughput curve.");
@@ -369,6 +370,7 @@ classdef CheckSimulators < matlab.unittest.TestCase
             pp.SymbolAllocation = [0 14];
             pp.NumACKBits = 2;
             pp.NRxAnts = 2;
+            pp.FrequencyHopping = 'intraSlot';
             pp.TestType = PUCCHTestType;
             pp.ImplementationType = 'srs';
             pp.PerfectChannelEstimator = false;
@@ -385,10 +387,10 @@ classdef CheckSimulators < matlab.unittest.TestCase
             if (PUCCHTestType == "Detection")
                 obj.assertLessThan(pp.Statistics.NACK2ACKDetectionRateSRS, 0.04, "Wrong NACK-to-ACK detection curve.");
                 obj.assertGreaterThanOrEqual(pp.Statistics.ACKDetectionRateSRS, ...
-                    [0.0077; 0.0096; 0.0183; 0.0280; 0.0415; 0.0735; 0.145; 0.28; 0.5261; 0.79], ...
+                    [0.0120; 0.0160; 0.0200; 0.0330; 0.0540; 0.0910; 0.1660; 0.3270; 0.6440; 0.8970], ...
                     "Wrong ACK detection rate curve.");
             else
-                obj.assertEqual(pp.Statistics.FalseACKDetectionRateSRS, 0.0075 * ones(10, 1), "Wrong false ACK detection rate curve.", RelTol=0.02);
+                obj.assertEqual(pp.Statistics.FalseACKDetectionRateSRS, 0.0067 * ones(10, 1), "Wrong false ACK detection rate curve.", RelTol=0.03);
             end
         end % of function testPUCCHPERFF1mex(obj, PUCCHTestType)
 

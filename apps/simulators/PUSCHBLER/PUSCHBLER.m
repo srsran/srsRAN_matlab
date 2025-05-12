@@ -45,12 +45,9 @@
 %
 %   PUSCHBLER properties (all nontunable, unless otherwise specified):
 %
-%   NTxAnts                      - Number of transmit antennas (temporarily
-%                                  constant and fixed to 1).
+%   NTxAnts                      - Number of transmit antennas.
 %   NRxAnts                      - Number of receive antennas.
 %   PerfectChannelEstimator      - Perfect channel estimation flag.
-%   DisplaySimulationInformation - Flag for displaying simulation information.
-%   DisplayDiagnostics           - Flag for displaying simulation diagnostics.
 %   NSizeGrid                    - Bandwidth as a number of resource blocks.
 %   SubcarrierSpacing            - Subcarrier spacing in kHz.
 %   CyclicPrefix                 - Cyclic prefix: 'Normal' or 'Extended'
@@ -61,6 +58,7 @@
 %   MappingType                  - PUSCH mapping type ('A'(slot-wise), 'B'(non slot-wise)).
 %   RNTI                         - Radio network temporary identifier (0...65535).
 %   NumLayers                    - Number of PUSCH transmission layers (1...4).
+%   TransformPrecoding           - Transform precoding flag: true for enabled.
 %   MCSTable                     - Modulation Coding Scheme table.
 %   MCSIndex                     - Modulation Coding Scheme index
 %                                  (inactive if "MCSTable == 'custom'").
@@ -77,15 +75,26 @@
 %                                  'TDL-C', 'TDLC300').
 %   DelaySpread                  - Delay spread in seconds (single-tap and TDL-{A,B,C} delay profiles only).
 %   MaximumDopplerShift          - Maximum Doppler shift in hertz (TDL delay profiles only).
+%   CarrierFrequencyOffset       - Carrier frequency offset in hertz (requires PerfectChannelEstimator
+%                                  set to false).
 %   EnableHARQ                   - HARQ flag: true for enabling retransmission with
 %                                  RV sequence [0, 2, 3, 1], false for no retransmissions.
+%   MaximumLDPCIterationCount    - Maximum LDPC decoding iterations.
 %   ImplementationType           - PUSCH implementation type ('matlab', 'srs' (requires mex), 'both')
 %   SRSEstimatorType             - Implementation of the SRS channel estimator ('MEX', 'noMEX')
+%   SRSSmoothing                 - Frequency-domain smoothing strategy of the SRS channel estimator
+%                                  ('none', 'mean', 'filter').
+%   SRSInterpolation             - Time-domain interpolation strategy of the SRS channel estimator
+%                                  ('average', 'interpolation').
+%   SRSCompensateCFO             - CFO compensation flag for the SRS channel estimator: true to enable.
+%   SRSEqualizerType             - Equalization algorithm of the SRS equalizer ('ZF', 'MMSE').
+%   ApplyOFHCompression          - O-FH compression flag: set to true to emulate the effect of O-FH
+%                                  compression on the received grid (tunable).
+%   CompIQwidth                  - Bit-width of the compressed IQ samples (1...16). Used only if
+%   DisplaySimulationInformation - Flag for displaying simulation information.
+%   DisplayDiagnostics           - Flag for displaying simulation diagnostics.
 %   QuickSimulation              - Quick-simulation flag: set to true to stop
 %                                  each point after 100 failed transport blocks (tunable).
-%   ApplyOFHCompression          - Emulate the effect of O-FH compression on the received grid: set to true 
-%                                  to enable (tunable).
-%   CompIQwidth                  - Bit-width of the compressed IQ samples (1...16). Used only if 
 %                                  'ApplyOFHCOmpression' is set to true.
 %
 %   When the simulation is over, the object allows access to the following
@@ -153,6 +162,8 @@ classdef PUSCHBLER < matlab.System
         RNTI (1, 1) double {mustBeReal, mustBeInteger, mustBeInRange(RNTI, 0, 65535)} = 1
         %Number of PUSCH transmission layers.
         NumLayers (1, 1) double {mustBeReal, mustBeInteger, mustBeInRange(NumLayers, 1, 4)} = 1
+        %Transform precoding flag: true for enabled.
+        TransformPrecoding (1, 1) logical = false
         %Modulation Coding Scheme table.
         %   Choose between 'qam64', 'qam256', 'qam64LowSE' and 'custom'.
         MCSTable (1, :) char {mustBeMember(MCSTable, {'qam64', 'qam256', 'qam64LowSE', 'custom'})} = 'qam64'
@@ -187,18 +198,14 @@ classdef PUSCHBLER < matlab.System
         CarrierFrequencyOffset (1, 1) double {mustBeReal} = 0
         %HARQ flag: true for enabling retransmission with RV sequence [0, 2, 3, 1], false for no retransmissions.
         EnableHARQ (1, 1) logical = false
+        %Maximum LDPC decoding iterations.
+        MaximumLDPCIterationCount (1, 1) double {mustBeInteger, mustBePositive} = 6
         %PUSCH implementation type ('matlab', 'srs' (requires mex), 'both').
         ImplementationType (1, :) char {mustBeMember(ImplementationType, {'matlab', 'srs', 'both'})} = 'matlab'
         %Implementation of the SRS channel estimator ('MEX', 'noMEX').
         %   Only applies if ImplementationType is set to 'srs' or 'both' and PerfectChannelEstimator
         %   is set to false.
         SRSEstimatorType (1, :) char {mustBeMember(SRSEstimatorType, {'MEX', 'noMEX'})} = 'MEX'
-        %Flag for emulating O-FH compression.
-        SRSEqualizerType (1, :) char {mustBeMember(SRSEqualizerType, {'ZF', 'MMSE'})} = 'ZF'
-        ApplyOFHCompression (1, 1) logical = false
-        %Bit-width of the compressed IQ samples.
-        %   Only applies if ApplyOFHCompression is set to true.
-        CompIQwidth (1, 1) double {mustBeInteger, mustBeInRange(CompIQwidth, 1, 16)} = 9
         %Channel estimator frequency-domain smoothing strategy ('none', 'mean', 'filter').
         %   Valid only for SRS estimator.
         SRSSmoothing (1, :) char {mustBeMember(SRSSmoothing, {'none', 'mean', 'filter'})} = 'filter'
@@ -208,6 +215,16 @@ classdef PUSCHBLER < matlab.System
         %Channel estimator CFO compensation.
         %   Valid only for SRS estimator.
         SRSCompensateCFO (1, 1) logical = true
+        %Channel equalizer type ('ZF', 'MMSE').
+        %   Valid only for SRS equalizer.
+        SRSEqualizerType (1, :) char {mustBeMember(SRSEqualizerType, {'ZF', 'MMSE'})} = 'ZF'
+        %Flag for emulating O-FH compression.
+        %   Emulates the effect of O-FH compression on the received grid: set to true
+        %   to enable (tunable).
+        ApplyOFHCompression (1, 1) logical = false
+        %Bit-width of the compressed IQ samples.
+        %   Only applies if ApplyOFHCompression is set to true.
+        CompIQwidth (1, 1) double {mustBeInteger, mustBeInRange(CompIQwidth, 1, 16)} = 9
 
     end % of properties (Nontunable)
 
@@ -235,6 +252,10 @@ classdef PUSCHBLER < matlab.System
         MissedBlocksMATLABCtr = []
         %Counter of missed transport blocks, after all allowed retransmissions (SRS case).
         MissedBlocksSRSCtr = []
+        %Counter of decoder iterations (SRS case).
+        DecIterationsSRSCtr = []
+        %Counter of decoder iterations, given CRC OK (SRS case).
+        DecIterationsCRCOKSRSCtr = []
         %Transport block size in bits.
         TBS = []
     end % of properties (SetAccess = private)
@@ -250,6 +271,10 @@ classdef PUSCHBLER < matlab.System
         BlockErrorRateMATLAB
         %Block error rate (SRS case).
         BlockErrorRateSRS
+        %Average number of decoder iterations (SRS case).
+        AverageDecIterationsSRS
+        %Average number of decoder iterations, given CRC OK (SRS case).
+        AverageDecIterationsCRCOKSRS
     end % of properties (Dependable)
 
     properties (Access = private, Hidden)
@@ -299,6 +324,12 @@ classdef PUSCHBLER < matlab.System
         function checkCFOandEstimator(obj)
             if (obj.PerfectChannelEstimator && (obj.CarrierFrequencyOffset ~= 0))
                 error('Cannot set a non-null carrier frequency offset with perfect channel estimation.');
+            end
+        end
+
+        function checkTrPrecandLayers(obj)
+            if (obj.TransformPrecoding && (obj.NumLayers > 1))
+                error('Transform precoding and more than one layer are incompatible.');
             end
         end
     end % of methods (Access = private)
@@ -357,6 +388,14 @@ classdef PUSCHBLER < matlab.System
 
         function maxTP = get.MaxThroughput(obj)
             maxTP = obj.TBS * 1e-3 * obj.SubcarrierSpacing / 15;
+        end
+
+        function avgIter = get.AverageDecIterationsSRS(obj)
+            avgIter = obj.DecIterationsSRSCtr ./ obj.TotalBlocksCtr;
+        end
+
+        function avgIter = get.AverageDecIterationsCRCOKSRS(obj)
+            avgIter = obj.DecIterationsCRCOKSRSCtr ./ (obj.TotalBlocksCtr - obj.MissedBlocksSRSCtr);
         end
 
         function plot(obj)
@@ -444,11 +483,11 @@ classdef PUSCHBLER < matlab.System
             obj.PUSCH.RNTI = obj.RNTI;
 
             % Define the transform precoding enabling, layering and transmission scheme.
-            obj.PUSCH.TransformPrecoding = false;         % Enable/disable transform precoding.
-            obj.PUSCH.NumLayers = obj.NumLayers;
-            obj.PUSCH.TransmissionScheme = 'nonCodebook'; % Transmission scheme ('nonCodebook', 'codebook').
-            obj.PUSCH.NumAntennaPorts = 1;                % Number of antenna ports for codebook based precoding.
-            obj.PUSCH.TPMI = 0;                           % Precoding matrix indicator for codebook based precoding.
+            obj.PUSCH.TransformPrecoding = obj.TransformPrecoding;    % Enable/disable transform precoding.
+            obj.PUSCH.NumLayers = obj.NumLayers;                      % Number of transmission layers.
+            obj.PUSCH.TransmissionScheme = 'nonCodebook';             % Transmission scheme ('nonCodebook', 'codebook').
+            obj.PUSCH.NumAntennaPorts = 1;                            % Number of antenna ports for codebook based precoding.
+            obj.PUSCH.TPMI = 0;                                       % Precoding matrix indicator for codebook based precoding.
 
             % Define codeword modulation.
             obj.PUSCH.Modulation = obj.Modulation;
@@ -478,7 +517,7 @@ classdef PUSCHBLER < matlab.System
             % LDPC decoder parameters.
             % Available algorithms: 'Belief propagation', 'Layered belief propagation', 'Normalized min-sum', 'Offset min-sum'.
             obj.PUSCHExtension.LDPCDecodingAlgorithm = 'Normalized min-sum';
-            obj.PUSCHExtension.MaximumLDPCIterationCount = 6;
+            obj.PUSCHExtension.MaximumLDPCIterationCount = obj.MaximumLDPCIterationCount;
 
             % The simulation relies on various pieces of information about the baseband
             % waveform, such as sample rate.
@@ -540,6 +579,7 @@ classdef PUSCHBLER < matlab.System
 
             [obj.SegmentCfg, configSRS] = srsMEX.phy.srsPUSCHDecoder.configureSegment(obj.Carrier, ...
                 obj.PUSCH, obj.TargetCodeRate, obj.PUSCHExtension.NHARQProcesses, obj.PUSCHExtension.XOverhead);
+            obj.SegmentCfg.MaximumLDPCIterationCount = obj.MaximumLDPCIterationCount;
             obj.DecodeULSCHsrs = srsMEX.phy.srsPUSCHDecoder('MaxCodeblockSize', configSRS.MaxCodeblockSize, ...
                 'MaxSoftbuffers', configSRS.MaxSoftbuffers, 'MaxCodeblocks', configSRS.MaxCodeblocks);
 
@@ -568,6 +608,9 @@ classdef PUSCHBLER < matlab.System
 
             % Cross-check that we are not using perfect channel estimation with CFO.
             obj.checkCFOandEstimator();
+
+            % Cross-check that we aren't enabling transform precoding with multiple layers.
+            obj.checkTrPrecandLayers();
         end
 
         function stepImpl(obj, SNRIn, nFrames)
@@ -630,6 +673,8 @@ classdef PUSCHBLER < matlab.System
             % Array to store the simulation throughput and BLER for all SNR points.
             simThroughputSRS = zeros(length(SNRIn), 1);
             simBLERSRS = zeros(length(SNRIn), 1);
+            simIterSRS = zeros(length(SNRIn), 1);
+            simIterCRCOKSRS = zeros(length(SNRIn), 1);
 
             quickSim = obj.QuickSimulation;
 
@@ -883,6 +928,7 @@ classdef PUSCHBLER < matlab.System
                         % Apply channel state information (CSI) produced by the equalizer,
                         % including the effect of transform precoding if enabled.
                         if (pusch.TransformPrecoding)
+                            MRB = numel(obj.PUSCH.PRBSet);
                             MSC = MRB * 12;
                             csi = nrTransformDeprecode(csi, MRB) / sqrt(MSC);
                             csi = repmat(csi((1:MSC:end).'), 1, MSC).';
@@ -934,6 +980,12 @@ classdef PUSCHBLER < matlab.System
                         simBLERSRS(snrIdx) = simBLERSRS(snrIdx) + (isCountBLER && any(decbitsSRS ~= srsTest.helpers.bitPack(trBlk)));
 
                         blkerrBoth = blkerrBoth || (~statsSRS.CRCOK);
+
+                        % Store decoder iteration stats.
+                        simIterSRS(snrIdx) = simIterSRS(snrIdx) + statsSRS.LDPCIterationsMean;
+                        if (statsSRS.CRCOK)
+                            simIterCRCOKSRS(snrIdx) = simIterCRCOKSRS(snrIdx) + statsSRS.LDPCIterationsMean;
+                        end
                     end
 
                     % Increase total number of transmitted information bits.
@@ -976,18 +1028,16 @@ classdef PUSCHBLER < matlab.System
                     fprintf('Throughput(%%) after %.0f frame(s) = %.4f\n', usedFrames, simThroughputSRS(snrIdx)*100/maxThroughput(snrIdx));
                     fprintf('BLER after %.0f frame(s) = %.4f\n', usedFrames, simBLERSRS(snrIdx)/totalBlocks(snrIdx));
 
-                    rsrpLT = rsrpLT / (nslot + 1);
-                    noiseEstLT = noiseEstLT / (nslot + 1);
-                    fprintf('Measured SNR = %.1f dB.\n', 10*log10(rsrpLT * pusch.NumLayers / noiseEstLT / betaDMRS^2));
-
+                    if (~perfectChannelEstimator)
+                        fprintf('Measured SNR = %.1f dB.\n', 10*log10(rsrpLT * pusch.NumLayers / noiseEstLT / betaDMRS^2));
+                    end
                 end
-
             end
 
             % Export results.
             [~, repeatedIdx] = intersect(obj.SNRrange, SNRIn);
             obj.SNRrange(repeatedIdx) = [];
-            [obj.SNRrange, sortedIdx] = sort([obj.SNRrange SNRIn]);
+            [obj.SNRrange, sortedIdx] = sort([obj.SNRrange; SNRIn(:)]);
 
             obj.MaxThroughputCtr = joinArrays(obj.MaxThroughputCtr, maxThroughput, repeatedIdx, sortedIdx);
             obj.ThroughputMATLABCtr = joinArrays(obj.ThroughputMATLABCtr, simThroughput, repeatedIdx, sortedIdx);
@@ -995,6 +1045,9 @@ classdef PUSCHBLER < matlab.System
             obj.TotalBlocksCtr = joinArrays(obj.TotalBlocksCtr, totalBlocks, repeatedIdx, sortedIdx);
             obj.MissedBlocksMATLABCtr = joinArrays(obj.MissedBlocksMATLABCtr, simBLER, repeatedIdx, sortedIdx);
             obj.MissedBlocksSRSCtr = joinArrays(obj.MissedBlocksSRSCtr, simBLERSRS, repeatedIdx, sortedIdx);
+            obj.DecIterationsSRSCtr = joinArrays(obj.DecIterationsSRSCtr, simIterSRS, repeatedIdx, sortedIdx);
+            obj.DecIterationsCRCOKSRSCtr = joinArrays(obj.DecIterationsCRCOKSRSCtr, simIterCRCOKSRS, ...
+                repeatedIdx, sortedIdx);
         end % of function stepImpl()
 
         function resetImpl(obj)
@@ -1012,6 +1065,8 @@ classdef PUSCHBLER < matlab.System
             obj.TotalBlocksCtr = [];
             obj.MissedBlocksMATLABCtr = [];
             obj.MissedBlocksSRSCtr = [];
+            obj.DecIterationsSRSCtr = [];
+            obj.DecIterationsCRCOKSRSCtr = [];
         end
 
         function releaseImpl(obj)
@@ -1036,7 +1091,7 @@ classdef PUSCHBLER < matlab.System
                     flag = strcmp(obj.DelayProfile, 'AWGN');
                 case {'ThroughputMATLABCtr', 'MissedBlocksMATLABCtr'}
                     flag = isempty(obj.SNRrange) || strcmp(obj.ImplementationType, 'srs');
-                case {'ThroughputSRSCtr', 'MissedBlocksSRSCtr'}
+                case {'ThroughputSRSCtr', 'MissedBlocksSRSCtr', 'DecIterationsSRSCtr', 'DecIterationsCRCOKSRSCtr'}
                     flag = isempty(obj.SNRrange) || strcmp(obj.ImplementationType, 'matlab');
                 case {'SNRrange', 'MaxThroughputCtr', 'TotalBlocksCtr'}
                     flag = isempty(obj.SNRrange);
@@ -1048,7 +1103,7 @@ classdef PUSCHBLER < matlab.System
                     flag = isempty(obj.TBS) || ~obj.isLocked;
                 case {'ThroughputMATLAB', 'BlockErrorRateMATLAB'}
                     flag = isempty(obj.ThroughputMATLABCtr) || strcmp(obj.ImplementationType, 'srs');
-                case {'ThroughputSRS', 'BlockErrorRateSRS'}
+                case {'ThroughputSRS', 'BlockErrorRateSRS', 'AverageDecIterationsSRS', 'AverageDecIterationsCRCOKSRS'}
                     flag = isempty(obj.ThroughputSRSCtr) || strcmp(obj.ImplementationType, 'matlab');
                 case {'SRSEstimatorType', 'SRSSmoothing', 'SRSInterpolation', 'SRSCompensateCFO'}
                     flag = strcmp(obj.ImplementationType, 'matlab') || obj.PerfectChannelEstimator;
@@ -1064,9 +1119,10 @@ classdef PUSCHBLER < matlab.System
         function groups = getPropertyGroups(obj)
 
             results = {'SNRrange', 'MaxThroughputCtr', 'ThroughputMATLABCtr', 'ThroughputSRSCtr', ...
-                'TotalBlocksCtr', 'MissedBlocksMATLABCtr', 'MissedBlocksSRSCtr', 'TBS', ...
+                'TotalBlocksCtr', 'MissedBlocksMATLABCtr', 'MissedBlocksSRSCtr', ...
+                'DecIterationsSRSCtr', 'DecIterationsCRCOKSRSCtr', 'TBS', ...
                 'MaxThroughput', 'ThroughputMATLAB', 'ThroughputSRS', 'BlockErrorRateMATLAB', ...
-                'BlockErrorRateSRS'};
+                'BlockErrorRateSRS', 'AverageDecIterationsSRS', 'AverageDecIterationsCRCOKSRS'};
 
             confProps = {...
                 ... Generic.
@@ -1078,7 +1134,7 @@ classdef PUSCHBLER < matlab.System
                 ... DM-RS.
                 'DMRSConfigurationType', 'DMRSLength', 'DMRSAdditionalPosition', 'DMRSTypeAPosition', ...
                 ... Modulation and coding.
-                'MCSTable', 'MCSIndex', 'Modulation', 'TargetCodeRate', ...
+                'MCSTable', 'MCSIndex', 'Modulation', 'TargetCodeRate', 'TransformPrecoding', ...
                 ... Antennas and layers.
                 'NRxAnts', 'NTxAnts', 'NumLayers', ...
                 ... Channel model.
@@ -1088,6 +1144,7 @@ classdef PUSCHBLER < matlab.System
                 ... Compression.
                 'ApplyOFHCompression', 'CompIQwidth', ...
                 ... Other simulation details.
+                'MaximumLDPCIterationCount', ...
                 'ImplementationType', 'SRSEqualizerType', 'SRSEstimatorType', 'SRSSmoothing', 'SRSInterpolation', ...
                 'SRSCompensateCFO', 'QuickSimulation', 'DisplaySimulationInformation', 'DisplayDiagnostics'};
             groups = matlab.mixin.util.PropertyGroup(confProps, 'Configuration');
@@ -1132,6 +1189,8 @@ classdef PUSCHBLER < matlab.System
                 s.TotalBlocksCtr = obj.TotalBlocksCtr;
                 s.MissedBlocksMATLABCtr = obj.MissedBlocksMATLABCtr;
                 s.MissedBlocksSRSCtr = obj.MissedBlocksSRSCtr;
+                s.DecIterationsSRSCtr = obj.DecIterationsSRSCtr;
+                s.DecIterationsCRCOKSRSCtr = obj.DecIterationsCRCOKSRSCtr;
                 s.TBS = obj.TBS;
             end
         end % of function s = saveObjectImpl(obj)
@@ -1161,6 +1220,8 @@ classdef PUSCHBLER < matlab.System
                 obj.TotalBlocksCtr = s.TotalBlocksCtr;
                 obj.MissedBlocksMATLABCtr = s.MissedBlocksMATLABCtr;
                 obj.MissedBlocksSRSCtr = s.MissedBlocksSRSCtr;
+                obj.DecIterationsSRSCtr = s.DecIterationsSRSCtr;
+                obj.DecIterationsCRCOKSRSCtr = s.DecIterationsCRCOKSRSCtr;
                 obj.TBS = s.TBS;
             end
 

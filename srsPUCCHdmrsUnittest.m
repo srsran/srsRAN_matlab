@@ -187,8 +187,6 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
             else
                 nSlot = randi([0, 19]);
             end
-            % Format name following srsran naming.
-            formatString = ['dmrs_pucch_estimator::format', num2str(format), '_configuration'];
 
             % Fixed parameter values.
             nSizeGrid  = 52;

@@ -1,7 +1,6 @@
 %srsPUCCHProcessor retrieves UCI messages from a PUCCH transmission.
 %   User-friendly interface for processing a PUCCH transmission via the MEX static
-%   method pucch_processor_mex, which calls srsRAN pucch_processor. The PUCCH format
-%   can be Format 0, Format 1 or Format 2.
+%   method pucch_processor_mex, which calls srsRAN pucch_processor.
 %
 %   PROCESSOR = srsPUCCHProcessor creates the PUCCH processor object PROCESSOR.
 %
@@ -11,26 +10,37 @@
 %
 %   Step method syntax
 %
-%   UCI = step(OBJ, RXGRID, PUCCH, CARRIER, NAME, VALUE, NAME, VALUE, ...) recovers
-%   the UCI messages from the PUCCH transmission in the resource grid
-%   RXGRID. Input PUCCH can be an nrPUCCH0Config, an nrPUCCH1Config or an nrPUCCH2Config
-%   object containing the configuration of the PUCCH transmission. Input CARRIER
-%   is an nrCarrierConfig object describing the carrier configuration (the only
-%   used fields are SubcarrierSpacing, NSlot, and CyclicPrefix). The Name-Value
-%   pairs are used to specify the length of the UCI messages (default is 0 for all of them):
+%   UCI = step(OBJ, CARRIER, PUCCH, RXGRID, NAME, VALUE, NAME, VALUE, ...) recovers
+%   the UCI messages from the PUCCH transmission in the resource grid RXGRID.
+%   Input CARRIER is an nrCarrierConfig object describing the carrier configuration
+%   (the only used fields are SubcarrierSpacing, NSlot, and CyclicPrefix). Input
+%   PUCCH can be any nrPUCCHxConfig object (x = 0,...,4) containing the
+%   configuration of the PUCCH transmission. The Name-Value pairs are used to
+%   specify the length of the UCI messages (default is 0 for all of them):
 %
 %   'NumHARQAck'   - Number of HARQ ACK bits (0...1706).
 %   'NumSR'        - Number of SR bits (0...4).
 %   'NumCSIPart1'  - Number of CSI Part 1 bits (0...1706).
 %   'NumCSIPart2'  - Number of CSI Part 2 bits (0...1706).
+%   'MuxFormat1'   - A structure array with fields 'InitialCyclicShift', 'OCCI'
+%                    and 'NumBits' specifying a list of multiplexed PUCCH Format 1
+%                    transmissions. This input can only be present when PUCCH is
+%                    an nrPUCCH1Config object, and it overwrites the 'InitialCyclicShift'
+%                    and the 'OCCI' provided in the PUCCH configuration, as well as
+%                    the number of bits provided with 'NumHARQAck'.
 %
-%   The output UCI is a structure with fields:
+%   The output UCI is a structure array (one entry per each PUCCH Format 1 configured
+%   in 'MuxFormat1', a singleton if 'MuxFormat1' is empty) with fields:
 %
-%   'isValid'         - Boolean flag: true if the PUCCH transmission was processed correctly.
-%   'HARQAckPayload'  - Column array of HARQ ACK bits (possibly empty).
-%   'SRPayload'       - Column array of SR bits (possibly empty).
-%   'CSI1Payload'     - Column array of CSI Part 1 bits (possibly empty).
-%   'CSI2Payload'     - Column array of CSI Part 2 bits (possibly empty).
+%   'isValid'             - Boolean flag: true if the PUCCH transmission was
+%                           processed correctly.
+%   'HARQAckPayload'      - Column array of HARQ ACK bits (possibly empty, int8).
+%   'SRPayload'           - Column array of SR bits (possibly empty, int8).
+%   'CSI1Payload'         - Column array of CSI Part 1 bits (possibly empty, int8).
+%   'CSI2Payload'         - Column array of CSI Part 2 bits (possibly empty, int8).
+%   'InitialCyclicShift'  - Initial cyclic shift (only when input 'MuxFormat1' is not empty).
+%   'OCCI'                - Time domain orthogonal cover code index (only when
+%                           input 'MuxFormat1' is not empty).
 %
 %   See also nrPUCCHDecode, nrUCIDecode, nrPUCCH0Config, nrPUCCH1Config, nrPUCCH2Config, nrCarrierConfig.
 
@@ -63,6 +73,7 @@ classdef srsPUCCHProcessor < matlab.System
                 uciSizes.NumSR        (1, 1) double {mustBeInteger, mustBeNonnegative} = 0
                 uciSizes.NumCSIPart1  (1, 1) double {mustBeInteger, mustBeNonnegative} = 0
                 uciSizes.NumCSIPart2  (1, 1) double {mustBeInteger, mustBeNonnegative} = 0
+                uciSizes.MuxFormat1   (:, 1)        {mustBeMultiplexList} = []
             end
 
             gridDims = size(rxGrid);
@@ -122,6 +133,8 @@ classdef srsPUCCHProcessor < matlab.System
                     'NIDScrambling', [], ...    only PUCCH F3 and F4
                     'SpreadingFactor', [] ...   only PUCCH F4
                 );
+
+                assert(isempty(uciSizes.MuxFormat1), 'srsRAN-matlab:srsPUCCHProcessor', 'Input MuxFormat1 should be empty for PUCCH Format 0');
             elseif isa(pucchConfig, 'nrPUCCH1Config')
                 if ~isempty(pucchConfig.HoppingID)
                     nid = pucchConfig.HoppingID;
@@ -187,6 +200,8 @@ classdef srsPUCCHProcessor < matlab.System
                     'NIDScrambling', [], ...      only PUCCH F3 and F4
                     'SpreadingFactor', [] ...     only PUCCH F4
                     );
+
+                assert(isempty(uciSizes.MuxFormat1), 'srsRAN-matlab:srsPUCCHProcessor', 'Input MuxFormat1 should be empty for PUCCH Format 2');
             elseif isa(pucchConfig, 'nrPUCCH3Config')
                 if ~isempty(pucchConfig.NID)
                     nid = pucchConfig.NID;
@@ -219,6 +234,8 @@ classdef srsPUCCHProcessor < matlab.System
                     'NID0', [], ...               only PUCCH F2
                     'SpreadingFactor', [] ...     only PUCCH F4
                     );
+
+                assert(isempty(uciSizes.MuxFormat1), 'srsRAN-matlab:srsPUCCHProcessor', 'Input MuxFormat1 should be empty for PUCCH Format 3');
             else
                 if ~isempty(pucchConfig.NID)
                     nid = pucchConfig.NID;
@@ -251,28 +268,15 @@ classdef srsPUCCHProcessor < matlab.System
                     'NumPRBs', [], ...            only PUCCH F2 and F3
                     'NID0', [] ...                only PUCCH F2
                     );
+
+                assert(isempty(uciSizes.MuxFormat1), 'srsRAN-matlab:srsPUCCHProcessor', 'Input MuxFormat1 should be empty for PUCCH Format 4');
             end
 
-            [status, harq, sr, csi1, csi2] = obj.pucch_processor_mex('step', single(rxGrid), mexConfig);
+            uci = obj.pucch_processor_mex('step', single(rxGrid), mexConfig, uciSizes.MuxFormat1);
 
-            isvalid = strcmp(status, 'valid');
-            % Because of a MEX issue with returning empty arrays, we set the bit fields to 9 as a tag to
-            % denote empty arrays.
-            if (harq == 9)
-                harq = int8.empty(0, 1);
-            end
-            if (sr == 9)
-                sr = int8.empty(0, 1);
-            end
-            if (csi1 == 9)
-                csi1 = int8.empty(0, 1);
-            end
-            if (csi2 == 9)
-                csi2 = int8.empty(0, 1);
-            end
+            nResults = length(uci);
 
-            uci = struct('isValid', isvalid, 'HARQAckPayload', int8(harq), 'SRPayload', int8(sr), ...
-                'CSI1Payload', int8(csi1), 'CSI2Payload', int8(csi2));
+            assert((nResults == 1) || (mexConfig.Format == 1) && (length(uciSizes.MuxFormat1) == nResults));
         end % of function [uci, csi] = stepImpl(obj, pucchConfig, carrierConfig)
     end % of methods (Access = protected)
 
@@ -281,3 +285,73 @@ classdef srsPUCCHProcessor < matlab.System
         varargout = pucch_processor_mex(varargin)
     end % of methods (Access = private, Static)
 end % of classdef srsPUCCHProcessor < matlab.System
+
+% Checks that the list of multiplexed PUCCH transmissions is valid.
+function mustBeMultiplexList(a)
+    arguments
+        a (:, 1) struct
+    end
+
+    % The multiplex list is allowed to be empty.
+    if isempty(a)
+        return;
+    end
+
+    % Check that each element of the list is a struct with the proper fields.
+    if ~isempty(setxor(fieldnames(a), {'InitialCyclicShift', 'OCCI', 'NumBits'}))
+        eidType = 'mustBeMultiplexList:wrongFormat';
+        msgType = ['All multiplexList entries should be structures with fields ''InitialCyclicShift'', ', ...
+            '''OCCI'' and ''NumBits''.'];
+        throwAsCaller(MException(eidType, msgType));
+    end
+
+    % Check the initial cyclic shifts are within bounds.
+    isICSDefined = all(arrayfun(@(x) ~isempty(x.InitialCyclicShift), a));
+    allShifts = [a.InitialCyclicShift];
+    isICSInteger = isICSDefined && all(mod(allShifts, 1) == 0);
+    isICSInRange = isICSInteger && all(allShifts >= 0) && all(allShifts <= 11);
+    if  ~isICSInRange
+        eidType = 'mustBeMultiplexList:wrongInitialCyclicShift';
+        msgType = 'All initial cyclic shifts must be integers between 0 and 11 included.';
+        throwAsCaller(MException(eidType, msgType));
+    end
+
+    % Check the OCCIs are within bounds (unfortunately, we can only check that the OCCI
+    % is at most 6, not the true upperbound that depends on the allocated grant).
+    isOCCIDefined = all(arrayfun(@(x) ~isempty(x.OCCI), a));
+    allOCCI = [a.OCCI];
+    isOCCIInteger = isOCCIDefined && all(mod(allOCCI, 1) == 0);
+    isOCCIInRange = isOCCIInteger && all(allOCCI >= 0) && all(allOCCI <= 6);
+    if  ~isOCCIInRange
+        eidType = 'mustBeMultiplexList:wrongOCCI';
+        msgType = 'All OCCI must be integers between 0 and 6 included.';
+        throwAsCaller(MException(eidType, msgType));
+    end
+
+    % Check the payload size.
+    isBitsDefined = all(arrayfun(@(x) ~isempty(x.NumBits), a));
+    allBits = [a.NumBits];
+    isBitsInteger = isBitsDefined && all(mod(allBits, 1) == 0);
+    isBitsInRange = isBitsInteger && all(allBits >= 0) && all(allBits <= 2);
+    if  ~isBitsInRange
+        eidType = 'mustBeMultiplexList:wrongNumBits';
+        msgType = 'All number of bits must be integers between 0 and 2 included.';
+        throwAsCaller(MException(eidType, msgType));
+    end
+
+    % Cannot mix SR and ACK PUCCHs.
+    nSR = sum(allBits == 0);
+    if ((nSR > 0) && (nSR < numel(allBits)))
+        eidType = 'mustBeMultiplexList:mixedPUCCHTypes';
+        msgType = 'Cannot mix PUCCH carrying HARQ-ACK bits and PUCCH carrying SR bits.';
+        throwAsCaller(MException(eidType, msgType));
+    end
+
+    % Check the uniqueness of the entries.
+    aHash = 12 * allShifts + allOCCI;
+    if numel(unique(aHash)) ~= numel(a)
+        eidType = 'mustBeMultiplexList:duplicatedEntry';
+        msgType = 'Cyclic shift-OCCI pairs should not be repeated.';
+        throwAsCaller(MException(eidType, msgType));
+    end
+end % of function mustBeMultiplexList(a)

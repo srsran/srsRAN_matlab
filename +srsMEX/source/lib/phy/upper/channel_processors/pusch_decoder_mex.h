@@ -129,6 +129,7 @@ private:
   ///     in a HARQ process (\c false).
   ///   - A one-dimensional structure that describes the segmentation of the transport block. The fields are
   ///      - \c BGN, the LDPC base graph;
+  ///      - \c MaximumLDPCIterationCount, the maximum number of LDPC decoding iterations;
   ///      - \c Modulation, modulation identifier;
   ///      - \c NumLayers, the number of transmission layers;
   ///      - \c RV, the redundancy version;
@@ -143,7 +144,8 @@ private:
   ///   - The decoded transport block (in packed format).
   ///   - A one-dimensional structure with decoding statistics. The fields are
   ///      - \c CRCOK, equal to \c true if the codeword CRC is valid, \c false if invalid;
-  ///      - \c LDPCIterations, the maximum number of LDPC iterations across all codeblocks forming the codeword.
+  ///      - \c LDPCIterationsMax, the maximum number of LDPC iterations across all codeblocks forming the codeword.
+  ///      - \c LDPCIterationsMean, the average number of LDPC iterations across all codeblocks forming the codeword.
   void method_step(ArgumentList outputs, ArgumentList inputs);
 
   /// \brief Resets the CRC status of a softbuffer.

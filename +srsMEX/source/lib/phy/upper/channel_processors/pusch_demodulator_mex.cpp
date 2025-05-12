@@ -93,7 +93,7 @@ public:
   const demodulation_stats& get_stats() const { return stats.value(); }
 
 private:
-  void on_provisional_stats(const demodulation_stats& stats_) override { stats = stats_; }
+  void on_provisional_stats(unsigned i_symbol, const demodulation_stats& stats_) override { stats = stats_; }
   void on_end_stats(const demodulation_stats& stats_) override { stats = stats_; }
 
   std::optional<demodulation_stats> stats;
@@ -174,7 +174,7 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
 
   // Build the RB allocation bitmask (contiguous PRB allocation is assumed).
   const TypedArray<bool> rb_mask_in = in_dem_cfg["RBMask"];
-  demodulator_config.rb_mask        = bounded_bitset<MAX_RB>(rb_mask_in.cbegin(), rb_mask_in.cend());
+  demodulator_config.rb_mask        = prb_bitmap(rb_mask_in.cbegin(), rb_mask_in.cend());
 
   // Set the modulation scheme.
   CharArray modulation_in       = in_dem_cfg["Modulation"];

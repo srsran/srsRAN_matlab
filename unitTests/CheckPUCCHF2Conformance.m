@@ -44,6 +44,13 @@
 %   file in the top-level directory of this distribution.
 
 classdef CheckPUCCHF2Conformance < matlab.unittest.TestCase
+    properties (Constant, Hidden)
+        %Folder for storing the test results in csv format.
+        OutputFolder = 'conformanceResults'
+        %File for storing the results in csv format.
+        OutputFile = fullfile(pwd, CheckPUCCHF2Conformance.OutputFolder, ['conformancePUCCHF2', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss')), '.csv'])
+    end % of properties (Constant, Hidden)
+
     properties (Constant)
         %Number of simulated slots.
         NSlots = 20000;
@@ -55,6 +62,24 @@ classdef CheckPUCCHF2Conformance < matlab.unittest.TestCase
         %   or receive antennas and the target SNR.
         TestConfig = generateTestConfig()
     end % of properties (TestParameter)
+
+    methods (TestClassSetup)
+        function preparecsv(obj)
+        %Creates a csv file for storing the results of all tests.
+
+            if ~exist(obj.OutputFolder, 'dir')
+                mkdir(obj.OutputFolder);
+            end
+            fff = fopen(obj.OutputFile, 'w');
+
+            % Write file header.
+            fprintf(fff, '#datatype measurement,tag,tag,double,dateTime:RFC3339\n');
+            fprintf(fff, '#default,,,\n');
+            fprintf(fff, 'm,suite,test,value,time\n');
+
+            fclose(fff);
+        end % of function preparecsv(obj)
+    end % of methods (TestClassSetup)
 
     methods (Test, TestTags = {'conformance'})
         function checkPUCCHF2shortDetect(obj, TestConfig)
@@ -80,13 +105,14 @@ classdef CheckPUCCHF2Conformance < matlab.unittest.TestCase
             end
 
             detectionRate = 1 - pp.Statistics.BlockErrorRateSRS;
+
+            % Export ack detection probability in csv format to be imported in grafana.
+            writecsv(obj, TestConfig, 'ACK detection', detectionRate);
+
             obj.verifyGreaterThanOrEqual(detectionRate, 0.99, ...
                 'WARNING: The PUCCH F2 ACK detection rate should be higher than 99%.');
             obj.assertGreaterThanOrEqual(detectionRate, 0.95, ...
                 'ERROR: The PUCCH F2 ACK detection rate is below the hard acceptance threshold of 95%.');
-
-            % TODO: export Detection Rate (and possibly other metrics) to grafana.
-
         end % of function checkPUCCHF2shortDetect(obj, TestConfig)
 
         function checkPUCCHF2shortFalseAlarm(obj, TestConfig)
@@ -111,12 +137,13 @@ classdef CheckPUCCHF2Conformance < matlab.unittest.TestCase
                 obj.assertFail(['PUCCHPERF simulation failed with error: ', ME.message]);
             end
 
+            % Export false-ack probability in csv format to be imported in grafana.
+            writecsv(obj, TestConfig, 'false ACK', pp.Statistics.FalseDetectionRateSRS);
+
             obj.verifyLessThanOrEqual(pp.Statistics.FalseDetectionRateSRS, 0.01, ...
                 'WARNING: The PUCCH F2 ACK detection rate should be lower than 1%.');
             obj.assertLessThanOrEqual(pp.Statistics.FalseDetectionRateSRS, 0.05, ...
                 'ERROR: The PUCCH F2 ACK detection rate is above the hard acceptance threshold of 5%.');
-
-            % TODO: export False Detection Rate (and possibly other metrics) to grafana.
         end % of function checkPUCCHF2shortDetect(obj, TestConfig)
 
         function checkPUCCHF2long(obj, TestConfig)
@@ -141,13 +168,13 @@ classdef CheckPUCCHF2Conformance < matlab.unittest.TestCase
                 obj.assertFail(['PUCCHPERF simulation failed with error: ', ME.message]);
             end
 
+            % Export UCI BLER in csv format to be imported in grafana.
+            writecsv(obj, TestConfig, 'UCI BLER', pp.Statistics.BlockErrorRateSRS);
+
             obj.verifyLessThanOrEqual(pp.Statistics.BlockErrorRateSRS, 0.01, ...
                 'WARNING: The PUCCH F2 UCI BLER should not be higher than 1%.');
             obj.assertLessThanOrEqual(pp.Statistics.BlockErrorRateSRS, 0.05, ...
                 'ERROR: The PUCCH F2 UCI BLER is above the hard acceptance threshold of 5%.');
-
-            % TODO: export Detection Rate (and possibly other metrics) to grafana.
-
         end % of function checkPUCCHF2shortDetect(obj, TestConfig)
 
     end % of methods (Test, TestTags = {'conformance'})
@@ -218,6 +245,19 @@ classdef CheckPUCCHF2Conformance < matlab.unittest.TestCase
             pp.QuickSimulation = false;
             pp.DisplaySimulationInformation = true;
         end % of function pp = preparePUCCHshort(obj, TestConfig)
+
+        function writecsv(obj, config, metric, prob)
+        %Writes the test entry in the csv file.
+
+            casename = sprintf('%s / %d Ant / %d PRB', config.Table, ...
+                config.NRxAnts, config.NSizeGrid);
+
+            fff = fopen(obj.OutputFile, 'a');
+            currTime = char(datetime('now', 'Format', 'yyyy-MM-dd''T''HH:mm:ss.SSS''Z'''));
+            fprintf(fff, '%s,matlab/PUCCH F2 conformance,%s,%.3f,%s\n', metric, casename, prob, currTime);
+
+            fclose(fff);
+        end % of function writecsv(obj)
     end % of methods (Access = private)
 end % of classdef CheckPUCCHF2Conformance < matlab.unittest.TestCase
 
