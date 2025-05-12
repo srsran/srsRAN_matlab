@@ -139,6 +139,10 @@ classdef CheckPUSCHConformance < matlab.unittest.TestCase
             pp.EnableHARQ = true;
             pp.ImplementationType = 'srs';
             pp.SRSEstimatorType = 'MEX';
+            pp.SRSInterpolation = 'interpolate';
+            pp.SRSSmoothing = 'filter';
+            pp.SRSCompensateCFO = false;
+            pp.EqualizerType = 'MMSE';
             pp.QuickSimulation = false;
 
             if ~contains(TestConfig.Name, 'Table 8.2.2.2')
