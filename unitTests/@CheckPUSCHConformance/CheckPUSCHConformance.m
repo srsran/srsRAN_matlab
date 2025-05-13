@@ -75,7 +75,7 @@ classdef CheckPUSCHConformance < matlab.unittest.TestCase
         %   Defines, for each test, the DelayProfile, the DelaySpread and the
         %   MaximumDopplerShift of the channel, the number of Rx antennas NRxAnts,
         %   the FRC and the target SNR.
-        %   Cases from TS38.104 V15.19.0 Table 8.2.1.2-1.
+        %   Cases from TS38.104 V15.19.0 and V19.0.0 Table 8.2.1.2-1.
         TestConfigTable8_2_1_2_1 = CheckPUSCHConformance.createTestConfigTable8_2_1_2_1()
         %PUSCH test configurations - Type A, 10 MHz channel bandwidth, 15 kHz SCS.
         %   Defines, for each test, the DelayProfile, the DelaySpread and the
@@ -93,7 +93,7 @@ classdef CheckPUSCHConformance < matlab.unittest.TestCase
         %   Defines, for each test, the DelayProfile, the DelaySpread and the
         %   MaximumDopplerShift of the channel, the number of Rx antennas NRxAnts,
         %   the FRC and the target SNR.
-        %   Cases from TS38.104 V15.19.0 Table 8.2.1.2-4.
+        %   Cases from TS38.104 V15.19.0 and V19.0.0 Table 8.2.1.2-4.
         TestConfigTable8_2_1_2_4 = CheckPUSCHConformance.createTestConfigTable8_2_1_2_4()
         %PUSCH test configurations - Type A, 20 MHz channel bandwidth, 30 kHz SCS.
         %   Defines, for each test, the DelayProfile, the DelaySpread and the
@@ -111,7 +111,7 @@ classdef CheckPUSCHConformance < matlab.unittest.TestCase
         %   Defines, for each test, the DelayProfile, the DelaySpread and the
         %   MaximumDopplerShift of the channel, the number of Rx antennas NRxAnts,
         %   the FRC and the target SNR.
-        %   Cases from TS38.104 V15.19.0 Table 8.2.1.2-7.
+        %   Cases from TS38.104 V15.19.0 and V19.0.0 Table 8.2.1.2-7.
         TestConfigTable8_2_1_2_7 = CheckPUSCHConformance.createTestConfigTable8_2_1_2_7()
         %PUSCH test configurations - Type A, transform precoding enabled.
         %   Defines, for each test, the DelayProfile, the DelaySpread and the
@@ -213,12 +213,14 @@ classdef CheckPUSCHConformance < matlab.unittest.TestCase
             else
                 TestConfigCustom.NRxAnts = 4;
             end
+
             if NumLayers == 1
                 strlayer = ' 1 layer';
             else
                 strlayer = sprintf(' %d layers', NumLayers);
             end
             TestConfigCustom.Name = [TestConfigCustom.Name strlayer];
+
             checkPUSCHconformance(obj, TestConfigCustom);
         end
     end % of methods (Test, TestTags = {'conformance'})
