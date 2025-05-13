@@ -20,6 +20,7 @@
 %   TestConfigTable8_2_1_2_7  - PUSCH test configurations - Type A, 100 MHz channel bandwidth, 30 kHz SCS.
 %   TestConfigTable8_2_2_2_x  - PUSCH test configurations - Type A, transform precoding enabled.
 %   TestConfigCustom          - PUSCH test configurations - Type A, custom cases.
+%   NumLayers                 - Number of transmission layers (1 to 4, only for custom tests).
 %
 %   CheckPUSCHConformance Methods (Test, TestTags = {'conformance'}), each running
 %      a the tests from the corresponding configuration table:
@@ -123,6 +124,8 @@ classdef CheckPUSCHConformance < matlab.unittest.TestCase
         %   MaximumDopplerShift of the channel, the number of Rx antennas NRxAnts,
         %   the FRC and the target SNR.
         TestConfigCustom = CheckPUSCHConformance.createTestConfigCustom()
+        %Number of transmission layers (only for custom tests).
+        NumLayers = {1, 2, 3, 4}
     end % of properties (TestParameter)
 
     methods (TestClassSetup)
@@ -200,10 +203,22 @@ classdef CheckPUSCHConformance < matlab.unittest.TestCase
             checkPUSCHconformance(obj, TestConfigTable8_2_2_2_x);
         end
 
-        function checkPUSCHconformanceCustom(obj, TestConfigCustom)
+        function checkPUSCHconformanceCustom(obj, TestConfigCustom, NumLayers)
         %Verifies that the target throughput is achieved for the given PUSCH configuration.
         %   Custom test cases.
 
+            TestConfigCustom.NTxAnts = NumLayers;
+            if NumLayers < 3
+                TestConfigCustom.NRxAnts = NumLayers;
+            else
+                TestConfigCustom.NRxAnts = 4;
+            end
+            if NumLayers == 1
+                strlayer = ' 1 layer';
+            else
+                strlayer = sprintf(' %d layers', NumLayers);
+            end
+            TestConfigCustom.Name = [TestConfigCustom.Name strlayer];
             checkPUSCHconformance(obj, TestConfigCustom);
         end
     end % of methods (Test, TestTags = {'conformance'})
@@ -249,8 +264,10 @@ classdef CheckPUSCHConformance < matlab.unittest.TestCase
             pp.SubcarrierSpacing = frc.SubcarrierSpacing;
             if contains(TestConfig.Name, 'Custom')
                 pp.NSizeGrid = 273;
+                pp.CarrierFrequencyOffset = 600;
             else
                 pp.NSizeGrid = frc.PRBSet(end) + 1;
+                pp.CarrierFrequencyOffset = 0;
             end
             pp.PRBSet = frc.PRBSet;
             pp.MCSTable = 'custom';
