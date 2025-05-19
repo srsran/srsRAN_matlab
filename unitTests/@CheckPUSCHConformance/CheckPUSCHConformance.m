@@ -267,9 +267,11 @@ classdef CheckPUSCHConformance < matlab.unittest.TestCase
             if contains(TestConfig.Name, 'Custom')
                 pp.NSizeGrid = 273;
                 pp.CarrierFrequencyOffset = 600;
+                pp.SRSCompensateCFO = true;
             else
                 pp.NSizeGrid = frc.PRBSet(end) + 1;
                 pp.CarrierFrequencyOffset = 0;
+                pp.SRSCompensateCFO = false;
             end
             pp.PRBSet = frc.PRBSet;
             pp.MCSTable = 'custom';
@@ -287,7 +289,6 @@ classdef CheckPUSCHConformance < matlab.unittest.TestCase
             pp.SRSEstimatorType = 'MEX';
             pp.SRSInterpolation = 'interpolate';
             pp.SRSSmoothing = 'filter';
-            pp.SRSCompensateCFO = false;
             pp.SRSEqualizerType = 'MMSE';
             pp.QuickSimulation = false;
 
