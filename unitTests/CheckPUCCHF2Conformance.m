@@ -253,7 +253,10 @@ classdef CheckPUCCHF2Conformance < matlab.unittest.TestCase
                 config.NRxAnts, config.NSizeGrid);
 
             fff = fopen(obj.OutputFile, 'a');
-            currTime = char(datetime('now', 'Format', 'yyyy-MM-dd''T''HH:mm:ss.SSS''Z'''));
+            currTime = getenv("CI_PIPELINE_CREATED_AT");
+            if isempty(currTime)
+                currTime = char(datetime('now', 'Format', 'yyyy-MM-dd''T''HH:mm:ss.SSS''Z'''));
+            end
             fprintf(fff, '%s,matlab/PUCCH F2 conformance,%s,%.3f,%s\n', metric, casename, prob, currTime);
 
             fclose(fff);

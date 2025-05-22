@@ -333,7 +333,10 @@ classdef CheckPUSCHConformance < matlab.unittest.TestCase
         %Writes the test entry in the csv file.
 
             fff = fopen(obj.OutputFile, 'a');
-            currTime = char(datetime('now', 'Format', 'yyyy-MM-dd''T''HH:mm:ss.SSS''Z'''));
+            currTime = getenv("CI_PIPELINE_CREATED_AT");
+            if isempty(currTime)
+                currTime = char(datetime('now', 'Format', 'yyyy-MM-dd''T''HH:mm:ss.SSS''Z'''));
+            end
             fprintf(fff, 'Throughput,matlab/PUSCH conformance,%s,%.3f,%s\n', casename, tp, currTime);
 
             fclose(fff);

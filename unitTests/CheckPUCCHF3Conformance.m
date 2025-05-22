@@ -163,7 +163,10 @@ classdef CheckPUCCHF3Conformance < matlab.unittest.TestCase
                 config.Test, config.NRxAnts, config.NSizeGrid, AdditionalDMRSStr);
 
             fff = fopen(obj.OutputFile, 'a');
-            currTime = char(datetime('now', 'Format', 'yyyy-MM-dd''T''HH:mm:ss.SSS''Z'''));
+            currTime = getenv("CI_PIPELINE_CREATED_AT");
+            if isempty(currTime)
+                currTime = char(datetime('now', 'Format', 'yyyy-MM-dd''T''HH:mm:ss.SSS''Z'''));
+            end
             fprintf(fff, '%s,matlab/PUCCH F3 conformance,%s,%.3f,%s\n', metric, casename, prob, currTime);
 
             fclose(fff);
