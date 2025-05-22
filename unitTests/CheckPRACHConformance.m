@@ -197,7 +197,7 @@ classdef CheckPRACHConformance < matlab.unittest.TestCase
             if isempty(currTime)
                 currTime = char(datetime('now', 'Format', 'yyyy-MM-dd''T''HH:mm:ss.SSS''Z'''));
             end
-            fprintf(fff, '%s,matlab/PRACH conformance,%s / Format %s,%.3f,%s\n', metric, casename, prachFormat, prob, currTime);
+            fprintf(fff, '%s,matlab/PRACH conformance,%s / Format %s,%.6f,%s\n', metric, casename, prachFormat, prob, currTime);
 
             fclose(fff);
         end % of function writecsv(obj)
