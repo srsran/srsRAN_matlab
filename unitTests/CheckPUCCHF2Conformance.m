@@ -149,7 +149,7 @@ classdef CheckPUCCHF2Conformance < matlab.unittest.TestCase
         function checkPUCCHF2long(obj, TestConfig)
         %Estimates the UCI block error rate for the given PUCCH Format 2 configuration.
         %   The UCI BLER is defined as the probability of incorrectly decoding the UCI
-        %   information, if present. The payload is of 22 UCI bits, with no CSI Part 2.
+        %   information, assuming it is sent. The payload is of 22 UCI bits, with no CSI Part 2.
         %   For more information, see TS38.104 Section 8.3.4.2 and TS38.141 Section 8.3.3.2.
 
             import matlab.unittest.fixtures.CurrentFolderFixture

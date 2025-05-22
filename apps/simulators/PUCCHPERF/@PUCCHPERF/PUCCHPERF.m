@@ -58,8 +58,8 @@
 %   RNTI                         - Radio network temporary identifier (0...65535).
 %   PUCCHFormat                  - PUCCH format (0, 1, 2, 3).
 %   FrequencyHopping             - Frequency hopping ('intraSlot', 'interSlot', 'either')
-%   Modulation                   - Modulation scheme (inactive if "PUCCHFormat ~= 3 && PUCCHFormat ~= 4").
-%   AdditionalDMRS               - Additional DM-RS flag (inactive if "PUCCHFormat ~= 3 && PUCCHFormat ~= 4").
+%   Modulation                   - Modulation scheme (only for PUCCH Formats 3 and 4").
+%   AdditionalDMRS               - Additional DM-RS flag (only for PUCCH Formats 3 and 4").
 %   NumACKBits                   - Number of HARQ-ACK bits.
 %   NumSRBits                    - Number of SR bits.
 %   NumCSI1Bits                  - Number of CSI Part 1 bits.
@@ -314,9 +314,9 @@ classdef PUCCHPERF < matlab.System
                 case 'MaximumDopplerShift'
                     flag = strcmp(obj.DelayProfile, 'AWGN');
                 case 'Modulation'
-                    flag = (obj.PUCCHFormat ~= 3 && obj.PUCCHFormat ~= 4);
+                    flag = (obj.PUCCHFormat < 3);
                 case 'AdditionalDMRS'
-                    flag = (obj.PUCCHFormat ~= 3 && obj.PUCCHFormat ~= 4);
+                    flag = (obj.PUCCHFormat < 3);
                 case 'TestType'
                     flag = (obj.PUCCHFormat >= 3);
                 otherwise
