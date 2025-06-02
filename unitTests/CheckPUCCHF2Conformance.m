@@ -149,7 +149,7 @@ classdef CheckPUCCHF2Conformance < matlab.unittest.TestCase
         function checkPUCCHF2long(obj, TestConfig)
         %Estimates the UCI block error rate for the given PUCCH Format 2 configuration.
         %   The UCI BLER is defined as the probability of incorrectly decoding the UCI
-        %   information, if present. The payload is of 22 UCI bits, with no CSI Part 2.
+        %   information, assuming it is sent. The payload is of 22 UCI bits, with no CSI Part 2.
         %   For more information, see TS38.104 Section 8.3.4.2 and TS38.141 Section 8.3.3.2.
 
             import matlab.unittest.fixtures.CurrentFolderFixture
@@ -253,8 +253,11 @@ classdef CheckPUCCHF2Conformance < matlab.unittest.TestCase
                 config.NRxAnts, config.NSizeGrid);
 
             fff = fopen(obj.OutputFile, 'a');
-            currTime = char(datetime('now', 'Format', 'yyyy-MM-dd''T''HH:mm:ss.SSS''Z'''));
-            fprintf(fff, '%s,matlab/PUCCH F2 conformance,%s,%.3f,%s\n', metric, casename, prob, currTime);
+            currTime = getenv("CI_PIPELINE_CREATED_AT");
+            if isempty(currTime)
+                currTime = char(datetime('now', 'Format', 'yyyy-MM-dd''T''HH:mm:ss.SSS''Z'''));
+            end
+            fprintf(fff, '%s,matlab/PUCCH F2 conformance,%s,%.6f,%s\n', metric, casename, prob, currTime);
 
             fclose(fff);
         end % of function writecsv(obj)

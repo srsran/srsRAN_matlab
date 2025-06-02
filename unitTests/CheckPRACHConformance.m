@@ -193,8 +193,11 @@ classdef CheckPRACHConformance < matlab.unittest.TestCase
         %Writes the test entry in the csv file.
 
             fff = fopen(obj.OutputFile, 'a');
-            currTime = char(datetime('now', 'Format', 'yyyy-MM-dd''T''HH:mm:ss.SSS''Z'''));
-            fprintf(fff, '%s,matlab/PRACH conformance,%s / Format %s,%.3f,%s\n', metric, casename, prachFormat, prob, currTime);
+            currTime = getenv("CI_PIPELINE_CREATED_AT");
+            if isempty(currTime)
+                currTime = char(datetime('now', 'Format', 'yyyy-MM-dd''T''HH:mm:ss.SSS''Z'''));
+            end
+            fprintf(fff, '%s,matlab/PRACH conformance,%s / Format %s,%.6f,%s\n', metric, casename, prachFormat, prob, currTime);
 
             fclose(fff);
         end % of function writecsv(obj)

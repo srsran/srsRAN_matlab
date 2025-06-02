@@ -278,7 +278,7 @@ classdef FormatDetailsF2 < handle
             if isDetectTest
                 message = ['UCI BLER of PUCCH Format ', num2str(obj.PUCCHFormat)];
             else
-                message = ['UCI false detection rate of PUCCH Format ', num2str(obj.FormatDetailsF2)];
+                message = ['UCI false detection rate of PUCCH Format ', num2str(obj.PUCCHFormat)];
             end
 
             fprintf([message ' for ' num2str(usedFrames) ...

@@ -58,7 +58,8 @@
 %   RNTI                         - Radio network temporary identifier (0...65535).
 %   PUCCHFormat                  - PUCCH format (0, 1, 2, 3).
 %   FrequencyHopping             - Frequency hopping ('intraSlot', 'interSlot', 'either')
-%   Modulation                   - Modulation scheme (inactive if "PUCCHFormat ~= 3").
+%   Modulation                   - Modulation scheme (only for PUCCH Formats 3 and 4").
+%   AdditionalDMRS               - Additional DM-RS flag (only for PUCCH Formats 3 and 4").
 %   NumACKBits                   - Number of HARQ-ACK bits.
 %   NumSRBits                    - Number of SR bits.
 %   NumCSI1Bits                  - Number of CSI Part 1 bits.
@@ -123,11 +124,13 @@ classdef PUCCHPERF < matlab.System
         SymbolAllocation = [13, 1]
         %Radio network temporary identifier (0...65535).
         RNTI (1, 1) double {mustBeReal, mustBeInteger, mustBeInRange(RNTI, 0, 65535)} = 1
-        %Modulation scheme (only when "PUCCHFormat == 3").
-        %   Choose between 'BPSK', 'pi/2-BPSK', 'QPSK'.
-        Modulation (1, :) char {mustBeMember(Modulation, {'BPSK', 'pi/2-BPSK', 'QPSK'})} = 'QPSK'
+        %Modulation scheme (PUCCH F3/F4 only).
+        %   Choose between 'pi/2-BPSK', 'QPSK'.
+        Modulation (1, :) char {mustBeMember(Modulation, {'pi/2-BPSK', 'QPSK'})} = 'QPSK'
+        %Additional DM-RS flag (PUCCH F3/F4 only).
+        AdditionalDMRS (1, 1) logical = false
         %PUCCH Format (0, 1, 2, 3).
-        PUCCHFormat double {mustBeInteger, mustBeInRange(PUCCHFormat, 0, 3)} = 2
+        PUCCHFormat double {mustBeInteger, mustBeInRange(PUCCHFormat, 0, 4)} = 2
         %Frequency hopping ('intraSlot', 'interSlot', 'neither')
         FrequencyHopping  {mustBeMember(FrequencyHopping, {'intraSlot', 'interSlot', 'neither'})} = 'neither'
         %Number of HARQ-ACK bits.
@@ -216,8 +219,8 @@ classdef PUCCHPERF < matlab.System
         end
 
         function checkImplementationandFormat(obj)
-            if (~strcmp(obj.ImplementationType, 'matlab') && (obj.PUCCHFormat > 2))
-                error('PUCCH formats other than Format0, Format1 and Format2 only work with ImplementationType=''matlab''.');
+            if (~strcmp(obj.ImplementationType, 'matlab') && (obj.PUCCHFormat > 3))
+                error('PUCCH formats other than Format0, Format1, Format2 and Format3 only work with ImplementationType=''matlab''.');
             end
         end
 
@@ -311,7 +314,9 @@ classdef PUCCHPERF < matlab.System
                 case 'MaximumDopplerShift'
                     flag = strcmp(obj.DelayProfile, 'AWGN');
                 case 'Modulation'
-                    flag = (obj.PUCCHFormat ~= 3);
+                    flag = (obj.PUCCHFormat < 3);
+                case 'AdditionalDMRS'
+                    flag = (obj.PUCCHFormat < 3);
                 case 'TestType'
                     flag = (obj.PUCCHFormat >= 3);
                 otherwise
@@ -327,8 +332,8 @@ classdef PUCCHPERF < matlab.System
                 ... Resource grid.
                 'SubcarrierSpacing', 'NSizeGrid', ...
                 ... PUCCH.
-                'PUCCHFormat', 'PRBSet', 'SymbolAllocation', 'Modulation', 'FrequencyHopping', ...
-                'NumACKBits', 'NumSRBits', 'NumCSI1Bits', 'NumCSI2Bits', ...
+                'PUCCHFormat', 'PRBSet', 'SymbolAllocation', 'Modulation', 'AdditionalDMRS', ...
+                'FrequencyHopping', 'NumACKBits', 'NumSRBits', 'NumCSI1Bits', 'NumCSI2Bits', ...
                 ... Antennas and layers.
                 'NRxAnts', 'NTxAnts', ...
                 ... Channel model.
