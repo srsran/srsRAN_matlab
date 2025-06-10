@@ -11,6 +11,7 @@
 %   testPUCCHPERFF0matlab - Verifies the PUCCHPERF simulator class for PUCCH F0 using MATLAB objects only.
 %   testPUCCHPERFF1matlab - Verifies the PUCCHPERF simulator class for PUCCH F1 using MATLAB objects only.
 %   testPUCCHPERFF2matlab - Verifies the PUCCHPERF simulator class for PUCCH F2 using MATLAB objects only.
+%   testPUCCHPERFF3matlab - Verifies the PUCCHPERF simulator class for PUCCH F3 using MATLAB objects only.
 %
 %   CheckSimulators Methods (Test, TestTags = {'mex code'}):
 %
@@ -18,6 +19,7 @@
 %   testPUCCHPERFF0mex - Verifies the PUCCHPERF simulator class PUCCH F0 also using MEX implementations.
 %   testPUCCHPERFF1mex - Verifies the PUCCHPERF simulator class PUCCH F1 also using MEX implementations.
 %   testPUCCHPERFF2mex - Verifies the PUCCHPERF simulator class PUCCH F2 also using MEX implementations.
+%   testPUCCHPERFF3mex - Verifies the PUCCHPERF simulator class PUCCH F3 also using MEX implementations.
 %
 %   Example
 %      runtests('CheckSimulators')
@@ -257,6 +259,41 @@ classdef CheckSimulators < matlab.unittest.TestCase
                 obj.assertEqual(pp.Statistics.FalseDetectionRateMATLAB, 0.005 * ones(9, 1), "Wrong false alarm curve.", RelTol=0.02);
             end
         end % of function testPUCCHPERFF2matlab(obj, PUCCHTestType)
+
+        function testPUCCHPERFF3matlab(obj)
+            import matlab.unittest.fixtures.CurrentFolderFixture
+
+            obj.applyFixture(CurrentFolderFixture('../apps/simulators/PUCCHPERF'));
+
+            try
+                pp = PUCCHPERF;
+            catch ME
+                obj.assertFail(['Could not create a PUCCHPERF object because of exception: ', ...
+                ME.message]);
+            end
+
+            obj.assertClass(pp, 'PUCCHPERF', 'The created object is not a PUCCHPERF object.');
+
+            pp.PUCCHFormat = 3;
+            pp.PRBSet = 0;
+            pp.SymbolAllocation = [0 14];
+            pp.Modulation = 'QPSK';
+            pp.NumACKBits = 16;
+            pp.NRxAnts = 2;
+            pp.FrequencyHopping = 'intraSlot';
+
+            snrs = -20:2:-10;
+            try
+                pp(snrs, 100)
+            catch ME
+                obj.assertFail(['PUCCHPERF could not run because of exception: ', ...
+                    ME.message]);
+            end
+
+            obj.assertEqual(pp.Counters.SNRrange, snrs', 'Wrong SNR range.');
+            obj.assertEqual(pp.Statistics.BlockErrorRateMATLAB, [1; 0.9804; 0.8929; 0.6536; 0.2320; 0.0140], ...
+                "Wrong BLER curve.", RelTol=0.02);
+        end % of function testPUCCHPERFF3matlab(obj)
     end % of methods (Test, TestTags = {'matlab code'})
 
     methods (Test, TestTags = {'mex code'})
@@ -435,5 +472,46 @@ classdef CheckSimulators < matlab.unittest.TestCase
                 obj.assertLessThanOrEqual(pp.Statistics.FalseDetectionRateSRS, 0.007 * ones(9, 1), "Wrong false alarm curve.");
             end
         end % of function testPUCCHPERFF2mex(obj, PUCCHTestType)
+
+        function testPUCCHPERFF3mex(obj)
+            import matlab.unittest.fixtures.CurrentFolderFixture
+            import matlab.unittest.constraints.IsFile
+
+            obj.applyFixture(CurrentFolderFixture('../apps/simulators/PUCCHPERF'));
+
+            try
+                pp = PUCCHPERF;
+            catch ME
+                obj.assertFail(['Could not create a PUCCHPERF object because of exception: ', ...
+                ME.message]);
+            end
+
+            obj.assertClass(pp, 'PUCCHPERF', 'The created object is not a PUCCHPERF object.');
+
+            obj.assertThat('../../../+srsMEX/+phy/@srsPUCCHProcessor/pucch_processor_mex.mexa64', IsFile, ...
+                'Could not find PUCCH processor mex executable.');
+
+            pp.PUCCHFormat = 3;
+            pp.PRBSet = 0;
+            pp.SymbolAllocation = [0 14];
+            pp.Modulation = 'QPSK';
+            pp.NumACKBits = 16;
+            pp.NRxAnts = 2;
+            pp.FrequencyHopping = 'intraSlot';
+            pp.ImplementationType = 'srs';
+            pp.PerfectChannelEstimator = false;
+
+            snrs = -14:2:-6;
+            try
+                pp(snrs, 100)
+            catch ME
+                obj.assertFail(['PUCCHPERF could not run because of exception: ', ...
+                    ME.message]);
+            end
+
+            obj.assertEqual(pp.Counters.SNRrange, snrs', 'Wrong SNR range.');
+            obj.assertEqual(pp.Statistics.BlockErrorRateSRS, [1; 0.9434; 0.6410; 0.2247; 0.0170], ...
+                "Wrong BLER curve.", RelTol=0.02);
+        end % of function testPUCCHPERFF3mex(obj)
     end % of methods (Test, TestTags = {'mex code'})
 end % of classdef CheckSimulators < matlab.unittest.TestCase
