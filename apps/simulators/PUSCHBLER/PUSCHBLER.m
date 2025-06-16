@@ -70,6 +70,7 @@
 %                                  (1(single symbol), 2(double symbol)).
 %   DMRSAdditionalPosition       - Additional DM-RS symbol positions (0...3).
 %   DMRSConfigurationType        - DM-RS configuration type (1, 2).
+%   FadingTimeEvolution          - Fading time evolution ('Slot independent', 'Jakes model').
 %   DelayProfile                 - Channel delay profile ('AWGN'(no delay, no Doppler), 'single-tap'
 %                                  (only one tap, no Doppler), 'TDL-A', 'TDLA30', 'TDL-B', 'TDLB100',
 %                                  'TDL-C', 'TDLC300').
@@ -183,6 +184,13 @@ classdef PUSCHBLER < matlab.System
         DMRSAdditionalPosition (1, 1) double {mustBeReal, mustBeMember(DMRSAdditionalPosition, [0, 1, 2, 3])} = 1
         %DM-RS configuration type (1, 2).
         DMRSConfigurationType (1, 1) double {mustBeReal, mustBeMember(DMRSConfigurationType, [1, 2])} = 1
+        %Fading time evolution ('Slot independent', 'Jakes model').
+        %   Set to 'Jakes model' for simulating the channel fading as a single process that
+        %   evolves according to the Jakes' doppler spectrum model.
+        %   Set to 'Slot independent' for generating a different channel realization
+        %   in each slot. Inside the slot, the evolution still follows Jakes' model.
+        FadingTimeEvolution (1, :) char {mustBeMember(FadingTimeEvolution, {'Slot independent', ...
+            'Jakes model'})} = 'Slot independent'
         %Channel delay profile ('AWGN'(no delay), 'TDL-A', 'TDLA30' 'TDL-B', 'TDLB100',
         %   'TDL-C', 'TDLC300').
         DelayProfile (1, :) char {mustBeMember(DelayProfile, {'AWGN', 'single-tap', 'TDL-A', 'TDLA30', ...
@@ -533,6 +541,12 @@ classdef PUSCHBLER < matlab.System
             channel.NumTransmitAntennas = obj.NTxAnts;
             channel.NumReceiveAntennas = obj.NRxAnts;
 
+            if strcmp(obj.FadingTimeEvolution, 'Slot independent')
+                channel.RandomStream = 'Global stream';
+            else
+                channel.RandomStream = "mt19937ar with seed";
+            end
+
             % Assign simulation channel parameters and waveform sample rate to the object.
             channel.SampleRate = waveformInfo.SampleRate;
             channel.DelaySpread = obj.DelaySpread;
@@ -726,9 +740,13 @@ classdef PUSCHBLER < matlab.System
                 % Initialize the state of all HARQ processes.
                 harqEntity = HARQEntity(harqSequence, rvSeq);
 
-                % Reset the channel so that each SNR point will experience the same
-                % channel realization.
-                reset(obj.Channel);
+                % If FadingTimeEvolution is set to 'Jakes model', we reset the channel before
+                % simulating the slots. Since the channel uses its internal random generator,
+                % resetting only means starting again from time zero and all SNR points will
+                % experience the same channel realization.
+                if strcmp(obj.FadingTimeEvolution, 'Jakes model')
+                    reset(obj.Channel);
+                end
 
                 % Total number of slots in the simulation period.
                 NSlots = nFrames * carrier.SlotsPerFrame;
@@ -803,6 +821,16 @@ classdef PUSCHBLER < matlab.System
 
                     % OFDM modulation.
                     txWaveform = nrOFDMModulate(carrier, puschGrid);
+
+                    % If FadingTimeEvolution is set to 'Slot independent', we reset the channel
+                    % before transmission in each slot. Since the channel uses the global
+                    % random generator, this implies each slot is a different fading process.
+                    % However, by resetting the global random generator at the beginning of the
+                    % SNR for loop, we still ensure that all SNR points will experience the
+                    % same channel ralizations.
+                    if strcmp(obj.FadingTimeEvolution, 'Slot independent')
+                        reset(obj.Channel);
+                    end
 
                     % Pass data through channel model. Append zeros at the end of the
                     % transmitted waveform to flush channel content. These zeros take
@@ -1138,7 +1166,8 @@ classdef PUSCHBLER < matlab.System
                 ... Antennas and layers.
                 'NRxAnts', 'NTxAnts', 'NumLayers', ...
                 ... Channel model.
-                'DelayProfile', 'DelaySpread', 'MaximumDopplerShift', 'CarrierFrequencyOffset', 'PerfectChannelEstimator', ...
+                'FadingTimeEvolution', 'DelayProfile', 'DelaySpread', 'MaximumDopplerShift', ...
+                'CarrierFrequencyOffset', 'PerfectChannelEstimator', ...
                 ... HARQ.
                 'EnableHARQ', ...
                 ... Compression.
