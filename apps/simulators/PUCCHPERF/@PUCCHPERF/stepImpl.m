@@ -72,7 +72,6 @@ function stepImpl(obj, SNRIn, nFrames)
         % Reset the random number generator so that each SNR point will
         % experience the same noise realization.
         rng('default')
-        reset(obj.Channel)
 
         % Initialize variables for this SNR point (required when using
         % Parallel Computing Toolbox).
@@ -95,7 +94,6 @@ function stepImpl(obj, SNRIn, nFrames)
         offset = 0;
 
         for nslot = 0:NSlots-1
-
             % Update carrier slot number to account for new slot transmission.
             carrier.NSlot = nslot;
 
@@ -139,6 +137,11 @@ function stepImpl(obj, SNRIn, nFrames)
 
             % Perform OFDM modulation.
             txWaveform = nrOFDMModulate(carrier, pucchGrid);
+
+            % Reset the channel: since the property RandomStream is set to "Global stream",
+            % we are only resetting the filter and generate an "independent" channel
+            % realization at each slot.
+            reset(obj.Channel)
 
             % Pass data through the channel model. Append zeros at the end of
             % the transmitted waveform to flush the channel content. These

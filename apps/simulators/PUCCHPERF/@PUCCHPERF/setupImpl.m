@@ -87,6 +87,10 @@ function setupImpl(obj)
     channel.DelaySpread = obj.DelaySpread;
     channel.TransmissionDirection = 'Uplink';
 
+    % The PUCCH receiver is memoryless - a new fading realization for each slot
+    % is more representative for performance analysis.
+    channel.RandomStream = 'Global stream';
+
     if strcmp(obj.DelayProfile, 'AWGN')
         channel.DelayProfile = 'custom';
         channel.MaximumDopplerShift = 0;
