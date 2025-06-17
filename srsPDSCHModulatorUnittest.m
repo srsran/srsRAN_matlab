@@ -74,6 +74,10 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
 
         %Number of transmission layers (1, 2, 4).
         NumLayers = {1, 2, 4}
+
+        %Virtual to physical resource block interleaved mapping bundle
+        %size. Zero means no interleaving.
+        VRBBundleSize = {0, 2, 4}
     end
 
     methods (Access = protected)
@@ -91,7 +95,7 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
     end % of methods (Access = protected)
 
     methods (Test, TestTags = {'testvector'})
-        function testvectorGenerationCases(testCase, SymbolAllocation, Modulation, NumLayers)
+        function testvectorGenerationCases(testCase, SymbolAllocation, Modulation, NumLayers, VRBBundleSize)
         %testvectorGenerationCases Generates a test vector for the given SymbolAllocation,
         %   Modulation scheme and number of layers. Other parameters (e.g.,
         %   the RNTI) are generated randomly.
@@ -101,7 +105,6 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
             import srsLib.phy.upper.channel_processors.srsPDSCHmodulator
             import srsLib.phy.upper.signal_processors.srsPDSCHdmrs
             import srsTest.helpers.array2str
-            import srsTest.helpers.rbAllocationIndexes2String
             import srsTest.helpers.symbolAllocationMask2string
             import srsTest.helpers.writeResourceGridEntryFile
             import srsTest.helpers.writeUint8File
@@ -110,22 +113,35 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
             testID = testCase.generateTestID;
 
             % Generate default carrier configuration.
-            carrier = nrCarrierConfig;
+            carrier = nrCarrierConfig();
+
+            % Set randomized values.
+            NSizeBWP = randi([carrier.NSizeGrid / 2, carrier.NSizeGrid]);
+            NStartBWP = randi([0, carrier.NSizeGrid - NSizeBWP]);
+            NID = randi([1, 1023]);
+            RNTI = randi([1, 65535]);
+            startPRB = randi([0, NSizeBWP - 2]);
+            endPRB = randi([startPRB + 1, NSizeBWP - 1]);
+
+            VRBToPRBInterleaving = (VRBBundleSize ~= 0);
+            VRBBundleSize = max([2, VRBBundleSize]);
 
             % Configure the PDSCH according to the test parameters.
             pdsch = nrPDSCHConfig( ...
-                SymbolAllocation=SymbolAllocation, ...
+                NSizeBWP=NSizeBWP, ...
+                NStartBWP=NStartBWP, ...
                 Modulation=Modulation, ...
-                NumLayers=NumLayers ...
+                NumLayers=NumLayers, ...
+                SymbolAllocation=SymbolAllocation, ...
+                PRBSet=startPRB:endPRB, ...
+                VRBToPRBInterleaving=VRBToPRBInterleaving, ...
+                VRBBundleSize=VRBBundleSize, ...
+                NID=NID, ...
+                RNTI=RNTI ...
                 );
-
-            % Set randomized values.
-            pdsch.NID = randi([1, 1023]);
-            pdsch.RNTI = randi([1, 65535]);
 
             modOrder1 = srsGetBitsSymbol(pdsch.Modulation);
             modString1 = srsModulationFromMatlab(pdsch.Modulation, 'full');
-
 
             % Calculate number of encoded bits.
             nBits = length(nrPDSCHIndices(carrier, pdsch, "IndexStyle", "subscript")) * modOrder1;
@@ -150,21 +166,25 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
             % Generate the test case entry.
             reservedString = '{}';
 
-            RBAllocationString = rbAllocationIndexes2String(pdsch.PRBSet);
-
+            if VRBToPRBInterleaving
+                RBAllocationString = sprintf('rb_allocation::make_type1(%d, %d, create_interleaved_other(%d, %d, vrb_to_prb::mapping_type::interleaved_n%d))', startPRB, length(pdsch.PRBSet), NStartBWP, NSizeBWP, VRBBundleSize);
+            else
+                RBAllocationString = sprintf('rb_allocation::make_type1(%d, %d, vrb_to_prb::create_non_interleaved_other())', startPRB, length(pdsch.PRBSet));
+            end
             DMRSTypeString = sprintf('dmrs_type::TYPE%d', pdsch.DMRS.DMRSConfigurationType);
 
             precodingString = ['precoding_configuration::make_wideband(make_identity(' num2str(NumLayers) '))'];
 
+            bwpConfig = {NStartBWP, NStartBWP + NSizeBWP};
+            timeAlloc= {pdsch.SymbolAllocation(1), sum(pdsch.SymbolAllocation)};
+
             configCell = {...
                 pdsch.RNTI,...                          % rnti
-                carrier.NSizeGrid, ...                  % bwp_size_rb
-                carrier.NStartGrid, ...                 % bwp_start_rb
+                bwpConfig, ...                          % bwp
                 modString1, ...                         % modulation1
                 modString1, ...                         % modulation2
                 RBAllocationString, ...                 % freq_allocation
-                pdsch.SymbolAllocation(1), ...          % start_symbol_index
-                pdsch.SymbolAllocation(2), ...          % nof_symbols
+                timeAlloc, ...                          % time_alloc
                 dmrsSymbolMask, ...                     % dmrs_symb_pos
                 DMRSTypeString, ...                     % dmrs_config_type
                 pdsch.DMRS.NumCDMGroupsWithoutData, ... % nof_cmd_groups_without_data 
@@ -174,8 +194,8 @@ classdef srsPDSCHModulatorUnittest < srsTest.srsBlockUnittest
                 precodingString...                      % precoding
                 };
 
-            testCaseString = testCase.testCaseToString(testID, configCell, true, ...
-                '_test_input', '_test_output');
+            testCaseString = testCase.testCaseToString(testID, ...
+                configCell, true, '_test_input', '_test_output');
 
             % Add the test to the file header.
             testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);
