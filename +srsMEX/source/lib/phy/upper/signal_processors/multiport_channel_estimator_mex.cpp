@@ -245,8 +245,9 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
     }
   }
 
+  unsigned    nof_infos = (nof_rx_ports == 1) ? 1 : nof_rx_ports + 1;
   StructArray info_out =
-      factory.createStructArray({nof_rx_ports + 1, 1}, {"NoiseVar", "RSRP", "EPRE", "SINR", "TimeAlignment", "CFO"});
+      factory.createStructArray({nof_infos, 1}, {"NoiseVar", "RSRP", "EPRE", "SINR", "TimeAlignment", "CFO"});
   float  total_noise_var      = 0;
   float  total_rsrp           = 0;
   float  total_epre           = 0;
@@ -273,17 +274,20 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
   }
 
   // In the last "info_out" we store the global metrics.
-  total_noise_var /= static_cast<float>(nof_rx_ports);
-  info_out[nof_rx_ports]["NoiseVar"] = factory.createScalar(static_cast<double>(total_noise_var));
-  info_out[nof_rx_ports]["RSRP"]     = factory.createScalar(static_cast<double>(total_rsrp / nof_rx_ports));
-  info_out[nof_rx_ports]["EPRE"]     = factory.createScalar(static_cast<double>(total_epre / nof_rx_ports));
-  // A global SINR doesn't make much sense, we need to know how the ports are combined.
-  info_out[nof_rx_ports]["SINR"]          = factory.createScalar(std::numeric_limits<double>::quiet_NaN());
-  info_out[nof_rx_ports]["TimeAlignment"] = factory.createScalar(total_time_alignment / nof_rx_ports);
-  if (!std::isnan(total_cfo)) {
-    info_out[nof_rx_ports]["CFO"] = factory.createScalar(total_cfo / nof_rx_ports);
-  } else {
-    info_out[nof_rx_ports]["CFO"] = factory.createEmptyArray();
+  if (nof_rx_ports > 1) {
+    total_noise_var /= static_cast<float>(nof_rx_ports);
+
+    info_out[nof_rx_ports]["NoiseVar"] = factory.createScalar(static_cast<double>(total_noise_var));
+    info_out[nof_rx_ports]["RSRP"]     = factory.createScalar(static_cast<double>(total_rsrp / nof_rx_ports));
+    info_out[nof_rx_ports]["EPRE"]     = factory.createScalar(static_cast<double>(total_epre / nof_rx_ports));
+    // A global SINR doesn't make much sense, we need to know how the ports are combined.
+    info_out[nof_rx_ports]["SINR"]          = factory.createScalar(std::numeric_limits<double>::quiet_NaN());
+    info_out[nof_rx_ports]["TimeAlignment"] = factory.createScalar(total_time_alignment / nof_rx_ports);
+    if (!std::isnan(total_cfo)) {
+      info_out[nof_rx_ports]["CFO"] = factory.createScalar(total_cfo / nof_rx_ports);
+    } else {
+      info_out[nof_rx_ports]["CFO"] = factory.createEmptyArray();
+    }
   }
 
   outputs[0] = ch_est_out;

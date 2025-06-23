@@ -962,7 +962,7 @@ classdef PUSCHBLER < matlab.System
                                 'BetaScaling', betaDMRS);
 
                             % Update long-term RSRP and noise power estimation.
-                            rsrpLT = rsrpLT + extra.RSRP;
+                            rsrpLT = rsrpLT + extra(end).RSRP;
                             noiseEstLT = noiseEstLT + noiseEst;
                         end
 

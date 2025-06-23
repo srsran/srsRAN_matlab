@@ -204,19 +204,8 @@ classdef srsMultiPortChannelEstimator < matlab.System
 
             % Format outputs.
             channelEst = double(squeeze(channelEstS));
-            if (isscalar(config.PortIndices))
-                % If there was a single port, use its info.
-                infoOut = info(1);
-            else
-                % If there were multiple ports, use the global info.
-                infoOut = info(end);
-            end
-            noiseEst = infoOut.NoiseVar;
-            extra.RSRP = infoOut.RSRP;
-            extra.EPRE = infoOut.EPRE;
-            extra.SINR = infoOut.SINR;
-            extra.TimeAlignment = infoOut.TimeAlignment;
-            extra.CFO = infoOut.CFO;
+            noiseEst = info(end).NoiseVar;
+            extra = rmfield(info, 'NoiseVar');
 
         end % of function stepMEX(obj, rxGrid, refInd, refSym, varargin)
 
