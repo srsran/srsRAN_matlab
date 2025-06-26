@@ -23,7 +23,7 @@ matlab_add_mex(
 
 target_link_libraries(prach_detector_mex
         srsran::srsran_channel_processors
-        srsran::srsran_generic_funcs)
+        srsran::srsran_dft)
 
 set_target_properties(prach_detector_mex
     PROPERTIES
@@ -54,7 +54,7 @@ target_link_libraries(pusch_demodulator_mex
     srsran::srsran_channel_processors
     srsran::srsran_channel_equalizer
     srsran::srsran_channel_precoder
-    srsran::srsran_generic_funcs
+    srsran::srsran_dft
     srsran::srsran_transform_precoding
 )
 
