@@ -26,7 +26,11 @@ target_link_libraries(multiport_channel_estimator_mex
     srsran::srsran_signal_processors
 )
 
+# Tell the installed MEXs where to find libresource_grid.so.
 set_target_properties(multiport_channel_estimator_mex
-    PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/../+phy/@srsMultiPortChannelEstimator"
+   PROPERTIES INSTALL_RPATH "${CMAKE_BINARY_DIR}/lib/support"
+)
+
+install(TARGETS multiport_channel_estimator_mex
+    DESTINATION "+phy/@srsMultiPortChannelEstimator"
 )

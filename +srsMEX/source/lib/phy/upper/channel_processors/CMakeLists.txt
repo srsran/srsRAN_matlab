@@ -25,9 +25,8 @@ target_link_libraries(prach_detector_mex
         srsran::srsran_channel_processors
         srsran::srsran_dft)
 
-set_target_properties(prach_detector_mex
-    PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/../+phy/@srsPRACHDetector"
+install(TARGETS prach_detector_mex
+    DESTINATION "+phy/@srsPRACHDetector"
 )
 
 matlab_add_mex(
@@ -38,9 +37,8 @@ matlab_add_mex(
 
 target_link_libraries(pusch_decoder_mex srsran::srsran_channel_processors)
 
-set_target_properties(pusch_decoder_mex
-    PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/../+phy/@srsPUSCHDecoder"
+install(TARGETS pusch_decoder_mex
+    DESTINATION "+phy/@srsPUSCHDecoder"
 )
 
 matlab_add_mex(
@@ -58,9 +56,8 @@ target_link_libraries(pusch_demodulator_mex
     srsran::srsran_transform_precoding
 )
 
-set_target_properties(pusch_demodulator_mex
-    PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/../+phy/@srsPUSCHDemodulator"
+install(TARGETS pusch_demodulator_mex
+    DESTINATION "+phy/@srsPUSCHDemodulator"
 )
 
 matlab_add_mex(
@@ -73,9 +70,8 @@ target_link_libraries(srsPUSCHCapabilitiesMEX
     srsran::srsran_pusch_processor
 )
 
-set_target_properties(srsPUSCHCapabilitiesMEX
-    PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/../+phy"
+install(TARGETS srsPUSCHCapabilitiesMEX
+    DESTINATION "+phy"
 )
 
 matlab_add_mex(
@@ -92,7 +88,11 @@ target_link_libraries(pucch_processor_mex
     srsran::srsran_transform_precoding
 )
 
-set_target_properties(pucch_processor_mex
-    PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/../+phy/@srsPUCCHProcessor"
+install(TARGETS pucch_processor_mex
+    DESTINATION "+phy/@srsPUCCHProcessor"
+)
+
+# Tell the installed MEXs where to find libresource_grid.so.
+set_target_properties(pucch_processor_mex pusch_demodulator_mex
+   PROPERTIES INSTALL_RPATH "${CMAKE_BINARY_DIR}/lib/support"
 )
