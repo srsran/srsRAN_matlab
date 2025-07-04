@@ -88,24 +88,32 @@ The directory `+srsMEX` contains MEX versions of a number of classes and functio
 The following steps are needed to compile MEX binaries.
 1. **Export the srsRAN libraries:** clone a local copy of the [srsRAN Project](https://github.com/srsran/srsRAN_Project) (if not done already) and generate the CMake project with the `-DENABLE_EXPORT=True` option. This creates the file `srsran.cmake` in your srsRAN binary folder (that is, the folder at the top level of CMake build tree).
 2. **Build the srsRAN Project:** Follow the instructions in the srsRAN Project repository. You can use the target `srsran_exported_libs` to compile only the libraries needed by *srsRAN-matlab* and reduce compilation time.
-3. **Generate the CMake project:** In your local copy of *srsRAN-matlab*, do the following:
+3. **Generate the CMake project:** In your local copy of *srsRAN-matlab*, do the following to generate a build system in the directory `builddir`:
     ```bash
     cd +srsMEX/source
-    mkdir build
-    cd build
-    cmake ..
+    cmake -B builddir
     ```
     If the path to your `srsran.cmake` file matches the patterns `~/srsRAN_Project/{build,build*,cmake-build-*}/srsran.cmake`, `~/*/srsRAN_Project/{build,build*,cmake-build-*}/srsran.cmake` or `~/*/*/srsRAN_Project/{build,build*,cmake-build-*}/srsran.cmake`, running CMake should find the exported libraries automatically. If this doesn't happen or if you have multiple copies of srsRAN on your machine, you should specify the path when running CMake.
     ```bash
-    cmake -DSRSRAN_BINARY_DIR="~/new_srsran/new_build" ..
+    cmake -B builddir -DSRSRAN_BINARY_DIR="~/new_srsran/new_build"
     ```
     Similarly, you can use the CMake option `Matlab_ROOT_DIR` if you have multiple versions of MATLAB on your machine or if MATLAB is not in your system path.
     ```bash
-    cmake -DMatlab_ROOT_DIR="/usr/local/MATLAB/R2024b" ..
+    cmake -B builddir -DMatlab_ROOT_DIR="/usr/local/MATLAB/R2024b"
     ```
-4. **Build the MEX:** Simply run `make` to build the MEX binaries, which will be automatically placed in the proper folder to be accessed from the `srsMEX` library.
+4. **Build the MEX:** Once the CMake project has been generated, the MEX binaries can be built with
+   ```bash
+   cmake --build builddir
+   ```
+   Finally, to be able to access the MEX binaries from the `srsMEX` library, you need to install them with
+   ```bash
+   cmake --install builddir
+   ```
 
-    Run `make doxygen` to build extra documentation, which can be accessed from `+srsMEX/source/build/docs/html/index.html`.
+    To build extra MEX-related documentation, which can be accessed from `+srsMEX/source/build/docs/html/index.html`, run
+    ```bash
+    cmake --build builddir --target doxygen
+    ```
 
     Depending on your setup, you may need to instruct MATLAB to use the system libraries instead of the internal ones: do the following and (re)start MATLAB.
     ```bash
