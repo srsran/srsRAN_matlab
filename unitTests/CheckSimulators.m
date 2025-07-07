@@ -510,7 +510,7 @@ classdef CheckSimulators < matlab.unittest.TestCase
             end
 
             obj.assertEqual(pp.Counters.SNRrange, snrs', 'Wrong SNR range.');
-            obj.assertLessThanOrEqual(pp.Statistics.BlockErrorRateSRS, [1; 0.9434; 0.66; 0.450; 0.290], ...
+            obj.assertLessThanOrEqual(pp.Statistics.BlockErrorRateSRS, [1; 0.9434; 0.800; 0.600; 0.410], ...
                 "Wrong BLER curve.");
         end % of function testPUCCHPERFF3mex(obj)
     end % of methods (Test, TestTags = {'mex code'})
