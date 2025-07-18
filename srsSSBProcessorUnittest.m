@@ -18,10 +18,10 @@
 %   srsSSBProcessorUnittest Properties (TestParameter):
 %
 %   SSBpattern - SSB pattern ('A', 'B', 'C', 'D', 'E').
-%   Lmax       - Maximum number of SSBs within a SSB set (4, 8 (default), 64).
+%   Lmax       - Maximum number of SSBs within an SSB set (4, 8, 64).
 %   betaPSS    - PSS scaling factor (0, -3).
 %   SSBindex   - SSB index (0...63).
-%   subframeIndex - Index of a SSB within the set transmitted in a given half-frame (0...3).
+%   subframeIndex - Index of an SSB within the set transmitted in a given half-frame (0...3).
 %   NCellID  - PHY-layer cell ID (0...1007).
 %
 %   srsSSBProcessorUnittest Methods (Test, TestTags = {'testvector'}):
@@ -71,7 +71,7 @@ classdef srsSSBProcessorUnittest < srsTest.srsBlockUnittest
         %SSB pattern ('A', 'B', 'C', 'D', 'E').
         SSBpattern = {'A', 'B', 'C', 'D', 'E'}
 
-        %Maximum number of SSBs within a SSB set (4, 8 (default), 64).
+        %Maximum number of SSBs within an SSB set (4, 8, 64).
         Lmax = {4, 8, 64}
 
         %PSS scaling factor in dB (0, -3).
@@ -80,7 +80,7 @@ classdef srsSSBProcessorUnittest < srsTest.srsBlockUnittest
         %SSB index (0...63).
         SSBindex = num2cell(0:63)
 
-        %Index of the subframe with a SSB in a given half-frame (0, 5).
+        %Index of the subframe with an SSB in a given half-frame (0, 5).
         subframeIndex = {0, 5}
 
         %PHY-layer cell ID (0...1007).
@@ -108,9 +108,8 @@ classdef srsSSBProcessorUnittest < srsTest.srsBlockUnittest
         function addTestDefinitionToHeaderFile(~, fileID)
         %addTestDefinitionToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
             fprintf(fileID, 'struct test_case_t {\n');
-            fprintf(fileID, 'ssb_processor::pdu_t config;\n');
-            fprintf(fileID, ...
-                'file_vector<resource_grid_writer_spy::expected_entry_t> symbols;\n');
+            fprintf(fileID, '  ssb_processor::pdu_t                                    config;\n');
+            fprintf(fileID, '  file_vector<resource_grid_writer_spy::expected_entry_t> symbols;\n');
             fprintf(fileID, '};\n');
         end
 
@@ -139,10 +138,10 @@ classdef srsSSBProcessorUnittest < srsTest.srsBlockUnittest
             import srsLib.phy.upper.channel_processors.ssb.srsPBCHmodulator
             import srsTest.helpers.writeResourceGridEntryFile
 
-            % generate a unique test ID by looking at the number of files generated so far
+            % Generate a unique test ID by looking at the number of files generated so far.
             testID = testCase.generateTestID;
 
-            % use a unique NCellID, cw and port index for each test
+            % Use a unique NCellID, cw and port index for each test.
             randomizedTestCase = testCase.randomizeTestvector(testID + 1);
             NCellIDLoc = testCase.NCellID{randomizedTestCase};
             randomizedSFN = testCase.randomizeSFN(testID + 1);
@@ -150,25 +149,25 @@ classdef srsSSBProcessorUnittest < srsTest.srsBlockUnittest
             portIdx = randi([0 63]);
             randomMIB = randi([0 1], 24, 1);
 
-            % current fixed parameter values as required by the C code
+            % Current fixed parameter values as required by the main code.
             pointAoffset = 0;
             SSBoffset = 0;
             cyclicPrefix = 'normal';
             SSBportsStr = cellarray2str({portIdx}, true);
 
-            % skip those invalid configuration cases
+            % Skip those invalid configuration cases.
             isPatternOK = ((Lmax < 64) || (strcmp(SSBpattern, 'D') && strcmp(SSBpattern, 'E')));
             isSSBindexOK = SSBindex < Lmax;
 
             if isPatternOK && isSSBindexOK
-                % deduce the subcarrier spacing used by the SSB pattern
+                % Deduce the subcarrier spacing used by the SSB pattern.
                 numerology = srsSSBgetNumerology(SSBpattern);
 
-                % configure the carrier according to the test parameters
+                % Configure the carrier according to the test parameters.
                 subcarrierSpacing = 15 * (2 .^ numerology);
                 carrier = nrCarrierConfig(SubcarrierSpacing=subcarrierSpacing, CyclicPrefix=cyclicPrefix);
 
-                % deduce derivative configuration parameters
+                % Deduce derived configuration parameters.
                 SSBfirstSymbolIndex = srsSSBgetFirstSymbolIndex(SSBpattern, SSBindex);
                 slotInBurst = floor(SSBfirstSymbolIndex / carrier.SymbolsPerSlot);
                 subframeInBurst = floor(slotInBurst / carrier.SlotsPerSubframe);
@@ -178,17 +177,10 @@ classdef srsSSBProcessorUnittest < srsTest.srsBlockUnittest
                 SSBfirstSubcarrierIndex = srsSSBgetFirstSubcarrierIndex(numerology, pointAoffset, SSBoffset);
                 SSBfirstSymbolIndexSlot = mod(SSBfirstSymbolIndex, carrier.SymbolsPerSlot);
 
-                % the BCH payload comprises 24 MIB bits, 4 SFN LSBs, 1 nHF bit and 3 SSBindex MSBs (TS 138.212, Section 7.1.1)
-                SFNbinStr = dec2bin(SFNLoc, 8);
-                SFNbin = (SFNbinStr(end-3:end).' == '1');
-                SSBindexbinStr = dec2bin(SSBindex, 8);
-                SSBindexbin = (SSBindexbinStr(1:3).' == '1');
-                payload = [randomMIB; SFNbin; nHF; SSBindexbin];
-
-                % call the PBCH encoder MATLAB functions
+                % Call the PBCH encoder MATLAB functions.
                 cw = srsPBCHencoder(randomMIB, NCellIDLoc, SSBindex, Lmax, SFNLoc, nHF, SSBoffset);
 
-                % call the PSS generation MATLAB functions and adjust the SSB indexing offsets
+                % Call the PSS generation MATLAB functions and adjust the SSB indexing offsets.
                 [PSSsymbols, PSSindices] = srsPSS(NCellIDLoc);
                 PSSindices(:, 1) = PSSindices(:, 1) +  SSBfirstSubcarrierIndex;
                 PSSindices(:, 2) = PSSindices(:, 2) +  SSBfirstSymbolIndexSlot;
@@ -196,41 +188,41 @@ classdef srsSSBProcessorUnittest < srsTest.srsBlockUnittest
                 betaPSS = 10^(PSSscale / 20);
                 PSSsymbols = betaPSS * PSSsymbols;
 
-                % call the SSS generation MATLAB functions and adjust the SSB indexing offsets
+                % Call the SSS generation MATLAB functions and adjust the SSB indexing offsets.
                 [SSSsymbols, SSSindices] = srsSSS(NCellIDLoc);
                 SSSindices(:, 1) = SSSindices(:, 1) +  SSBfirstSubcarrierIndex;
                 SSSindices(:, 2) = SSSindices(:, 2) +  SSBfirstSymbolIndexSlot;
                 SSSindices(:, 3) = ones(length(SSSsymbols), 1) * portIdx;
 
-                % call the PBCH symbol modulation MATLAB functions and adjust the SSB indexing offsets
+                % Call the PBCH symbol modulation MATLAB functions and adjust the SSB indexing offsets.
                 [PBCHsymbols, PBCHindices] = srsPBCHmodulator(cw, NCellIDLoc, SSBindex, Lmax);
                 PBCHindices(:, 1) = PBCHindices(:, 1) +  SSBfirstSubcarrierIndex;
                 PBCHindices(:, 2) = PBCHindices(:, 2) +  SSBfirstSymbolIndexSlot;
                 PBCHindices(:, 3) = ones(length(PBCHsymbols), 1) * portIdx;
 
-                % call the PBCH DMRS symbol processor MATLAB functions and adjust the SSB indexing offsets
+                % Call the PBCH DM-RS symbol processor MATLAB functions and adjust the SSB indexing offsets.
                 [PBCHdmrsSymbols, PBCHdmrsIndices] = srsPBCHdmrs(NCellIDLoc, SSBindex, Lmax, nHF);
                 PBCHdmrsIndices(:, 1) = PBCHdmrsIndices(:, 1) +  SSBfirstSubcarrierIndex;
                 PBCHdmrsIndices(:, 2) = PBCHdmrsIndices(:, 2) +  SSBfirstSymbolIndexSlot;
                 PBCHdmrsIndices(:, 3) = ones(length(PBCHdmrsSymbols), 1) * portIdx;
 
-                % combine all generated symbols and indices and write them to a binary file
+                % Combine all generated symbols and indices and write them to a binary file.
                 SSBsymbols = [PSSsymbols; SSSsymbols; PBCHsymbols; PBCHdmrsSymbols];
                 SSBindices = [PSSindices; SSSindices; PBCHindices; PBCHdmrsIndices];
                 testCase.saveDataFile('_test_output', testID, @writeResourceGridEntryFile, ...
                     SSBsymbols, SSBindices);
 
-                % create common SCS string assuming it is equal to the SS/PBCH block SCS
+                % Create common SCS string assuming it is equal to the SS/PBCH block SCS.
                 commonSCSStr = sprintf('subcarrier_spacing::kHz%d', subcarrierSpacing);
 
-                % generate the test case entry
+                % Generate the test case entry.
                 testCaseString = testCase.testCaseToString(testID, ...
                     {{numerology, SFNLoc, subframeIndexLoc, slotInSubframe}, NCellIDLoc, ...
                         PSSscale, SSBindex, Lmax, commonSCSStr, SSBoffset, pointAoffset, ...
-                        ['ssb_pattern_case::', upper(SSBpattern)], payload, ...
+                        ['ssb_pattern_case::', upper(SSBpattern)], randomMIB, ...
                         SSBportsStr}, true, '_test_output');
 
-                % add the test to the file header
+                % Add the test to the file header.
                 testCase.addTestToHeaderFile(testCase.headerFileID, testCaseString);
             end
         end % of function testvectorGenerationCases
