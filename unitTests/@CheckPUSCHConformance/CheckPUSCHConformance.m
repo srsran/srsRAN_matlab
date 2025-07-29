@@ -283,6 +283,7 @@ classdef CheckPUSCHConformance < matlab.unittest.TestCase
             pp.DelayProfile = TestConfig.DelayProfile;
             pp.DelaySpread = TestConfig.DelaySpread;
             pp.MaximumDopplerShift = TestConfig.MaximumDopplerShift;
+            pp.FadingTimeEvolution = 'Slot independent';
             pp.PerfectChannelEstimator = false;
             pp.EnableHARQ = true;
             pp.ImplementationType = 'srs';

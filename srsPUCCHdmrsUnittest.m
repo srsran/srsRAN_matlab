@@ -18,7 +18,7 @@
 %   srsPUCCHdmrsUnittest Properties (TestParameter):
 %
 %   numerology           - Defines the subcarrier spacing (0, 1).
-%   format               - PUCCH format (1, 2, 3, 4).
+%   format               - PUCCH format (2, 3, 4).
 %   intraSlotFreqHopping - Intra-slot frequency hopping (false - enabled, true - enabled)
 %
 %   srsPUCCHdmrsUnittest Methods (TestTags = {'testvector'}):
@@ -67,8 +67,9 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
         %Defines the subcarrier spacing (0, 1).
         numerology = {0, 1}
 
-        %PUCCH format indexes.
-        format = {1, 2, 3, 4}
+        %PUCCH formats.
+        %    Only PUCCH Formats 2, 3, 4 use DM-RS based channel estimator.
+        format = {2, 3, 4}
 
         %Intra-slot frequency hopping usage (inter-slot hopping is not tested).
         intraSlotFreqHopping = {false, true}
@@ -110,7 +111,6 @@ classdef srsPUCCHdmrsUnittest < srsTest.srsBlockUnittest
         function addTestDefinitionToHeaderFile(~, fileID)
         %addTestDetailsToHeaderFile Adds details (e.g., type/variable declarations) to the test header file.
             fprintf(fileID, 'using estimator_config = std::variant<\n');
-            fprintf(fileID, 'dmrs_pucch_estimator::format1_configuration,\n');
             fprintf(fileID, 'dmrs_pucch_estimator::format2_configuration,\n');
             fprintf(fileID, 'dmrs_pucch_estimator::format3_configuration,\n');
             fprintf(fileID, 'dmrs_pucch_estimator::format4_configuration\n');

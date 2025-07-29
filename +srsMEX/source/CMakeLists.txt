@@ -87,9 +87,14 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
 
 find_package(Matlab REQUIRED)
 
+# SRSRAN
 find_package(SRSRAN MODULE REQUIRED)
 
 include(${SRSRAN_BINARY_DIR}/srsran.cmake)
+
+################################################################################
+# Global includes
+################################################################################
 include_directories(
     ${CMAKE_SOURCE_DIR}/include
     ${SRSRAN_INCLUDE_DIR}
@@ -97,6 +102,19 @@ include_directories(
     ${SRSRAN_SOURCE_DIR}/external
 )
 
+################################################################################
+# Install setup
+################################################################################
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+    set_property(CACHE CMAKE_INSTALL_PREFIX PROPERTY VALUE "${CMAKE_SOURCE_DIR}/../")
+endif()
+
+# Add default RPATH to the installed targets.
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
+################################################################################
+# Project subdirectories to be built
+################################################################################
 add_subdirectory(lib)
 add_subdirectory(unittests)
 add_subdirectory(docs)

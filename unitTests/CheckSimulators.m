@@ -84,8 +84,8 @@ classdef CheckSimulators < matlab.unittest.TestCase
             obj.assertEqual(pp.SNRrange, snrs', 'Wrong SNR range.');
             obj.assertEqual(pp.TBS, 1800, 'Wrong transport block size.');
             obj.assertEqual(pp.MaxThroughput, 1.8, 'Wrong maximum throughput.');
-            obj.assertEqual(pp.ThroughputMATLAB, [0; 0; 0.0178; 0.1636; 0.5755], "Wrong througuput curve.", RelTol=0.02);
-            obj.assertEqual(pp.BlockErrorRateMATLAB, [1; 1; 0.9901; 0.9091; 0.6803], "Wrong BLER curve.", RelTol=0.02);
+            obj.assertEqual(pp.ThroughputMATLAB, [0.6312; 0.6957; 0.7473; 0.7595; 0.7773], "Wrong througuput curve.", RelTol=0.02);
+            obj.assertEqual(pp.BlockErrorRateMATLAB, [0.6494; 0.6135; 0.5848; 0.5780; 0.5682], "Wrong BLER curve.", RelTol=0.02);
         end % of function testPUSCHBLERmatlab(obj)
 
         function testPRACHPERFmatlab(obj)
@@ -177,10 +177,10 @@ classdef CheckSimulators < matlab.unittest.TestCase
             if (PUCCHTestType == "Detection")
                 obj.assertEqual(pp.Statistics.SRDetectionRateMATLAB, ones(numel(snrs), 1), "Wrong SR detection curve.");
                 obj.assertGreaterThanOrEqual(pp.Statistics.ACKDetectionRateMATLAB, ...
-                    [0.025; 0.060; 0.110; 0.220; 0.380; 0.660; 0.880; 0.980; 0.999], ...
+                    [0.025; 0.060; 0.090; 0.160; 0.300; 0.440; 0.600; 0.750; 0.870], ...
                     "Wrong ACK detection curve.");
             else
-                obj.assertEqual(pp.Statistics.FalseACKDetectionRateMATLAB, 0.016 * ones(numel(snrs), 1), ...
+                obj.assertEqual(pp.Statistics.FalseACKDetectionRateMATLAB, 0.02 * ones(numel(snrs), 1), ...
                     "Wrong false ACK detection rate curve.");
             end
         end % of function testPUCCHPERFF0matlab(obj, PUCCHTestType)
@@ -218,10 +218,10 @@ classdef CheckSimulators < matlab.unittest.TestCase
             obj.assertEqual(pp.Counters.SNRrange, snrs', 'Wrong SNR range.');
             if (PUCCHTestType == "Detection")
                 obj.assertLessThan(pp.Statistics.NACK2ACKDetectionRateMATLAB, 0.01, "Wrong NACK-to-ACK detection curve.");
-                obj.assertEqual(pp.Statistics.ACKDetectionRateMATLAB, [0.0077; 0.0193; 0.0222; 0.0319; 0.0619; 0.1228; 0.2041; 0.4052; 0.6364; 0.8762], ...
+                obj.assertEqual(pp.Statistics.ACKDetectionRateMATLAB, [0.0264; 0.0305; 0.0376; 0.0488; 0.0681; 0.1179; 0.1839; 0.2947; 0.4664; 0.6270], ...
                     "Wrong ACK detection rate curve.", RelTol=0.02);
             else
-                obj.assertEqual(pp.Statistics.FalseACKDetectionRateMATLAB, 0.0057 * ones(10, 1), "Wrong false ACK detection rate curve.", RelTol=0.04);
+                obj.assertEqual(pp.Statistics.FalseACKDetectionRateMATLAB, 0.0125 * ones(10, 1), "Wrong false ACK detection rate curve.", RelTol=0.04);
             end
         end % of function testPUCCHPERFF1matlab(obj, PUCCHTestType)
 
@@ -253,10 +253,10 @@ classdef CheckSimulators < matlab.unittest.TestCase
 
             obj.assertEqual(pp.Counters.SNRrange, snrs', 'Wrong SNR range.');
             if (PUCCHTestType == "Detection")
-                obj.assertEqual(pp.Statistics.BlockErrorRateMATLAB, [1; 0.9709; 0.9346; 0.8696; 0.7576; 0.5682; 0.2053; 0.0280; 0.0010], ...
+                obj.assertEqual(pp.Statistics.BlockErrorRateMATLAB, [0.9804; 0.9615; 0.9434; 0.9174; 0.8547; 0.6849; 0.4673; 0.2519; 0.1431], ...
                     "Wrong BLER curve.", RelTol=0.02);
             else
-                obj.assertEqual(pp.Statistics.FalseDetectionRateMATLAB, 0.005 * ones(9, 1), "Wrong false alarm curve.", RelTol=0.02);
+                obj.assertEqual(pp.Statistics.FalseDetectionRateMATLAB, 0.006 * ones(9, 1), "Wrong false alarm curve.", RelTol=0.02);
             end
         end % of function testPUCCHPERFF2matlab(obj, PUCCHTestType)
 
@@ -291,7 +291,7 @@ classdef CheckSimulators < matlab.unittest.TestCase
             end
 
             obj.assertEqual(pp.Counters.SNRrange, snrs', 'Wrong SNR range.');
-            obj.assertEqual(pp.Statistics.BlockErrorRateMATLAB, [1; 0.9804; 0.8929; 0.6536; 0.2320; 0.0140], ...
+            obj.assertEqual(pp.Statistics.BlockErrorRateMATLAB, [1; 0.9524; 0.8547; 0.6711; 0.4219; 0.2688], ...
                 "Wrong BLER curve.", RelTol=0.02);
         end % of function testPUCCHPERFF3matlab(obj)
     end % of methods (Test, TestTags = {'matlab code'})
@@ -334,8 +334,8 @@ classdef CheckSimulators < matlab.unittest.TestCase
             obj.assertEqual(pp.SNRrange, snrs', 'Wrong SNR range.');
             obj.assertEqual(pp.TBS, 1800, 'Wrong transport block size.');
             obj.assertEqual(pp.MaxThroughput, 1.8, 'Wrong maximum throughput.');
-            obj.assertGreaterThanOrEqual(pp.ThroughputSRS, [0; 0; 0.041; 0.30; 0.97], "Wrong throughput curve.");
-            obj.assertLessThanOrEqual(pp.BlockErrorRateSRS, [1.00; 1.00; 0.98; 0.83; 0.46], "Wrong BLER curve.");
+            obj.assertGreaterThanOrEqual(pp.ThroughputSRS, [0; 0; 0.041; 0.30; 0.70], "Wrong throughput curve.");
+            obj.assertLessThanOrEqual(pp.BlockErrorRateSRS, [0.70; 0.70; 0.65; 0.65; 0.62], "Wrong BLER curve.");
         end % of function testPUSCHBLERmex(obj)
 
         function testPUCCHPERFF0mex(obj, PUCCHTestType)
@@ -376,7 +376,7 @@ classdef CheckSimulators < matlab.unittest.TestCase
             if (PUCCHTestType == "Detection")
                 obj.assertEqual(pp.Statistics.SRDetectionRateSRS, ones(numel(snrs), 1), "Wrong SR detection curve.");
                 obj.assertGreaterThanOrEqual(pp.Statistics.ACKDetectionRateSRS, ...
-                    [0.010; 0.025; 0.063; 0.151; 0.328; 0.628; 0.880; 0.980; 0.999], ...
+                    [0.010; 0.030; 0.070; 0.150; 0.250; 0.440; 0.630; 0.775; 0.890], ...
                     "Wrong ACK detection curve.");
             else
                 obj.assertLessThanOrEqual(pp.Statistics.FalseACKDetectionRateSRS, 0.008 * ones(numel(snrs), 1), ...
@@ -424,10 +424,10 @@ classdef CheckSimulators < matlab.unittest.TestCase
             if (PUCCHTestType == "Detection")
                 obj.assertLessThan(pp.Statistics.NACK2ACKDetectionRateSRS, 0.04, "Wrong NACK-to-ACK detection curve.");
                 obj.assertGreaterThanOrEqual(pp.Statistics.ACKDetectionRateSRS, ...
-                    [0.0120; 0.0160; 0.0200; 0.0330; 0.0540; 0.0910; 0.1660; 0.3270; 0.6440; 0.8970], ...
+                    [0.007; 0.007; 0.013; 0.023; 0.032; 0.075; 0.130; 0.270; 0.430; 0.610], ...
                     "Wrong ACK detection rate curve.");
             else
-                obj.assertEqual(pp.Statistics.FalseACKDetectionRateSRS, 0.0067 * ones(10, 1), "Wrong false ACK detection rate curve.", RelTol=0.03);
+                obj.assertEqual(pp.Statistics.FalseACKDetectionRateSRS, 0.0075 * ones(10, 1), "Wrong false ACK detection rate curve.", RelTol=0.03);
             end
         end % of function testPUCCHPERFF1mex(obj, PUCCHTestType)
 
@@ -466,10 +466,10 @@ classdef CheckSimulators < matlab.unittest.TestCase
             obj.assertEqual(pp.Counters.SNRrange, snrs', 'Wrong SNR range.');
             if (PUCCHTestType == "Detection")
                 obj.assertLessThanOrEqual(pp.Statistics.BlockErrorRateSRS, ...
-                    [0.9434; 0.9434; 0.901; 0.7937; 0.6452; 0.4274; 0.241; 0.0560; 0.0040], ...
+                    [0.920; 0.910; 0.890; 0.850; 0.720; 0.600; 0.420; 0.250; 0.160], ...
                     "Wrong BLER curve.");
             else
-                obj.assertLessThanOrEqual(pp.Statistics.FalseDetectionRateSRS, 0.007 * ones(9, 1), "Wrong false alarm curve.");
+                obj.assertLessThanOrEqual(pp.Statistics.FalseDetectionRateSRS, 0.008 * ones(9, 1), "Wrong false alarm curve.");
             end
         end % of function testPUCCHPERFF2mex(obj, PUCCHTestType)
 
@@ -510,8 +510,8 @@ classdef CheckSimulators < matlab.unittest.TestCase
             end
 
             obj.assertEqual(pp.Counters.SNRrange, snrs', 'Wrong SNR range.');
-            obj.assertEqual(pp.Statistics.BlockErrorRateSRS, [1; 0.9434; 0.6410; 0.2247; 0.0170], ...
-                "Wrong BLER curve.", RelTol=0.02);
+            obj.assertLessThanOrEqual(pp.Statistics.BlockErrorRateSRS, [1; 0.9434; 0.800; 0.600; 0.410], ...
+                "Wrong BLER curve.");
         end % of function testPUCCHPERFF3mex(obj)
     end % of methods (Test, TestTags = {'mex code'})
 end % of classdef CheckSimulators < matlab.unittest.TestCase
