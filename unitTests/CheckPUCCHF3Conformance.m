@@ -15,8 +15,8 @@
 %
 %   CheckPUCCHF3Conformance Methods (Test, TestTags = {'conformance'}):
 %
-%   checkPUCCHF3BLER             - Estimates the UCI block error rate for the given
-%                                  PUCCH Format 3 configuration.
+%   checkPUCCHF3BLER  - Estimates the UCI block error rate for the given PUCCH Format 3
+%                       configuration.
 %
 %   Example
 %      runtests('CheckPUCCHF3Conformance')

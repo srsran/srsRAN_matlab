@@ -45,7 +45,7 @@ function setupImpl(obj)
         obj.PUCCH.NID = [];
         obj.PUCCH.RNTI = obj.RNTI;
         obj.FormatDetails = FormatDetailsF2(obj.NumACKBits, obj.NumSRBits, obj.NumCSI1Bits, obj.NumCSI2Bits, obj.isDetectionTest());
-    else % if PUCCH Format3
+    elseif (obj.PUCCHFormat == 3)
         obj.PUCCH = nrPUCCH3Config;
         obj.PUCCH.Modulation = obj.Modulation;
         obj.PUCCH.AdditionalDMRS = obj.AdditionalDMRS;
@@ -56,6 +56,19 @@ function setupImpl(obj)
         % BLER tests work the same as detection tests.
         obj.TestType = 'Detection';
         obj.FormatDetails = FormatDetailsF3(obj.NumACKBits, obj.NumSRBits, obj.NumCSI1Bits, obj.NumCSI2Bits);
+    else % if PUCCH Format4
+        obj.PUCCH = nrPUCCH4Config;
+        obj.PUCCH.Modulation = obj.Modulation;
+        obj.PUCCH.AdditionalDMRS = obj.AdditionalDMRS;
+        obj.PUCCH.GroupHopping = "neither";
+        obj.PUCCH.HoppingID = 0;
+        obj.PUCCH.NID = [];
+        obj.PUCCH.RNTI = obj.RNTI;
+        obj.PUCCH.SpreadingFactor = 2;
+        obj.PUCCH.OCCI = 0;
+        % BLER tests work the same as detection tests.
+        obj.TestType = 'Detection';
+        obj.FormatDetails = FormatDetailsF4(obj.NumACKBits, obj.NumSRBits, obj.NumCSI1Bits, obj.NumCSI2Bits);
     end
     obj.PUCCH.PRBSet = obj.PRBSet;
     obj.PUCCH.SymbolAllocation = obj.SymbolAllocation;

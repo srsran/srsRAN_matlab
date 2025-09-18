@@ -129,7 +129,7 @@ classdef PUCCHPERF < matlab.System
         Modulation (1, :) char {mustBeMember(Modulation, {'pi/2-BPSK', 'QPSK'})} = 'QPSK'
         %Additional DM-RS flag (PUCCH F3/F4 only).
         AdditionalDMRS (1, 1) logical = false
-        %PUCCH Format (0, 1, 2, 3).
+        %PUCCH Format (0, 1, 2, 3, 4).
         PUCCHFormat double {mustBeInteger, mustBeInRange(PUCCHFormat, 0, 4)} = 2
         %Frequency hopping ('intraSlot', 'interSlot', 'neither')
         FrequencyHopping  {mustBeMember(FrequencyHopping, {'intraSlot', 'interSlot', 'neither'})} = 'neither'
@@ -218,12 +218,6 @@ classdef PUCCHPERF < matlab.System
             end
         end
 
-        function checkImplementationandFormat(obj)
-            if (~strcmp(obj.ImplementationType, 'matlab') && (obj.PUCCHFormat > 3))
-                error('PUCCH formats other than Format0, Format1, Format2 and Format3 only work with ImplementationType=''matlab''.');
-            end
-        end
-
         function checkUCIBits(obj)
             obj.FormatDetails.checkUCIBits(obj.NumACKBits, obj.NumSRBits, obj.NumCSI1Bits, obj.NumCSI2Bits);
         end
@@ -287,7 +281,6 @@ classdef PUCCHPERF < matlab.System
             obj.checkPRBSetandGrid();
             obj.checkImplementationandChEstPerf();
             obj.checkImplementationandHopping();
-            obj.checkImplementationandFormat();
             obj.checkFormatandTestType();
         end % of function validatePropertiesImpl(obj)
 
