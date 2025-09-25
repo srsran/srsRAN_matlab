@@ -1,19 +1,27 @@
 %srsParseLogs Parses a PHY uplink channel log entry.
 %   [CARRIER, PHYCH, EXTRA] = srsParseLogs asks the user to select a section of
-%   the srsGNB logs corresponding to PHY uplink channel, parses the information
+%   the srsRAN gNB logs corresponding to PHY uplink channel, parses the information
 %   and returns the following objects:
-%   CARRIER - an nrCarrierConfig object with the carrier configuration
+%   CARRIER - an nrCarrierConfig object with the carrier configuration (meaningless
+%             for PRACH)
 %   PHYCH   - a PHY uplink channel configuration object (specifically, an
-%             nrPUSCHConfig, an nrPUCCH1Config or an nrPUCCH2Config object)
+%             nrPUSCHConfig, an nrPUCCHNConfig, N=1,2,3,4, or an nrPRACHConfig object)
 %   EXTRA   - a struct with PUSCH additional information, namely redundancy
-%             version, transport block size and target code rate (for PUCCH, the
-%             struct is empty).
+%             version, transport block size and target code rate (for PUCCH and PRACH,
+%             the struct is empty).
+%
+%   Remark: The nrPRACHConfig object assumes PRACH root sequence index 1 (the default
+%   value in srsRAN gNB). Similarly, the PRACH preamble index is set to the first
+%   detected preamble in the logs, if any, or to 0 if no detection was possible.
+%   If these indices differ from the desired ones, they must be changed manually
+%   in the nrPRACHConfig object returned by the function.
 %
 %   As an example of a log entry expected by the srsParseLogs function, the
-%   following excerpt from a srsGNB log file refers to a PUSCH transmission
-%   (similar ones can be found for PUCCH transmissions, too).
-%   Important: The srsGNB log level must be set to "debug" to obtain detailed
-%   information as shown below.
+%   following excerpt from a srsRAN gNB log file refers to a PUSCH transmission
+%   (similar ones can be found for PUCCH and PRACH transmissions, too).
+%   Important: The srsRAN gNB PHY log level must be set to "debug" to obtain detailed
+%   information as shown below. It may also be interesting to activate the
+%   "braadcast_enabled" logging option for keeping track of the PRACH opportunities.
 %
 %   2023-06-07T20:54:24.497343 [UL-PHY1 ] [D] [   584.9] PUSCH: rnti=0x4601 h_id=0 prb=[4, 10) symb=[0, 14) mod=64QAM rv=0 tbs=544 crc=OK iter=2.0 snr=31.8dB t=135.0us
 %     rnti=0x4601
@@ -106,7 +114,7 @@ function [carrier, phych, extra] = srsParseLogs
     carrier.NStartGrid = 0;
 
     % Check whether this is a PUSCH or PUCCH log entry.
-    chPattern = ("PUSCH"|"PUCCH");
+    chPattern = ("PUSCH"|"PUCCH"|"PRACH");
     chType = extract(allLines{1}, chPattern);
 
     isPUSCH = true;
@@ -131,8 +139,13 @@ function [carrier, phych, extra] = srsParseLogs
         else
             error('PUCCH Format %d is not supported.', format);
         end
+    elseif strcmp(chType{1}, 'PRACH')
+        % PRACH is dealt with differently.
+        extra = struct([]);
+        phych = parsePRACH(allLines);
+        return;
     else
-        error('Invalid channel type: can only parse PUSCH and PUCCH logs.');
+        error('Invalid channel type: can only parse PUSCH, PUCCH and PRACH logs.');
     end
 
     % Now parse all lines and get the values we need.
@@ -273,3 +286,43 @@ function [carrier, phych, extra] = srsParseLogs
         extra = struct([]);
     end
 end
+
+function prach = parsePRACH(allLines)
+% Parses a PRACH log.
+
+    nLines = length(allLines);
+    for iLine = 2:nLines
+        parameter = split(strtrim(allLines{iLine}), '=');
+        switch parameter{1}
+            case 'format'
+                preambleFormat = sscanf(parameter{2}, '%s');
+            case 'zcz'
+                zcz = sscanf(parameter{2}, '%d');
+            case 'scs'
+                scs = sscanf(parameter{2}, '%d');
+                if (scs == 15)
+                    duplexMode = 'FDD';
+                else
+                    duplexMode = 'TDD';
+                end
+            case 'detected_preambles'
+                if strcmp(parameter{2}, '[]')
+                    % If no preambles were detected, default to preamble index 0.
+                    preambleIndex = 0;
+                else
+                    p = split(strtrim(parameter{3}), ' ');
+                    preambleIndex = str2double(p{1});
+                end
+            otherwise
+        end
+    end % of for iLine = 2:nLines
+
+    % Configure the nrPRACHConfig object.
+    prach = srsLib.phy.helpers.srsConfigurePRACH(preambleFormat, ...
+        ZeroCorrelationZone=zcz, ...
+        SubcarrierSpacing=scs, ...
+        DuplexMode=duplexMode, ...
+        SequenceIndex=1, ...
+        PreambleIndex=preambleIndex ...
+        );
+end % of function parsePRACH(allLines)

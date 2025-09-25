@@ -20,6 +20,9 @@
 %      prach.PreambleIndex = 48;
 %
 %      srsPRACHAnalyzer(prach, '~/Downloads/ul_symbol_handler', 1391191, 3336);
+%
+%   Remark: The nrPRACHConfig object can also be created from the logs with the
+%   srsParseLogs helper function.
 
 %   Copyright 2021-2025 Software Radio Systems Limited
 %
