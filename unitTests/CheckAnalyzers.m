@@ -12,12 +12,13 @@
 %
 %   CheckAnalyzers Methods (Test, TestTags = {'matlab code'}):
 %
-%   checkParserPUSCH    - Checks that the parser for PUSCH logs.
-%   checkParserPUCCHF0  - Checks that the parser for PUCCH Format 0 logs.
-%   checkParserPUCCHF1  - Checks that the parser for PUCCH Format 1 logs.
-%   checkParserPUCCHF2  - Checks that the parser for PUCCH Format 2 logs.
-%   checkParserPUCCHF3  - Checks that the parser for PUCCH Format 3 logs.
-%   checkParserPUCCHF4  - Checks that the parser for PUCCH Format 4 logs.
+%   checkParserPUSCH    - Checks the parser for PUSCH logs.
+%   checkParserPUCCHF0  - Checks the parser for PUCCH Format 0 logs.
+%   checkParserPUCCHF1  - Checks the parser for PUCCH Format 1 logs.
+%   checkParserPUCCHF2  - Checks the parser for PUCCH Format 2 logs.
+%   checkParserPUCCHF3  - Checks the parser for PUCCH Format 3 logs.
+%   checkParserPUCCHF4  - Checks the parser for PUCCH Format 4 logs.
+%   checkParserPRACH    - Checks the parser for PRACH logs.
 %
 %   Example
 %      runtests('CheckAnalyzers')
@@ -493,6 +494,54 @@ classdef CheckAnalyzers < matlab.unittest.TestCase
             obj.assertClass(extra, 'struct', 'Output "extra" is not a struct.');
             obj.assertEmpty(extra, 'Output "extra" is not empty.');
         end % of function checkParserPUCCHF4(obj)
+
+        function checkParserPRACH(obj)
+            % Create a log and feed it to the stub pause function.
+            logs = ['2025-09-26T07:51:13.573645 [PHY     ] [D] [   16.19] PRACH: rsi=1 rssi=+6.2dB detected_preambles=[{idx=17 ta=0.00us detection_metric=8.0}] t=123.3us', newline, ...
+                'rsi=1', newline, ...
+                'preambles=[0, 64)', newline, ...
+                'format=B4', newline, ...
+                'set=unrestricted', newline, ...
+                'zcz=0', newline, ...
+                'scs=30kHz', newline, ...
+                'nof_rx_ports=1', newline, ...
+                'rssi=+6.2dB', newline, ...
+                'res=0.1us', newline, ...
+                'max_ta=12.08us', newline, ...
+                'detected_preambles=[{idx=17 ta=0.00us detection_metric=8.0}]'];
+            obj.injectClipboardStub(logs);
+
+            % Prepare answers and feed them to the stub input function.
+            answers = {'y', 30, 24};
+            obj.injectInputStub(answers);
+
+            % Run the parser.
+            [carrier, prach, extra] = srsParseLogs;
+
+            % Check the carrier output. Despite the object is not needed for running
+            % the PRACH analyzer, the parser still sets the subcarrier spacing and
+            % the grid size.
+            obj.assertClass(carrier, 'nrCarrierConfig', 'Output "carrier" is not an nrCarrierConfig object.');
+            obj.assertEqual(carrier.SubcarrierSpacing, 30, 'Wrong subcarrier spacing.');
+            obj.assertEqual(carrier.NSizeGrid, 24, 'Wrong resource grid size.');
+            obj.assertEqual(carrier.NStartGrid, 0, 'Wrong start of resource grid.');
+
+            % Check the prach output.
+            obj.assertClass(prach, 'nrPRACHConfig', 'Output "prach" is not an nrPRACHConfig onject.');
+            obj.assertEqual(prach.FrequencyRange, 'FR1', 'Wrong frequency range.');
+            obj.assertEqual(prach.DuplexMode, 'TDD', 'Wrong duplex mode.');
+            obj.assertEqual(prach.SubcarrierSpacing, 30, 'Wrong subcarrier spacing.');
+            obj.assertEqual(prach.LRA, 139, 'Wrong sequence length.');
+            obj.assertEqual(prach.SequenceIndex, 1, 'Wrong sequence index.');
+            obj.assertEqual(prach.PreambleIndex, 17, 'Wrong preamble index.');
+            obj.assertEqual(prach.RestrictedSet, 'UnrestrictedSet', 'Wrong type of restricted set.');
+            obj.assertEqual(prach.ZeroCorrelationZone, 0, 'Wrong zero correlation zone.');
+            obj.assertEqual(prach.Format, 'B4', 'Wrong preamble format.');
+
+            % Check the extra output.
+            obj.assertClass(extra, 'struct', 'Output "extra" is not a struct.');
+            obj.assertEmpty(extra, 'Output "extra" is not empty.');
+        end % of function checkParserPRACH(obj)
     end % of methods (Test, TestTags = {'matlab code'})
 
     methods (Access=private)
