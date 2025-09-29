@@ -4,7 +4,8 @@ The following compatibility table provides a list of reference commits on both t
 
 | *srsRAN-matlab* | srsRAN Project | Release date |
 |      ------     |     ------     |    ------    |
-|     latest      |     11c9bbab   |  2025-09-15  |
+|     latest      |     cdc93a60   |  2025-09-29  |
+|     cf3fd590    |     11c9bbab   |  2025-09-15  |
 |     0249e4eb    |     fc4e810b   |  2025-09-11  |
 |     7fb14737    |     d90cd4e2   |  2025-07-29  |
 |     ba3605cf    |     d8bfdc9d   |  2025-07-03  |
