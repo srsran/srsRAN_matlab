@@ -302,6 +302,7 @@ classdef srsSRSEstimatorUnittest < srsTest.srsBlockUnittest
                 };
 
             configCell = {...
+                'std::nullopt', ... % context
                 slotPointConfig,... % slot
                 srsResourceCell,... % resource
                 portsConfig,...     % ports
