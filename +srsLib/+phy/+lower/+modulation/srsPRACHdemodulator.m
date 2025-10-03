@@ -47,7 +47,7 @@
 %   file in the top-level directory of this distribution.
 
 function PRACHSymbols = srsPRACHdemodulator(carrier, prach, gridInfo, waveform, info)
-    
+
     % Main PRACH demodulation parameters.
     prachDFTSize = gridInfo.Nfft;
     nofSymbols = length(info.PRACHSymbols) / prach.LRA;
@@ -74,14 +74,14 @@ function PRACHSymbols = srsPRACHdemodulator(carrier, prach, gridInfo, waveform, 
 
         % DFT.
         freqPRACH = fft(noCPprach(1:prachDFTSize, :), prachDFTSize);
-        
+
         % Upper and lower grid.
         lowerPRACHgrid = freqPRACH(end - halfPRACHgridSize + 1 : end, :);
         upperPRACHgrid = freqPRACH(1 : halfPRACHgridSize, :);
-    
+
         % Initial subcarrier.
         kStart = info.PRACHIndices(prach.LRA * symbolIndex + 1) - PRACHgridSize * symbolIndex - 1;
-    
+
         % If the sequence map starts at the lower half of the frequency band.
         if kStart < halfPRACHgridSize
             N = min(halfPRACHgridSize - kStart, prach.LRA);
@@ -95,11 +95,11 @@ function PRACHSymbols = srsPRACHdemodulator(carrier, prach, gridInfo, waveform, 
             % Copy the sequence in the upper half grid.
             PRACHSymbolTmp = upperPRACHgrid(kStart - halfPRACHgridSize + 1 : kStart - halfPRACHgridSize + prach.LRA, :);
         end
-    
+
         % Revert power scaling: MATLAB scales the transmitted power so that the
         % PSD is one when normalized wrt the carrier SCS (whereas we want a PSD
-        % of LRA when nomralized wrt the PRACH SCS).
-        scaling = sqrt(prach.LRA) / sqrt(prachDFTSize / carrierInfo.Nfft);
+        % of one when nomralized wrt the PRACH SCS).
+        scaling = 1 / sqrt(prachDFTSize / carrierInfo.Nfft);
         PRACHSymbolTmp = PRACHSymbolTmp * scaling;
 
         % Advance the time signal pointer and update the output array.

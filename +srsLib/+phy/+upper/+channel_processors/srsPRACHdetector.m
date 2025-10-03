@@ -70,7 +70,7 @@ function [indices, offsets, normMetric, rssi] = srsPRACHdetector(carrier, prachC
     offsets = nan(64, 1);
     normMetric = nan(64, 1);
 
-    rssi = 10 * log10(mean(abs(grid).^2, 'all') / LRA);
+    rssi = 10 * log10(mean(abs(grid).^2, 'all'));
 
     nSequences = info.nSequences;
     remainingShifts = 64;
@@ -85,7 +85,7 @@ function [indices, offsets, normMetric, rssi] = srsPRACHdetector(carrier, prachC
 
         % Multiply the preamble by the complex conjugate of the root sequence and
         % take the ifft - same as correlation.
-        noRoot = conj(root) .* preambles / LRA;
+        noRoot = conj(root) .* preambles / sqrt(LRA);
         % We want a symmetric FFT.
         noRootLarge = [noRoot(halfLRA + 1:end, :); zeros(Nfft - LRA, nReplicas); noRoot(1:halfLRA, :)];
 
