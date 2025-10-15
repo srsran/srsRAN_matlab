@@ -9,7 +9,7 @@
 %
 %   srsBlock      - The tested block (i.e., 'dmrs_pusch_estimator').
 %   srsBlockType  - The type of the tested block, including layer
-%                   (i.e., 'phy/upper/signal_processors').
+%                   (i.e., 'phy/upper/signal_processors/pusch').
 %
 %   srsPUSCHdmrsUnittest Properties (ClassSetupParameter):
 %
@@ -58,7 +58,7 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
         srsBlock = 'dmrs_pusch_estimator'
 
         %Type of the tested block.
-        srsBlockType = 'phy/upper/signal_processors'
+        srsBlockType = 'phy/upper/signal_processors/pusch'
 
         %Valid number of RB that accept transform precoding.
         ValidNumPRB = [...
@@ -103,8 +103,8 @@ classdef srsPUSCHdmrsUnittest < srsTest.srsBlockUnittest
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
 
 
-            fprintf(fileID, '#include "../../support/resource_grid_test_doubles.h"\n');
-            fprintf(fileID, '#include "srsran/phy/upper/signal_processors/dmrs_pusch_estimator.h"\n');
+            fprintf(fileID, '#include "../../../support/resource_grid_test_doubles.h"\n');
+            fprintf(fileID, '#include "srsran/phy/upper/signal_processors/pusch/dmrs_pusch_estimator.h"\n');
             fprintf(fileID, '#include "srsran/support/file_vector.h"\n');
         end
 

@@ -9,7 +9,7 @@
 %
 %   srsBlock      - The tested block (i.e., 'dmrs_pdcch_processor').
 %   srsBlockType  - The type of the tested block, including layer
-%                   (i.e., 'phy/upper/signal_processors').
+%                   (i.e., 'phy/upper/signal_processors/pdcch').
 %
 %   srsPDCCHdmrsUnittest Properties (ClassSetupParameter):
 %
@@ -57,7 +57,7 @@ classdef srsPDCCHdmrsUnittest < srsTest.srsBlockUnittest
         srsBlock = 'dmrs_pdcch_processor'
 
         %Type of the tested block.
-        srsBlockType = 'phy/upper/signal_processors'
+        srsBlockType = 'phy/upper/signal_processors/pdcch'
     end
 
     properties (ClassSetupParameter)

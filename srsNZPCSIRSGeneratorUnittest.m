@@ -7,9 +7,9 @@
 %
 %   srsNZPCSIRSGeneratorUnittest Properties (Constant):
 %
-%   srsBlock      - The tested block (i.e., 'csi_rs_processor').
+%   srsBlock      - The tested block (i.e., 'nzp_csi_rs_processor').
 %   srsBlockType  - The type of the tested block, including layer
-%                   (i.e., 'phy/upper/signal_processors').
+%                   (i.e., 'phy/upper/signal_processors/nzp_csi_rs').
 %
 %   srsNZPCSIRSGeneratorUnittest Properties (ClassSetupParameter):
 %
@@ -58,12 +58,12 @@ classdef srsNZPCSIRSGeneratorUnittest < srsTest.srsBlockUnittest
         srsBlock = 'nzp_csi_rs_generator'
 
         %Type of the tested block.
-        srsBlockType = 'phy/upper/signal_processors'
+        srsBlockType = 'phy/upper/signal_processors/nzp_csi_rs'
     end
 
     properties (ClassSetupParameter)
         %Path to results folder (old 'csi_rs_processor' tests will be erased).
-        outputPath = {['testCSIRS', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
+        outputPath = {['testNZPCSIRS', char(datetime('now', 'Format', 'yyyyMMdd''T''HHmmss'))]}
     end
 
     properties (TestParameter)
