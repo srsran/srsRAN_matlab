@@ -23,7 +23,9 @@ matlab_add_mex(
 
 target_link_libraries(multiport_channel_estimator_mex
     srsran_matlab::resource_grid
-    srsran::srsran_signal_processors
+    srsran::srsran_channel_estimator
+    srsran::srsran_dft
+    srsran::fmt
 )
 
 # Tell the installed MEXs where to find libresource_grid.so.

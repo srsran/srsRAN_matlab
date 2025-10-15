@@ -31,7 +31,6 @@
 #include "srsran/phy/upper/channel_processors/uci/factories.h"
 #include "srsran/phy/upper/equalization/equalization_factories.h"
 #include "srsran/phy/upper/sequence_generators/sequence_generator_factories.h"
-#include "srsran/phy/upper/signal_processors/signal_processor_factories.h"
 #include "srsran/ran/pucch/pucch_constants.h"
 #include <memory>
 

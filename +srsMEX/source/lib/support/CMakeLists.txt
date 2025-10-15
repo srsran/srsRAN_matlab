@@ -17,7 +17,9 @@
 
 add_library(resource_grid SHARED resource_grid.cpp)
 target_include_directories(resource_grid PUBLIC ${Matlab_INCLUDE_DIRS})
-target_link_libraries(resource_grid
-    PRIVATE srsran::srsran_channel_precoder
-            srsran::srsran_signal_processors)
+target_link_libraries(resource_grid PRIVATE
+    srsran::srsran_phy_support
+    srsran::fmt
+)
+
 add_library(srsran_matlab::resource_grid ALIAS resource_grid)

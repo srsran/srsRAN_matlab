@@ -24,8 +24,7 @@
 
 #include "srsran_matlab/srsran_mex_dispatcher.h"
 #include "srsran/phy/generic_functions/generic_functions_factories.h"
-#include "srsran/phy/upper/signal_processors/port_channel_estimator.h"
-#include "srsran/phy/upper/signal_processors/signal_processor_factories.h"
+#include "srsran/phy/upper/signal_processors/channel_estimator/factories.h"
 #include <memory>
 
 /// Factory method for a single port channel estimator.
