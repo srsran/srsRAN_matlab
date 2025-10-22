@@ -607,6 +607,7 @@ classdef PUSCHBLER < matlab.System
             tmp.PUSCH.NumLayers = obj.NumLayers;
             tmp.NTxAnts = obj.NTxAnts;
             tmp.NRxAnts = obj.NRxAnts;
+            tmp.ImplementationType = obj.ImplementationType;
 
             % Cross-check the PUSCH layering against the channel geometry.
             validateNumLayers(tmp);
@@ -1284,6 +1285,13 @@ function validateNumLayers(simParameters)
     if numlayers > min(ntxants, nrxants)
         error('The number of layers (%d) must satisfy NumLayers <= %s', ...
             numlayers, antennaDescription);
+    end
+
+    % When using srsRAN components (ImplementationType is 'srs' or 'both'), check that
+    % the number of layers is supported by the available MEX libraries.
+    if (~strcmp(simParameters.ImplementationType, 'matlab') && (numlayers > srsMEX.phy.srsPUSCHCapabilitiesMEX().NumLayers))
+        error(['The number of layers (%d) is larger than the number of layers supported ', ...
+              'by the current MEX version (%d).'], numlayers, srsMEX.phy.srsPUSCHCapabilitiesMEX().NumLayers);
     end
 
     % Display a warning if the maximum possible rank of the channel equals
