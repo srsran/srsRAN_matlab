@@ -410,11 +410,6 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
 
             import srsMEX.phy.srsMultiPortChannelEstimator
 
-            capabilitiesMEX = srsMEX.phy.srsPUSCHCapabilitiesMEX();
-
-            obj.assumeGreaterThanOrEqual(capabilitiesMEX.NumLayers, NumLayers, ...
-                sprintf('The current MEX version only works with max. %d layers, requested %d.', capabilitiesMEX.NumLayers, NumLayers));
-
             [fullConfig, ~, receivedRG, results] = configureAndMatlab(obj, ...
                 configuration, SubcarrierSpacing, NumLayers, FrequencyHopping, CarrierOffset);
 

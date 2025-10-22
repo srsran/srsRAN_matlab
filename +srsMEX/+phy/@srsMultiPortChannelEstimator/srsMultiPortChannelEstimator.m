@@ -157,7 +157,7 @@ classdef srsMultiPortChannelEstimator < matlab.System
             end
 
             nLayers = size(refSym, 2);
-            nLayersMEX = srsMEX.phy.srsPUSCHCapabilitiesMEX().NumLayers;
+            nLayersMEX = 4;
             assert(nLayers <= nLayersMEX, 'srsran_matlab:srsMultiPortChannelEstimator', ...
                 'The current MEX version does not support more than %d layers, required %d.', ...
                 nLayersMEX, nLayers);
