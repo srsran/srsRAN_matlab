@@ -20,6 +20,7 @@
 #include "pucch_processor_mex.h"
 #include "srsran_matlab/support/matlab_to_srs.h"
 #include "srsran_matlab/support/resource_grid.h"
+#include "srsran/phy/support/resource_grid_writer.h"
 #include <optional>
 
 using namespace matlab::data;

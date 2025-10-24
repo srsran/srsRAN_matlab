@@ -78,7 +78,7 @@ classdef FormatDetailsF2 < handle
 
     % This class is meant to be used only inside a PUCCHPERF simulation - restrict the constructor
     % and the methods that modify the properties.
-    methods (Access = {?PUCCHPERF, ?FormatDetailsF3})
+    methods (Access = {?PUCCHPERF, ?FormatDetailsF3, ?FormatDetailsF4})
         function obj = FormatDetailsF2(nACKBits, nSRBits, nCSI1Bits, nCSI2Bits, isdetection)
             obj.isDetectionTest = isdetection;
             obj.NumACKBits = nACKBits;

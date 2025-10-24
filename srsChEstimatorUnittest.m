@@ -9,7 +9,7 @@
 %
 %   srsBlock      - The tested block (i.e., 'port_channel_estimator').
 %   srsBlockType  - The type of the tested block, including layer
-%                   (i.e., 'phy/upper/signal_processors').
+%                   (i.e., 'phy/upper/signal_processors/channel_estimator').
 %
 %   srsChEstimatorUnittest Properties (ClassSetupParameter):
 %
@@ -65,7 +65,7 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
         srsBlock = 'port_channel_estimator'
 
         %Type of the tested block, including layers.
-        srsBlockType = 'phy/upper/signal_processors'
+        srsBlockType = 'phy/upper/signal_processors/channel_estimator'
     end % of properties (Constant)
 
     properties (Hidden, Constant)
@@ -235,9 +235,9 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
         function addTestIncludesToHeaderFile(~, fileID)
         %addTestIncludesToHeaderFile(OBJ, FILEID) adds include directives to
         %   the header file pointed by FILEID, which describes the test vectors.
-            fprintf(fileID, '#include "../../support/resource_grid_test_doubles.h"\n');
-            fprintf(fileID, '#include "srsran/phy/upper/signal_processors/port_channel_estimator.h"\n');
-            fprintf(fileID, '#include "srsran/phy/upper/signal_processors/port_channel_estimator_parameters.h"\n');
+            fprintf(fileID, '#include "../../../support/resource_grid_test_doubles.h"\n');
+            fprintf(fileID, '#include "srsran/phy/upper/signal_processors/channel_estimator/port_channel_estimator.h"\n');
+            fprintf(fileID, '#include "srsran/phy/upper/signal_processors/channel_estimator/port_channel_estimator_parameters.h"\n');
             fprintf(fileID, '#include "srsran/support/file_vector.h"\n');
             fprintf(fileID, '#include <optional>\n');
 
@@ -409,11 +409,6 @@ classdef srsChEstimatorUnittest < srsTest.srsBlockUnittest
         %   a given CONFIGURATION, SUBCARRIERSPACING, FREQUENCYHOPPING type and CARRIEROFFSET.
 
             import srsMEX.phy.srsMultiPortChannelEstimator
-
-            capabilitiesMEX = srsMEX.phy.srsPUSCHCapabilitiesMEX();
-
-            obj.assumeGreaterThanOrEqual(capabilitiesMEX.NumLayers, NumLayers, ...
-                sprintf('The current MEX version only works with max. %d layers, requested %d.', capabilitiesMEX.NumLayers, NumLayers));
 
             [fullConfig, ~, receivedRG, results] = configureAndMatlab(obj, ...
                 configuration, SubcarrierSpacing, NumLayers, FrequencyHopping, CarrierOffset);

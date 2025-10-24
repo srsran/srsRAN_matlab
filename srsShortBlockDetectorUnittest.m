@@ -112,7 +112,7 @@ classdef srsShortBlockDetectorUnittest < srsTest.srsBlockUnittest
                 return;
             end
 
-            % generate a unique test ID
+            % Generate a unique test ID.
             testID = obj.generateTestID;
 
             if msgLength == 1
@@ -123,10 +123,10 @@ classdef srsShortBlockDetectorUnittest < srsTest.srsBlockUnittest
                 blkLength = 32;
             end
 
-            % Block length after rate-matching: at least as long as the basic block length.
-            blkLength = round(blkLength * (1 + randi([0, 8]) / 4));
+            % Block length after rate-matching: must be longer than the basic block length.
+            blkLength = round((blkLength + 1) * (1 + randi([0, 8]) / 4));
 
-            % random messages
+            % Generate random messages.
             nMessages = 10;
             messages = randi([0, 1], msgLength, nMessages);
 
@@ -134,7 +134,7 @@ classdef srsShortBlockDetectorUnittest < srsTest.srsBlockUnittest
 
             codeblocks = nan(blkLength, nMessages);
             for iMessage = 1:nMessages
-                % recall modScheme is ignored if msgLength > 2
+                % Recall modScheme is ignored if msgLength > 2.
                 codeblocks(:, iMessage) = nrUCIEncode(messages(:, iMessage), ...
                     blkLength, modScheme);
             end
@@ -146,34 +146,36 @@ classdef srsShortBlockDetectorUnittest < srsTest.srsBlockUnittest
             % Even though we have different modulations, we cast the codeblocks as simple
             % BPSK-like LLRs.
             codeblocks = 10 - 20 * codeblocks;
-            % add some noise (SNR 20 dB)
+            % Add some noise (SNR 20 dB).
             codeblocks = codeblocks + randn(blkLength, nMessages);
 
-            % clip and quantize
+            % Clip and quantize.
             codeblocks(abs(codeblocks) > 20) = 20;
             codeblocks = round(codeblocks * 6); % this is codeblocks * 120 / 20
 
-            % decode
-            messages = nan(msgLength, nMessages);
+            % Decode.
+            messagesOut = nan(msgLength, nMessages);
             for iMessage = 1:nMessages
-                % recall modScheme is ignored if msgLength > 2
-                messages(:, iMessage) = nrUCIDecode(codeblocks(:, iMessage), ...
+                % Recall modScheme is ignored if msgLength > 2.
+                messagesOut(:, iMessage) = nrUCIDecode(codeblocks(:, iMessage), ...
                     msgLength, modScheme);
+                % Check original and decoded messages are the same.
+                obj.assertEqual(messagesOut(:, iMessage), messages(:, iMessage), "Decoded message different than original one.");
             end
 
-            % write codeblocks
+            % Write codeblocks.
             obj.saveDataFile('_test_input', testID, @writeInt8File, codeblocks(:));
 
-            % write messages
+            % Write messages.
             obj.saveDataFile('_test_output', testID, @writeUint8File, messages(:));
 
             modScheme = srsModulationFromMatlab(modScheme, 'full');
 
-            % generate the test case entry
+            % Generate the test case entry.
             testCaseString = obj.testCaseToString(testID, {nMessages, ...
                 msgLength, blkLength, modScheme}, false, '_test_input', '_test_output');
 
-            % add the test to the file header
+            % Add the test to the file header.
             obj.addTestToHeaderFile(obj.headerFileID, testCaseString);
 
         end % of function addTestIncludesToHeaderFile

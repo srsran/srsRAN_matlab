@@ -92,6 +92,12 @@ find_package(SRSRAN MODULE REQUIRED)
 
 include(${SRSRAN_BINARY_DIR}/srsran.cmake)
 
+get_property(SRSRAN_BUILD_TYPE TARGET srsran::srsran_support PROPERTY IMPORTED_CONFIGURATIONS)
+if ((${CMAKE_BUILD_TYPE} STREQUAL "Release") AND (${SRSRAN_BUILD_TYPE} STREQUAL "DEBUG"))
+    message(FATAL_ERROR "Cannot compile with build type RELEASE if srsRAN is exported with build type DEBUG!")
+endif ((${CMAKE_BUILD_TYPE} STREQUAL "Release") AND (${SRSRAN_BUILD_TYPE} STREQUAL "DEBUG"))
+
+
 ################################################################################
 # Global includes
 ################################################################################

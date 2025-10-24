@@ -105,9 +105,11 @@ end
 % Demodulate codeword.
 [rxcw, ~] = nrPUSCHDecode(carrier, pusch, equalized, nVar);
 
-% Make sure equalized zeros translate to soft zeros.
+% Make sure equalized zeros translate to soft zeros. This is especially important
+% for the REs that were nulled out to remove the DC from the grid.
 zerosInd = (equalized == 0);
-cwZerosInd = repelem(zerosInd, 6);
+bps = srsLib.phy.helpers.srsGetBitsSymbol(pusch.Modulation);
+cwZerosInd = repelem(zerosInd, bps);
 rxcw(cwZerosInd) = 0;
 
 % Prepare UL-SCH decoder.

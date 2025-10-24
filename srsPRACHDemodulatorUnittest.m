@@ -95,7 +95,7 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
         %Frequency-domain sequence mapping.
         %   Starting resource block (RB) index of the initial uplink bandwidth
         %   part (BWP) relative to carrier resource grid.
-        RBOffset = {0, 2, 4, 10};
+        RBOffset = {0, 2, 4, 30};
     end
 
     methods (Access = protected)
@@ -219,10 +219,15 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
                 end % for FrequencyIndex = NumFreqOccasions
             end % for TimeIndex = 0:prach.NumTimeOccasions
 
-            % Correct waveform scaling for the demodulator.
+            % Correct waveform scaling for the demodulator: The Matlab
+            % PRACH DFT is normalized such that the spectral density of the
+            % generated PRACH signal is equal to the grid spectral density.
+            % The SRS PRACH demodulator uses the isometric DFT, such that
+            % the energy of the input is equal to the energy of the output.
+            % Therefore, scaling needs to be applied to the test waveform
+            % so that its energy is equal to the energy of the PRACH sequence.
             ofdmInfo = nrOFDMInfo(carrier);
-            prachInfo = nrPRACHOFDMInfo(carrier, prach);
-            scaling = sqrt(prach.LRA * ofdmInfo.Nfft / prachInfo.Nfft);
+            scaling = sqrt(prach.LRA * ofdmInfo.Nfft);
             waveform = waveform * scaling;
 
             % Reset time and frequency indexes.

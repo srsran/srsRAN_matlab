@@ -175,7 +175,7 @@ classdef srsBlockUnittest < matlab.unittest.TestCase
             fprintf(fileID, '#include "srsran/%s/%s.h"\n', ...
                 obj.srsBlockType, obj.srsBlock);
             fprintf(fileID, '#include "srsran/support/file_vector.h"\n');
-            fprintf(fileID, '#include "../../support/resource_grid_test_doubles.h"\n');
+            fprintf(fileID, '#include "../../../support/resource_grid_test_doubles.h"\n');
         end
 
         function addTestIncludesToHeaderFilePHYchproc(obj, fileID)
