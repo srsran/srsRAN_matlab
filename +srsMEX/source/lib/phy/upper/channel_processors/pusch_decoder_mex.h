@@ -26,7 +26,6 @@
 #include "srsran_matlab/support/memento.h"
 #include "srsran/phy/upper/channel_processors/pusch/factories.h"
 #include "srsran/phy/upper/channel_processors/pusch/pusch_decoder.h"
-#include "srsran/phy/upper/rx_buffer.h"
 #include "srsran/phy/upper/rx_buffer_pool.h"
 #include "srsran/phy/upper/unique_rx_buffer.h"
 #include <memory>
@@ -180,7 +179,8 @@ std::unique_ptr<srsran::pusch_decoder> create_pusch_decoder()
 
   std::shared_ptr<crc_calculator_factory> crc_calculator_factory = create_crc_calculator_factory_sw("auto");
 
-  std::shared_ptr<ldpc_decoder_factory> ldpc_decoder_factory = create_ldpc_decoder_factory_sw("auto");
+  std::shared_ptr<ldpc_decoder_factory> ldpc_decoder_factory =
+      create_ldpc_decoder_factory_sw("auto", {.force_decoding = false});
 
   std::shared_ptr<ldpc_rate_dematcher_factory> ldpc_rate_dematcher_factory =
       create_ldpc_rate_dematcher_factory_sw("auto");
