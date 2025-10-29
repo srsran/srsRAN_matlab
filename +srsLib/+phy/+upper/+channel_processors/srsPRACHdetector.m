@@ -1,5 +1,5 @@
 %srsPRACHdetector Detects the 5G NR PRACH preamble in a PRACH occasion.
-%   [INDICES, OFFSETS, NMETRIC, RSSI] = srsPRACHdetector(CARRIER, PRACH, GRID, IGNORECFO)
+%   [INDICES, OFFSETS, NMETRICS, POWERS, RSSI] = srsPRACHdetector(CARRIER, PRACH, GRID, IGNORECFO)
 %   detects the 5G NR PRACH preambles in GRID. GRID is a matrix (one column per
 %   RX antenna port) with the baseband symbols corresponding to one PRACH occasion,
 %   that is it may contain a number of copies of the preamble depending on the
@@ -10,8 +10,8 @@
 %
 %   The function returns INDICES and OFFSETS, that is a 64-entry boolean mask of
 %   the detected Preamble indices and the corresponding offsets in microseconds,
-%   respectively. It also returns the valuse of the detecion metric (normalized
-%   with respect to the detection threshold) and the signal RSSI (in dB).
+%   respectively. It also returns the valuse of the detecion metrics (normalized
+%   with respect to the detection threshold), the preamble POWERS and the signal RSSI (in dB).
 
 %   Copyright 2021-2025 Software Radio Systems Limited
 %
@@ -28,7 +28,7 @@
 %   A copy of the BSD 2-Clause License can be found in the LICENSE
 %   file in the top-level directory of this distribution.
 
-function [indices, offsets, normMetric, rssi] = srsPRACHdetector(carrier, prachConf, grid, ignoreCFO, newThreshold)
+function [indices, offsets, normMetrics, preamblePowers, rssi] = srsPRACHdetector(carrier, prachConf, grid, ignoreCFO, newThreshold)
     assert(prachConf.RestrictedSet == "UnrestrictedSet", "srsran_matlab:srsPRACHdetector",...
         "Only unrestricted sets are supported.");
 
@@ -68,7 +68,8 @@ function [indices, offsets, normMetric, rssi] = srsPRACHdetector(carrier, prachC
     % Initialize output.
     indices = false(64, 1);
     offsets = nan(64, 1);
-    normMetric = nan(64, 1);
+    normMetrics = nan(64, 1);
+    preamblePowers = nan(64, 1);
 
     rssi = 10 * log10(mean(abs(grid).^2, 'all'));
 
@@ -143,7 +144,9 @@ function [indices, offsets, normMetric, rssi] = srsPRACHdetector(carrier, prachC
                 indices(pos) = true;
                 d = delay + winStart - 1;
                 offsets(pos) = (d / Nfft - mod(LRA - info.WinStart(iWindow), LRA) / LRA) / prach.SubcarrierSpacing * 1000;
-                normMetric(pos) = m / threshold;
+                normMetrics(pos) = m / threshold;
+                powerNormalization = LRA * nReplicas;
+                preamblePowers(pos) = sum(winScalar(delay, :)) / powerNormalization;
             end
         end
     end
