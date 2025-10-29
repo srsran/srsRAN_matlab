@@ -119,9 +119,9 @@ classdef PRACHPERF < matlab.System
         %PUSCH subcarrier spacing in kHz (15, 30, 120).
         %   Default is 15 kHz.
         PUSCHSubcarrierSpacing (1, 1) double {mustBeMember(PUSCHSubcarrierSpacing, [15 30 120])} = 15
-        %Channel delay profile ('AWGN', 'TDLC300').
+        %Channel delay profile ('AWGN', 'TDLA30', 'TDLC300').
         %   Default is 'AWGN'.
-        DelayProfile (1, :) char {mustBeMember(DelayProfile, {'AWGN', 'TDLC300'})} = 'AWGN'
+        DelayProfile (1, :) char {mustBeMember(DelayProfile, {'AWGN', 'TDLA30', 'TDLC300'})} = 'AWGN'
         %Number of receive antennas.
         %   Default is 2.
         NumReceiveAntennas (1, 1) double {mustBeInteger, mustBePositive, mustBeFinite} = 2
@@ -233,6 +233,13 @@ classdef PRACHPERF < matlab.System
                     'Format %s is not valid in FR2.', obj.Format);
             end
         end % of function checkSCSandFormat(obj)
+
+        function checkSCSandDelayProfile(obj)
+            % Typically, it doesn't make much sense to test FR2 with heavy fading.
+            if ((obj.PUSCHSubcarrierSpacing == 120) && strcmp(obj.DelayProfile, 'TDLC300'))
+                warning('Testing heavy fading channels in FR2 is not recommended.');
+            end
+        end
     end % of methods (Access = private)
 
     methods (Access = protected)
@@ -303,7 +310,11 @@ classdef PRACHPERF < matlab.System
             else
                 obj.Channel = nrTDLChannel;
                 obj.Channel.DelayProfile = obj.DelayProfile;      % Delay profile
-                obj.Channel.MaximumDopplerShift = 100.0;          % Maximum Doppler shift in Hz
+                if strcmp(obj.DelayProfile, 'TDLC300')
+                    obj.Channel.MaximumDopplerShift = 100.0;          % Maximum Doppler shift in Hz
+                else % if strcmp(obj.DelayProfile, 'TDLA30')
+                    obj.Channel.MaximumDopplerShift = 300.0;          % Maximum Doppler shift in Hz
+                end
                 obj.Channel.SampleRate = obj.OFDMInfo.SampleRate; % Input signal sample rate in Hz
                 obj.Channel.MIMOCorrelation = "Low";              % MIMO correlation
                 obj.Channel.TransmissionDirection = "Uplink";     % Uplink transmission
@@ -322,6 +333,7 @@ classdef PRACHPERF < matlab.System
             checkSeqIndexandFormat(obj);
             checkNCSandFormat(obj);
             checkSCSandFormat(obj);
+            checkSCSandDelayProfile(obj);
         end
 
         function stepImpl(obj, SNRdB, nPRACHOccasions)
