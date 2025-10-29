@@ -40,6 +40,13 @@
 %   file in the top-level directory of this distribution.
 
 function srsPRACHAnalyzer(prach, filename, offset, prachSize)
+    arguments
+        prach     (1, 1) nrPRACHConfig
+        filename         char {mustBeFile}
+        offset    (1, 1) double {mustBeInteger, mustBeNonnegative}
+        prachSize (1, 1) double {mustBeInteger, mustBePositive}
+    end
+
     import srsTest.helpers.readComplexFloatFile
 
     nPorts = floor(prachSize / prach.LRA / prach.PRACHDuration);
