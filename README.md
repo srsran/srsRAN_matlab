@@ -233,7 +233,7 @@ The classes *CheckPUSCHConformance*, *CheckPUCCHF0Conformance*, *CheckPUCCHF1Con
 These checks have been designed mainly for automatic CI/CD procedures. Nevertheless, they can be executed locally by running the following commands from the *srsRAN-matlab* root folder (be aware that these tests may run for several hours).
 ```matlab
 addpath .
-runtests("unitTests/CheckPUSCHConformance.m")
+runtests("unitTests/@CheckPUSCHConformance/CheckPUSCHConformance.m")
 runtests("unitTests/CheckPUCCHF0Conformance.m")
 runtests("unitTests/CheckPUCCHF1Conformance.m")
 runtests("unitTests/CheckPUCCHF2Conformance.m")

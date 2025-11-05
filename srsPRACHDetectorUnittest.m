@@ -78,7 +78,7 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
         DuplexMode = {'FDD', 'TDD', 'TDD-FR2'}
 
         %Preamble formats.
-        PreambleFormat = {'0', '1', '2', 'A1','B4'}
+        PreambleFormat = {'0', '1', '2', '3', 'A1', 'A2', 'A3', 'B4'}
 
         %Zero-correlation zone boolean flag. Set to false for no cyclic shift
         %   and set to true for cyclic shift. The final value of the zero-configuration
@@ -119,9 +119,9 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
         %addTestIncludesToHeaderFile Adds include directives to the test header file.
 
             fprintf(fileID, [...
-                '#include "srsran/phy/upper/channel_processors/prach_detector.h"\n'...
-                '#include "srsran/support/file_vector.h"\n'...
                 '#include "../../support/prach_buffer_test_doubles.h"\n'...
+                '#include "srsran/phy/upper/channel_processors/prach_detector.h"\n'...
+                '#include "srsran/support/file_tensor.h"\n'...
                 ]);
         end
 
@@ -268,9 +268,12 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
             % Generate PRACH grid.
             grid = obj.generatePRACH(nAntennas);
 
-            [ix, delays, normMetric, rssi] = srsLib.phy.upper.channel_processors.srsPRACHdetector(obj.carrier, obj.prach, grid, true);
+            [ix, delays, normMetrics, preamblePowers, rssi] = srsLib.phy.upper.channel_processors.srsPRACHdetector(obj.carrier, obj.prach, grid, true);
             pp = obj.prach.PreambleIndex + 1;
-            assert(ix(pp), 'Transmitted preamble %d not detected.', pp - 1);
+            obj.assertTrue(ix(pp), sprintf('Transmitted preamble %d not detected.', pp - 1));
+            if ~strcmp(DuplexMode, 'TDD-FR2')
+                obj.assertEqual(10 * log10(preamblePowers(pp)), 0, 'Wrong estimated preamble power.', AbsTol=3);
+            end
 
             % Reshape grid with PRACH symbols.
             grid = reshape(grid, obj.prach.LRA, obj.prach.PRACHDuration, nAntennas);
@@ -312,7 +315,8 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
             srsPreambleIndication = {...
                 obj.prach.PreambleIndex, ...            % preamble_index
                 delayString, ...                        % time_advance
-                normMetric(pp), ...                     % normalized detection metric
+                normMetrics(pp), ...                    % detection_metric
+                10 * log10(preamblePowers(pp)), ...     % preamble_power_dB
                 };
 
             srsPrachDetectionResult = {...
@@ -359,14 +363,10 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
             %   cyclic shift index configuration ZEROCORRELATIONINDEX and a RB
             %   offset RBOFFSET. The PRACH transmission is demodulated in
             %   MATLAB and PRACH detection is then performed using the mex
-            %   wrapper of the SRSRAN C++ component. The test is considered
+            %   wrapper of the srsRAN C++ component. The test is considered
             %   as passed if the detected PRACH is equal to the transmitted one.
 
             import srsMEX.phy.srsPRACHDetector
-
-            obj.assumeTrue(ismember(PreambleFormat, {'0', '1', 'A1', 'B4'}), ['Format ' PreambleFormat ' not yet supported.']);
-            obj.assumeFalse(strcmp(PreambleFormat, 'B4') && strcmp(DuplexMode, 'FDD'), ...
-                'For now, Format B4 is supported in TDD only (SCS 30 kHz).');
 
             % Configure the test.
             obj.setupsimulation(DuplexMode, PreambleFormat, UseZCZ);
@@ -384,8 +384,14 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
                 % Reshape grid with PRACH symbols.
                 PRACHGrid = reshape(PRACHGrid, obj.prach.LRA, obj.prach.PRACHDuration, nAntennas);
 
-                % Run the PRACH detector.
-                PRACHdetectionResult = PRACHDetector(obj.prach, PRACHGrid);
+                try
+                    % Run the PRACH detector.
+                    PRACHdetectionResult = PRACHDetector(obj.prach, PRACHGrid);
+                catch exception
+                    obj.assertTrue(strncmp(exception.message, 'Invalid configuration', 21), 'Unexpected MEX error.');
+                    obj.assumeFail(['MEX unsupported configuration:', exception.message(23:end)]);
+                end
+
 
                 maskDetected = (PRACHdetectionResult.PreambleIndices == obj.prach.PreambleIndex);
 

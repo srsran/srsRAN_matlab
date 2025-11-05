@@ -68,6 +68,9 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
         %Preamble formats for FR2.
         PreambleFormatsFR2 = {'A1', 'A1/B1', 'A2', 'A2/B2', 'A3', ...
             'A3/B3', 'B1', 'B4', 'C0', 'C2'}
+
+        %PRACH Demodulator health check absolute tolerance.
+        DemodulatorAbsTol = 1e-8
     end
 
     properties (ClassSetupParameter)
@@ -138,6 +141,7 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
             import srsTest.helpers.writeComplexFloatFile
             import srsLib.phy.helpers.srsConfigurePRACH
             import srsLib.phy.upper.channel_processors.srsPRACHgenerator
+            import srsLib.phy.lower.modulation.srsPRACHdemodulator
 
             % Generate a unique test ID
             TestID = testCase.generateTestID;
@@ -190,10 +194,10 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
             PrachOfdmInfo = nrPRACHOFDMInfo(carrier, prach);
 
             % Allocate the modulated waveform.
-            waveform = zeros(sum(PrachOfdmInfo.SymbolLengths), 1);
+            waveform = complex(zeros(sum(PrachOfdmInfo.SymbolLengths), 1));
 
             % Prepare matrix with PRACH symbols to modulate.
-            PRACHSymbols = nan(prach.LRA, NumFreqOccasions, prach.NumTimeOccasions);
+            PRACHSymbols = complex(nan(prach.LRA, NumFreqOccasions, prach.NumTimeOccasions));
 
             % Generate a waveform for each time and frequency occasion.
             for TimeIndex = 1:prach.NumTimeOccasions
@@ -210,6 +214,15 @@ classdef srsPRACHDemodulatorUnittest < srsTest.srsBlockUnittest
 
                     % Pad occasion with zeros to match the waveform size.
                     occasion = [occasionTmp; zeros(numel(waveform) - numel(occasionTmp), 1)];
+
+                    % Try to demodulate.
+                    demodulated = srsPRACHdemodulator(carrier, prach, gridset.Info, occasion, info);
+
+                    % Check that the demodulation symbols have a cosine
+                    % similarity above 90% with the original symbols.
+                    testCase.assertEqual(demodulated, info.PRACHSymbols / sqrt(prach.LRA), ...
+                        'Demodulated and expected PRACH symbols do not match.', ...
+                        AbsTol=testCase.DemodulatorAbsTol);
 
                     % Combine the waveform of each occasion.
                     waveform = occasion + waveform;

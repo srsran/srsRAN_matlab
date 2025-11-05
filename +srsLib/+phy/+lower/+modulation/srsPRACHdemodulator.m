@@ -1,5 +1,5 @@
 %srsPRACHdemodulator Demodulate a 5G NR PRACH waveform.
-%   PRACHSYMBOLS = srsPRACHdemodulator(CARRIER, PRACH, GRIDSET,WAVEFORM,INFO)
+%   PRACHSYMBOLS = srsPRACHdemodulator(CARRIER, PRACH, GRIDINFO, WAVEFORM, INFO)
 %   returns a set of frequency-domain symbols PRACHSYMBOLS comprising the 5G
 %   5G NR physical random access channel (PRACH) given input CARRIER and 
 %   PRACH parameters, PRACH waveform WAVEFORM and two structure arrays 
@@ -60,14 +60,22 @@ function PRACHSymbols = srsPRACHdemodulator(carrier, prach, gridInfo, waveform, 
 
     carrierInfo = nrOFDMInfo(carrier);
 
+    % Select the starting symbol within the slot.
+    startSymbolWithinSlot = mod(prach.SymbolLocation, length(gridInfo.SymbolLengths));
+
+    % Calculate the offset of the PRACH within the slot.
+    symbolOffset = sum(gridInfo.SymbolLengths(1:startSymbolWithinSlot));
+
     % Demodulate the PRACH symbol(s).
     PRACHSymbolTmp = complex(nan(prach.LRA, nAntennas));
     PRACHSymbols = complex(nan(prach.LRA * nofSymbols, nAntennas));
-    symbolOffset = 0;
     for symbolIndex = 0:nofSymbols-1
+        % Calculate the OFDM symbol index within the slot (0-based).
+        symbolIndexWithinSlot = symbolIndex + startSymbolWithinSlot;
+
         % Symbol-specific PRACH demodulation parameters.
-        prachSymbolLength = gridInfo.SymbolLengths(symbolIndex+1);
-        prachCPSize = gridInfo.CyclicPrefixLengths(symbolIndex+1);
+        prachSymbolLength = gridInfo.SymbolLengths(symbolIndexWithinSlot + 1);
+        prachCPSize = gridInfo.CyclicPrefixLengths(symbolIndexWithinSlot + 1);
 
         % Remove the CP.
         noCPprach = waveform(symbolOffset + prachCPSize + 1 : end , :);
@@ -80,8 +88,8 @@ function PRACHSymbols = srsPRACHdemodulator(carrier, prach, gridInfo, waveform, 
         upperPRACHgrid = freqPRACH(1 : halfPRACHgridSize, :);
 
         % Initial subcarrier.
-        kStart = info.PRACHIndices(prach.LRA * symbolIndex + 1) - PRACHgridSize * symbolIndex - 1;
-
+        kStart = info.PRACHIndices(prach.LRA * symbolIndex + 1) ...
+            - PRACHgridSize * symbolIndexWithinSlot - 1;
         % If the sequence map starts at the lower half of the frequency band.
         if kStart < halfPRACHgridSize
             N = min(halfPRACHgridSize - kStart, prach.LRA);
