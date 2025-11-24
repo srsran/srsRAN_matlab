@@ -78,7 +78,7 @@ classdef srsPRACHDetectorUnittest < srsTest.srsBlockUnittest
         DuplexMode = {'FDD', 'TDD', 'TDD-FR2'}
 
         %Preamble formats.
-        PreambleFormat = {'0', '1', '2', '3', 'A1', 'A2', 'A3', 'B4'}
+        PreambleFormat = {'0', '1', '2', '3', 'A1', 'A2', 'A3', 'B4', 'C0'}
 
         %Zero-correlation zone boolean flag. Set to false for no cyclic shift
         %   and set to true for cyclic shift. The final value of the zero-configuration
