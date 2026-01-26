@@ -25,6 +25,7 @@
 #include "srsran_matlab/support/resource_grid.h"
 #include "srsran_matlab/support/to_span.h"
 #include "srsran/phy/support/resource_grid_writer.h"
+#include "srsran/phy/upper/channel_estimation.h"
 #include "srsran/srsvec/conversion.h"
 #include <MatlabDataArray/ArrayDimensions.hpp>
 
@@ -229,7 +230,22 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
   channel_estimate ch_estimate(ch_est_dims);
 
   for (unsigned i_port = 0; i_port != nof_rx_ports; ++i_port) {
-    estimator->compute(ch_estimate, grid->get_reader(), i_port, pilots, cfg);
+    const port_channel_estimator_results& ch_est_results = estimator->compute(grid->get_reader(), i_port, pilots, cfg);
+
+    for (unsigned i_layer = 0; i_layer != nof_layers; ++i_layer) {
+      for (unsigned i_symbol = cfg.first_symbol, last_symbol = cfg.first_symbol + cfg.nof_symbols;
+           i_symbol != last_symbol;
+           ++i_symbol) {
+        ch_est_results.get_symbol_ch_estimate(
+            ch_estimate.get_symbol_ch_estimate(i_symbol, i_port, i_layer), i_symbol, i_layer);
+      }
+      ch_estimate.set_rsrp(ch_est_results.get_rsrp(i_layer), i_port, i_layer);
+      ch_estimate.set_time_alignment(ch_est_results.get_time_alignment(), i_port, i_layer);
+      ch_estimate.set_cfo_Hz(ch_est_results.get_cfo_Hz(), i_port, i_layer);
+    }
+    ch_estimate.set_epre(ch_est_results.get_epre(), i_port);
+    ch_estimate.set_noise_variance(ch_est_results.get_noise_variance(), i_port);
+    ch_estimate.set_snr(ch_est_results.get_snr(), i_port);
   }
 
   TypedArray<cf_t> ch_est_out = factory.createArray<cf_t>(
@@ -256,8 +272,13 @@ void MexFunction::method_step(ArgumentList outputs, ArgumentList inputs)
   for (unsigned i_port = 0; i_port != nof_rx_ports; ++i_port) {
     info_out[i_port]["NoiseVar"] = factory.createScalar(static_cast<double>(ch_estimate.get_noise_variance(i_port)));
     total_noise_var += ch_estimate.get_noise_variance(i_port);
-    info_out[i_port]["RSRP"] = factory.createScalar(static_cast<double>(ch_estimate.get_rsrp(i_port)));
-    total_rsrp += ch_estimate.get_rsrp(i_port);
+    float rsrp_avg = 0;
+    for (unsigned i_layer = 0; i_layer != nof_layers; ++i_layer) {
+      rsrp_avg += ch_estimate.get_rsrp(i_port, i_layer);
+    }
+    rsrp_avg /= nof_layers;
+    info_out[i_port]["RSRP"] = factory.createScalar(static_cast<double>(rsrp_avg));
+    total_rsrp += rsrp_avg;
     info_out[i_port]["EPRE"] = factory.createScalar(static_cast<double>(ch_estimate.get_epre(i_port)));
     total_epre += ch_estimate.get_epre(i_port);
     info_out[i_port]["SINR"] = factory.createScalar(static_cast<double>(ch_estimate.get_snr(i_port)));

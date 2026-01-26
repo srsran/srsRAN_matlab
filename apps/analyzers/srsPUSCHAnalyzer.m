@@ -83,8 +83,8 @@ if pusch.DMRS.NumCDMGroupsWithoutData
 end
 
 % Remove DC from the grid if it is available.
-if ~isempty(extra.dcPosition)
-    rxGrid(extra.dcPosition + 1, :) = 0;
+if ~isempty(extra.DCPosition)
+    rxGrid(extra.DCPosition + 1, :) = 0;
 end
 
 %% Equalize.
@@ -112,6 +112,11 @@ bps = srsLib.phy.helpers.srsGetBitsSymbol(pusch.Modulation);
 cwZerosInd = repelem(zerosInd, bps);
 rxcw(cwZerosInd) = 0;
 
+
+% Demultiplex data and UCI.
+[culsch, cack, ccsi1, ~] = nrULSCHDemultiplex(pusch, extra.TargetCodeRate, ...
+    extra.TransportBlockLength, extra.OACK, extra.OCSI1, 0, rxcw);
+
 % Prepare UL-SCH decoder.
 ULSCHDecoder = nrULSCHDecoder( ...
     MultipleHARQProcesses=multipleHARQProcesses, ...
@@ -119,14 +124,37 @@ ULSCHDecoder = nrULSCHDecoder( ...
     TransportBlockLength=transportBlockLength ...
     );
 
-% Decode.
-[~, blkCRCErr] = ULSCHDecoder(rxcw, pusch.Modulation, pusch.NumLayers, rv);
+% Decode data.
+[~, blkCRCErr] = ULSCHDecoder(culsch, pusch.Modulation, pusch.NumLayers, rv);
 
-crcStatus = 'OK';
-if (blkCRCErr == 1)
-    crcStatus = 'KO';
+crcStatus = ["OK", "KO"];
+fprintf('The block CRC is %s.\n', crcStatus(blkCRCErr + 1));
+
+% Decode ACK.
+if ~isempty(cack)
+    [ack, ackErr] = nrUCIDecode(cack, extra.OACK, pusch.Modulation);
+
+    msg = sprintf('Multiplexed ACK is %s.', join(string(ack)));
+    if isempty(ackErr)
+        msg = [msg, '\n'];
+    else
+        msg = [msg, sprintf('(CRC is %s).\n', crcStatus(ackErr + 1))];
+    end
+    fprintf(msg);
 end
-fprintf('The block CRC is %s.\n', crcStatus);
+
+% Decode CSI1.
+if ~isempty(ccsi1)
+    [csi1, csi1Err] = nrUCIDecode(ccsi1, extra.OCSI1, pusch.Modulation);
+
+    msg = sprintf('Multiplexed CSI1 is %s.', join(string(csi1)));
+    if isempty(csi1Err)
+        msg = [msg, '\n'];
+    else
+        msg = [msg, sprintf('(CRC is %s).\n', crcStatus(csi1Err + 1))];
+    end
+    fprintf(msg);
+end
 
 %% Plot analysis.
 figRG = figure("Name", "srsPUSCHAnalyzer: Resource grid amplitude");

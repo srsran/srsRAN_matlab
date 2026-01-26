@@ -169,6 +169,10 @@ function [carrier, phych, extra] = srsParseLogs
                 if betas(3) ~= 0
                     phych.BetaOffsetCSI2 = betas(3);
                 end
+            case 'oack'
+                oack = sscanf(parameter{2}, '%d');
+            case 'ocsi1'
+                ocsi1 = sscanf(parameter{2}, '%d');
             case 'bwp'
                 bwp = sscanf(parameter{2}, '[%d, %d)');
                 phych.NSizeBWP = bwp(2) - bwp(1);
@@ -281,7 +285,7 @@ function [carrier, phych, extra] = srsParseLogs
         tbs = sscanf(allLines{1}(tStart:end), 'tbs=%d');
 
         extra = struct('RV', rv, 'TargetCodeRate', tcr, 'TransportBlockLength', tbs * 8, ...
-            'dcPosition', dcPosition);
+            'OACK', oack, 'OCSI1', ocsi1, 'DCPosition', dcPosition);
     else
         extra = struct([]);
     end

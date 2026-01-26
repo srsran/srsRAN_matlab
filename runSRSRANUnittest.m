@@ -14,6 +14,9 @@
 %
 %   TEST = runSRSRANUnittest(...) returns a Test object TEST withouth running it.
 %   The test can be later executed with the command TEST.run.
+%
+%   [TEST, RUNNER] = runSRSRANUnittest(...) also returns a TestRunner with
+%   suitable settings for the generated test suite.
 
 %   Copyright 2021-2025 Software Radio Systems Limited
 %
@@ -30,7 +33,7 @@
 %   A copy of the BSD 2-Clause License can be found in the LICENSE
 %   file in the top-level directory of this distribution.
 
-function test = runSRSRANUnittest(blockName, testType, opt)
+function [test, runner] = runSRSRANUnittest(blockName, testType, opt)
     arguments
         blockName          char   {mustBeSRSBlock}
         testType           char   {mustBeMember(testType, {'testvector', 'testmex'})}
@@ -40,7 +43,7 @@ function test = runSRSRANUnittest(blockName, testType, opt)
     import matlab.unittest.TestSuite
     import matlab.unittest.parameters.Parameter
 
-    % define the absolute output paths
+    % Define the absolute output paths.
     outputPath = [pwd '/testvector_outputs'];
     extParams = Parameter.fromData('outputPath', {outputPath}, 'RandomDefault', {~opt.RandomShuffle});
 
@@ -51,15 +54,27 @@ function test = runSRSRANUnittest(blockName, testType, opt)
         if isempty(nrPHYtestvectorTests)
             warning('No ''%s'' tests for the ''%s'' block.', testType, blockName);
         end
+
+        % When running the tests for one block only, use the default runner that
+        % shows all diagnostics.
+        runner = matlab.unittest.TestRunner.withDefaultPlugins;
     else
         nrPHYtestvectorTests = TestSuite.fromFolder('.', 'Tag', testType, ...
             'ExternalParameters', extParams);
+
+        % When running the tests for all blocks, replace the DiagnosticsOutputPlugin
+        % with a modified version that does not show diagnostics caused by failed
+        % assumptions.
+        runner = matlab.unittest.TestRunner.withNoPlugins;
+        runner.addPlugin(srsTest.plugins.srsDiagnosticsOutputPlugin);
+        runner.addPlugin(matlab.unittest.plugins.TestRunProgressPlugin.withVerbosity("Concise"));
+        runner.addPlugin(matlab.unittest.plugins.DiagnosticsRecordingPlugin);
     end
-    if nargout == 1
+    if nargout >= 1
         test = nrPHYtestvectorTests;
     else
-        nrPHYtestvectorTests.run;
-    end % of if nargout == 1
+        test = runner.run(nrPHYtestvectorTests);
+    end % of if nargout >= 1
 end % of runSRSRANUnittest
 
 function mustBeSRSBlock(a)
@@ -133,6 +148,8 @@ function unittestClass = name2Class(name)
             unittestClass = ?srsPRACHDetectorUnittest;
         case 'prach_generator'
             unittestClass = ?srsPRACHGeneratorUnittest;
+        case 'prach_scheduler'
+            unittestClass = ?srsPRACHSchedulerUnittest;
         case 'prs_generator'
             unittestClass = ?srsPRSGeneratorUnittest;
         case 'ptrs_pdsch_generator'

@@ -161,11 +161,14 @@ classdef CheckAnalyzers < matlab.unittest.TestCase
 
             % Check the extra output.
             obj.assertClass(extra, 'struct', 'Output "extra" is not a struct.');
-            obj.assertEqual(fieldnames(extra), {'RV'; 'TargetCodeRate'; 'TransportBlockLength'; 'dcPosition'}, 'Wrong extra field names.');
+            obj.assertEqual(fieldnames(extra), {'RV'; 'TargetCodeRate'; 'TransportBlockLength'; 'OACK'; 'OCSI1'; 'DCPosition'}, ...
+                'Wrong extra field names.');
             obj.assertEqual(extra.RV, 0, 'Wrong redundancy version.');
             obj.assertEqual(extra.TargetCodeRate, 0.92578125, 'Wrong target code rate.');
             obj.assertEqual(extra.TransportBlockLength, 196776, 'Wrong transport block size.');
-            obj.assertEmpty(extra.dcPosition, 'Wrong transport block size.');
+            obj.assertEmpty(extra.DCPosition, 'Wrong DC position.');
+            obj.assertEqual(extra.OACK, 0, 'Wrong number of multiplexed ACK bits.');
+            obj.assertEqual(extra.OCSI1, 0, 'Wrong number of multiplexed CSI1 bits.');
         end % of function checkParser(obj)
 
         function checkParserPUCCHF0(obj)
