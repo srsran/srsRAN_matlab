@@ -1,5 +1,9 @@
 # srsRAN-matlab
 
+
+> [!IMPORTANT]
+> Project transition notice: *srsRAN-matlab* is now *OCUDU MATLAB*, part of the [OCUDU Ecosystem](https://ocudu.org). As of December 2025, all development has transitioned to the new [repository](https://gitlab.com/ocudu/ocudu_elements/ocudu-matlab). This repository will be archived and is no longer maintained.
+
 *srsRAN-matlab*, developed by [SRS](https://www.srs.io), provides a number of MATLAB-based tools for testing and benchmarking the [srsRAN Project](https://www.srsran.com) software.
 
 ## Overview
